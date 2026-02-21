@@ -1,0 +1,5 @@
+{
+  "extends": "@crm/tsconfig/react.json",
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

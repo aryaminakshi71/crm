@@ -1,0 +1,41 @@
+{
+  "appId": "crm",
+  "version": "1.0.0",
+  "capabilities": [
+    "crm.contacts.manage",
+    "crm.leads.manage",
+    "crm.pipeline.manage",
+    "crm.ai.assist"
+  ],
+  "api": {
+    "basePath": "/api",
+    "openApiUrl": "/api/openapi.json"
+  },
+  "events": {
+    "published": [
+      "crm.lead.created",
+      "crm.contact.updated",
+      "crm.ai.lead_scored"
+    ],
+    "subscribed": [
+      "invoicing.payment.received",
+      "helpdesk.ticket.created"
+    ]
+  },
+  "ai": {
+    "assistant": {
+      "enabled": true,
+      "entrypoint": "/api/ai/lead/score"
+    },
+    "automationAgents": [
+      "crm-lead-enrichment-agent",
+      "crm-followup-agent"
+    ],
+    "analyticsAgent": [
+      "crm-pipeline-insights-agent"
+    ],
+    "guardrails": {
+      "dataClass": "pii"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(/opt/homebrew/bin/npm install better-auth)",
+      "Bash(cat:*)",
+      "Bash(npx drizzle-kit generate)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(npx tsx:*)",
+      "Bash(__NEW_LINE_b5d0a01aea71947a__ echo \"\")",
+      "Bash(__NEW_LINE_20a97d8110551911__ echo \"\")",
+      "Bash(lsof:*)"
+    ]
+  }
+}

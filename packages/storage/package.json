@@ -1,0 +1,41 @@
+{
+  "name": "@crm/storage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./schema": "./src/db/schema/index.ts",
+    "./enums": "./src/db/enums.ts",
+    "./redis": "./src/redis/index.ts",
+    "./r2": "./src/r2/index.ts",
+    "./kv": "./src/kv/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.821.0",
+    "@aws-sdk/s3-request-presigner": "^3.821.0",
+    "@crm/core": "workspace:*",
+    "@crm/env": "workspace:*",
+    "@neondatabase/serverless": "^0.10.0",
+    "@upstash/redis": "^1.36.1",
+    "drizzle-orm": "^0.45.0",
+    "drizzle-zod": "^0.8.3",
+    "nanoid": "^5.0.9",
+    "postgres": "^3.4.8",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@crm/tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/node": "^22.19.2",
+    "drizzle-kit": "^0.31.8",
+    "typescript": "^5.9.3"
+  }
+}

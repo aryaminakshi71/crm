@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "crm-api",
+  "main": "./src/index.ts",
+  "compatibility_date": "2025-01-10",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
+
+  "vars": {
+    "NODE_ENV": "development"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  "dev": {
+    "port": 8787
+  }
+}
