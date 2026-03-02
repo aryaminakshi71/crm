@@ -1,26 +1,38 @@
 {
-  "name": "crm",
+  "name": "nucleo-one",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.5",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "bun run dev:web & bun run dev:api",
     "dev:no-cloudflare": "cd apps/web && SKIP_CLOUDFLARE=true bun run dev",
-    "typecheck": "bun run --workspaces --if-present typecheck",
+    "typecheck": "bun run --cwd apps/api typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/mobile typecheck && bun run --cwd packages/env typecheck && bun run --cwd packages/shared typecheck && bun run --cwd packages/storage typecheck && bun run --cwd packages/ui typecheck && bun run --cwd packages/workflows typecheck",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "check": "biome check --write .",
     "clean": "rm -rf node_modules .turbo && find . -name 'node_modules' -type d -prune -exec rm -rf {} + && find . -name '.turbo' -type d -prune -exec rm -rf {} +",
-    "db:generate": "turbo run db:generate",
-    "db:push": "turbo run db:push",
-    "db:migrate": "turbo run db:migrate",
-    "db:studio": "turbo run db:studio",
+    "db:generate": "bun run --cwd packages/storage db:generate",
+    "db:push": "bun run --cwd packages/storage db:push",
+    "db:migrate": "bun run --cwd packages/storage db:migrate",
+    "db:studio": "bun run --cwd packages/storage db:studio",
+    "test": "bun run --cwd apps/web test --run",
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
+    "test:ci": "turbo run test:ci",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "E2E_TEST=1 playwright test",
+    "test:e2e:ui": "E2E_TEST=1 playwright test --ui",
+    "test:all": "bun run test && bun run test:integration && bun run test:e2e",
     "test:links": "E2E_TEST=1 playwright test e2e/link-testing.spec.ts",
     "test:links:ui": "E2E_TEST=1 playwright test e2e/link-testing.spec.ts --ui",
     "test:links:report": "playwright show-report",
+    "security:audit": "bun audit",
+    "security:scan": "bunx snyk test",
     "apps:init": "bun run scripts/manage-apps.ts init",
     "apps:add": "bun run scripts/manage-apps.ts add",
     "apps:remove": "bun run scripts/manage-apps.ts remove",
@@ -34,16 +46,22 @@
     "apps:costs": "bun run scripts/manage-apps.ts costs",
     "apps:checklist": "bun run scripts/manage-apps.ts checklist",
     "apps:services": "bun run scripts/manage-apps.ts services",
-    "test": "bun run --workspaces --if-present test"
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:api": "bun run --cwd apps/api dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@clack/prompts": "^0.11.0",
     "@playwright/test": "^1.57.0",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.3",
     "turbo": "^2.4.4"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1"
+  },
+  "overrides": {
+    "@tanstack/query-core": "5.90.20"
   }
 }

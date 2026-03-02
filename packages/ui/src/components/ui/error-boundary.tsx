@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Bug, Home, RefreshCw } from "lucide-react";
-import React, { Component } from "react";
+import { Component, type ComponentType } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
 interface Props {
@@ -223,9 +223,9 @@ function ErrorDisplay({
 }
 
 export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
+  Component: ComponentType<P>,
   options?: Omit<Props, "children">,
-): React.ComponentType<P> {
+): ComponentType<P> {
   const WrappedComponent = (props: P) => (
     <ErrorBoundary {...options}>
       <Component {...props} />

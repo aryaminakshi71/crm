@@ -9,6 +9,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "build/**", ".output/**"]
     },
+    "@crm/ui#build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        "src/**/*.js",
+        "src/**/*.js.map",
+        "src/**/*.d.ts",
+        "src/**/*.d.ts.map"
+      ]
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": []

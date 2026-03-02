@@ -1,3 +1,4 @@
+import net from "node:net";
 import path from "path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
@@ -8,16 +9,36 @@ import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig, loadEnv } from "vite";
 import viteTsConfigPaths from "vite-tsconfig-paths";
 
-export default defineConfig(({ mode }) => {
+async function findAvailablePort(preferredPort: number): Promise<number> {
+  for (let offset = 0; offset < 25; offset++) {
+    const candidate = preferredPort + offset;
+    const isFree = await new Promise<boolean>((resolve) => {
+      const server = net.createServer();
+      server.unref();
+      server.once("error", () => resolve(false));
+      server.once("listening", () => {
+        server.close(() => resolve(true));
+      });
+      server.listen(candidate, "127.0.0.1");
+    });
+    if (isFree) return candidate;
+  }
+
+  // Fall back to a deterministic high port if all probes are occupied.
+  return preferredPort + 100;
+}
+
+export default defineConfig(async ({ mode }) => {
   // Capture PORT from shell BEFORE loadEnv (which might load PORT from .env)
   const shellPort = process.env.PORT;
   // Load env from root (../../)
   const env = loadEnv(mode, path.resolve(__dirname, "../../"), "");
   // PORT from shell environment takes highest priority
-  const port = shellPort || env.PORT || "3000";
-  const devtoolsPort = Number.isFinite(Number(port))
+  const port = shellPort || env.PORT || "3001";
+  const preferredDevtoolsPort = Number.isFinite(Number(port))
     ? Number(port) + 10000
     : 42069;
+  const devtoolsPort = await findAvailablePort(preferredDevtoolsPort);
   process.env = { ...process.env, ...env };
 
   return {
@@ -29,7 +50,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(port),
       host: true,
-      strictPort: true,
+      strictPort: false,
+      hmr: {
+        overlay: false,
+      },
       proxy: {
         "/api": {
           target: "http://localhost:8787",
@@ -59,8 +83,8 @@ export default defineConfig(({ mode }) => {
                 if (!id.includes("node_modules")) return;
                 if (id.includes("/react/") || id.includes("react-dom"))
                   return "vendor-react";
-                if (id.includes("@tanstack/")) return "vendor-tanstack";
-                if (id.includes("@radix-ui/")) return "vendor-radix";
+                if (id.includes("@tanstack/") || id.includes("@radix-ui/"))
+                  return "vendor-framework";
                 if (
                   id.includes("react-hook-form") ||
                   id.includes("@hookform/resolvers")
@@ -73,8 +97,6 @@ export default defineConfig(({ mode }) => {
                   id.includes("xlsx")
                 )
                   return "vendor-charts";
-                if (id.includes("posthog-js") || id.includes("@sentry/"))
-                  return "vendor-analytics";
                 if (id.includes("/zod/")) return "vendor-zod";
               },
             },

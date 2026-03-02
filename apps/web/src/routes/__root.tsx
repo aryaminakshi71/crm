@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import React, { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundaryWrapper } from "../components/error-boundary-wrapper";
 import { PostHogProvider } from "../components/providers/posthog-provider";
@@ -26,11 +26,11 @@ export const Route = createRootRoute({
       meta: [
         { charSet: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "CRM Platform - Customer Relationship Management System" },
+        { title: "Nucleo One - Customer Relationship Management System" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         {
           name: "keywords",
@@ -39,24 +39,24 @@ export const Route = createRootRoute({
         },
         {
           property: "og:title",
-          content: "CRM Platform - Customer Relationship Management",
+          content: "Nucleo One - Customer Relationship Management",
         },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships and sales pipelines.",
+            "Modern Nucleo One platform for managing customer relationships and sales pipelines.",
         },
         { property: "og:type", content: "website" },
         { property: "og:image", content: ogImage },
         { name: "twitter:card", content: "summary_large_image" },
         {
           name: "twitter:title",
-          content: "CRM Platform - Customer Relationship Management",
+          content: "Nucleo One - Customer Relationship Management",
         },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships and sales pipelines.",
+            "Modern Nucleo One platform for managing customer relationships and sales pipelines.",
         },
         { name: "twitter:image", content: ogImage },
         { name: "robots", content: "index, follow" },
@@ -120,7 +120,7 @@ export const Route = createRootRoute({
   },
 });
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({ children }: { children: ReactNode }) {
   // Register service worker for offline support
   useEffect(() => {
     initSentry();

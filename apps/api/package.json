@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/crm_db} wrangler dev src/index.ts",
+    "dev": "wrangler dev src/index.ts",
     "deploy": "wrangler deploy --minify src/index.ts"
   },
   "exports": {
@@ -14,10 +14,10 @@
     "./router": "./src/routers/index.ts"
   },
   "dependencies": {
-    "@crm/auth": "workspace:*",
-    "@crm/env": "workspace:*",
-    "@crm/logger": "workspace:*",
-    "@crm/storage": "workspace:*",
+    "@crm/auth": "file:../../packages/auth",
+    "@crm/env": "file:../../packages/env",
+    "@crm/logger": "file:../../packages/logger",
+    "@crm/storage": "file:../../packages/storage",
     "@orpc/openapi": "^1.13.4",
     "@orpc/server": "^1.13.4",
     "@orpc/zod": "^1.13.4",
@@ -25,7 +25,7 @@
     "@sentry/cloudflare": "^10.36.0",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.36.1",
-    "better-auth": "^1.4.18",
+    "better-auth": "1.4.18",
     "dd-trace": "^5.0.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.7",
@@ -33,7 +33,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@crm/tsconfig": "workspace:*",
+    "@crm/tsconfig": "file:../../packages/tsconfig",
     "@cloudflare/workers-types": "^4.20250109.0",
     "@types/node": "^22.19.2",
     "typescript": "^5.9.3",

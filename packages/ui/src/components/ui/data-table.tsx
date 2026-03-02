@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import type { ReactNode } from "react";
 
 interface Column<T> {
   key: string;
   header: string;
-  render?: (item: T) => React.ReactNode;
+  render?: (item: T) => ReactNode;
 }
 
 interface DataTableProps<T> {
