@@ -1,0 +1,141 @@
+Issue Type,Summary,Description,Assignee,Priority,Original estimate,Labels
+Task,PLAT-001 CI pipeline baseline Platform & CI,"Ticket: PLAT-001 CI pipeline baseline
+Epic: Platform & CI
+Owner Role: Platform Engineer
+Dependencies: None
+
+Acceptance Criteria:
+PR checks run typecheck, test, build, and smoke e2e; merge blocked on failure",,P0,2d,platform-ci
+Task,PLAT-002 Branch protection + PR template Platform & CI,"Ticket: PLAT-002 Branch protection + PR template
+Epic: Platform & CI
+Owner Role: Engineering Manager
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Main branch is protected; at least one review required; PR template enforced",,P0,0.5d,platform-ci
+Task,PLAT-003 Dependency governance Platform & CI,"Ticket: PLAT-003 Dependency governance
+Epic: Platform & CI
+Owner Role: Platform Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Single lockfile policy documented and enforced; critical auth deps pinned",,P0,1d,platform-ci
+Task,PLAT-004 Env validation hardening Platform & CI,"Ticket: PLAT-004 Env validation hardening
+Epic: Platform & CI
+Owner Role: Backend Engineer
+Dependencies: None
+
+Acceptance Criteria:
+App fails fast with clear startup errors for missing/invalid required env vars",,P0,1.5d,platform-ci
+Task,QA-001 Smoke test suite Quality Automation,"Ticket: QA-001 Smoke test suite
+Epic: Quality Automation
+Owner Role: QA Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Playwright smoke flow covers login, dashboard load, and core module navigation under 10 minutes",,P0,2d,quality-automation
+Task,OBS-001 Request ID tracing end-to-end Observability,"Ticket: OBS-001 Request ID tracing end-to-end
+Epic: Observability
+Owner Role: Backend Engineer
+Dependencies: PLAT-004
+
+Acceptance Criteria:
+Request ID present in API logs and frontend error context for every request",,P1,1.5d,observability
+Task,OBS-002 Sentry standardization Observability,"Ticket: OBS-002 Sentry standardization
+Epic: Observability
+Owner Role: Fullstack Engineer
+Dependencies: OBS-001
+
+Acceptance Criteria:
+Sentry events include consistent release and environment tags across web and API",,P1,1d,observability
+Task,SEC-001 Rate limiting policy Security,"Ticket: SEC-001 Rate limiting policy
+Epic: Security
+Owner Role: Backend Engineer
+Dependencies: PLAT-004
+
+Acceptance Criteria:
+Auth, AI, and public endpoints enforce limits and return stable 429 responses",,P0,2d,security
+Task,SEC-002 Security CI scans Security,"Ticket: SEC-002 Security CI scans
+Epic: Security
+Owner Role: Platform Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Dependency audit and secret scan run in CI; high severity findings fail builds",,P0,1d,security
+Task,OPS-001 Health + readiness endpoints Operations,"Ticket: OPS-001 Health + readiness endpoints
+Epic: Operations
+Owner Role: Backend Engineer
+Dependencies: PLAT-004
+
+Acceptance Criteria:
+Health and readiness endpoints validate DB, auth provider, and external AI provider reachability",,P1,1d,operations
+Task,ARCH-001 Module boundary contracts Architecture,"Ticket: ARCH-001 Module boundary contracts
+Epic: Architecture
+Owner Role: Tech Lead
+Dependencies: None
+
+Acceptance Criteria:
+Shared contracts define cross-module interfaces for crm, hrm, finance, and ops",,P1,2d,architecture
+Task,ARCH-002 API contract tests Architecture,"Ticket: ARCH-002 API contract tests
+Epic: Architecture
+Owner Role: Backend Engineer
+Dependencies: ARCH-001
+
+Acceptance Criteria:
+Schema compatibility tests run in CI and fail on breaking API changes",,P1,2d,architecture
+Task,ARCH-003 Feature flag framework Architecture,"Ticket: ARCH-003 Feature flag framework
+Epic: Architecture
+Owner Role: Fullstack Engineer
+Dependencies: ARCH-001
+
+Acceptance Criteria:
+Tenant or org level flags can enable or disable modules without redeploy",,P1,2.5d,architecture
+Task,DATA-001 Migration safety checks Data Platform,"Ticket: DATA-001 Migration safety checks
+Epic: Data Platform
+Owner Role: Backend Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Migration lint, pre-deploy checks, and rollback notes are required for schema changes",,P1,1.5d,data-platform
+Task,DX-001 Developer onboarding doc Developer Experience,"Ticket: DX-001 Developer onboarding doc
+Epic: Developer Experience
+Owner Role: Platform Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+New developer can boot app locally in under 30 minutes using documented steps",,P2,1d,developer-experience
+Task,UX-001 First-run onboarding flow User Activation,"Ticket: UX-001 First-run onboarding flow
+Epic: User Activation
+Owner Role: Product + Frontend Engineer
+Dependencies: ARCH-003
+
+Acceptance Criteria:
+Users can create org, import contacts, and create first pipeline with tracked completion events",,P1,3d,user-activation
+Task,UX-002 Role-based default dashboards User Activation,"Ticket: UX-002 Role-based default dashboards
+Epic: User Activation
+Owner Role: Frontend Engineer
+Dependencies: ARCH-003
+
+Acceptance Criteria:
+Sales, ops, finance, and admin roles each load tailored default dashboards",,P1,2.5d,user-activation
+Task,PERF-001 Route bundle budget and alerts Performance,"Ticket: PERF-001 Route bundle budget and alerts
+Epic: Performance
+Owner Role: Frontend Engineer
+Dependencies: PLAT-001
+
+Acceptance Criteria:
+Bundle size thresholds are defined and CI warns or fails on regression",,P1,1.5d,performance
+Task,PERF-002 Data loading polish Performance,"Ticket: PERF-002 Data loading polish
+Epic: Performance
+Owner Role: Frontend Engineer
+Dependencies: UX-002
+
+Acceptance Criteria:
+Top routes use prefetch and skeletons; measured perceived load time improves",,P1,2d,performance
+Task,ANL-001 Product analytics baseline Analytics,"Ticket: ANL-001 Product analytics baseline
+Epic: Analytics
+Owner Role: Product Analyst
+Dependencies: UX-001
+
+Acceptance Criteria:
+Event tracking captures signup, onboarding milestones, and module usage for weekly reporting",,P1,1.5d,analytics
