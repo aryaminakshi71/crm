@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 # Check if server is running
 check_server() {
     echo "Checking if dev server is running..."
-    if curl -s http://localhost:5173 > /dev/null 2>&1; then
+    if curl -s http://localhost:3001 > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Server is running${NC}"
         return 0
     else
@@ -58,32 +58,32 @@ main() {
     local failed=0
     
     # Public routes
-    test_url "http://localhost:5173/" "Landing Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/login" "Login Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/register" "Register Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/demo" "Demo Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/about" "About Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/contact" "Contact Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/docs" "Documentation Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/support" "Support Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries" "Industries Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/privacy" "Privacy Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/terms" "Terms Page" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/forgot-password" "Forgot Password Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/" "Landing Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/login" "Login Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/register" "Register Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/demo" "Demo Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/about" "About Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/contact" "Contact Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/docs" "Documentation Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/support" "Support Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries" "Industries Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/privacy" "Privacy Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/terms" "Terms Page" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/forgot-password" "Forgot Password Page" && ((passed++)) || ((failed++))
     
     echo ""
     echo "Testing Industry Pages..."
     echo "-------------------------"
     
     # Industry pages
-    test_url "http://localhost:5173/industries/real-estate" "Real Estate Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/education" "Education Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/healthcare" "Healthcare Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/legal" "Legal Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/retail" "Retail Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/technology" "Technology Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/consulting" "Consulting Industry" && ((passed++)) || ((failed++))
-    test_url "http://localhost:5173/industries/banking" "Banking Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/real-estate" "Real Estate Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/education" "Education Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/healthcare" "Healthcare Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/legal" "Legal Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/retail" "Retail Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/technology" "Technology Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/consulting" "Consulting Industry" && ((passed++)) || ((failed++))
+    test_url "http://localhost:3001/industries/banking" "Banking Industry" && ((passed++)) || ((failed++))
     
     echo ""
     echo "Summary"

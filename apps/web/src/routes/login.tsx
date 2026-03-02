@@ -7,23 +7,24 @@ import {
 } from "@tanstack/react-router";
 import { Lock, LogIn, Mail } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/login";
     return {
       meta: [
-        { title: "CRM Platform - Login" },
-        { name: "description", content: "Log in to CRM Platform." },
+        { title: "Nucleo One - Login" },
+        { name: "description", content: "Log in to Nucleo One." },
         { name: "robots", content: "noindex, nofollow" },
-        { property: "og:title", content: "CRM Platform - Login" },
-        { property: "og:description", content: "Log in to CRM Platform." },
+        { property: "og:title", content: "Nucleo One - Login" },
+        { property: "og:description", content: "Log in to Nucleo One." },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Login" },
-        { name: "twitter:description", content: "Log in to CRM Platform." },
+        { name: "twitter:title", content: "Nucleo One - Login" },
+        { name: "twitter:description", content: "Log in to Nucleo One." },
       ],
       links: [{ rel: "canonical", href: canonical }],
     };
@@ -37,7 +38,7 @@ function LoginPage() {
   const router = useRouter();
   const searchParams = new URLSearchParams(router.state.location.search);
   const redirect = searchParams.get("redirect") || undefined;
-  const [email, setEmail] = useState("demo@crm.com");
+  const [email, setEmail] = useState("demo@nucleo.one");
   const [password, setPassword] = useState("password");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -91,12 +92,39 @@ function LoginPage() {
     }
   };
 
+  const handleSocialLogin = async (provider: "google" | "github") => {
+    try {
+      await authClient.signIn.social({
+        provider,
+        callbackURL: `${window.location.origin}/app`,
+      });
+    } catch (err) {
+      console.error("Social login error:", err);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("demo_mode", "true");
+        localStorage.setItem("isDemo", "true");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            id: `crm-${provider}-demo`,
+            name: "Demo User",
+            email: "demo@nucleo.one",
+          }),
+        );
+      }
+      toast.success(
+        `${provider === "github" ? "GitHub" : "Google"} login unavailable. Continuing in demo mode.`,
+      );
+      navigate({ to: "/app" });
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div>
           <Link to="/" className="flex justify-center">
-            <h1 className="font-bold text-3xl text-primary">CRM Platform</h1>
+            <h1 className="font-bold text-3xl text-primary">Nucleo One</h1>
           </Link>
           <h2 className="mt-6 text-center font-extrabold text-3xl text-foreground">
             Sign in to your account
@@ -119,7 +147,7 @@ function LoginPage() {
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="flex items-center justify-between rounded border border-border bg-muted p-2">
               <span className="text-muted-foreground">Email</span>
-              <code className="font-mono text-primary">demo@crm.com</code>
+              <code className="font-mono text-primary">demo@nucleo.one</code>
             </div>
             <div className="flex items-center justify-between rounded border border-border bg-muted p-2">
               <span className="text-muted-foreground">Password</span>
@@ -226,8 +254,7 @@ function LoginPage() {
             <button
               type="button"
               className="inline-flex w-full justify-center rounded-lg border border-border bg-card px-4 py-2.5 font-medium text-muted-foreground text-sm shadow-sm hover:bg-muted"
-              onClick={() => authClient.signIn.social({ provider: "google" })}
-            // // onClick={() => authClient.signIn.social({ provider: "google" })}
+              onClick={() => void handleSocialLogin("google")}
             >
               <span className="sr-only">Sign in with Google</span>
               <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
@@ -241,8 +268,7 @@ function LoginPage() {
             <button
               type="button"
               className="inline-flex w-full justify-center rounded-lg border border-border bg-card px-4 py-2.5 font-medium text-muted-foreground text-sm shadow-sm hover:bg-muted"
-              onClick={() => authClient.signIn.social({ provider: "github" })}
-            // // onClick={() => authClient.signIn.social({ provider: "github" })}
+              onClick={() => void handleSocialLogin("github")}
             >
               <span className="sr-only">Sign in with GitHub</span>
               <svg

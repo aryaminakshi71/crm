@@ -1,7 +1,7 @@
 {
-  "name": "CRM Platform",
-  "short_name": "CRM Platform",
-  "description": "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+  "name": "Nucleo One",
+  "short_name": "Nucleo One",
+  "description": "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

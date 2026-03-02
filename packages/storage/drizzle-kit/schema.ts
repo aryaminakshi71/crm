@@ -8,3 +8,5 @@ export * from "../src/db/schema/auth.schema.ts";
 export * from "../src/db/schema/audit-logs.schema.ts";
 export * from "./schema-crm.ts";
 export * from "./schema-integrations.ts";
+export * from "./schema-module-flags.ts";
+export * from "./schema-nucleo-unified.ts";

@@ -1,5 +1,5 @@
 {
-  "appId": "crm",
+  "appId": "nucleo-one",
   "version": "1.0.0",
   "capabilities": [
     "crm.contacts.manage",

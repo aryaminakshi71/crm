@@ -14,6 +14,6 @@
   <circle cx="980" cy="150" r="220" fill="#e11d48" opacity="0.28" filter="url(#blur)" />
   <circle cx="250" cy="520" r="260" fill="#ffffff" opacity="0.10" filter="url(#blur)" />
 
-  <text x="80" y="290" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="88" font-weight="800" fill="#ffffff">CRM</text>
+  <text x="80" y="290" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="88" font-weight="800" fill="#ffffff">N1</text>
   <text x="80" y="360" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="38" font-weight="500" fill="#ffffff" opacity="0.92">Customer Relationship Management</text>
 </svg>

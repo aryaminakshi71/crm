@@ -1,7 +1,7 @@
 /**
  * Security Utilities
  *
- * Provides security helpers for the CRM API.
+ * Provides security helpers for the Nucleo One API.
  */
 
 /**

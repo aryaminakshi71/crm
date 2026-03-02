@@ -8,27 +8,52 @@ import {
 import { Lock, LogIn, Mail, User } from "lucide-react";
 import { useState } from "react";
 
+async function notifyWeavebridgeOfSignup(data: {
+  email: string;
+  name?: string;
+  sourceApp: string;
+}) {
+  try {
+    const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || "http://localhost:8787";
+    await fetch(`${webhookUrl}/api/webhooks/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: data.sourceApp,
+        type: "user.signup",
+        data: {
+          email: data.email,
+          name: data.name,
+          signedUpAt: new Date().toISOString(),
+        },
+      }),
+    });
+  } catch (e) {
+    console.error("Webhook notification failed:", e);
+  }
+}
+
 export const Route = createFileRoute("/register")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/register";
     return {
       meta: [
-        { title: "CRM Platform - Register" },
-        { name: "description", content: "Create your CRM Platform account." },
+        { title: "Nucleo One - Register" },
+        { name: "description", content: "Create your Nucleo One account." },
         { name: "robots", content: "noindex, nofollow" },
-        { property: "og:title", content: "CRM Platform - Register" },
+        { property: "og:title", content: "Nucleo One - Register" },
         {
           property: "og:description",
-          content: "Create your CRM Platform account.",
+          content: "Create your Nucleo One account.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Register" },
+        { name: "twitter:title", content: "Nucleo One - Register" },
         {
           name: "twitter:description",
-          content: "Create your CRM Platform account.",
+          content: "Create your Nucleo One account.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -74,6 +99,13 @@ function RegisterPage() {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("companyId");
 
+      // Notify Weavebridge of new signup
+      await notifyWeavebridgeOfSignup({
+        email,
+        name,
+        sourceApp: "crm",
+      });
+
       // Successful registration - redirect to dashboard or specified path
       const redirectPath = redirect || "/app";
       navigate({ to: redirectPath });
@@ -94,7 +126,7 @@ function RegisterPage() {
       <div className="w-full max-w-md space-y-8">
         <div>
           <Link to="/" className="flex justify-center">
-            <h1 className="font-bold text-3xl text-primary">CRM Platform</h1>
+            <h1 className="font-bold text-3xl text-primary">Nucleo One</h1>
           </Link>
           <h2 className="mt-6 text-center font-extrabold text-3xl text-foreground">
             Create your account

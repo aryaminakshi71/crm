@@ -55,7 +55,7 @@ test.describe("App Routes (Demo Mode)", () => {
     await page.addInitScript(() => {
       const demoUserData = {
         id: "demo-user",
-        email: "demo@crm.com",
+        email: "demo@nucleo.one",
         name: "Demo User",
         firstName: "Demo",
         lastName: "User",

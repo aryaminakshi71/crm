@@ -47,8 +47,10 @@ ${urlset}
  * Get public routes for CRM app
  */
 export function getCRMRoutes(): SitemapRoute[] {
-  return [
+  const staticRoutes: SitemapRoute[] = [
     { path: "/", changefreq: "daily", priority: 1.0 },
+    { path: "/pricing", changefreq: "weekly", priority: 0.9 },
+    { path: "/blog", changefreq: "weekly", priority: 0.9 },
     { path: "/about", changefreq: "monthly", priority: 0.7 },
     { path: "/contact", changefreq: "monthly", priority: 0.6 },
     { path: "/demo", changefreq: "weekly", priority: 0.8 },
@@ -60,4 +62,14 @@ export function getCRMRoutes(): SitemapRoute[] {
     { path: "/security", changefreq: "monthly", priority: 0.3 },
     { path: "/status", changefreq: "weekly", priority: 0.3 },
   ];
+
+  const blogRoutes: SitemapRoute[] = blogPosts.map((post) => ({
+    path: `/blog/${post.slug}`,
+    changefreq: "monthly",
+    priority: 0.75,
+    lastmod: post.publishedAt,
+  }));
+
+  return [...staticRoutes, ...blogRoutes];
 }
+import { blogPosts } from "./blog-content";

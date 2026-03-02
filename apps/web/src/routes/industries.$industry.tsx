@@ -205,7 +205,7 @@ function IndustryDetailPage() {
       <section className="bg-muted px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <h2 className="mb-8 text-center font-bold text-3xl text-foreground">
-            Why Choose CRM Platform?
+            Why Choose Nucleo One?
           </h2>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
             <div className="flex items-start gap-4">

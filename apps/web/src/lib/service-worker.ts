@@ -8,6 +8,13 @@ export function registerServiceWorker() {
     return;
   }
 
+  // Service workers break local dev/HMR if stale caches survive between ports.
+  // In development, force-unregister and clear CRM caches instead of registering.
+  if (import.meta.env.DEV) {
+    void unregisterServiceWorker({ clearCaches: true });
+    return;
+  }
+
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
@@ -35,14 +42,27 @@ export function registerServiceWorker() {
   });
 }
 
-export function unregisterServiceWorker() {
+export function unregisterServiceWorker({
+  clearCaches = false,
+}: {
+  clearCaches?: boolean;
+} = {}) {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
     return;
   }
 
-  navigator.serviceWorker.ready
-    .then((registration) => {
-      registration.unregister();
+  Promise.resolve()
+    .then(async () => {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+      if (clearCaches && "caches" in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter((name) => name.startsWith("crm-"))
+            .map((name) => caches.delete(name)),
+        );
+      }
       console.log("Service Worker unregistered");
     })
     .catch((error) => {

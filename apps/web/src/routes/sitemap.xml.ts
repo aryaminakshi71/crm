@@ -6,7 +6,7 @@ export const Route = createFileRoute("/sitemap/xml")({
     handlers: {
       GET: () => {
         const baseUrl =
-          import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+          import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
         const routes = getCRMRoutes();
         const sitemap = generateSitemap(routes, baseUrl);
 

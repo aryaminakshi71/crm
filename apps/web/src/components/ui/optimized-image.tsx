@@ -47,7 +47,11 @@ function getOptimizedImageUrl(
   const baseUrl = cdnUrl
     ? `${cdnUrl}${src.startsWith("/") ? "" : "/"}${src}`
     : src;
-  const url = new URL(baseUrl, window.location.origin);
+  const baseOrigin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
+  const url = new URL(baseUrl, baseOrigin);
 
   if (width) url.searchParams.set("w", width.toString());
   url.searchParams.set("q", quality.toString());

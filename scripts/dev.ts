@@ -54,5 +54,5 @@ webProcess.on("exit", (code) => {
 
 console.log("✅ Both servers starting...");
 console.log("   API: http://localhost:3001");
-console.log("   Web: http://localhost:5173");
+console.log("   Web: http://localhost:3001");
 console.log("\n   Press Ctrl+C to stop both servers\n");

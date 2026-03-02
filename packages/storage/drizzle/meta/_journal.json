@@ -8,6 +8,34 @@
       "when": 1770744539706,
       "tag": "0000_omniscient_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772407368282,
+      "tag": "0001_fixed_newton_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772414470005,
+      "tag": "0002_luxuriant_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772416566609,
+      "tag": "0003_superb_changeling",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772417828231,
+      "tag": "0004_real_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

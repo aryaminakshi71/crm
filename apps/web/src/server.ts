@@ -1,9 +1,11 @@
-// const handler = { fetch: async () => new Response("Mock Handler Works (Node)") };
+/// <reference types="@cloudflare/workers-types" />
+
 import { api } from "@crm/api/app";
-import type { Env } from "@crm/env/cloudflare";
 import { honoIntegration, withSentry } from "@sentry/cloudflare";
 import handler from "@tanstack/react-start/server-entry";
 import type { getRouter } from "./router";
+
+type Env = Record<string, unknown>;
 
 export interface CloudflareRequestContext {
   cloudflare: {
@@ -23,7 +25,7 @@ declare module "@tanstack/react-start" {
 }
 
 export default withSentry(
-  (env: Env) => {
+  (env: Env = {}) => {
     const safeEnv = env || process.env || {};
     return {
       dsn: (safeEnv as any).SENTRY_DSN || (safeEnv as any).VITE_PUBLIC_SENTRY_DSN,
@@ -37,22 +39,22 @@ export default withSentry(
   {
     async fetch(
       request: Request,
-      env: Env,
+      env: Env | undefined,
       ctx: ExecutionContext,
     ): Promise<Response> {
-      const safeEnv = env || process.env || {};
+      const safeEnv = env ?? {};
       (process as any).env = { ...process.env, ...safeEnv };
 
       const url = new URL(request.url);
 
       // Handle API routes - integrated API
       if (url.pathname.startsWith("/api")) {
-        return api.fetch(request, env as any, ctx);
+        return api.fetch(request, safeEnv as any, ctx);
       }
 
       return handler.fetch(request, {
         context: {
-          cloudflare: { env, ctx },
+          cloudflare: { env: safeEnv, ctx },
         },
       } as Parameters<typeof handler.fetch>[1]);
     },

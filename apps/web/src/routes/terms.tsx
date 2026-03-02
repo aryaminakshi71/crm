@@ -5,30 +5,30 @@ import { AlertCircle, FileText, Scale } from "lucide-react";
 export const Route = createFileRoute("/terms")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/terms";
     return {
       meta: [
-        { title: "CRM Platform - Terms" },
+        { title: "Nucleo One - Terms" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "CRM Platform - Terms" },
+        { property: "og:title", content: "Nucleo One - Terms" },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Terms" },
+        { name: "twitter:title", content: "Nucleo One - Terms" },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -72,7 +72,7 @@ function TermsPage() {
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
-                  By accessing or using CRM Platform ("the Service"), you agree
+                  By accessing or using Nucleo One ("the Service"), you agree
                   to be bound by these Terms of Service ("Terms"). If you
                   disagree with any part of these terms, you may not access the
                   Service.
@@ -92,7 +92,7 @@ function TermsPage() {
               <div className="space-y-3 text-foreground">
                 <p>
                   Permission is granted to temporarily access the materials on
-                  CRM Platform for personal or commercial transitory viewing
+                  Nucleo One for personal or commercial transitory viewing
                   only. This is the grant of a license, not a transfer of title,
                   and under this license you may not:
                 </p>
@@ -356,7 +356,7 @@ function TermsPage() {
                   us:
                 </p>
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="font-semibold">CRM Platform Legal Team</p>
+                  <p className="font-semibold">Nucleo One Legal Team</p>
                   <p>
                     Email:{" "}
                     <a

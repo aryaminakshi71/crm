@@ -21,30 +21,30 @@ import {
 export const Route = createFileRoute("/docs")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/docs";
     return {
       meta: [
-        { title: "CRM Platform - Docs" },
+        { title: "Nucleo One - Docs" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "CRM Platform - Docs" },
+        { property: "og:title", content: "Nucleo One - Docs" },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Docs" },
+        { name: "twitter:title", content: "Nucleo One - Docs" },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -60,7 +60,7 @@ const docCategories = [
     title: "Getting Started",
     description: "Quick start guides and setup instructions",
     articles: [
-      "Introduction to CRM Platform",
+      "Introduction to Nucleo One",
       "Creating Your First Account",
       "Setting Up Your Organization",
       "Inviting Team Members",
@@ -138,7 +138,7 @@ function DocsPage() {
             Documentation
           </h1>
           <p className="mb-8 text-muted-foreground text-xl">
-            Everything you need to know about using CRM Platform effectively.
+            Everything you need to know about using Nucleo One effectively.
           </p>
           <div className="relative mx-auto max-w-xl">
             <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 transform text-muted-foreground" />

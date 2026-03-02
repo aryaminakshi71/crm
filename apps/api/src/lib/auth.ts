@@ -20,7 +20,7 @@ export function createAuth(connectionString: string) {
       provider: "pg",
       schema: schema,
     }),
-    baseURL: env.VITE_PUBLIC_SITE_URL || "http://localhost:5173",
+    baseURL: env.VITE_PUBLIC_SITE_URL || "http://localhost:3001",
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET || "change-me-in-production-min-32-chars",
     emailAndPassword: {

@@ -89,42 +89,41 @@ const pricingPlans = [
 export const Route = createFileRoute("/")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     return {
       meta: [
-        { title: "CRM Platform - Customer Relationship Management System" },
+        { title: "Nucleo One - Customer Relationship Management System" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
         {
           property: "og:title",
-          content: "CRM Platform - Customer Relationship Management System",
+          content: "Nucleo One - Customer Relationship Management System",
         },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
         {
           name: "twitter:title",
-          content: "CRM Platform - Customer Relationship Management System",
+          content: "Nucleo One - Customer Relationship Management System",
         },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
     };
   },
-
   component: LandingPage,
 });
 
@@ -159,8 +158,8 @@ function LandingPage() {
               const Icon = feature.icon;
               // Map features to their corresponding app routes
               const featureRoutes: Record<string, string> = {
-                "Deal Pipeline": "/app/deals",
-                "Contact Management": "/app/contacts",
+                "Deal Pipeline": "/app/crm",
+                "Contact Management": "/app/crm",
                 "Email Campaigns": "/app/marketing",
                 "Sales Analytics": "/app",
                 "Relationship Tracking": "/app/activities",
@@ -251,7 +250,7 @@ function LandingPage() {
             Ready to Get Started?
           </h2>
           <p className="mb-8 text-primary text-xl">
-            Join thousands of teams using our CRM platform
+            Join thousands of teams using our Nucleo One platform
           </p>
           <Link
             to="/register"
@@ -329,7 +328,7 @@ function LandingPage() {
             </div>
           </div>
           <div className="mt-8 border-border border-t pt-8 text-center">
-            <p>&copy; 2024 CRM Platform. All rights reserved.</p>
+            <p>&copy; 2024 Nucleo One. All rights reserved.</p>
           </div>
         </div>
       </footer>

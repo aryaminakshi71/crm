@@ -37,7 +37,7 @@ function ForgotPasswordPage() {
             to="/"
             className="mb-4 inline-block font-bold text-2xl text-primary"
           >
-            CRM Platform
+            Nucleo One
           </Link>
         </div>
 

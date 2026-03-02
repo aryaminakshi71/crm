@@ -18,7 +18,7 @@
     "build": "tsc"
   },
   "devDependencies": {
-    "@crm/tsconfig": "workspace:*",
+    "@crm/tsconfig": "file:../tsconfig",
     "typescript": "^5.9.3"
   }
 }

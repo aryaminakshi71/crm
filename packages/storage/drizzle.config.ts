@@ -7,6 +7,6 @@ export default defineConfig({
   dbCredentials: {
     url:
       process.env.DATABASE_URL ||
-      "postgresql://postgres:postgres@localhost:5432/crm_db",
+      `postgresql://${process.env.PGUSER || process.env.USER || "postgres"}@localhost:5432/crm_db`,
   },
 });

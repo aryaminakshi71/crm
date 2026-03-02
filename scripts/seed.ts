@@ -1,10 +1,3 @@
-/**
- * Database Seed Script
- *
- * Creates demo user and sample CRM data for testing.
- * Run with: bun run scripts/seed.ts
- */
-
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
@@ -12,21 +5,16 @@ import * as schema from "../packages/storage/src/db/schema";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/crm_db";
+  "postgresql://aryaminakshi:postgres@localhost:5432/crm_db";
 
 // Demo user details
-const DEMO_EMAIL = "demo@crm.com";
+const DEMO_EMAIL = "demo@nucleo.one";
 const DEMO_PASSWORD = "password";
 const DEMO_ORG_NAME = "Demo Organization";
 
 async function hashPassword(password: string): Promise<string> {
-  // Better Auth uses bcrypt-style hashing, but for demo we'll use a simple hash
-  // In production, Better Auth handles this automatically
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "better-auth-salt");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const bcrypt = await import("bcryptjs");
+  return await bcrypt.default.hash(password, 10);
 }
 
 async function seed() {

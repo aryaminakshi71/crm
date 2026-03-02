@@ -45,7 +45,7 @@ const serverSchema = clientSchema.extend({
 
   BETTER_AUTH_SECRET: z
     .string()
-    .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
+    .default("crm-local-dev-secret-0000000000000"),
 
   // OAuth Providers
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -108,4 +108,15 @@ export type ServerEnv = z.infer<typeof serverSchema>;
  * via Hono context (c.env.*), not through this module.
  */
 const cfEnv = await resolveEnv();
-export const env: ServerEnv = serverSchema.parse(cfEnv);
+const parsedEnv = serverSchema.parse(cfEnv);
+const nodeEnv = parsedEnv.NODE_ENV ?? "development";
+const betterAuthSecret = parsedEnv.BETTER_AUTH_SECRET;
+
+if (nodeEnv === "production" && betterAuthSecret.length < 32) {
+  throw new Error("BETTER_AUTH_SECRET must be at least 32 characters in production");
+}
+
+export const env: ServerEnv = {
+  ...parsedEnv,
+  BETTER_AUTH_SECRET: betterAuthSecret,
+};

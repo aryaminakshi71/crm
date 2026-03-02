@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "crm",
+  "main": "./src/server.ts",
+  "compatibility_date": "2025-01-10",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
+  "assets": {
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NODE_ENV": "development",
+    "VITE_PUBLIC_SITE_URL": "http://localhost:3001",
+    "GITHUB_CLIENT_ID": "Ov23liCtXOp6LOtNcm6U",
+    "GITHUB_CLIENT_SECRET": "2ab2a7100dbf5910da2c406ca52288d378b57f2c"
+  },
+  "routes": [
+    {
+      "pattern": "crm.aryaminakshi.workers.dev",
+      "zone_name": "aryaminakshi.workers.dev"
+    }
+  ],
+  "hyperdrive": [
+    {
+      "binding": "DATABASE",
+      "id": "placeholder-create-hyperdrive-first",
+      "localConnectionString": "postgresql://aryaminakshi:postgres@localhost:5432/crm_db"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "placeholder-kv-id"
+    }
+  ],
+  "upstash_redis": [
+    {
+      "binding": "REDIS",
+      "rest_api_url": "https://placeholder.upstash.io",
+      "rest_api_token": "placeholder-token"
+    }
+  ],
+  "dev": {
+    "port": 3001
+  }
+}

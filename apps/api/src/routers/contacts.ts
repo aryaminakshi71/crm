@@ -5,7 +5,7 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { trackQuery } from "../lib/db-performance";
@@ -28,6 +28,7 @@ export const contactsRouter = {
       z.object({
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(200).default(50),
+        search: z.string().optional(),
       }),
     )
     .output(
@@ -43,57 +44,59 @@ export const contactsRouter = {
       async ({
         context,
         input,
-      }: { context: OrgContext; input: { page: number; limit: number } }) => {
+      }: {
+        context: OrgContext;
+        input: { page: number; limit: number; search?: string };
+      }) => {
         const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
+        const search = input.search?.trim();
+        const whereConditions = search
+          ? and(
+              eq(contacts.organizationId, context.organization.id),
+              or(
+                ilike(contacts.firstName, `%${search}%`),
+                ilike(contacts.lastName, `%${search}%`),
+                ilike(contacts.email, `%${search}%`),
+                ilike(contacts.companyName, `%${search}%`),
+              ),
+            )
+          : eq(contacts.organizationId, context.organization.id);
 
         // Cache key for list queries
-        const cacheKey = `contacts:list:${context.organization.id}:${input.page}:${input.limit}`;
+        const cacheKey = `contacts:list:${context.organization.id}:${input.page}:${input.limit}:${search || "all"}`;
 
         // Use cache for list queries (5 min TTL)
-        return getOrCache(
+        return getOrCache<{
+          data: any[];
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        }>(
           cacheKey,
           async () => {
             // Get total count
-            try {
-              console.log(
-                "Fetching contacts for organization:",
-                context.organization.id,
-              );
-              const allContacts = await trackQuery("listContactsCount", () =>
-                db
-                  .select()
-                  .from(contacts)
-                  .where(eq(contacts.organizationId, context.organization.id)),
-              );
-              const total = allContacts.length;
-
-              console.log("Contacts count:", total);
-
-              return {
-                data: [], // Temporarily removing data fetch to isolate the issue
-                total,
-                page: input.page,
-                limit: input.limit,
-                totalPages: Math.ceil(total / input.limit),
-              };
-            } catch (err) {
-              console.error("Error fetching contacts:", err);
-              throw err;
-            }
+            const allContacts = (await trackQuery("listContactsCount", () =>
+              db
+                .select()
+                .from(contacts)
+                .where(whereConditions),
+            )) as any[];
+            const total = allContacts.length;
 
             // Get paginated results
-            const paginatedContacts = await trackQuery(
+            const paginatedContacts = (await trackQuery(
               "listContactsPaginated",
               () =>
                 db
                   .select()
                   .from(contacts)
-                  .where(eq(contacts.organizationId, context.organization.id))
+                  .where(whereConditions)
                   .orderBy(desc(contacts.createdAt))
                   .limit(input.limit)
                   .offset(offset),
-            );
+            )) as any[];
 
             return {
               data: paginatedContacts,
@@ -135,7 +138,12 @@ export const contactsRouter = {
               const [result] = await db
                 .select()
                 .from(contacts)
-                .where(eq(contacts.id, input.id))
+                .where(
+                  and(
+                    eq(contacts.id, input.id),
+                    eq(contacts.organizationId, context.organization.id),
+                  ),
+                )
                 .limit(1);
 
               if (!result) {
@@ -147,6 +155,74 @@ export const contactsRouter = {
             3600, // 1 hour
           );
         });
+
+        return contact;
+      },
+    ),
+
+  /**
+   * Update a contact
+   */
+  update: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/contacts/:id",
+      summary: "Update contact",
+      tags: ["Contacts"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        firstName: z.string().min(1).max(100).optional(),
+        lastName: z.string().min(1).max(100).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        companyName: z.string().max(255).optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: {
+          id: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          phone?: string;
+          companyName?: string;
+        };
+      }) => {
+        const db = getDb(context);
+        const [contact] = (await trackQuery("updateContact", () =>
+          db
+            .update(contacts)
+            .set({
+              ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+              ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+              ...(input.email !== undefined ? { email: input.email.toLowerCase() } : {}),
+              ...(input.phone !== undefined ? { phone: input.phone } : {}),
+              ...(input.companyName !== undefined ? { companyName: input.companyName } : {}),
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(contacts.id, input.id),
+                eq(contacts.organizationId, context.organization.id),
+              ),
+            )
+            .returning(),
+        )) as any[];
+
+        if (!contact) {
+          throw new Error("Contact not found");
+        }
+
+        await invalidateCache(`contact:${input.id}`);
+        await invalidateCache(`contacts:list:${context.organization.id}`);
 
         return contact;
       },
@@ -187,7 +263,7 @@ export const contactsRouter = {
         };
       }) => {
         const db = getDb(context);
-        const [contact] = await trackQuery("createContact", () =>
+        const created = (await trackQuery("createContact", () =>
           db
             .insert(contacts)
             .values({
@@ -200,7 +276,8 @@ export const contactsRouter = {
               createdBy: context.user.id,
             })
             .returning(),
-        );
+        )) as any[];
+        const [contact] = created;
 
         // Invalidate contacts list cache
         await invalidateCache(`contacts:list:${context.organization.id}`);
@@ -228,7 +305,14 @@ export const contactsRouter = {
       }: { context: OrgContext; input: { id: string } }) => {
         const db = getDb(context);
         await trackQuery("deleteContact", () =>
-          db.delete(contacts).where(eq(contacts.id, input.id)),
+          db
+            .delete(contacts)
+            .where(
+              and(
+                eq(contacts.id, input.id),
+                eq(contacts.organizationId, context.organization.id),
+              ),
+            ),
         );
 
         // Invalidate caches

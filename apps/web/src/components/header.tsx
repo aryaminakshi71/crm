@@ -11,7 +11,7 @@ export function Header({ showTryDemo = true }: HeaderProps) {
   const handleTryDemo = () => {
     const demoUserData = {
       id: "demo-user-" + Date.now(),
-      email: "demo@crm.com",
+      email: "demo@nucleo.one",
       name: "Demo User",
       firstName: "Demo",
       lastName: "User",
@@ -33,8 +33,19 @@ export function Header({ showTryDemo = true }: HeaderProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link to="/" className="font-bold text-2xl text-primary">
-            CRM Platform
+            Nucleo One
           </Link>
+          <div className="hidden items-center gap-4 md:flex">
+            <Link to="/pricing" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+              Pricing
+            </Link>
+            <Link to="/blog" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+              Blog
+            </Link>
+            <Link to="/docs" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+              Docs
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <Link
               to="/login"

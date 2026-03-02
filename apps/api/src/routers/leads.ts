@@ -4,7 +4,7 @@
  * Lead management operations.
  */
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
@@ -27,6 +27,7 @@ export const leadsRouter = {
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(200).default(50),
         status: z.string().optional(),
+        search: z.string().optional(),
       }),
     )
     .output(
@@ -44,18 +45,29 @@ export const leadsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { page: number; limit: number; status?: string };
+        input: { page: number; limit: number; status?: string; search?: string };
       }) => {
         const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
+        const search = input.search?.trim();
 
         // Build where conditions
-        const whereConditions = input.status
-          ? and(
-              eq(leads.organizationId, context.organization.id),
-              eq(leads.status, input.status),
-            )
-          : eq(leads.organizationId, context.organization.id);
+        const conditions = [eq(leads.organizationId, context.organization.id)];
+        if (input.status) {
+          conditions.push(eq(leads.status, input.status));
+        }
+        if (search) {
+          conditions.push(
+            or(
+              ilike(leads.email, `%${search}%`),
+              ilike(leads.firstName, `%${search}%`),
+              ilike(leads.lastName, `%${search}%`),
+              ilike(leads.companyName, `%${search}%`),
+              ilike(leads.notes, `%${search}%`),
+            )!,
+          );
+        }
+        const whereConditions = conditions.length > 1 ? and(...conditions) : conditions[0];
 
         // Get total count
         const allLeads = await db.select().from(leads).where(whereConditions);
@@ -79,6 +91,38 @@ export const leadsRouter = {
         };
       },
     ),
+
+  /**
+   * Get a lead
+   */
+  get: orgAuthed
+    .route({
+      method: "GET",
+      path: "/leads/:id",
+      summary: "Get lead",
+      tags: ["Leads"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+      const db = getDb(context);
+      const [lead] = await db
+        .select()
+        .from(leads)
+        .where(
+          and(
+            eq(leads.id, input.id),
+            eq(leads.organizationId, context.organization.id),
+          ),
+        )
+        .limit(1);
+
+      if (!lead) {
+        throw new Error("Lead not found");
+      }
+
+      return lead;
+    }),
 
   /**
    * Create a new lead
@@ -148,6 +192,70 @@ export const leadsRouter = {
     ),
 
   /**
+   * Update a lead
+   */
+  update: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/leads/:id",
+      summary: "Update lead",
+      tags: ["Leads"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        email: z.string().email().optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        companyName: z.string().optional(),
+        phone: z.string().optional(),
+        source: z
+          .enum([
+            "website",
+            "referral",
+            "cold_outreach",
+            "social_media",
+            "event",
+            "advertising",
+            "other",
+          ])
+          .optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }: { context: OrgContext; input: any }) => {
+      const db = getDb(context);
+      const [lead] = await db
+        .update(leads)
+        .set({
+          ...(input.email !== undefined ? { email: input.email.toLowerCase() } : {}),
+          ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+          ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+          ...(input.companyName !== undefined ? { companyName: input.companyName } : {}),
+          ...(input.phone !== undefined ? { phone: input.phone } : {}),
+          ...(input.source !== undefined ? { source: input.source } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.id, input.id),
+            eq(leads.organizationId, context.organization.id),
+          ),
+        )
+        .returning();
+
+      if (!lead) {
+        throw new Error("Lead not found");
+      }
+
+      return lead;
+    }),
+
+  /**
    * Convert a lead to a contact
    */
   convert: orgAuthed
@@ -214,10 +322,35 @@ export const leadsRouter = {
         // Update lead status
         await db
           .update(leads)
-          .set({ status: "converted" })
+          .set({ status: "converted", updatedAt: new Date() })
           .where(eq(leads.id, input.id));
 
         return contact;
       },
     ),
+
+  /**
+   * Delete a lead
+   */
+  delete: orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/leads/:id",
+      summary: "Delete lead",
+      tags: ["Leads"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.object({ success: z.boolean() }))
+    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+      const db = getDb(context);
+      await db
+        .delete(leads)
+        .where(
+          and(
+            eq(leads.id, input.id),
+            eq(leads.organizationId, context.organization.id),
+          ),
+        );
+      return { success: true };
+    }),
 };

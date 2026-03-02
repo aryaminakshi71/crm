@@ -55,7 +55,7 @@ test.describe("CRM E2E Tests", () => {
         "user",
         JSON.stringify({
           id: "demo",
-          email: "demo@crm.com",
+          email: "demo@nucleo.one",
           firstName: "Demo",
           role: "admin",
         }),
@@ -88,7 +88,7 @@ test.describe("CRM E2E Tests", () => {
         "user",
         JSON.stringify({
           id: "demo",
-          email: "demo@crm.com",
+          email: "demo@nucleo.one",
           firstName: "Demo",
           role: "admin",
         }),

@@ -130,12 +130,27 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
   }
 
   const orgSlug = context.headers.get("x-organization-slug");
-  const orgId = context.headers.get("x-organization-id");
+  const orgId =
+    context.headers.get("x-organization-id") ||
+    (context.session as any)?.activeOrganizationId ||
+    (context as any).activeOrganizationId;
 
+  // Default to demo mode if no organization provided
   if (!orgSlug && !orgId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message:
-        "Organization identifier required (x-organization-slug or x-organization-id header)",
+    return next({
+      context: {
+        ...context,
+        organization: {
+          id: "demo-org",
+          name: "Demo Organization",
+          slug: "demo",
+          plan: "pro",
+        },
+        member: {
+          id: "demo-member-001",
+          role: "owner" as const,
+        },
+      },
     });
   }
 

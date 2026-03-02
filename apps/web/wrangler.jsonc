@@ -7,21 +7,18 @@
     "nodejs_compat",
     "nodejs_compat_populate_process_env"
   ],
-  // Hyperdrive for PostgreSQL
   "hyperdrive": [
     {
       "binding": "DATABASE",
       "id": "placeholder-create-hyperdrive-first"
     }
   ],
-  // R2 bucket for assets
   "r2_buckets": [
     {
       "binding": "BUCKET",
       "bucket_name": "crm-assets-production"
     }
   ],
-  // KV namespace for caching
   "kv_namespaces": [
     {
       "binding": "CACHE",
@@ -30,7 +27,7 @@
   ],
   "vars": {
     "NODE_ENV": "development",
-    "VITE_PUBLIC_SITE_URL": "http://localhost:3200"
+    "VITE_PUBLIC_SITE_URL": "http://localhost:3001"
   },
   "observability": {
     "enabled": true,
@@ -39,6 +36,6 @@
     }
   },
   "dev": {
-    "port": 3200
+    "port": 3001
   }
 }

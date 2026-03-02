@@ -169,7 +169,7 @@ test.describe("CRM E2E Tests", () => {
         return;
       }
 
-      await emailInput.fill("demo@crm.com");
+      await emailInput.fill("demo@nucleo.one");
       await passwordInput.fill("demo123");
 
       const signInButton = page

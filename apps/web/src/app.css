@@ -1,3 +1,4 @@
+@import "./platform-ui.css";
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -40,7 +41,7 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 240 85% 60%;
+  --primary: 217 91% 60%; /* Royal Blue - CRM */
   --primary-foreground: 210 40% 98%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
@@ -69,7 +70,7 @@
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 240 85% 60%;
+  --primary: 217 91% 60%; /* Royal Blue - CRM */
   --primary-foreground: 222.2 47.4% 11.2%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
@@ -98,3 +99,41 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* platform-theme:start */
+:root {
+  color-scheme: dark;
+  /* Required semantic tokens */
+  --background: 222 47% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 8%;
+  --popover-foreground: 210 40% 98%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 20% 65%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --primary: 192 95% 48%;
+  --primary-foreground: 222 47% 8%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 142 70% 45%;
+  --warning: 38 92% 50%;
+
+  /* Optional compatibility tokens */
+  --bg-1: #020617;
+  --bg-2: #0f172a;
+  --panel: #111827;
+  --line: #334155;
+  --ink: #e2e8f0;
+  --ink-muted: #94a3b8;
+}
+
+html,
+body,
+#root {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+/* platform-theme:end */

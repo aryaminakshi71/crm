@@ -93,9 +93,9 @@ export function generateBreadcrumbSchema(data: BreadcrumbSchema): object {
  */
 export function getCRMOrganizationSchema(): OrganizationSchema {
   return {
-    name: "CRM Platform",
-    url: import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000",
+    name: "Nucleo One",
+    url: import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001",
     description:
-      "Modern CRM platform for managing customer relationships, sales pipelines, and business operations.",
+      "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations.",
   };
 }

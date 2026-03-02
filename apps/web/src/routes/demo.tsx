@@ -4,30 +4,30 @@ import { ArrowRight, Check } from "lucide-react";
 export const Route = createFileRoute("/demo")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/demo";
     return {
       meta: [
-        { title: "CRM Platform - Demo" },
+        { title: "Nucleo One - Demo" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "CRM Platform - Demo" },
+        { property: "og:title", content: "Nucleo One - Demo" },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Demo" },
+        { name: "twitter:title", content: "Nucleo One - Demo" },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -43,7 +43,7 @@ function DemoPage() {
   const handleStartDemo = () => {
     const demoUserData = {
       id: "demo-user-" + Date.now(),
-      email: "demo@crm.com",
+      email: "demo@nucleo.one",
       name: "Demo User",
       firstName: "Demo",
       lastName: "User",
@@ -74,7 +74,7 @@ function DemoPage() {
         <div className="rounded-2xl bg-card p-8 shadow-xl md:p-12">
           <div className="mb-8 text-center">
             <h1 className="mb-4 font-bold text-4xl text-foreground">
-              Try CRM Platform Demo
+              Try Nucleo One Demo
             </h1>
             <p className="text-muted-foreground text-xl">
               Experience the full power of our platform with sample data

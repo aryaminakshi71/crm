@@ -5,30 +5,30 @@ import { Heart, Target, Zap } from "lucide-react";
 export const Route = createFileRoute("/about")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/about";
     return {
       meta: [
-        { title: "CRM Platform - About" },
+        { title: "Nucleo One - About" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "CRM Platform - About" },
+        { property: "og:title", content: "Nucleo One - About" },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - About" },
+        { name: "twitter:title", content: "Nucleo One - About" },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -47,7 +47,7 @@ function AboutPage() {
       <section className="bg-gradient-to-b from-primary/5 to-background px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="mb-6 font-bold text-5xl text-foreground">
-            About CRM Platform
+            About Nucleo One
           </h1>
           <p className="mb-8 text-muted-foreground text-xl">
             We're on a mission to help businesses build stronger customer
@@ -63,7 +63,7 @@ function AboutPage() {
           <h2 className="mb-6 font-bold text-3xl text-foreground">Our Story</h2>
           <div className="space-y-4 text-muted-foreground leading-relaxed">
             <p>
-              Founded in 2024, CRM Platform was born from a simple observation:
+              Founded in 2024, Nucleo One was born from a simple observation:
               most CRM systems are either too complex for small teams or too
               basic for growing businesses. We set out to create a solution that
               bridges this gap—powerful enough for enterprise needs, yet

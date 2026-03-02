@@ -17,7 +17,7 @@ export const clientSchema = z.object({
     .string()
     .url()
     .optional()
-    .default("http://localhost:5173"),
+    .default("http://localhost:3001"),
   VITE_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().startsWith("pk_").optional(),
   // PostHog Analytics
   VITE_PUBLIC_POSTHOG_KEY: z.string().startsWith("phc_").optional(),

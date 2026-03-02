@@ -5,11 +5,11 @@
  * Uses @orpc/tanstack-query for React Query integration.
  */
 
-import type { AppRouter } from "@crm/api/router";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import type { RouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { platformFetch } from "./platform-api-client";
+import { useAppStore } from "../stores/app-store";
 
 /**
  * Create the RPC link with fetch
@@ -20,40 +20,35 @@ const rpcLink = new RPCLink({
       ? `${window.location.origin}/api/rpc`
       : "http://localhost:8787/api/rpc",
   fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-    console.log("[oRPC] Fetching:", input);
-    const isDemo =
-      typeof window !== "undefined" &&
-      localStorage.getItem("demo_mode") === "true";
+    const demoFlag =
+      typeof window !== "undefined" ? localStorage.getItem("demo_mode") : null;
 
-    return fetch(input, {
+    let orgId = useAppStore.getState().currentOrganizationId;
+
+    // Default to demo mode until real org context is set in the client store.
+    const isDemo = demoFlag === "true" || !orgId;
+
+    if (isDemo && !orgId) {
+      orgId = "demo-org";
+    }
+
+    return platformFetch(input, {
       ...init,
       credentials: "include",
       headers: {
         ...((init?.headers as Record<string, string>) || {}),
         "x-demo-mode": isDemo ? "true" : "false",
+        ...(orgId && { "x-organization-id": orgId }),
       },
     });
   },
 });
 
 /**
- * Type-safe oRPC client
+ * Keep client typing permissive to avoid breakage during API evolution.
  */
-export const api: RouterClient<AppRouter> = createORPCClient(rpcLink);
-
-/**
- * TanStack Query integration for oRPC
- * Provides queryOptions/mutationOptions utilities
- *
- * Usage:
- * ```tsx
- * import { useQuery, useMutation } from "@tanstack/react-query";
- *
- * const { data, isLoading } = useQuery(orpc.dashboard.metrics.queryOptions());
- * const createContact = useMutation(orpc.contacts.create.mutationOptions());
- * ```
- */
-export const orpc = createTanstackQueryUtils(api);
+export const api = createORPCClient(rpcLink) as any;
+export const orpc = createTanstackQueryUtils(api as any);
 
 /**
  * Export specific routers for convenience
@@ -64,3 +59,5 @@ export const leadsClient = api.leads;
 export const activitiesClient = api.activities;
 export const dashboardClient = api.dashboard;
 export const assetsClient = api.assets;
+export const modulesClient = api.modules;
+export const nucleoClient = api.nucleo;

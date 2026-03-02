@@ -62,11 +62,13 @@ export function trapFocus(containerElement: HTMLElement | null): () => void {
   ) as HTMLElement[];
 
   const firstFocusable = focusableElements[0];
-  const lastFocusable = focusableElements[focusableElements.length - 1];
 
   if (!firstFocusable) {
     return () => {};
   }
+
+  const lastFocusable =
+    focusableElements[focusableElements.length - 1] ?? firstFocusable;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Tab") {
@@ -132,6 +134,6 @@ export function addSkipLink(
       skipLink.style.width = "1px";
       skipLink.style.height = "1px";
     };
-    document.body.prepend(skipLink);
+    document.body.appendChild(skipLink);
   }
 }

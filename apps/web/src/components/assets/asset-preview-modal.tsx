@@ -1,20 +1,9 @@
-import {
-  Badge,
-  Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@crm/ui";
-import { motion } from "framer-motion";
-import { Copy, Download, Sparkles } from "lucide-react";
-import { toast } from "sonner";
-
 interface Asset {
   id: string;
   name: string;
   url: string;
   type: string;
+  mimeType?: string;
   size: number;
   tags: string[];
   createdAt: string;
@@ -26,6 +15,7 @@ interface AssetPreviewModalProps {
   onClose: () => void;
   onGenerateTags?: (id: string) => void;
   isGeneratingTags?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 export function AssetPreviewModal({
@@ -34,146 +24,153 @@ export function AssetPreviewModal({
   onClose,
   onGenerateTags,
   isGeneratingTags,
+  onDelete,
 }: AssetPreviewModalProps) {
-  if (!asset) return null;
+  if (!asset || !isOpen) return null;
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(asset.url);
-    toast.success("Asset URL copied to clipboard");
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this asset?")) {
+      onDelete?.(asset.id);
+      onClose();
+    }
   };
 
-  const isImage = asset.type.startsWith("image/");
+  const isImage = (asset.type?.startsWith("image/") || asset.mimeType?.startsWith("image/")) && asset.url;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-4xl overflow-hidden border-border/20 bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="flex h-[600px] flex-col md:flex-row">
-          {/* Preview Area */}
-          <div className="group relative flex flex-1 items-center justify-center bg-foreground p-8">
-            <div className="absolute top-4 right-4 opacity-0 transition-opacity group-hover:opacity-100">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => window.open(asset.url, "_blank")}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        maxWidth: '900px',
+        width: '90%',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{asset.name}</h2>
+          <button
+            onClick={onClose}
+            style={{ fontSize: '24px', border: 'none', background: 'none', cursor: 'pointer' }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ display: 'flex', flex: 1, minHeight: '400px' }}>
+          {/* Preview */}
+          <div style={{
+            flex: 1,
+            backgroundColor: '#1a1a1a',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}>
             {isImage ? (
-              <motion.img
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+              <img
                 src={asset.url}
                 alt={asset.name}
-                className="max-h-full max-w-full rounded-md object-contain shadow-lg"
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
               />
             ) : (
-              <div className="text-center text-background">
-                <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-xl bg-card/10">
-                  <span className="font-bold text-4xl text-background/50">
-                    {asset.type.split("/")[1]?.toUpperCase() || "FILE"}
-                  </span>
+              <div style={{ color: 'white', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '10px' }}>
+                  {asset.type.split('/')[1]?.toUpperCase() || 'FILE'}
                 </div>
-                <p className="font-medium text-lg">{asset.name}</p>
-                <p className="text-muted-foreground text-sm">
-                  {(asset.size / 1024).toFixed(2)} KB
-                </p>
+                <p>{asset.name}</p>
               </div>
             )}
           </div>
 
-          {/* Details Sidebar */}
-          <div className="flex w-full flex-col border-border border-l bg-card p-6 md:w-80">
-            <DialogHeader className="mb-6">
-              <DialogTitle
-                className="truncate pr-8 font-bold text-xl"
-                title={asset.name}
-              >
-                {asset.name}
-              </DialogTitle>
-              <p className="mt-1 text-muted-foreground text-sm">
-                Added {new Date(asset.createdAt).toLocaleDateString()}
+          {/* Sidebar */}
+          <div style={{ width: '280px', padding: '20px', borderLeft: '1px solid #e5e7eb' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <p style={{ color: '#6b7280', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                Type
               </p>
-            </DialogHeader>
-
-            <div className="flex-1 space-y-6 overflow-y-auto">
-              {/* Tags Section */}
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-medium text-foreground text-sm">Tags</h3>
-                  {onGenerateTags && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onGenerateTags(asset.id)}
-                      disabled={isGeneratingTags}
-                      className="h-7 gap-1.5 text-xs"
-                    >
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      {isGeneratingTags ? "Analyzing..." : "AI Tag"}
-                    </Button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {asset.tags.length > 0 ? (
-                    asset.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="rounded-md px-2 py-1"
-                      >
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-sm italic">
-                      No tags yet
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="font-semibold text-muted-foreground text-xs uppercase">
-                    Type
-                  </label>
-                  <p
-                    className="truncate font-medium text-foreground text-sm"
-                    title={asset.type}
-                  >
-                    {asset.type}
-                  </p>
-                </div>
-                <div>
-                  <label className="font-semibold text-muted-foreground text-xs uppercase">
-                    Size
-                  </label>
-                  <p className="font-medium text-foreground text-sm">
-                    {(asset.size / 1024).toFixed(0)} KB
-                  </p>
-                </div>
+              <p style={{ fontSize: '14px' }}>{asset.type}</p>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <p style={{ color: '#6b7280', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                Size
+              </p>
+              <p style={{ fontSize: '14px' }}>{Math.round(Number(asset.size) / 1024)} KB</p>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <p style={{ color: '#6b7280', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                Tags
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {asset.tags?.length > 0 ? (
+                  asset.tags.map((tag: string) => (
+                    <span key={tag} style={{
+                      backgroundColor: '#e5e7eb',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                    }}>
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <p style={{ color: '#9ca3af', fontSize: '14px', fontStyle: 'italic' }}>No tags</p>
+                )}
               </div>
             </div>
 
-            {/* Actions Footer */}
-            <div className="mt-8 flex gap-3 border-border border-t pt-6">
-              <Button
-                onClick={handleShare}
-                className="flex-1 gap-2"
-                variant="default"
+            {/* Actions */}
+            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                onClick={handleDelete}
+                style={{
+                  padding: '10px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
               >
-                <Copy className="h-4 w-4" />
-                Share Asset
-              </Button>
-              <Button variant="outline" onClick={onClose}>
+                Delete Asset
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  backgroundColor: 'white',
+                }}
+              >
                 Close
-              </Button>
+              </button>
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

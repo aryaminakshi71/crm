@@ -16,7 +16,7 @@ test.describe("Form Submissions E2E", () => {
         "user",
         JSON.stringify({
           id: "demo",
-          email: "demo@crm.com",
+          email: "demo@nucleo.one",
           firstName: "Demo",
           role: "admin",
           companyId: "demo-company",

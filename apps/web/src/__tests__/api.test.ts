@@ -1,10 +1,10 @@
 /**
- * Unit Tests for CRM API Client
+ * Unit Tests for Nucleo One API Client
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("CRM API Client", () => {
+describe("Nucleo One API Client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

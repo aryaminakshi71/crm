@@ -4,8 +4,8 @@
  * Deal management operations.
  */
 
-import { getOrCache } from "@crm/storage/redis";
-import { and, desc, eq } from "drizzle-orm";
+import { getOrCache, invalidateCache } from "@crm/storage/redis";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
@@ -28,6 +28,7 @@ export const dealsRouter = {
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(200).default(50),
         stage: z.string().optional(),
+        search: z.string().optional(),
       }),
     )
     .output(
@@ -45,25 +46,34 @@ export const dealsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { page: number; limit: number; stage?: string };
+        input: { page: number; limit: number; stage?: string; search?: string };
       }) => {
         const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
+        const search = input.search?.trim();
 
         // Cache key for list queries
-        const cacheKey = `deals:list:${context.organization.id}:${input.page}:${input.limit}:${input.stage || "all"}`;
+        const cacheKey = `deals:list:${context.organization.id}:${input.page}:${input.limit}:${input.stage || "all"}:${search || "all"}`;
 
         // Use cache for list queries (5 min TTL)
         return getOrCache(
           cacheKey,
           async () => {
             // Build where conditions
-            const whereConditions = input.stage
-              ? and(
-                  eq(deals.organizationId, context.organization.id),
-                  eq(deals.stage, input.stage),
-                )
-              : eq(deals.organizationId, context.organization.id);
+            const conditions = [eq(deals.organizationId, context.organization.id)];
+            if (input.stage) {
+              conditions.push(eq(deals.stage, input.stage));
+            }
+            if (search) {
+              conditions.push(
+                or(
+                  ilike(deals.name, `%${search}%`),
+                  ilike(deals.notes, `%${search}%`),
+                  ilike(deals.stage, `%${search}%`),
+                )!,
+              );
+            }
+            const whereConditions = conditions.length > 1 ? and(...conditions) : conditions[0];
 
             // Get total count
             const allDeals = await db
@@ -91,6 +101,38 @@ export const dealsRouter = {
           },
           300, // 5 minutes
         );
+      },
+    ),
+
+  /**
+   * Get a deal
+   */
+  get: orgAuthed
+    .route({
+      method: "GET",
+      path: "/deals/:id",
+      summary: "Get deal",
+      tags: ["Deals"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        const [deal] = await db
+          .select()
+          .from(deals)
+          .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
+          .limit(1);
+
+        if (!deal) {
+          throw new Error("Deal not found");
+        }
+
+        return deal;
       },
     ),
 
@@ -144,12 +186,70 @@ export const dealsRouter = {
           })
           .returning();
 
+        // Invalidate all deals list caches for this org
+        for (let page = 1; page <= 10; page++) {
+          for (const stage of ["all", "lead", "qualified", "proposal", "negotiation", "won", "lost"]) {
+            await invalidateCache(`deals:list:${context.organization.id}:${page}:50:${stage}`);
+          }
+        }
+
         return deal;
       },
     ),
 
   /**
-   * Update deal stage
+   * Update deal
+   */
+  update: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/deals/:id",
+      summary: "Update deal",
+      tags: ["Deals"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        value: z.number().positive().optional(),
+        stage: z
+          .enum(["lead", "qualified", "proposal", "negotiation", "won", "lost"])
+          .optional(),
+        notes: z.string().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string; name?: string; value?: number; stage?: string; notes?: string };
+      }) => {
+        const db = getDb(context);
+        const [deal] = await db
+          .update(deals)
+          .set({
+            ...(input.name !== undefined ? { name: input.name } : {}),
+            ...(input.value !== undefined ? { value: String(input.value) } : {}),
+            ...(input.stage !== undefined ? { stage: input.stage } : {}),
+            ...(input.notes !== undefined ? { notes: input.notes } : {}),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
+          .returning();
+
+        if (!deal) {
+          throw new Error("Deal not found");
+        }
+
+        return deal;
+      },
+    ),
+
+  /**
+   * Update deal stage (alias)
    */
   updateStage: orgAuthed
     .route({
@@ -161,34 +261,40 @@ export const dealsRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
-        stage: z.enum([
-          "lead",
-          "qualified",
-          "proposal",
-          "negotiation",
-          "won",
-          "lost",
-        ]),
+        stage: z.enum(["lead", "qualified", "proposal", "negotiation", "won", "lost"]),
       }),
     )
     .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: { context: OrgContext; input: { id: string; stage: string } }) => {
-        const db = getDb(context);
-        const [deal] = await db
-          .update(deals)
-          .set({ stage: input.stage })
-          .where(eq(deals.id, input.id))
-          .returning();
+    .handler(async ({ context, input }: { context: OrgContext; input: { id: string; stage: string } }) => {
+      const db = getDb(context);
+      const [deal] = await db
+        .update(deals)
+        .set({ stage: input.stage, updatedAt: new Date() })
+        .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
+        .returning();
+      if (!deal) {
+        throw new Error("Deal not found");
+      }
+      return deal;
+    }),
 
-        if (!deal) {
-          throw new Error("Deal not found");
-        }
-
-        return deal;
-      },
-    ),
+  /**
+   * Delete a deal
+   */
+  delete: orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/deals/:id",
+      summary: "Delete deal",
+      tags: ["Deals"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.object({ success: z.boolean() }))
+    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+      const db = getDb(context);
+      await db
+        .delete(deals)
+        .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)));
+      return { success: true };
+    }),
 };

@@ -37,9 +37,16 @@ export const ROUTES_TO_TEST = {
   // App routes (require auth/demo)
   app: [
     { path: "/app", name: "Dashboard" },
-    { path: "/app/contacts", name: "Contacts" },
-    { path: "/app/deals", name: "Deals" },
-    { path: "/app/leads", name: "Leads" },
+    { path: "/app/crm", name: "CRM" },
+    { path: "/app/helpdesk", name: "Helpdesk" },
+    { path: "/app/finance", name: "Finance" },
+    { path: "/app/procurement", name: "Procurement" },
+    { path: "/app/contracts", name: "Contracts" },
+    { path: "/app/compliance", name: "Compliance" },
+    { path: "/app/policies", name: "Policies" },
+    { path: "/app/enterprise", name: "Enterprise" },
+    { path: "/app/hrm", name: "HRM" },
+    { path: "/app/intelligence", name: "AI & BI" },
     { path: "/app/activities", name: "Activities" },
     { path: "/app/marketing", name: "Marketing" },
     { path: "/app/settings", name: "Settings" },
@@ -48,7 +55,7 @@ export const ROUTES_TO_TEST = {
 
 export const LINKS_TO_VERIFY = {
   "/": [
-    { selector: 'a[href="/"]', text: "CRM Platform", type: "logo" },
+    { selector: 'a[href="/"]', text: "Nucleo One", type: "logo" },
     { selector: 'a[href="/login"]', text: "Sign In", type: "header" },
     {
       selector: 'a[href="/register"]',
@@ -56,12 +63,12 @@ export const LINKS_TO_VERIFY = {
       type: "header",
     },
     {
-      selector: 'a[href="/app/deals"]',
+      selector: 'a[href="/app/crm"]',
       text: "Deal Pipeline",
       type: "feature",
     },
     {
-      selector: 'a[href="/app/contacts"]',
+      selector: 'a[href="/app/crm"]',
       text: "Contact Management",
       type: "feature",
     },
@@ -147,9 +154,16 @@ export const LINKS_TO_VERIFY = {
   ],
   "/app": [
     { selector: 'a[href="/app"]', text: "Dashboard", type: "sidebar" },
-    { selector: 'a[href="/app/contacts"]', text: "Contacts", type: "sidebar" },
-    { selector: 'a[href="/app/deals"]', text: "Deals", type: "sidebar" },
-    { selector: 'a[href="/app/leads"]', text: "Leads", type: "sidebar" },
+    { selector: 'a[href="/app/crm"]', text: "CRM", type: "sidebar" },
+    { selector: 'a[href="/app/helpdesk"]', text: "Helpdesk", type: "sidebar" },
+    { selector: 'a[href="/app/finance"]', text: "Finance", type: "sidebar" },
+    { selector: 'a[href="/app/procurement"]', text: "Procurement", type: "sidebar" },
+    { selector: 'a[href="/app/contracts"]', text: "Contracts", type: "sidebar" },
+    { selector: 'a[href="/app/compliance"]', text: "Compliance", type: "sidebar" },
+    { selector: 'a[href="/app/policies"]', text: "Policies", type: "sidebar" },
+    { selector: 'a[href="/app/enterprise"]', text: "Enterprise", type: "sidebar" },
+    { selector: 'a[href="/app/hrm"]', text: "HRM", type: "sidebar" },
+    { selector: 'a[href="/app/intelligence"]', text: "AI & BI", type: "sidebar" },
     {
       selector: 'a[href="/app/activities"]',
       text: "Activities",

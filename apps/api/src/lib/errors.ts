@@ -1,7 +1,7 @@
 /**
  * Error Handling Utilities
  *
- * Provides standardized error handling for the CRM API.
+ * Provides standardized error handling for the Nucleo One API.
  */
 
 import { z } from "zod";

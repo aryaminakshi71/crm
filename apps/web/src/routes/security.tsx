@@ -5,15 +5,15 @@ import { ShieldCheck } from "lucide-react";
 export const Route = createFileRoute("/security")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/security";
     return {
       meta: [
-        { title: "CRM Platform - Security" },
+        { title: "Nucleo One - Security" },
         {
           name: "description",
           content:
-            "Security information and responsible disclosure for our CRM platform.",
+            "Security information and responsible disclosure for our Nucleo One platform.",
         },
         { name: "robots", content: "index, follow" },
       ],
@@ -56,7 +56,7 @@ function SecurityPage() {
           </p>
           <h2 className="font-bold text-2xl text-foreground">Contact</h2>
           <p className="text-foreground">
-            Email security@crm.app with details.
+            Email security@nucleo.one with details.
           </p>
         </div>
       </section>

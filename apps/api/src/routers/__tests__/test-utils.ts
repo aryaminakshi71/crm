@@ -35,7 +35,7 @@ export function createMockInitialContext(
       CACHE: {} as KVNamespace,
       BUCKET: {} as R2Bucket,
       BETTER_AUTH_SECRET: "test-secret",
-      VITE_PUBLIC_SITE_URL: "http://localhost:3000",
+      VITE_PUBLIC_SITE_URL: "http://localhost:3001",
       NODE_ENV: "test",
       ...overrides.env,
     },

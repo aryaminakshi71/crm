@@ -5,14 +5,14 @@ import { Activity } from "lucide-react";
 export const Route = createFileRoute("/status")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/status";
     return {
       meta: [
-        { title: "CRM Platform - Status" },
+        { title: "Nucleo One - Status" },
         {
           name: "description",
-          content: "System status and uptime information for our CRM platform.",
+          content: "System status and uptime information for our Nucleo One platform.",
         },
         { name: "robots", content: "index, follow" },
       ],

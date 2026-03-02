@@ -21,8 +21,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",
     "@aws-sdk/s3-request-presigner": "^3.821.0",
-    "@crm/core": "workspace:*",
-    "@crm/env": "workspace:*",
+    "@crm/core": "file:../core",
+    "@crm/env": "file:../env",
     "@neondatabase/serverless": "^0.10.0",
     "@upstash/redis": "^1.36.1",
     "drizzle-orm": "^0.45.0",
@@ -32,7 +32,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@crm/tsconfig": "workspace:*",
+    "@crm/tsconfig": "file:../tsconfig",
     "@cloudflare/workers-types": "^4.20250109.0",
     "@types/node": "^22.19.2",
     "drizzle-kit": "^0.31.8",

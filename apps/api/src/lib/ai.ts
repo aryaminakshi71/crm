@@ -17,7 +17,7 @@
  * AI Client Configuration
  */
 export interface AIConfig {
-  provider: "openai" | "cloudflare" | "anthropic";
+  provider: "openai" | "openrouter" | "cloudflare" | "anthropic";
   apiKey?: string;
   model?: string;
   aiBinding?: any; // Cloudflare Workers AI binding
@@ -30,12 +30,28 @@ export function createAIClient(config?: AIConfig) {
   const provider =
     config?.provider ||
     (typeof process !== "undefined" && process.env.AI_PROVIDER) ||
-    "openai";
+    "openrouter";
 
   if (provider === "cloudflare" && config?.aiBinding) {
     return {
       type: "cloudflare" as const,
       binding: config.aiBinding,
+    };
+  }
+
+  if (provider === "openrouter") {
+    const apiKey =
+      config?.apiKey ||
+      (typeof process !== "undefined" && process.env.OPENROUTER_API_KEY);
+    if (!apiKey) {
+      console.warn("OPENROUTER_API_KEY not set - AI features disabled");
+      return null;
+    }
+
+    return {
+      type: "openrouter" as const,
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
     };
   }
 
@@ -68,9 +84,15 @@ export async function analyzeText(
 ): Promise<any> {
   if (!ai) throw new Error("AI client not configured");
 
-  if (ai.type === "openai") {
+  if (ai.type === "openrouter" || ai.type === "openai") {
+    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
+    
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: ai.apiKey });
+    const openai = new OpenAI({ 
+      apiKey: ai.apiKey,
+      baseURL,
+    });
 
     const prompts = {
       sentiment:
@@ -83,7 +105,7 @@ export async function analyzeText(
     };
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: prompts[task] },
         { role: "user", content: text },
@@ -129,12 +151,18 @@ export async function generateSuggestions(
     insights: `Based on this ${app} context: "${context}", provide 3-5 key insights. Return JSON: {"suggestions": ["..."]}`,
   };
 
-  if (ai.type === "openai") {
+  if (ai.type === "openrouter" || ai.type === "openai") {
+    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
+    
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: ai.apiKey });
+    const openai = new OpenAI({ 
+      apiKey: ai.apiKey,
+      baseURL,
+    });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: prompts[type] },
         { role: "user", content: context },
@@ -159,12 +187,18 @@ export async function autoTag(
 ): Promise<Array<{ label: string; confidence: number }>> {
   if (!ai) throw new Error("AI client not configured");
 
-  if (ai.type === "openai") {
+  if (ai.type === "openrouter" || ai.type === "openai") {
+    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
+    
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: ai.apiKey });
+    const openai = new OpenAI({ 
+      apiKey: ai.apiKey,
+      baseURL,
+    });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
@@ -192,12 +226,18 @@ export async function predictScore(
 ): Promise<{ score: number; reasoning: string }> {
   if (!ai) throw new Error("AI client not configured");
 
-  if (ai.type === "openai") {
+  if (ai.type === "openrouter" || ai.type === "openai") {
+    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
+    
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: ai.apiKey });
+    const openai = new OpenAI({ 
+      apiKey: ai.apiKey,
+      baseURL,
+    });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",

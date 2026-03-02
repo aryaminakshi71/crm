@@ -5,30 +5,30 @@ import { Eye, FileText, Lock, Shield } from "lucide-react";
 export const Route = createFileRoute("/privacy")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = baseUrl.replace(/\/$/, "") + "/privacy";
     return {
       meta: [
-        { title: "CRM Platform - Privacy" },
+        { title: "Nucleo One - Privacy" },
         {
           name: "description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "CRM Platform - Privacy" },
+        { property: "og:title", content: "Nucleo One - Privacy" },
         {
           property: "og:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "CRM Platform - Privacy" },
+        { name: "twitter:title", content: "Nucleo One - Privacy" },
         {
           name: "twitter:description",
           content:
-            "Modern CRM platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],
@@ -243,7 +243,7 @@ function PrivacyPage() {
                   contact us:
                 </p>
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="font-semibold">CRM Platform Privacy Team</p>
+                  <p className="font-semibold">Nucleo One Privacy Team</p>
                   <p>
                     Email:{" "}
                     <a

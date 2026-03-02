@@ -2,7 +2,7 @@ import { generateSitemap, getCRMRoutes } from "@/lib/sitemap";
 
 export async function GET() {
   const baseUrl =
-    import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3000";
+    import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
   const routes = getCRMRoutes();
   const sitemap = generateSitemap(routes, baseUrl);
 

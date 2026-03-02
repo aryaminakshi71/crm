@@ -13,7 +13,9 @@ import type { Database } from "@crm/storage";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey, openAPI, organization } from "better-auth/plugins";
+import bcrypt from "bcryptjs";
 import { createKVStorage } from "./kv-storage";
+import * as authSchema from "@crm/storage/schema";
 
 export interface AuthConfig {
   /** Database instance from @crm/storage */
@@ -99,6 +101,7 @@ export function createAuth(config: AuthConfig) {
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
+      schema: authSchema,
       usePlural: true,
     }),
     ...(kv ? { secondaryStorage: createKVStorage(kv) } : {}),
@@ -116,7 +119,15 @@ export function createAuth(config: AuthConfig) {
     // Email/password enabled
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false, // Can be enabled in production
+      requireEmailVerification: false,
+      password: {
+        hash: async (password) => {
+          return await bcrypt.hash(password, 10);
+        },
+        verify: async ({ hash, password }) => {
+          return await bcrypt.compare(password, hash);
+        },
+      },
     },
 
     // OAuth providers
