@@ -5,13 +5,26 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { contacts } = schema;
+
+// Create a Zod schema from the contacts table columns
+const contactSchema = schema.contacts ? z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().email().nullable(),
+  phone: z.string().nullable(),
+  companyName: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+}).passthrough() : z.unknown();
 
 export const contactsRouter = {
   /**
@@ -33,7 +46,7 @@ export const contactsRouter = {
     )
     .output(
       z.object({
-        data: z.array(z.any()),
+        data: z.array(z.instanceof(Contact)),
         total: z.number(),
         page: z.number(),
         limit: z.number(),
@@ -76,14 +89,11 @@ export const contactsRouter = {
         }>(
           cacheKey,
           async () => {
-            // Get total count
-            const allContacts = (await trackQuery("listContactsCount", () =>
-              db
-                .select()
-                .from(contacts)
-                .where(whereConditions),
-            )) as any[];
-            const total = allContacts.length;
+            // Get total count using SQL COUNT()
+            const countResult = await trackQuery("listContactsCount", () =>
+              db.select({ count: count() }).from(contacts).where(whereConditions),
+            );
+            const total = countResult[0]?.count ?? 0;
 
             // Get paginated results
             const paginatedContacts = (await trackQuery(
@@ -122,7 +132,7 @@ export const contactsRouter = {
       tags: ["Contacts"],
     })
     .input(z.object({ id: z.string().uuid() }))
-    .output(z.any())
+    .output(contactSchema)
     .handler(
       async ({
         context,
@@ -180,7 +190,7 @@ export const contactsRouter = {
         companyName: z.string().max(255).optional(),
       }),
     )
-    .output(z.any())
+    .output(contactSchema)
     .handler(
       async ({
         context,
@@ -201,11 +211,19 @@ export const contactsRouter = {
           db
             .update(contacts)
             .set({
-              ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
-              ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
-              ...(input.email !== undefined ? { email: input.email.toLowerCase() } : {}),
+              ...(input.firstName !== undefined
+                ? { firstName: input.firstName }
+                : {}),
+              ...(input.lastName !== undefined
+                ? { lastName: input.lastName }
+                : {}),
+              ...(input.email !== undefined
+                ? { email: input.email.toLowerCase() }
+                : {}),
               ...(input.phone !== undefined ? { phone: input.phone } : {}),
-              ...(input.companyName !== undefined ? { companyName: input.companyName } : {}),
+              ...(input.companyName !== undefined
+                ? { companyName: input.companyName }
+                : {}),
               updatedAt: new Date(),
             })
             .where(
@@ -247,7 +265,7 @@ export const contactsRouter = {
         companyName: z.string().max(255).optional(),
       }),
     )
-    .output(z.any())
+    .output(contactSchema)
     .handler(
       async ({
         context,

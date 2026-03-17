@@ -38,10 +38,32 @@ function LoginPage() {
   const router = useRouter();
   const searchParams = new URLSearchParams(router.state.location.search);
   const redirect = searchParams.get("redirect") || undefined;
-  const [email, setEmail] = useState("demo@nucleo.one");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Demo credentials should be set via environment variables
+  // Do NOT hardcode in source code
+  const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL;
+  const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD;
+  const isDemoModeEnabled = Boolean(DEMO_EMAIL && DEMO_PASSWORD);
+  const isDemoCredential = isDemoModeEnabled && email.trim() === DEMO_EMAIL && password === DEMO_PASSWORD;
+
+  const activateDemoMode = () => {
+    localStorage.setItem("demo_mode", "true");
+    localStorage.setItem("isDemo", "true");
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        id: "demo-user-login",
+        name: "Demo User",
+        email: DEMO_EMAIL || "demo@example.com",
+      }),
+    );
+    localStorage.setItem("accessToken", "demo-token");
+    localStorage.setItem("companyId", "demo-company");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +78,12 @@ function LoginPage() {
       // const result = { error: { message: "Auth disabled" } };
 
       if (result.error) {
+        if (isDemoCredential) {
+          activateDemoMode();
+          toast.success("Demo mode activated");
+          navigate({ to: redirect || "/app" });
+          return;
+        }
         setError(result.error.message || "Invalid email or password");
         setIsLoading(false);
         return;
@@ -79,7 +107,7 @@ function LoginPage() {
           err.message.includes("Failed to fetch")
         ) {
           setError(
-            "Cannot connect to server. Please make sure the API server is running on port 3001.",
+            "Cannot connect to server. Please make sure the API server is running.",
           );
         } else {
           setError(err.message);
@@ -94,28 +122,41 @@ function LoginPage() {
 
   const handleSocialLogin = async (provider: "google" | "github") => {
     try {
-      await authClient.signIn.social({
+      // Clear any existing demo mode before social login
+      localStorage.removeItem("demo_mode");
+      localStorage.removeItem("isDemo");
+
+      const result: any = await authClient.signIn.social({
         provider,
         callbackURL: `${window.location.origin}/app`,
       });
+
+      console.log("Social login result:", result);
+
+      // If result has a URL, redirect to it (OAuth flow)
+      // better-auth might return it in different formats
+      const url = result?.data?.url || result?.url || result?.redirect?.url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+
+      // If no URL but no error, it might have redirected already
+      console.log("No redirect URL in result, checking if redirected...");
     } catch (err) {
       console.error("Social login error:", err);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("demo_mode", "true");
-        localStorage.setItem("isDemo", "true");
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            id: `crm-${provider}-demo`,
-            name: "Demo User",
-            email: "demo@nucleo.one",
-          }),
+      // Only auto-activate demo mode if demo credentials are configured
+      if (isDemoModeEnabled && typeof window !== "undefined") {
+        activateDemoMode();
+        toast.success(
+          `${provider === "github" ? "GitHub" : "Google"} login unavailable. Continuing in demo mode.`,
+        );
+        navigate({ to: "/app" });
+      } else {
+        toast.error(
+          `${provider === "github" ? "GitHub" : "Google"} login failed. Please try again or use demo mode.`,
         );
       }
-      toast.success(
-        `${provider === "github" ? "GitHub" : "Google"} login unavailable. Continuing in demo mode.`,
-      );
-      navigate({ to: "/app" });
     }
   };
 
@@ -286,14 +327,16 @@ function LoginPage() {
             </button>
           </div>
 
-          <div>
-            <Link
-              to="/demo"
-              className="flex w-full justify-center rounded-lg border-2 border-border bg-card px-4 py-3 font-medium text-foreground text-sm shadow-sm hover:bg-muted"
-            >
-              Try Demo Instead
-            </Link>
-          </div>
+          {isDemoModeEnabled && (
+            <div>
+              <Link
+                to="/demo"
+                className="flex w-full justify-center rounded-lg border-2 border-border bg-card px-4 py-3 font-medium text-foreground text-sm shadow-sm hover:bg-muted"
+              >
+                Try Demo Instead
+              </Link>
+            </div>
+          )}
         </form>
       </div>
     </div>

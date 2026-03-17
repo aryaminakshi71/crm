@@ -5,12 +5,26 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { deals } = schema;
+
+// Create a Zod schema from the deals table columns
+const dealSchema = schema.deals ? z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  name: z.string(),
+  value: z.number().nullable(),
+  stage: z.string(),
+  probability: z.number().nullable(),
+  notes: z.string().nullable(),
+  contactId: z.string().uuid().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+}).passthrough() : z.unknown();
 
 export const dealsRouter = {
   /**
@@ -33,7 +47,7 @@ export const dealsRouter = {
     )
     .output(
       z.object({
-        data: z.array(z.any()),
+        data: z.array(dealSchema),
         total: z.number(),
         page: z.number(),
         limit: z.number(),
@@ -60,7 +74,9 @@ export const dealsRouter = {
           cacheKey,
           async () => {
             // Build where conditions
-            const conditions = [eq(deals.organizationId, context.organization.id)];
+            const conditions = [
+              eq(deals.organizationId, context.organization.id),
+            ];
             if (input.stage) {
               conditions.push(eq(deals.stage, input.stage));
             }
@@ -73,14 +89,15 @@ export const dealsRouter = {
                 )!,
               );
             }
-            const whereConditions = conditions.length > 1 ? and(...conditions) : conditions[0];
+            const whereConditions =
+              conditions.length > 1 ? and(...conditions) : conditions[0];
 
-            // Get total count
-            const allDeals = await db
-              .select()
+            // Get total count using SQL COUNT()
+            const countResult = await db
+              .select({ count: count() })
               .from(deals)
               .where(whereConditions);
-            const total = allDeals.length;
+            const total = countResult[0]?.count ?? 0;
 
             // Get paginated results
             const paginatedDeals = await db
@@ -115,7 +132,7 @@ export const dealsRouter = {
       tags: ["Deals"],
     })
     .input(z.object({ id: z.string().uuid() }))
-    .output(z.any())
+    .output(dealSchema)
     .handler(
       async ({
         context,
@@ -125,7 +142,12 @@ export const dealsRouter = {
         const [deal] = await db
           .select()
           .from(deals)
-          .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
+          .where(
+            and(
+              eq(deals.id, input.id),
+              eq(deals.organizationId, context.organization.id),
+            ),
+          )
           .limit(1);
 
         if (!deal) {
@@ -157,7 +179,7 @@ export const dealsRouter = {
         contactId: z.string().uuid().optional(),
       }),
     )
-    .output(z.any())
+    .output(dealSchema)
     .handler(
       async ({
         context,
@@ -188,8 +210,18 @@ export const dealsRouter = {
 
         // Invalidate all deals list caches for this org
         for (let page = 1; page <= 10; page++) {
-          for (const stage of ["all", "lead", "qualified", "proposal", "negotiation", "won", "lost"]) {
-            await invalidateCache(`deals:list:${context.organization.id}:${page}:50:${stage}`);
+          for (const stage of [
+            "all",
+            "lead",
+            "qualified",
+            "proposal",
+            "negotiation",
+            "won",
+            "lost",
+          ]) {
+            await invalidateCache(
+              `deals:list:${context.organization.id}:${page}:50:${stage}`,
+            );
           }
         }
 
@@ -218,26 +250,39 @@ export const dealsRouter = {
         notes: z.string().optional(),
       }),
     )
-    .output(z.any())
+    .output(dealSchema)
     .handler(
       async ({
         context,
         input,
       }: {
         context: OrgContext;
-        input: { id: string; name?: string; value?: number; stage?: string; notes?: string };
+        input: {
+          id: string;
+          name?: string;
+          value?: number;
+          stage?: string;
+          notes?: string;
+        };
       }) => {
         const db = getDb(context);
         const [deal] = await db
           .update(deals)
           .set({
             ...(input.name !== undefined ? { name: input.name } : {}),
-            ...(input.value !== undefined ? { value: String(input.value) } : {}),
+            ...(input.value !== undefined
+              ? { value: String(input.value) }
+              : {}),
             ...(input.stage !== undefined ? { stage: input.stage } : {}),
             ...(input.notes !== undefined ? { notes: input.notes } : {}),
             updatedAt: new Date(),
           })
-          .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
+          .where(
+            and(
+              eq(deals.id, input.id),
+              eq(deals.organizationId, context.organization.id),
+            ),
+          )
           .returning();
 
         if (!deal) {
@@ -261,22 +306,39 @@ export const dealsRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
-        stage: z.enum(["lead", "qualified", "proposal", "negotiation", "won", "lost"]),
+        stage: z.enum([
+          "lead",
+          "qualified",
+          "proposal",
+          "negotiation",
+          "won",
+          "lost",
+        ]),
       }),
     )
-    .output(z.any())
-    .handler(async ({ context, input }: { context: OrgContext; input: { id: string; stage: string } }) => {
-      const db = getDb(context);
-      const [deal] = await db
-        .update(deals)
-        .set({ stage: input.stage, updatedAt: new Date() })
-        .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)))
-        .returning();
-      if (!deal) {
-        throw new Error("Deal not found");
-      }
-      return deal;
-    }),
+    .output(dealSchema)
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { id: string; stage: string } }) => {
+        const db = getDb(context);
+        const [deal] = await db
+          .update(deals)
+          .set({ stage: input.stage, updatedAt: new Date() })
+          .where(
+            and(
+              eq(deals.id, input.id),
+              eq(deals.organizationId, context.organization.id),
+            ),
+          )
+          .returning();
+        if (!deal) {
+          throw new Error("Deal not found");
+        }
+        return deal;
+      },
+    ),
 
   /**
    * Delete a deal
@@ -290,11 +352,21 @@ export const dealsRouter = {
     })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
-    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
-      const db = getDb(context);
-      await db
-        .delete(deals)
-        .where(and(eq(deals.id, input.id), eq(deals.organizationId, context.organization.id)));
-      return { success: true };
-    }),
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        await db
+          .delete(deals)
+          .where(
+            and(
+              eq(deals.id, input.id),
+              eq(deals.organizationId, context.organization.id),
+            ),
+          );
+        return { success: true };
+      },
+    ),
 };

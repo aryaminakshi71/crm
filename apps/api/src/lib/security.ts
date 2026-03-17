@@ -4,6 +4,8 @@
  * Provides security helpers for the Nucleo One API.
  */
 
+const isDev = process.env.NODE_ENV === "development";
+
 /**
  * Set security headers on response
  */
@@ -16,10 +18,14 @@ export function setSecurityHeaders(headers: Headers): void {
     "Strict-Transport-Security",
     "max-age=31536000; includeSubDomains; preload",
   );
-  headers.set(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;",
-  );
+
+  // CSP - more restrictive in production
+  // Note: In production, you should use nonces or hashes for inline scripts
+  const csp = isDev
+    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss: https:;"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';";
+
+  headers.set("Content-Security-Policy", csp);
   headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
 }
 

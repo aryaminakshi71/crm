@@ -4,12 +4,29 @@
  * Lead management operations.
  */
 
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { leads, contacts } = schema;
+
+// Create a Zod schema from the leads table columns
+const leadSchema = schema.leads ? z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  email: z.string().email(),
+  phone: z.string().nullable(),
+  companyName: z.string().nullable(),
+  status: z.string(),
+  source: z.string().nullable(),
+  notes: z.string().nullable(),
+  assignedTo: z.string().uuid().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+}).passthrough() : z.unknown();
 
 export const leadsRouter = {
   /**
@@ -32,7 +49,7 @@ export const leadsRouter = {
     )
     .output(
       z.object({
-        data: z.array(z.any()),
+        data: z.array(leadSchema),
         total: z.number(),
         page: z.number(),
         limit: z.number(),
@@ -45,7 +62,12 @@ export const leadsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { page: number; limit: number; status?: string; search?: string };
+        input: {
+          page: number;
+          limit: number;
+          status?: string;
+          search?: string;
+        };
       }) => {
         const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
@@ -67,11 +89,15 @@ export const leadsRouter = {
             )!,
           );
         }
-        const whereConditions = conditions.length > 1 ? and(...conditions) : conditions[0];
+        const whereConditions =
+          conditions.length > 1 ? and(...conditions) : conditions[0];
 
-        // Get total count
-        const allLeads = await db.select().from(leads).where(whereConditions);
-        const total = allLeads.length;
+        // Get total count using SQL COUNT()
+        const countResult = await db
+          .select({ count: count() })
+          .from(leads)
+          .where(whereConditions);
+        const total = countResult[0]?.count ?? 0;
 
         // Get paginated results
         const paginatedLeads = await db
@@ -103,26 +129,31 @@ export const leadsRouter = {
       tags: ["Leads"],
     })
     .input(z.object({ id: z.string().uuid() }))
-    .output(z.any())
-    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
-      const db = getDb(context);
-      const [lead] = await db
-        .select()
-        .from(leads)
-        .where(
-          and(
-            eq(leads.id, input.id),
-            eq(leads.organizationId, context.organization.id),
-          ),
-        )
-        .limit(1);
+    .output(leadSchema)
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        const [lead] = await db
+          .select()
+          .from(leads)
+          .where(
+            and(
+              eq(leads.id, input.id),
+              eq(leads.organizationId, context.organization.id),
+            ),
+          )
+          .limit(1);
 
-      if (!lead) {
-        throw new Error("Lead not found");
-      }
+        if (!lead) {
+          throw new Error("Lead not found");
+        }
 
-      return lead;
-    }),
+        return lead;
+      },
+    ),
 
   /**
    * Create a new lead
@@ -155,7 +186,7 @@ export const leadsRouter = {
         notes: z.string().optional(),
       }),
     )
-    .output(z.any())
+    .output(leadSchema)
     .handler(
       async ({
         context,
@@ -224,36 +255,46 @@ export const leadsRouter = {
         notes: z.string().optional(),
       }),
     )
-    .output(z.any())
-    .handler(async ({ context, input }: { context: OrgContext; input: any }) => {
-      const db = getDb(context);
-      const [lead] = await db
-        .update(leads)
-        .set({
-          ...(input.email !== undefined ? { email: input.email.toLowerCase() } : {}),
-          ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
-          ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
-          ...(input.companyName !== undefined ? { companyName: input.companyName } : {}),
-          ...(input.phone !== undefined ? { phone: input.phone } : {}),
-          ...(input.source !== undefined ? { source: input.source } : {}),
-          ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.notes !== undefined ? { notes: input.notes } : {}),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(leads.id, input.id),
-            eq(leads.organizationId, context.organization.id),
-          ),
-        )
-        .returning();
+    .output(leadSchema)
+    .handler(
+      async ({ context, input }: { context: OrgContext; input: any }) => {
+        const db = getDb(context);
+        const [lead] = await db
+          .update(leads)
+          .set({
+            ...(input.email !== undefined
+              ? { email: input.email.toLowerCase() }
+              : {}),
+            ...(input.firstName !== undefined
+              ? { firstName: input.firstName }
+              : {}),
+            ...(input.lastName !== undefined
+              ? { lastName: input.lastName }
+              : {}),
+            ...(input.companyName !== undefined
+              ? { companyName: input.companyName }
+              : {}),
+            ...(input.phone !== undefined ? { phone: input.phone } : {}),
+            ...(input.source !== undefined ? { source: input.source } : {}),
+            ...(input.status !== undefined ? { status: input.status } : {}),
+            ...(input.notes !== undefined ? { notes: input.notes } : {}),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(leads.id, input.id),
+              eq(leads.organizationId, context.organization.id),
+            ),
+          )
+          .returning();
 
-      if (!lead) {
-        throw new Error("Lead not found");
-      }
+        if (!lead) {
+          throw new Error("Lead not found");
+        }
 
-      return lead;
-    }),
+        return lead;
+      },
+    ),
 
   /**
    * Convert a lead to a contact
@@ -273,7 +314,7 @@ export const leadsRouter = {
         companyName: z.string().optional(),
       }),
     )
-    .output(z.any())
+    .output(leadSchema)
     .handler(
       async ({
         context,
@@ -341,16 +382,21 @@ export const leadsRouter = {
     })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
-    .handler(async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
-      const db = getDb(context);
-      await db
-        .delete(leads)
-        .where(
-          and(
-            eq(leads.id, input.id),
-            eq(leads.organizationId, context.organization.id),
-          ),
-        );
-      return { success: true };
-    }),
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        await db
+          .delete(leads)
+          .where(
+            and(
+              eq(leads.id, input.id),
+              eq(leads.organizationId, context.organization.id),
+            ),
+          );
+        return { success: true };
+      },
+    ),
 };
