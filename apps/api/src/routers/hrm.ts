@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { orgAuthed, getDb, schema } from "../procedures";
+import { getDb, orgAuthed, schema } from "../procedures";
 
 const pageInput = z.object({
   page: z.number().min(1).default(1),
@@ -25,7 +25,17 @@ export const hrmRouter = {
       const db = getDb(context);
       const orgId = context.organization.id;
 
-      const [employees, attendance, leaves, reviews, requisitions, candidates, trainingPrograms, trainingRecords, payrollRuns] = await Promise.all([
+      const [
+        employees,
+        attendance,
+        leaves,
+        reviews,
+        requisitions,
+        candidates,
+        trainingPrograms,
+        trainingRecords,
+        payrollRuns,
+      ] = await Promise.all([
         db
           .select({ count: sql<number>`count(*)` })
           .from(schema.employees)
@@ -49,7 +59,9 @@ export const hrmRouter = {
             ),
           ),
         db
-          .select({ avg: sql<number>`coalesce(avg(${schema.performanceReviews.goalsProgress}), 0)` })
+          .select({
+            avg: sql<number>`coalesce(avg(${schema.performanceReviews.goalsProgress}), 0)`,
+          })
           .from(schema.performanceReviews)
           .where(eq(schema.performanceReviews.organizationId, orgId)),
         db
@@ -94,11 +106,18 @@ export const hrmRouter = {
       summary: "List employees",
       tags: ["HRM"],
     })
-    .input(pageInput.extend({ search: z.string().optional(), department: z.string().optional() }))
+    .input(
+      pageInput.extend({
+        search: z.string().optional(),
+        department: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
-      const conditions = [eq(schema.employees.organizationId, context.organization.id)];
+      const conditions = [
+        eq(schema.employees.organizationId, context.organization.id),
+      ];
 
       if (input.search?.trim()) {
         const pattern = `%${input.search.trim()}%`;
@@ -113,7 +132,9 @@ export const hrmRouter = {
       }
 
       if (input.department?.trim()) {
-        conditions.push(eq(schema.employees.department, input.department.trim()));
+        conditions.push(
+          eq(schema.employees.department, input.department.trim()),
+        );
       }
 
       const where = conditions.length > 1 ? and(...conditions) : conditions[0];
@@ -198,14 +219,24 @@ export const hrmRouter = {
         .update(schema.employees)
         .set({
           ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
-          ...(input.workEmail !== undefined ? { workEmail: input.workEmail } : {}),
-          ...(input.department !== undefined ? { department: input.department } : {}),
+          ...(input.workEmail !== undefined
+            ? { workEmail: input.workEmail }
+            : {}),
+          ...(input.department !== undefined
+            ? { department: input.department }
+            : {}),
           ...(input.jobTitle !== undefined ? { jobTitle: input.jobTitle } : {}),
-          ...(input.managerName !== undefined ? { managerName: input.managerName } : {}),
+          ...(input.managerName !== undefined
+            ? { managerName: input.managerName }
+            : {}),
           ...(input.location !== undefined ? { location: input.location } : {}),
-          ...(input.employmentType !== undefined ? { employmentType: input.employmentType } : {}),
+          ...(input.employmentType !== undefined
+            ? { employmentType: input.employmentType }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.joinDate !== undefined ? { joinDate: new Date(input.joinDate) } : {}),
+          ...(input.joinDate !== undefined
+            ? { joinDate: new Date(input.joinDate) }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
@@ -267,7 +298,9 @@ export const hrmRouter = {
           schema.employees,
           eq(schema.attendanceLogs.employeeId, schema.employees.id),
         )
-        .where(eq(schema.attendanceLogs.organizationId, context.organization.id))
+        .where(
+          eq(schema.attendanceLogs.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.attendanceLogs.attendanceDate))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -337,8 +370,12 @@ export const hrmRouter = {
         .set({
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.hours !== undefined ? { hours: String(input.hours) } : {}),
-          ...(input.checkInAt !== undefined ? { checkInAt: new Date(input.checkInAt) } : {}),
-          ...(input.checkOutAt !== undefined ? { checkOutAt: new Date(input.checkOutAt) } : {}),
+          ...(input.checkInAt !== undefined
+            ? { checkInAt: new Date(input.checkInAt) }
+            : {}),
+          ...(input.checkOutAt !== undefined
+            ? { checkOutAt: new Date(input.checkOutAt) }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
         })
         .where(
@@ -397,7 +434,10 @@ export const hrmRouter = {
           createdAt: schema.leaveRequests.createdAt,
         })
         .from(schema.leaveRequests)
-        .leftJoin(schema.employees, eq(schema.leaveRequests.employeeId, schema.employees.id))
+        .leftJoin(
+          schema.employees,
+          eq(schema.leaveRequests.employeeId, schema.employees.id),
+        )
         .where(eq(schema.leaveRequests.organizationId, context.organization.id))
         .orderBy(desc(schema.leaveRequests.createdAt))
         .limit(input.limit)
@@ -463,12 +503,20 @@ export const hrmRouter = {
       const [request] = await db
         .update(schema.leaveRequests)
         .set({
-          ...(input.leaveType !== undefined ? { leaveType: input.leaveType } : {}),
-          ...(input.startDate !== undefined ? { startDate: new Date(input.startDate) } : {}),
-          ...(input.endDate !== undefined ? { endDate: new Date(input.endDate) } : {}),
+          ...(input.leaveType !== undefined
+            ? { leaveType: input.leaveType }
+            : {}),
+          ...(input.startDate !== undefined
+            ? { startDate: new Date(input.startDate) }
+            : {}),
+          ...(input.endDate !== undefined
+            ? { endDate: new Date(input.endDate) }
+            : {}),
           ...(input.reason !== undefined ? { reason: input.reason } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.status !== undefined ? { approverId: context.user.id, decidedAt: new Date() } : {}),
+          ...(input.status !== undefined
+            ? { approverId: context.user.id, decidedAt: new Date() }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
@@ -560,7 +608,9 @@ export const hrmRouter = {
           schema.employees,
           eq(schema.performanceReviews.employeeId, schema.employees.id),
         )
-        .where(eq(schema.performanceReviews.organizationId, context.organization.id))
+        .where(
+          eq(schema.performanceReviews.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.performanceReviews.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -629,9 +679,13 @@ export const hrmRouter = {
       const [review] = await db
         .update(schema.performanceReviews)
         .set({
-          ...(input.reviewCycle !== undefined ? { reviewCycle: input.reviewCycle } : {}),
+          ...(input.reviewCycle !== undefined
+            ? { reviewCycle: input.reviewCycle }
+            : {}),
           ...(input.rating !== undefined ? { rating: input.rating } : {}),
-          ...(input.goalsProgress !== undefined ? { goalsProgress: input.goalsProgress } : {}),
+          ...(input.goalsProgress !== undefined
+            ? { goalsProgress: input.goalsProgress }
+            : {}),
           ...(input.summary !== undefined ? { summary: input.summary } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.status === "completed"
@@ -642,7 +696,10 @@ export const hrmRouter = {
         .where(
           and(
             eq(schema.performanceReviews.id, input.id),
-            eq(schema.performanceReviews.organizationId, context.organization.id),
+            eq(
+              schema.performanceReviews.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -665,7 +722,10 @@ export const hrmRouter = {
         .where(
           and(
             eq(schema.performanceReviews.id, input.id),
-            eq(schema.performanceReviews.organizationId, context.organization.id),
+            eq(
+              schema.performanceReviews.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };
@@ -685,7 +745,12 @@ export const hrmRouter = {
       const items = await db
         .select()
         .from(schema.recruitmentRequisitions)
-        .where(eq(schema.recruitmentRequisitions.organizationId, context.organization.id))
+        .where(
+          eq(
+            schema.recruitmentRequisitions.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.recruitmentRequisitions.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -726,7 +791,9 @@ export const hrmRouter = {
           status: input.status,
           hiringManager: input.hiringManager || null,
           budget: input.budget !== undefined ? String(input.budget) : null,
-          targetHireDate: input.targetHireDate ? new Date(input.targetHireDate) : null,
+          targetHireDate: input.targetHireDate
+            ? new Date(input.targetHireDate)
+            : null,
           description: input.description || null,
           createdBy: context.user.id,
         })
@@ -762,20 +829,35 @@ export const hrmRouter = {
         .update(schema.recruitmentRequisitions)
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.department !== undefined ? { department: input.department } : {}),
-          ...(input.employmentType !== undefined ? { employmentType: input.employmentType } : {}),
+          ...(input.department !== undefined
+            ? { department: input.department }
+            : {}),
+          ...(input.employmentType !== undefined
+            ? { employmentType: input.employmentType }
+            : {}),
           ...(input.openings !== undefined ? { openings: input.openings } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.hiringManager !== undefined ? { hiringManager: input.hiringManager } : {}),
-          ...(input.budget !== undefined ? { budget: String(input.budget) } : {}),
-          ...(input.targetHireDate !== undefined ? { targetHireDate: new Date(input.targetHireDate) } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.hiringManager !== undefined
+            ? { hiringManager: input.hiringManager }
+            : {}),
+          ...(input.budget !== undefined
+            ? { budget: String(input.budget) }
+            : {}),
+          ...(input.targetHireDate !== undefined
+            ? { targetHireDate: new Date(input.targetHireDate) }
+            : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(schema.recruitmentRequisitions.id, input.id),
-            eq(schema.recruitmentRequisitions.organizationId, context.organization.id),
+            eq(
+              schema.recruitmentRequisitions.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -798,7 +880,10 @@ export const hrmRouter = {
         .where(
           and(
             eq(schema.recruitmentRequisitions.id, input.id),
-            eq(schema.recruitmentRequisitions.organizationId, context.organization.id),
+            eq(
+              schema.recruitmentRequisitions.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };
@@ -834,9 +919,17 @@ export const hrmRouter = {
         .from(schema.recruitmentCandidates)
         .leftJoin(
           schema.recruitmentRequisitions,
-          eq(schema.recruitmentCandidates.requisitionId, schema.recruitmentRequisitions.id),
+          eq(
+            schema.recruitmentCandidates.requisitionId,
+            schema.recruitmentRequisitions.id,
+          ),
         )
-        .where(eq(schema.recruitmentCandidates.organizationId, context.organization.id))
+        .where(
+          eq(
+            schema.recruitmentCandidates.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.recruitmentCandidates.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -912,21 +1005,28 @@ export const hrmRouter = {
       const [row] = await db
         .update(schema.recruitmentCandidates)
         .set({
-          ...(input.requisitionId !== undefined ? { requisitionId: input.requisitionId } : {}),
+          ...(input.requisitionId !== undefined
+            ? { requisitionId: input.requisitionId }
+            : {}),
           ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
           ...(input.email !== undefined ? { email: input.email } : {}),
           ...(input.phone !== undefined ? { phone: input.phone } : {}),
           ...(input.stage !== undefined ? { stage: input.stage } : {}),
           ...(input.score !== undefined ? { score: input.score } : {}),
           ...(input.source !== undefined ? { source: input.source } : {}),
-          ...(input.resumeUrl !== undefined ? { resumeUrl: input.resumeUrl } : {}),
+          ...(input.resumeUrl !== undefined
+            ? { resumeUrl: input.resumeUrl }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(schema.recruitmentCandidates.id, input.id),
-            eq(schema.recruitmentCandidates.organizationId, context.organization.id),
+            eq(
+              schema.recruitmentCandidates.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -949,7 +1049,10 @@ export const hrmRouter = {
         .where(
           and(
             eq(schema.recruitmentCandidates.id, input.id),
-            eq(schema.recruitmentCandidates.organizationId, context.organization.id),
+            eq(
+              schema.recruitmentCandidates.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };
@@ -969,7 +1072,9 @@ export const hrmRouter = {
       const items = await db
         .select()
         .from(schema.trainingPrograms)
-        .where(eq(schema.trainingPrograms.organizationId, context.organization.id))
+        .where(
+          eq(schema.trainingPrograms.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.trainingPrograms.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -1045,11 +1150,19 @@ export const hrmRouter = {
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.category !== undefined ? { category: input.category } : {}),
           ...(input.provider !== undefined ? { provider: input.provider } : {}),
-          ...(input.durationHours !== undefined ? { durationHours: input.durationHours } : {}),
+          ...(input.durationHours !== undefined
+            ? { durationHours: input.durationHours }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.startDate !== undefined ? { startDate: new Date(input.startDate) } : {}),
-          ...(input.endDate !== undefined ? { endDate: new Date(input.endDate) } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.startDate !== undefined
+            ? { startDate: new Date(input.startDate) }
+            : {}),
+          ...(input.endDate !== undefined
+            ? { endDate: new Date(input.endDate) }
+            : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
@@ -1112,9 +1225,23 @@ export const hrmRouter = {
           updatedAt: schema.employeeTrainingRecords.updatedAt,
         })
         .from(schema.employeeTrainingRecords)
-        .leftJoin(schema.employees, eq(schema.employeeTrainingRecords.employeeId, schema.employees.id))
-        .leftJoin(schema.trainingPrograms, eq(schema.employeeTrainingRecords.programId, schema.trainingPrograms.id))
-        .where(eq(schema.employeeTrainingRecords.organizationId, context.organization.id))
+        .leftJoin(
+          schema.employees,
+          eq(schema.employeeTrainingRecords.employeeId, schema.employees.id),
+        )
+        .leftJoin(
+          schema.trainingPrograms,
+          eq(
+            schema.employeeTrainingRecords.programId,
+            schema.trainingPrograms.id,
+          ),
+        )
+        .where(
+          eq(
+            schema.employeeTrainingRecords.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.employeeTrainingRecords.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -1151,7 +1278,8 @@ export const hrmRouter = {
           progress: input.progress,
           score: input.score || null,
           notes: input.notes || null,
-          completedAt: input.completionStatus === "completed" ? new Date() : null,
+          completedAt:
+            input.completionStatus === "completed" ? new Date() : null,
         })
         .returning();
       return row;
@@ -1179,17 +1307,24 @@ export const hrmRouter = {
       const [row] = await db
         .update(schema.employeeTrainingRecords)
         .set({
-          ...(input.completionStatus !== undefined ? { completionStatus: input.completionStatus } : {}),
+          ...(input.completionStatus !== undefined
+            ? { completionStatus: input.completionStatus }
+            : {}),
           ...(input.progress !== undefined ? { progress: input.progress } : {}),
           ...(input.score !== undefined ? { score: input.score } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
-          ...(input.completionStatus === "completed" ? { completedAt: new Date() } : {}),
+          ...(input.completionStatus === "completed"
+            ? { completedAt: new Date() }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(schema.employeeTrainingRecords.id, input.id),
-            eq(schema.employeeTrainingRecords.organizationId, context.organization.id),
+            eq(
+              schema.employeeTrainingRecords.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -1212,7 +1347,10 @@ export const hrmRouter = {
         .where(
           and(
             eq(schema.employeeTrainingRecords.id, input.id),
-            eq(schema.employeeTrainingRecords.organizationId, context.organization.id),
+            eq(
+              schema.employeeTrainingRecords.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };

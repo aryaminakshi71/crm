@@ -26,9 +26,9 @@ const publicRoutes = [
 
 const appRoutes = [
   "/app",
-  "/app/contacts",
-  "/app/deals",
-  "/app/leads",
+  "/app/crm?view=contacts",
+  "/app/crm?view=deals",
+  "/app/crm?view=leads",
   "/app/activities",
   "/app/marketing",
   "/app/settings",

@@ -4,6 +4,7 @@
  * Dynamic route for individual industry pages.
  */
 
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Button, Card, CardContent } from "@crm/ui";
 import { Link, createFileRoute } from "@tanstack/react-router";
@@ -286,6 +287,7 @@ function IndustryDetailPage() {
           </Link>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

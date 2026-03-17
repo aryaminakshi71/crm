@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertCircle, FileText, Scale } from "lucide-react";
@@ -72,10 +73,9 @@ function TermsPage() {
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
-                  By accessing or using Nucleo One ("the Service"), you agree
-                  to be bound by these Terms of Service ("Terms"). If you
-                  disagree with any part of these terms, you may not access the
-                  Service.
+                  By accessing or using Nucleo One ("the Service"), you agree to
+                  be bound by these Terms of Service ("Terms"). If you disagree
+                  with any part of these terms, you may not access the Service.
                 </p>
                 <p>
                   These Terms apply to all users of the Service, including
@@ -92,9 +92,9 @@ function TermsPage() {
               <div className="space-y-3 text-foreground">
                 <p>
                   Permission is granted to temporarily access the materials on
-                  Nucleo One for personal or commercial transitory viewing
-                  only. This is the grant of a license, not a transfer of title,
-                  and under this license you may not:
+                  Nucleo One for personal or commercial transitory viewing only.
+                  This is the grant of a license, not a transfer of title, and
+                  under this license you may not:
                 </p>
                 <ul className="list-disc space-y-2 pl-6">
                   <li>Modify or copy the materials</li>
@@ -360,10 +360,10 @@ function TermsPage() {
                   <p>
                     Email:{" "}
                     <a
-                      href="mailto:legal@crmplatform.com"
+                      href="mailto:legal@nucleoone.com"
                       className="text-primary hover:underline"
                     >
-                      legal@crmplatform.com
+                      legal@nucleoone.com
                     </a>
                   </p>
                   <p>
@@ -376,6 +376,7 @@ function TermsPage() {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

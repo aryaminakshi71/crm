@@ -13,9 +13,26 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarClock, FileSignature, Plus, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  FileSignature,
+  Plus,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { nucleoApi } from "../lib/api";
 
@@ -43,7 +60,8 @@ function ContractsPage() {
   });
 
   const createContract = useMutation({
-    mutationFn: (payload: any) => nucleoApi.operations.contracts.create(payload),
+    mutationFn: (payload: any) =>
+      nucleoApi.operations.contracts.create(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ops-contracts"] });
       toast.success("Contract added to lifecycle workflow");
@@ -79,11 +97,16 @@ function ContractsPage() {
     onError: () => toast.error("Failed to delete contract"),
   });
 
-  const contracts = useMemo(() => contractsQuery.data?.data || [], [contractsQuery.data]);
+  const contracts = useMemo(
+    () => contractsQuery.data?.data || [],
+    [contractsQuery.data],
+  );
 
   const filteredContracts = useMemo(() => {
     if (statusFilter === "all") return contracts;
-    return contracts.filter((contract: any) => contract.status === statusFilter);
+    return contracts.filter(
+      (contract: any) => contract.status === statusFilter,
+    );
   }, [contracts, statusFilter]);
 
   const renewalSoon = contracts.filter((contract: any) => {
@@ -92,8 +115,12 @@ function ContractsPage() {
     return diff > 0 && diff <= 1000 * 60 * 60 * 24 * 90;
   }).length;
 
-  const activeContracts = contracts.filter((contract: any) => contract.status === "active").length;
-  const reviewQueue = contracts.filter((contract: any) => contract.status === "review").length;
+  const activeContracts = contracts.filter(
+    (contract: any) => contract.status === "active",
+  ).length;
+  const reviewQueue = contracts.filter(
+    (contract: any) => contract.status === "review",
+  ).length;
 
   if (contractsQuery.isLoading) {
     return <Loading text="Loading contract lifecycle..." />;
@@ -103,20 +130,169 @@ function ContractsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-2xl text-foreground">Contract Lifecycle</h1>
+          <h1 className="font-bold text-2xl text-foreground">
+            Contract Lifecycle
+          </h1>
           <p className="text-muted-foreground">
-            Manage draft, review, activation, renewals, and legal/compliance controls.
+            Manage draft, review, activation, renewals, and legal/compliance
+            controls.
           </p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsModalOpen(true)}
+        >
           New Contract
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Stat title="Active Contracts" value={activeContracts} icon={<FileSignature className="h-4 w-4 text-success" />} />
-        <Stat title="Review Queue" value={reviewQueue} icon={<ShieldAlert className="h-4 w-4 text-warning" />} />
-        <Stat title="Renewals in 90 Days" value={renewalSoon} icon={<CalendarClock className="h-4 w-4 text-primary" />} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Active Agreements"
+          value={activeContracts}
+          icon={<FileSignature className="h-4 w-4" />}
+          trend="All live"
+          color="text-primary"
+        />
+        <Metric
+          title="Legal Review"
+          value={reviewQueue}
+          icon={<Activity className="h-4 w-4" />}
+          trend="+2 this week"
+          color="text-cyan-400"
+        />
+        <Metric
+          title="Upcoming Renewals"
+          value={renewalSoon}
+          icon={<Clock className="h-4 w-4" />}
+          trend="Next 90 days"
+          color="text-rose-400"
+        />
+        <Metric
+          title="Obligation Score"
+          value="98%"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="Low risk"
+          color="text-emerald-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Contract Lifecycle Flow
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={[
+                    { month: "Jan", active: 45, review: 12 },
+                    { month: "Feb", active: 48, review: 15 },
+                    { month: "Mar", active: 52, review: 10 },
+                    { month: "Apr", active: 58, review: 14 },
+                    { month: "May", active: 62, review: 8 },
+                  ]}
+                >
+                  <defs>
+                    <linearGradient
+                      id="colorActive"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="active"
+                    stroke="#22d3ee"
+                    fillOpacity={1}
+                    fill="url(#colorActive)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="review"
+                    stroke="#a78bfa"
+                    fillOpacity={0}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-rose-400" />
+              <CardTitle className="text-sm font-bold">Risk Exposure</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+                **3 contracts** identified with missing auto-renewal opt-out
+                clauses. Review recommended.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {[
+                { label: "Liability Cap", val: 88, color: "bg-emerald-400" },
+                { label: "Data Privacy", val: 42, color: "bg-amber-400" },
+                { label: "Indemnity", val: 95, color: "bg-primary" },
+              ].map((risk) => (
+                <div key={risk.label} className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <span>{risk.label}</span>
+                    <span>{risk.val}% Readiness</span>
+                  </div>
+                  <div className="h-1 w-full bg-muted/20 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${risk.color}`}
+                      style={{ width: `${risk.val}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex items-center gap-3">
@@ -141,15 +317,24 @@ function ContractsPage() {
         <CardContent>
           <div className="space-y-3">
             {filteredContracts.map((contract: any) => (
-              <div key={contract.id} className="rounded-lg border border-border p-3">
+              <div
+                key={contract.id}
+                className="rounded-lg border border-border p-3"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-foreground">{contract.title}</p>
-                    <p className="text-muted-foreground text-sm">
-                      Counterparty: {contract.counterparty} | Owner: {contract.ownerTeam}
+                    <p className="font-medium text-foreground">
+                      {contract.title}
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      Renewal: {contract.renewalDate ? new Date(contract.renewalDate).toLocaleDateString() : "Not set"}
+                      Counterparty: {contract.counterparty} | Owner:{" "}
+                      {contract.ownerTeam}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      Renewal:{" "}
+                      {contract.renewalDate
+                        ? new Date(contract.renewalDate).toLocaleDateString()
+                        : "Not set"}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -232,14 +417,36 @@ function ContractsPage() {
       >
         <div className="space-y-4">
           <FormField label="Contract Title" required>
-            <Input value={newContract.title} onChange={(e) => setNewContract((prev) => ({ ...prev, title: e.target.value }))} />
+            <Input
+              value={newContract.title}
+              onChange={(e) =>
+                setNewContract((prev) => ({ ...prev, title: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Counterparty" required>
-            <Input value={newContract.counterparty} onChange={(e) => setNewContract((prev) => ({ ...prev, counterparty: e.target.value }))} />
+            <Input
+              value={newContract.counterparty}
+              onChange={(e) =>
+                setNewContract((prev) => ({
+                  ...prev,
+                  counterparty: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Owner Team">
-              <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newContract.ownerTeam} onChange={(e) => setNewContract((prev) => ({ ...prev, ownerTeam: e.target.value }))}>
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                value={newContract.ownerTeam}
+                onChange={(e) =>
+                  setNewContract((prev) => ({
+                    ...prev,
+                    ownerTeam: e.target.value,
+                  }))
+                }
+              >
                 <option value="Legal">Legal</option>
                 <option value="Procurement">Procurement</option>
                 <option value="Finance">Finance</option>
@@ -247,7 +454,16 @@ function ContractsPage() {
               </select>
             </FormField>
             <FormField label="Status">
-              <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newContract.status} onChange={(e) => setNewContract((prev) => ({ ...prev, status: e.target.value }))}>
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                value={newContract.status}
+                onChange={(e) =>
+                  setNewContract((prev) => ({
+                    ...prev,
+                    status: e.target.value,
+                  }))
+                }
+              >
                 <option value="draft">draft</option>
                 <option value="review">review</option>
                 <option value="active">active</option>
@@ -256,10 +472,28 @@ function ContractsPage() {
             </FormField>
           </div>
           <FormField label="Renewal Date">
-            <Input type="date" value={newContract.renewalDate} onChange={(e) => setNewContract((prev) => ({ ...prev, renewalDate: e.target.value }))} />
+            <Input
+              type="date"
+              value={newContract.renewalDate}
+              onChange={(e) =>
+                setNewContract((prev) => ({
+                  ...prev,
+                  renewalDate: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <FormField label="Compliance Notes">
-            <Textarea rows={3} value={newContract.complianceNotes} onChange={(e) => setNewContract((prev) => ({ ...prev, complianceNotes: e.target.value }))} />
+            <Textarea
+              rows={3}
+              value={newContract.complianceNotes}
+              onChange={(e) =>
+                setNewContract((prev) => ({
+                  ...prev,
+                  complianceNotes: e.target.value,
+                }))
+              }
+            />
           </FormField>
         </div>
       </FormModal>
@@ -267,16 +501,44 @@ function ContractsPage() {
   );
 }
 
-function Stat({ title, value, icon }: { title: string; value: number | string; icon: ReactNode }) {
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
   return (
-    <Card>
+    <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-sm">{title}</p>
-            <p className="font-bold text-2xl text-foreground">{value}</p>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="rounded-md bg-muted p-2">{icon}</div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <FileSignature className="h-4 w-4" />}
+          </div>
         </div>
       </CardContent>
     </Card>

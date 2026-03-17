@@ -15,9 +15,10 @@ import {
   predictScore,
 } from "./ai";
 
-const ai = createAIClient({ 
+const ai = createAIClient({
   provider: "openrouter",
-  apiKey: typeof process !== "undefined" ? process.env.OPENROUTER_API_KEY : undefined,
+  apiKey:
+    typeof process !== "undefined" ? process.env.OPENROUTER_API_KEY : undefined,
 });
 
 /**
@@ -31,7 +32,7 @@ export async function scoreLead(contactData: {
   tags?: string[];
 }): Promise<{ score: number; reasoning: string; factors: string[] }> {
   console.log("scoreLead called, ai:", ai);
-  
+
   if (!ai) {
     return { score: 50, reasoning: "AI not configured", factors: [] };
   }
@@ -49,8 +50,13 @@ export async function scoreLead(contactData: {
 
     const prediction = await predictScore(ai, context, "value");
     console.log("Prediction result:", prediction);
-    
-    const suggestions = await generateSuggestions(ai, "CRM", context, "insights");
+
+    const suggestions = await generateSuggestions(
+      ai,
+      "CRM",
+      context,
+      "insights",
+    );
 
     return {
       score: prediction.score,
@@ -129,19 +135,24 @@ function getTicketHeuristics(input: {
   description?: string;
   customerTier?: string;
 }): TicketTriageResult {
-  const text = `${input.subject || ""} ${input.description || ""}`.toLowerCase();
+  const text =
+    `${input.subject || ""} ${input.description || ""}`.toLowerCase();
 
   let priority: TicketTriageResult["priority"] = "medium";
   let queue = "general";
   let slaHours = 24;
   const rationale: string[] = [];
 
-  if (/(down|outage|critical|urgent|asap|cannot access|blocked|breach)/.test(text)) {
+  if (
+    /(down|outage|critical|urgent|asap|cannot access|blocked|breach)/.test(text)
+  ) {
     priority = "high";
     queue = "technical";
     slaHours = 4;
     rationale.push("Detected outage/urgent technical language.");
-  } else if (/(invoice|billing|payment|refund|charge|subscription)/.test(text)) {
+  } else if (
+    /(invoice|billing|payment|refund|charge|subscription)/.test(text)
+  ) {
     queue = "billing";
     slaHours = 8;
     rationale.push("Detected billing-related terms.");
@@ -157,7 +168,11 @@ function getTicketHeuristics(input: {
   return {
     priority,
     queue,
-    summary: (input.description || input.subject || "No context provided").slice(0, 220),
+    summary: (
+      input.description ||
+      input.subject ||
+      "No context provided"
+    ).slice(0, 220),
     suggestedResponse:
       "Thanks for reaching out. We have triaged this ticket and assigned it to the appropriate queue. We will update you with next steps shortly.",
     slaHours,
@@ -184,16 +199,22 @@ Ticket Description: ${input.description || "N/A"}
 Customer Tier: ${input.customerTier || "N/A"}
 `;
     const prediction = await predictScore(ai, context, "priority");
-    const insights = await generateSuggestions(ai, "Helpdesk", context, "insights");
+    const insights = await generateSuggestions(
+      ai,
+      "Helpdesk",
+      context,
+      "insights",
+    );
     const summaryData = await analyzeText(ai, context, "summary");
 
     const score = Number(prediction.score || 50);
     const priority: TicketTriageResult["priority"] =
       score >= 75 ? "high" : score <= 35 ? "low" : "medium";
-    const queue =
-      /billing|invoice|payment/i.test(context) ? "billing" :
-      /bug|error|down|technical|outage/i.test(context) ? "technical" :
-      fallback.queue;
+    const queue = /billing|invoice|payment/i.test(context)
+      ? "billing"
+      : /bug|error|down|technical|outage/i.test(context)
+        ? "technical"
+        : fallback.queue;
     const slaHours = priority === "high" ? 4 : priority === "medium" ? 12 : 24;
 
     return {
@@ -253,8 +274,18 @@ Audience: ${input.audience}
 Preferred Channel: ${input.channel || "email"}
 Budget: ${input.budget ?? "N/A"}
 `;
-    const suggestions = await generateSuggestions(ai, "Marketing", context, "actions");
-    const insights = await generateSuggestions(ai, "Marketing", context, "insights");
+    const suggestions = await generateSuggestions(
+      ai,
+      "Marketing",
+      context,
+      "actions",
+    );
+    const insights = await generateSuggestions(
+      ai,
+      "Marketing",
+      context,
+      "insights",
+    );
 
     return {
       ...fallback,
@@ -262,7 +293,9 @@ Budget: ${input.budget ?? "N/A"}
         ? suggestions.slice(0, 3)
         : fallback.subjectLines,
       messageOutline: insights[0] || fallback.messageOutline,
-      segments: insights.slice(1, 4).length ? insights.slice(1, 4) : fallback.segments,
+      segments: insights.slice(1, 4).length
+        ? insights.slice(1, 4)
+        : fallback.segments,
       kpis: ["Open rate", "CTR", "Conversion rate", "Attributed revenue"],
     };
   } catch (error) {
@@ -379,7 +412,9 @@ export async function assessProjectRisk(input: {
   return {
     riskScore: finalScore,
     riskLevel,
-    blockers: blockers.length ? blockers : ["No blockers detected from available data."],
+    blockers: blockers.length
+      ? blockers
+      : ["No blockers detected from available data."],
     nextActions:
       riskLevel === "high"
         ? [
@@ -420,14 +455,21 @@ export async function analyzeDocumentDraft(input: {
   try {
     const summary = await analyzeText(ai, text, "summary");
     const keywords = await analyzeText(ai, text, "keywords");
-    const actions = await generateSuggestions(ai, "Doclattice", text, "actions");
+    const actions = await generateSuggestions(
+      ai,
+      "Doclattice",
+      text,
+      "actions",
+    );
 
     return {
       summary: summary?.summary || fallback.summary,
       keywords: Array.isArray(keywords?.keywords)
         ? keywords.keywords.slice(0, 6)
         : fallback.keywords,
-      actionItems: actions.slice(0, 4).length ? actions.slice(0, 4) : fallback.actionItems,
+      actionItems: actions.slice(0, 4).length
+        ? actions.slice(0, 4)
+        : fallback.actionItems,
     };
   } catch (error) {
     console.error("Error analyzing document draft:", error);

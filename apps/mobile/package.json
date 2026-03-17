@@ -4,26 +4,55 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
+    "prebuild": "expo prebuild",
+    "doctor": "bunx expo-doctor",
+    "reset:workspace": "rm -rf .expo node_modules",
+    "build:android:dev": "eas build --platform android --profile development",
+    "build:ios:dev": "eas build --platform ios --profile development",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:ios:preview": "eas build --platform ios --profile preview",
+    "build:android": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile production",
+    "submit:android": "eas submit --platform android --profile production",
+    "submit:ios": "eas submit --platform ios --profile production",
+    "release:android": "bun run build:android && bun run submit:android",
+    "release:ios": "bun run build:ios && bun run submit:ios",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
     "expo": "~54.0.33",
+    "expo-constants": "~18.0.13",
+    "expo-linking": "~8.0.11",
+    "expo-router": "~6.0.14",
+    "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-system-ui": "~6.0.9",
+    "expo-web-browser": "~15.0.8",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "expo-router": "~6.0.14",
-    "@tanstack/react-query": "^5.90.20"
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2",
     "vitest": "^2.1.8"
+  },
+  "expo": {
+    "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      }
+    }
   },
   "private": true
 }

@@ -105,7 +105,9 @@ export const intelligenceRouter = {
           status: input.status,
           output: input.output || null,
           confidence:
-            input.confidence !== undefined ? String(Math.max(0, Math.min(100, input.confidence))) : null,
+            input.confidence !== undefined
+              ? String(Math.max(0, Math.min(100, input.confidence)))
+              : null,
           model: input.model || null,
           createdBy: context.user.id,
           startedAt: new Date(),
@@ -141,7 +143,11 @@ export const intelligenceRouter = {
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.output !== undefined ? { output: input.output } : {}),
           ...(input.confidence !== undefined
-            ? { confidence: String(Math.max(0, Math.min(100, input.confidence))) }
+            ? {
+                confidence: String(
+                  Math.max(0, Math.min(100, input.confidence)),
+                ),
+              }
             : {}),
           ...(input.model !== undefined ? { model: input.model } : {}),
           ...(input.status === "completed" ? { completedAt: new Date() } : {}),
@@ -192,7 +198,9 @@ export const intelligenceRouter = {
       const items = await db
         .select()
         .from(schema.forecastSnapshots)
-        .where(eq(schema.forecastSnapshots.organizationId, context.organization.id))
+        .where(
+          eq(schema.forecastSnapshots.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.forecastSnapshots.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -264,19 +272,34 @@ export const intelligenceRouter = {
       const [forecast] = await db
         .update(schema.forecastSnapshots)
         .set({
-          ...(input.pipelineAmount !== undefined ? { pipelineAmount: String(input.pipelineAmount) } : {}),
-          ...(input.winRate !== undefined ? { winRate: String(input.winRate) } : {}),
-          ...(input.avgSalesCycleDays !== undefined ? { avgSalesCycleDays: input.avgSalesCycleDays } : {}),
-          ...(input.projectedRevenue !== undefined ? { projectedRevenue: String(input.projectedRevenue) } : {}),
+          ...(input.pipelineAmount !== undefined
+            ? { pipelineAmount: String(input.pipelineAmount) }
+            : {}),
+          ...(input.winRate !== undefined
+            ? { winRate: String(input.winRate) }
+            : {}),
+          ...(input.avgSalesCycleDays !== undefined
+            ? { avgSalesCycleDays: input.avgSalesCycleDays }
+            : {}),
+          ...(input.projectedRevenue !== undefined
+            ? { projectedRevenue: String(input.projectedRevenue) }
+            : {}),
           ...(input.riskBand !== undefined ? { riskBand: input.riskBand } : {}),
-          ...(input.confidence !== undefined ? { confidence: String(input.confidence) } : {}),
-          ...(input.recommendations !== undefined ? { recommendations: input.recommendations } : {}),
+          ...(input.confidence !== undefined
+            ? { confidence: String(input.confidence) }
+            : {}),
+          ...(input.recommendations !== undefined
+            ? { recommendations: input.recommendations }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(schema.forecastSnapshots.id, input.id),
-            eq(schema.forecastSnapshots.organizationId, context.organization.id),
+            eq(
+              schema.forecastSnapshots.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -298,7 +321,10 @@ export const intelligenceRouter = {
         .where(
           and(
             eq(schema.forecastSnapshots.id, input.id),
-            eq(schema.forecastSnapshots.organizationId, context.organization.id),
+            eq(
+              schema.forecastSnapshots.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };
@@ -318,7 +344,12 @@ export const intelligenceRouter = {
       const items = await db
         .select()
         .from(schema.executiveKpiSnapshots)
-        .where(eq(schema.executiveKpiSnapshots.organizationId, context.organization.id))
+        .where(
+          eq(
+            schema.executiveKpiSnapshots.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.executiveKpiSnapshots.observedAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -384,17 +415,30 @@ export const intelligenceRouter = {
       const [kpi] = await db
         .update(schema.executiveKpiSnapshots)
         .set({
-          ...(input.metricKey !== undefined ? { metricKey: input.metricKey } : {}),
-          ...(input.metricLabel !== undefined ? { metricLabel: input.metricLabel } : {}),
-          ...(input.metricValue !== undefined ? { metricValue: String(input.metricValue) } : {}),
-          ...(input.metricText !== undefined ? { metricText: input.metricText } : {}),
-          ...(input.periodLabel !== undefined ? { periodLabel: input.periodLabel } : {}),
+          ...(input.metricKey !== undefined
+            ? { metricKey: input.metricKey }
+            : {}),
+          ...(input.metricLabel !== undefined
+            ? { metricLabel: input.metricLabel }
+            : {}),
+          ...(input.metricValue !== undefined
+            ? { metricValue: String(input.metricValue) }
+            : {}),
+          ...(input.metricText !== undefined
+            ? { metricText: input.metricText }
+            : {}),
+          ...(input.periodLabel !== undefined
+            ? { periodLabel: input.periodLabel }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(schema.executiveKpiSnapshots.id, input.id),
-            eq(schema.executiveKpiSnapshots.organizationId, context.organization.id),
+            eq(
+              schema.executiveKpiSnapshots.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -416,7 +460,10 @@ export const intelligenceRouter = {
         .where(
           and(
             eq(schema.executiveKpiSnapshots.id, input.id),
-            eq(schema.executiveKpiSnapshots.organizationId, context.organization.id),
+            eq(
+              schema.executiveKpiSnapshots.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };

@@ -93,6 +93,11 @@ export const projects = pgTable(
     orgIdx: index("idx_projects_org").on(table.organizationId),
     customerIdx: index("idx_projects_customer").on(table.customerId),
     statusIdx: index("idx_projects_status").on(table.status),
+    orgStatusCreatedIdx: index("idx_projects_org_status_created").on(
+      table.organizationId,
+      table.status,
+      table.createdAt,
+    ),
   }),
 );
 
@@ -125,6 +130,61 @@ export const projectTasks = pgTable(
     orgIdx: index("idx_project_tasks_org").on(table.organizationId),
     projectIdx: index("idx_project_tasks_project").on(table.projectId),
     statusIdx: index("idx_project_tasks_status").on(table.status),
+  }),
+);
+
+export const projectMilestones = pgTable(
+  "project_milestones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }).notNull(),
+    status: varchar("status", { length: 40 }).notNull().default("in_progress"),
+    targetDate: timestamp("target_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("idx_project_milestones_org").on(table.organizationId),
+    projectIdx: index("idx_project_milestones_project").on(table.projectId),
+  }),
+);
+
+export const projectResources = pgTable(
+  "project_resources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: varchar("name", { length: 255 }),
+    role: varchar("role", { length: 120 }),
+    allocation: integer("allocation").notNull().default(100),
+    startDate: timestamp("start_date", { withTimezone: true }),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("idx_project_resources_org").on(table.organizationId),
+    projectIdx: index("idx_project_resources_project").on(table.projectId),
+    userIdx: index("idx_project_resources_user").on(table.userId),
   }),
 );
 
@@ -167,6 +227,12 @@ export const tickets = pgTable(
     orgIdx: index("idx_tickets_org").on(table.organizationId),
     statusIdx: index("idx_tickets_status").on(table.status),
     queueIdx: index("idx_tickets_queue").on(table.queue),
+    orgStatusQueueCreatedIdx: index("idx_tickets_org_status_queue_created").on(
+      table.organizationId,
+      table.status,
+      table.queue,
+      table.createdAt,
+    ),
   }),
 );
 
@@ -337,6 +403,10 @@ export const documents = pgTable(
   (table) => ({
     orgIdx: index("idx_documents_org").on(table.organizationId),
     statusIdx: index("idx_documents_status").on(table.status),
+    orgUpdatedIdx: index("idx_documents_org_updated").on(
+      table.organizationId,
+      table.updatedAt,
+    ),
   }),
 );
 
@@ -383,9 +453,7 @@ export const invoices = pgTable(
       .notNull()
       .default("0"),
     tax: numeric("tax", { precision: 15, scale: 2 }).notNull().default("0"),
-    total: numeric("total", { precision: 15, scale: 2 })
-      .notNull()
-      .default("0"),
+    total: numeric("total", { precision: 15, scale: 2 }).notNull().default("0"),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -501,10 +569,14 @@ export const employees = pgTable(
     employeeCode: varchar("employee_code", { length: 64 }),
     fullName: varchar("full_name", { length: 255 }).notNull(),
     workEmail: varchar("work_email", { length: 255 }).notNull(),
-    department: varchar("department", { length: 120 }).notNull().default("General"),
+    department: varchar("department", { length: 120 })
+      .notNull()
+      .default("General"),
     jobTitle: varchar("job_title", { length: 160 }),
     managerName: varchar("manager_name", { length: 255 }),
-    employmentType: varchar("employment_type", { length: 60 }).notNull().default("full_time"),
+    employmentType: varchar("employment_type", { length: 60 })
+      .notNull()
+      .default("full_time"),
     status: varchar("status", { length: 40 }).notNull().default("active"),
     location: varchar("location", { length: 120 }),
     joinDate: timestamp("join_date", { withTimezone: true }),
@@ -537,7 +609,9 @@ export const attendanceLogs = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    attendanceDate: timestamp("attendance_date", { withTimezone: true }).notNull(),
+    attendanceDate: timestamp("attendance_date", {
+      withTimezone: true,
+    }).notNull(),
     status: varchar("status", { length: 40 }).notNull().default("present"),
     hours: numeric("hours", { precision: 5, scale: 2 }).notNull().default("0"),
     checkInAt: timestamp("check_in_at", { withTimezone: true }),
@@ -564,7 +638,9 @@ export const leaveRequests = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    leaveType: varchar("leave_type", { length: 60 }).notNull().default("annual"),
+    leaveType: varchar("leave_type", { length: 60 })
+      .notNull()
+      .default("annual"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }).notNull(),
     reason: text("reason"),
@@ -658,7 +734,9 @@ export const approvalWorkflows = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
-    ownerTeam: varchar("owner_team", { length: 120 }).notNull().default("operations"),
+    ownerTeam: varchar("owner_team", { length: 120 })
+      .notNull()
+      .default("operations"),
     stageCount: integer("stage_count").notNull().default(1),
     status: varchar("status", { length: 40 }).notNull().default("draft"),
     notes: text("notes"),
@@ -708,7 +786,9 @@ export const ssoProviders = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     providerName: varchar("provider_name", { length: 120 }).notNull(),
-    providerType: varchar("provider_type", { length: 60 }).notNull().default("oidc"),
+    providerType: varchar("provider_type", { length: 60 })
+      .notNull()
+      .default("oidc"),
     status: varchar("status", { length: 40 }).notNull().default("connected"),
     config: jsonb("config").$type<Record<string, unknown>>(),
     lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
@@ -737,7 +817,9 @@ export const scimSyncJobs = pgTable(
       onDelete: "set null",
     }),
     status: varchar("status", { length: 40 }).notNull().default("queued"),
-    direction: varchar("direction", { length: 40 }).notNull().default("inbound"),
+    direction: varchar("direction", { length: 40 })
+      .notNull()
+      .default("inbound"),
     recordsProcessed: integer("records_processed").notNull().default(0),
     errorMessage: text("error_message"),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -783,7 +865,9 @@ export const enterpriseAuditEvents = pgTable(
   (table) => ({
     orgIdx: index("idx_enterprise_audit_events_org").on(table.organizationId),
     eventTimeIdx: index("idx_enterprise_audit_events_time").on(table.eventTime),
-    severityIdx: index("idx_enterprise_audit_events_severity").on(table.severity),
+    severityIdx: index("idx_enterprise_audit_events_severity").on(
+      table.severity,
+    ),
   }),
 );
 
@@ -892,7 +976,9 @@ export const executiveKpiSnapshots = pgTable(
   (table) => ({
     orgIdx: index("idx_executive_kpi_snapshots_org").on(table.organizationId),
     keyIdx: index("idx_executive_kpi_snapshots_key").on(table.metricKey),
-    observedIdx: index("idx_executive_kpi_snapshots_observed").on(table.observedAt),
+    observedIdx: index("idx_executive_kpi_snapshots_observed").on(
+      table.observedAt,
+    ),
   }),
 );
 
@@ -904,7 +990,9 @@ export const vendors = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
-    category: varchar("category", { length: 120 }).notNull().default("Services"),
+    category: varchar("category", { length: 120 })
+      .notNull()
+      .default("Services"),
     slaTier: varchar("sla_tier", { length: 80 }).notNull().default("Standard"),
     risk: varchar("risk", { length: 40 }).notNull().default("low"),
     onTimeRate: integer("on_time_rate").notNull().default(95),
@@ -937,8 +1025,12 @@ export const purchaseRequests = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
-    department: varchar("department", { length: 120 }).notNull().default("Operations"),
-    amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+    department: varchar("department", { length: 120 })
+      .notNull()
+      .default("Operations"),
+    amount: numeric("amount", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     currency: varchar("currency", { length: 12 }).notNull().default("USD"),
     vendorId: uuid("vendor_id").references(() => vendors.id, {
       onDelete: "set null",
@@ -962,7 +1054,9 @@ export const purchaseRequests = pgTable(
     orgIdx: index("idx_purchase_requests_org").on(table.organizationId),
     statusIdx: index("idx_purchase_requests_status").on(table.status),
     vendorIdx: index("idx_purchase_requests_vendor").on(table.vendorId),
-    departmentIdx: index("idx_purchase_requests_department").on(table.department),
+    departmentIdx: index("idx_purchase_requests_department").on(
+      table.department,
+    ),
   }),
 );
 
@@ -975,7 +1069,9 @@ export const contractsRegister = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
     counterparty: varchar("counterparty", { length: 255 }).notNull(),
-    ownerTeam: varchar("owner_team", { length: 120 }).notNull().default("Legal"),
+    ownerTeam: varchar("owner_team", { length: 120 })
+      .notNull()
+      .default("Legal"),
     status: varchar("status", { length: 40 }).notNull().default("draft"),
     renewalDate: timestamp("renewal_date", { withTimezone: true }),
     complianceNotes: text("compliance_notes"),
@@ -1023,7 +1119,9 @@ export const complianceControls = pgTable(
   },
   (table) => ({
     orgIdx: index("idx_compliance_controls_org").on(table.organizationId),
-    frameworkIdx: index("idx_compliance_controls_framework").on(table.framework),
+    frameworkIdx: index("idx_compliance_controls_framework").on(
+      table.framework,
+    ),
     statusIdx: index("idx_compliance_controls_status").on(table.status),
   }),
 );
@@ -1066,7 +1164,9 @@ export const retentionPolicies = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     dataClass: varchar("data_class", { length: 160 }).notNull(),
     retentionPeriod: varchar("retention_period", { length: 120 }).notNull(),
-    backupFrequency: varchar("backup_frequency", { length: 80 }).notNull().default("Daily"),
+    backupFrequency: varchar("backup_frequency", { length: 80 })
+      .notNull()
+      .default("Daily"),
     archivePolicy: text("archive_policy"),
     status: varchar("status", { length: 40 }).notNull().default("active"),
     createdBy: text("created_by").references(() => users.id, {
@@ -1129,7 +1229,9 @@ export const financeTransactions = pgTable(
     type: varchar("type", { length: 60 }).notNull().default("expense"),
     category: varchar("category", { length: 120 }).notNull().default("general"),
     reference: varchar("reference", { length: 120 }),
-    amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+    amount: numeric("amount", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     currency: varchar("currency", { length: 12 }).notNull().default("USD"),
     status: varchar("status", { length: 40 }).notNull().default("posted"),
     counterparty: varchar("counterparty", { length: 255 }),
@@ -1162,11 +1264,15 @@ export const payrollRuns = pgTable(
     periodLabel: varchar("period_label", { length: 80 }).notNull(),
     payDate: timestamp("pay_date", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 40 }).notNull().default("draft"),
-    totalGross: numeric("total_gross", { precision: 15, scale: 2 }).notNull().default("0"),
+    totalGross: numeric("total_gross", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     totalDeductions: numeric("total_deductions", { precision: 15, scale: 2 })
       .notNull()
       .default("0"),
-    totalNet: numeric("total_net", { precision: 15, scale: 2 }).notNull().default("0"),
+    totalNet: numeric("total_net", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     notes: text("notes"),
     createdBy: text("created_by").references(() => users.id, {
       onDelete: "set null",
@@ -1195,9 +1301,15 @@ export const payrollEntries = pgTable(
     employeeId: uuid("employee_id").references(() => employees.id, {
       onDelete: "set null",
     }),
-    grossPay: numeric("gross_pay", { precision: 15, scale: 2 }).notNull().default("0"),
-    deductions: numeric("deductions", { precision: 15, scale: 2 }).notNull().default("0"),
-    netPay: numeric("net_pay", { precision: 15, scale: 2 }).notNull().default("0"),
+    grossPay: numeric("gross_pay", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
+    deductions: numeric("deductions", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
+    netPay: numeric("net_pay", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     status: varchar("status", { length: 40 }).notNull().default("draft"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1304,7 +1416,9 @@ export const recruitmentRequisitions = pgTable(
   (table) => ({
     orgIdx: index("idx_recruitment_requisitions_org").on(table.organizationId),
     statusIdx: index("idx_recruitment_requisitions_status").on(table.status),
-    deptIdx: index("idx_recruitment_requisitions_department").on(table.department),
+    deptIdx: index("idx_recruitment_requisitions_department").on(
+      table.department,
+    ),
   }),
 );
 
@@ -1315,9 +1429,12 @@ export const recruitmentCandidates = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    requisitionId: uuid("requisition_id").references(() => recruitmentRequisitions.id, {
-      onDelete: "set null",
-    }),
+    requisitionId: uuid("requisition_id").references(
+      () => recruitmentRequisitions.id,
+      {
+        onDelete: "set null",
+      },
+    ),
     fullName: varchar("full_name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),
     phone: varchar("phone", { length: 64 }),
@@ -1338,7 +1455,9 @@ export const recruitmentCandidates = pgTable(
   },
   (table) => ({
     orgIdx: index("idx_recruitment_candidates_org").on(table.organizationId),
-    requisitionIdx: index("idx_recruitment_candidates_requisition").on(table.requisitionId),
+    requisitionIdx: index("idx_recruitment_candidates_requisition").on(
+      table.requisitionId,
+    ),
     stageIdx: index("idx_recruitment_candidates_stage").on(table.stage),
   }),
 );
@@ -1407,9 +1526,15 @@ export const employeeTrainingRecords = pgTable(
   },
   (table) => ({
     orgIdx: index("idx_employee_training_records_org").on(table.organizationId),
-    employeeIdx: index("idx_employee_training_records_employee").on(table.employeeId),
-    programIdx: index("idx_employee_training_records_program").on(table.programId),
-    statusIdx: index("idx_employee_training_records_status").on(table.completionStatus),
+    employeeIdx: index("idx_employee_training_records_employee").on(
+      table.employeeId,
+    ),
+    programIdx: index("idx_employee_training_records_program").on(
+      table.programId,
+    ),
+    statusIdx: index("idx_employee_training_records_status").on(
+      table.completionStatus,
+    ),
   }),
 );
 
@@ -1497,33 +1622,36 @@ export const queueTokensRelations = relations(queueTokens, ({ one }) => ({
   }),
 }));
 
-export const digitalAssetsRelations = relations(digitalAssets, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [digitalAssets.organizationId],
-    references: [organizations.id],
+export const digitalAssetsRelations = relations(
+  digitalAssets,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [digitalAssets.organizationId],
+      references: [organizations.id],
+    }),
+    folder: one(assetFolders, {
+      fields: [digitalAssets.folderId],
+      references: [assetFolders.id],
+    }),
+    customer: one(customers, {
+      fields: [digitalAssets.customerId],
+      references: [customers.id],
+    }),
+    project: one(projects, {
+      fields: [digitalAssets.projectId],
+      references: [projects.id],
+    }),
+    ticket: one(tickets, {
+      fields: [digitalAssets.ticketId],
+      references: [tickets.id],
+    }),
+    file: one(files, {
+      fields: [digitalAssets.fileId],
+      references: [files.id],
+    }),
+    tags: many(digitalAssetTags),
   }),
-  folder: one(assetFolders, {
-    fields: [digitalAssets.folderId],
-    references: [assetFolders.id],
-  }),
-  customer: one(customers, {
-    fields: [digitalAssets.customerId],
-    references: [customers.id],
-  }),
-  project: one(projects, {
-    fields: [digitalAssets.projectId],
-    references: [projects.id],
-  }),
-  ticket: one(tickets, {
-    fields: [digitalAssets.ticketId],
-    references: [tickets.id],
-  }),
-  file: one(files, {
-    fields: [digitalAssets.fileId],
-    references: [files.id],
-  }),
-  tags: many(digitalAssetTags),
-}));
+);
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
   organization: one(organizations, {
@@ -1549,16 +1677,19 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   versions: many(documentVersions),
 }));
 
-export const documentVersionsRelations = relations(documentVersions, ({ one }) => ({
-  document: one(documents, {
-    fields: [documentVersions.documentId],
-    references: [documents.id],
+export const documentVersionsRelations = relations(
+  documentVersions,
+  ({ one }) => ({
+    document: one(documents, {
+      fields: [documentVersions.documentId],
+      references: [documents.id],
+    }),
+    author: one(users, {
+      fields: [documentVersions.createdBy],
+      references: [users.id],
+    }),
   }),
-  author: one(users, {
-    fields: [documentVersions.createdBy],
-    references: [users.id],
-  }),
-}));
+);
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   organization: one(organizations, {
@@ -1599,13 +1730,16 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   contacts: many(campaignContacts),
 }));
 
-export const campaignContactsRelations = relations(campaignContacts, ({ one }) => ({
-  campaign: one(campaigns, {
-    fields: [campaignContacts.campaignId],
-    references: [campaigns.id],
+export const campaignContactsRelations = relations(
+  campaignContacts,
+  ({ one }) => ({
+    campaign: one(campaigns, {
+      fields: [campaignContacts.campaignId],
+      references: [campaigns.id],
+    }),
+    contact: one(contacts, {
+      fields: [campaignContacts.contactId],
+      references: [contacts.id],
+    }),
   }),
-  contact: one(contacts, {
-    fields: [campaignContacts.contactId],
-    references: [contacts.id],
-  }),
-}));
+);

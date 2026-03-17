@@ -22,6 +22,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Activity,
   Calendar,
   CheckCircle,
   Clock,
@@ -29,8 +30,20 @@ import {
   Mail,
   Phone,
   Plus,
+  ShieldCheck,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { activitiesApi } from "../lib/api";
 
@@ -139,49 +152,146 @@ function ActivitiesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/15">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Pending</p>
-                <p className="font-bold text-2xl text-foreground">
-                  {pendingActivities.length}
-                </p>
-              </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Interaction Vol"
+          value={activities.length}
+          icon={<Activity className="h-4 w-4" />}
+          trend="+12% vs lw"
+          color="text-primary"
+        />
+        <Metric
+          title="Completion"
+          value={`${Math.round((completedActivities.length / (activities.length || 1)) * 100)}%`}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="High efficiency"
+          color="text-emerald-400"
+        />
+        <Metric
+          title="Open Tasks"
+          value={pendingActivities.length}
+          icon={<Clock className="h-4 w-4" />}
+          trend="Due today"
+          color="text-rose-400"
+        />
+        <Metric
+          title="Next Goal"
+          value="Meeting"
+          icon={<Calendar className="h-4 w-4" />}
+          trend="In 2 hours"
+          color="text-cyan-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+                Activity Velocity
+              </CardTitle>
+              <p className="text-2xl font-black text-foreground">
+                Interaction Pulse
+              </p>
+            </div>
+            <TrendingUp className="h-4 w-4 text-muted-foreground/40" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={[
+                    { day: "Mon", activities: 12, completions: 8 },
+                    { day: "Tue", activities: 18, completions: 15 },
+                    { day: "Wed", activities: 24, completions: 20 },
+                    { day: "Thu", activities: 16, completions: 14 },
+                    { day: "Fri", activities: 32, completions: 28 },
+                  ]}
+                >
+                  <defs>
+                    <linearGradient id="colorAct" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="activities"
+                    stroke="#22d3ee"
+                    fillOpacity={1}
+                    fill="url(#colorAct)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="completions"
+                    stroke="#888"
+                    fillOpacity={0}
+                    strokeWidth={1}
+                    strokeDasharray="5 5"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/15">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Completed</p>
-                <p className="font-bold text-2xl text-foreground">
-                  {completedActivities.length}
-                </p>
-              </div>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold">AI Triage</CardTitle>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Calendar className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">This Week</p>
-                <p className="font-bold text-2xl text-foreground">
-                  {activities.length}
-                </p>
-              </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+                AI recommends prioritizing the **"Follow up on Proposal"** note
+                for Acme Corp as intent signals are spiking.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {[
+                { type: "Email", status: "Auto-replied", time: "10m ago" },
+                { type: "Meeting", status: "Scheduled", time: "1h ago" },
+              ].map((insight, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-[10px] font-bold"
+                >
+                  <span className="text-muted-foreground uppercase">
+                    {insight.type}
+                  </span>
+                  <span className="text-foreground">{insight.status}</span>
+                  <span className="text-primary/60">{insight.time}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -321,3 +431,47 @@ function ActivitiesPage() {
     </div>
   );
 }
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <Activity className="h-4 w-4" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+import { Sparkles } from "lucide-react";

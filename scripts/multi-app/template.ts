@@ -91,6 +91,7 @@ DATABASE_URL={{DATABASE_URL}}
 # ===========================================
 # Application URLs
 # ===========================================
+BETTER_AUTH_BASE_URL={{BETTER_AUTH_BASE_URL}}
 VITE_PUBLIC_SITE_URL={{VITE_PUBLIC_SITE_URL}}
 VITE_API_URL={{VITE_API_URL}}
 
@@ -158,6 +159,10 @@ export function appConfigToTemplateVars(config: AppConfig): EnvTemplateVars {
     DATABASE_URL: config.services.database?.url || "",
 
     // URLs
+    BETTER_AUTH_BASE_URL:
+      config.environment === "development"
+        ? "http://localhost:8787"
+        : `${baseUrl}`,
     VITE_PUBLIC_SITE_URL: baseUrl,
     VITE_API_URL: apiUrl,
   };

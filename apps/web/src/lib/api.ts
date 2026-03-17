@@ -1,10 +1,3 @@
-/**
- * API Client
- *
- * REST API client for the CRM.
- */
-
-import { queryClient } from "./query";
 import { api as rpcClient } from "./orpc";
 
 const rpc = rpcClient as any;
@@ -12,9 +5,42 @@ const rpc = rpcClient as any;
 const API_BASE = "/api/v1";
 
 function getOrgHeader(): Record<string, string> {
-  const isDemo = typeof window !== "undefined" && localStorage.getItem("demo_mode") === "true";
+  const isDemo =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo_mode") === "true";
   const orgId = isDemo ? "demo-org" : undefined;
+
+  // Check for real session org
+  if (!orgId && typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.companyId && !user.isDemo) {
+          return { "x-organization-id": user.companyId };
+        }
+      } catch {}
+    }
+  }
+
   return orgId ? { "x-organization-id": orgId } : {};
+}
+
+// ─── localStorage helpers ───────────────────────────────────────────────────
+const LS_CONTACTS = "nucleo_local_contacts";
+const LS_LEADS = "nucleo_local_leads";
+const LS_DEALS = "nucleo_local_deals";
+function lsGet(key: string): any[] {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "[]");
+  } catch {
+    return [];
+  }
+}
+function lsSet(key: string, data: any[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {}
 }
 
 // ============ CONTACTS ============
@@ -26,12 +52,29 @@ export const contactsApi = {
       });
       if (!res.ok) throw new Error("Failed to fetch contacts");
       const data = (await res.json()) as { data?: any[]; total?: number };
+      const localExtras = lsGet(LS_CONTACTS).filter(
+        (lc: any) => !(data.data || []).find((sc: any) => sc.id === lc.id),
+      );
+      const combined = [...(data.data || []), ...localExtras];
       const limit = params?.limit ?? 50;
       const page = params?.page ?? 1;
-      return { data: data.data || [], total: data.total || 0, limit, page, totalPages: Math.ceil((data.total || 0) / limit) };
+      return {
+        data: combined,
+        total: combined.length,
+        limit,
+        page,
+        totalPages: Math.ceil(combined.length / limit),
+      };
     } catch (e) {
       console.error("contactsApi.list error:", e);
-      return { data: [], total: 0, limit: 50, page: 1, totalPages: 1 };
+      const local = lsGet(LS_CONTACTS);
+      return {
+        data: local,
+        total: local.length,
+        limit: 50,
+        page: 1,
+        totalPages: 1,
+      };
     }
   },
   get: async (id: string) => {
@@ -41,36 +84,87 @@ export const contactsApi = {
     if (!res.ok) throw new Error("Failed to get contact");
     return res.json();
   },
-  create: async (data: { firstName: string; lastName: string; email?: string; phone?: string; companyName?: string }) => {
-    const res = await fetch(`${API_BASE}/contacts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to create contact");
-    return res.json();
+  create: async (data: {
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    companyName?: string;
+    jobTitle?: string;
+    notes?: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const newContact = {
+        id: crypto.randomUUID(),
+        ...data,
+        createdAt: new Date().toISOString(),
+      };
+      const existing = lsGet(LS_CONTACTS);
+      lsSet(LS_CONTACTS, [...existing, newContact]);
+      return newContact;
+    }
   },
-  update: async (id: string, data: Partial<{ firstName: string; lastName: string; email: string; phone: string; companyName: string }>) => {
-    const res = await fetch(`${API_BASE}/contacts/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update contact");
-    return res.json();
+  update: async (
+    id: string,
+    data: Partial<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      companyName: string;
+      jobTitle: string;
+      notes: string;
+    }>,
+  ) => {
+    try {
+      const res = await fetch(`${API_BASE}/contacts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const existing = lsGet(LS_CONTACTS);
+      const updated = existing.map((c: any) =>
+        c.id === id ? { ...c, ...data } : c,
+      );
+      lsSet(LS_CONTACTS, updated);
+      return updated.find((c: any) => c.id === id);
+    }
   },
   delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/contacts/${id}`, {
-      method: "DELETE",
-      headers: getOrgHeader(),
-    });
-    if (!res.ok) throw new Error("Failed to delete contact");
+    try {
+      const res = await fetch(`${API_BASE}/contacts/${id}`, {
+        method: "DELETE",
+        headers: getOrgHeader(),
+      });
+      if (!res.ok) throw new Error("API error");
+    } catch {
+      lsSet(
+        LS_CONTACTS,
+        lsGet(LS_CONTACTS).filter((c: any) => c.id !== id),
+      );
+    }
   },
 };
 
 // ============ DEALS ============
 export const dealsApi = {
-  list: async (params?: { page?: number; limit?: number; stage?: string; search?: string }) => {
+  list: async (params?: {
+    page?: number;
+    limit?: number;
+    stage?: string;
+    search?: string;
+  }) => {
     try {
       const query = new URLSearchParams();
       if (params?.search) query.set("search", params.search);
@@ -82,12 +176,29 @@ export const dealsApi = {
       });
       if (!res.ok) throw new Error("Failed to fetch deals");
       const data = (await res.json()) as { data?: any[]; total?: number };
+      const localExtras = lsGet(LS_DEALS).filter(
+        (ld: any) => !(data.data || []).find((sd: any) => sd.id === ld.id),
+      );
+      const combined = [...(data.data || []), ...localExtras];
       const limit = params?.limit ?? 50;
       const page = params?.page ?? 1;
-      return { data: data.data || [], total: data.total || 0, limit, page, totalPages: Math.ceil((data.total || 0) / limit) };
+      return {
+        data: combined,
+        total: combined.length,
+        limit,
+        page,
+        totalPages: Math.ceil(combined.length / limit),
+      };
     } catch (e) {
       console.error("dealsApi.list error:", e);
-      return { data: [], total: 0, limit: 50, page: 1, totalPages: 1 };
+      const local = lsGet(LS_DEALS);
+      return {
+        data: local,
+        total: local.length,
+        limit: 50,
+        page: 1,
+        totalPages: 1,
+      };
     }
   },
   get: async (id: string) => {
@@ -97,45 +208,101 @@ export const dealsApi = {
     if (!res.ok) throw new Error("Failed to get deal");
     return res.json();
   },
-  create: async (data: { name: string; value: number; stage?: string; notes?: string }) => {
-    const res = await fetch(`${API_BASE}/deals`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to create deal");
-    return res.json();
+  create: async (data: {
+    name: string;
+    value: number;
+    stage?: string;
+    notes?: string;
+    probability?: number;
+    expectedCloseDate?: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/deals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const newDeal = {
+        id: crypto.randomUUID(),
+        ...data,
+        stage: data.stage || "lead",
+        createdAt: new Date().toISOString(),
+      };
+      lsSet(LS_DEALS, [...lsGet(LS_DEALS), newDeal]);
+      return newDeal;
+    }
   },
-  update: async (id: string, data: Partial<{ name: string; value: number; stage: string; notes: string }>) => {
-    const res = await fetch(`${API_BASE}/deals/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update deal");
-    return res.json();
+  update: async (
+    id: string,
+    data: Partial<{
+      name: string;
+      value: number;
+      stage: string;
+      notes: string;
+      probability: number;
+      expectedCloseDate: string;
+    }>,
+  ) => {
+    try {
+      const res = await fetch(`${API_BASE}/deals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const updated = lsGet(LS_DEALS).map((d: any) =>
+        d.id === id ? { ...d, ...data } : d,
+      );
+      lsSet(LS_DEALS, updated);
+      return updated.find((d: any) => d.id === id);
+    }
   },
   updateStage: async (id: string, stage: string) => {
-    const res = await fetch(`${API_BASE}/deals/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify({ stage }),
-    });
-    if (!res.ok) throw new Error("Failed to update deal");
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/deals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ stage }),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const updated = lsGet(LS_DEALS).map((d: any) =>
+        d.id === id ? { ...d, stage } : d,
+      );
+      lsSet(LS_DEALS, updated);
+      return updated.find((d: any) => d.id === id);
+    }
   },
   delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/deals/${id}`, {
-      method: "DELETE",
-      headers: getOrgHeader(),
-    });
-    if (!res.ok) throw new Error("Failed to delete deal");
+    try {
+      const res = await fetch(`${API_BASE}/deals/${id}`, {
+        method: "DELETE",
+        headers: getOrgHeader(),
+      });
+      if (!res.ok) throw new Error("API error");
+    } catch {
+      lsSet(
+        LS_DEALS,
+        lsGet(LS_DEALS).filter((d: any) => d.id !== id),
+      );
+    }
   },
 };
 
 // ============ LEADS ============
 export const leadsApi = {
-  list: async (params?: { page?: number; limit?: number; status?: string; search?: string }) => {
+  list: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }) => {
     try {
       const query = new URLSearchParams();
       if (params?.search) query.set("search", params.search);
@@ -147,12 +314,29 @@ export const leadsApi = {
       });
       if (!res.ok) throw new Error("Failed to fetch leads");
       const data = (await res.json()) as { data?: any[]; total?: number };
+      const localExtras = lsGet(LS_LEADS).filter(
+        (ll: any) => !(data.data || []).find((sl: any) => sl.id === ll.id),
+      );
+      const combined = [...(data.data || []), ...localExtras];
       const limit = params?.limit ?? 50;
       const page = params?.page ?? 1;
-      return { data: data.data || [], total: data.total || 0, limit, page, totalPages: Math.ceil((data.total || 0) / limit) };
+      return {
+        data: combined,
+        total: combined.length,
+        limit,
+        page,
+        totalPages: Math.ceil(combined.length / limit),
+      };
     } catch (e) {
       console.error("leadsApi.list error:", e);
-      return { data: [], total: 0, limit: 50, page: 1, totalPages: 1 };
+      const local = lsGet(LS_LEADS);
+      return {
+        data: local,
+        total: local.length,
+        limit: 50,
+        page: 1,
+        totalPages: 1,
+      };
     }
   },
   get: async (id: string) => {
@@ -163,38 +347,104 @@ export const leadsApi = {
     return res.json();
   },
   create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/leads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to create lead");
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const newLead = {
+        id: crypto.randomUUID(),
+        ...data,
+        status: data.status || "new",
+        createdAt: new Date().toISOString(),
+      };
+      lsSet(LS_LEADS, [...lsGet(LS_LEADS), newLead]);
+      return newLead;
+    }
   },
-  update: async (id: string, data: Partial<{ firstName: string; lastName: string; email: string; phone: string; companyName: string; source: string; status: string; notes: string }>) => {
-    const res = await fetch(`${API_BASE}/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update lead");
-    return res.json();
+  update: async (
+    id: string,
+    data: Partial<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      companyName: string;
+      source: string;
+      status: string;
+      notes: string;
+      jobTitle: string;
+    }>,
+  ) => {
+    try {
+      const res = await fetch(`${API_BASE}/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      const updated = lsGet(LS_LEADS).map((l: any) =>
+        l.id === id ? { ...l, ...data } : l,
+      );
+      lsSet(LS_LEADS, updated);
+      return updated.find((l: any) => l.id === id);
+    }
   },
   delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/leads/${id}`, {
-      method: "DELETE",
-      headers: getOrgHeader(),
-    });
-    if (!res.ok) throw new Error("Failed to delete lead");
+    try {
+      const res = await fetch(`${API_BASE}/leads/${id}`, {
+        method: "DELETE",
+        headers: getOrgHeader(),
+      });
+      if (!res.ok) throw new Error("API error");
+    } catch {
+      lsSet(
+        LS_LEADS,
+        lsGet(LS_LEADS).filter((l: any) => l.id !== id),
+      );
+    }
   },
   convert: async (id: string, data: any) => {
-    const res = await fetch(`${API_BASE}/leads/${id}/convert`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to convert lead");
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/leads/${id}/convert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("API error");
+      return res.json();
+    } catch {
+      // Mark lead as converted in localStorage
+      const leads = lsGet(LS_LEADS);
+      const lead = leads.find((l: any) => l.id === id);
+      if (lead) {
+        lsSet(
+          LS_LEADS,
+          leads.map((l: any) =>
+            l.id === id ? { ...l, status: "converted" } : l,
+          ),
+        );
+        // Also add to contacts
+        const newContact = {
+          id: crypto.randomUUID(),
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          email: lead.email,
+          phone: lead.phone,
+          companyName: lead.companyName,
+          createdAt: new Date().toISOString(),
+        };
+        lsSet(LS_CONTACTS, [...lsGet(LS_CONTACTS), newContact]);
+        return newContact;
+      }
+      return {};
+    }
   },
 };
 
@@ -207,14 +457,26 @@ export const activitiesApi = {
     dealId?: string;
   }) => {
     try {
-      const res = await fetch(`${API_BASE}/activities`, {
+      const query = new URLSearchParams();
+      if (params?.contactId) query.set("contactId", params.contactId);
+      if (params?.dealId) query.set("dealId", params.dealId);
+      if (params?.page) query.set("page", String(params.page));
+      if (params?.limit) query.set("limit", String(params.limit));
+
+      const res = await fetch(`${API_BASE}/activities?${query}`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch activities");
       const data = (await res.json()) as { data?: any[]; total?: number };
       const limit = params?.limit ?? 50;
       const page = params?.page ?? 1;
-      return { data: data.data || [], total: data.total || 0, limit, page, totalPages: Math.ceil((data.total || 0) / limit) };
+      return {
+        data: data.data || [],
+        total: data.total || 0,
+        limit,
+        page,
+        totalPages: Math.ceil((data.total || 0) / limit),
+      };
     } catch (e) {
       console.error("activitiesApi.list error:", e);
       return { data: [], total: 0, limit: 50, page: 1, totalPages: 1 };
@@ -236,7 +498,16 @@ export const activitiesApi = {
     if (!res.ok) throw new Error("Failed to create activity");
     return res.json();
   },
-  update: async (id: string, data: Partial<{ type: string; title: string; description: string; contactId: string; dealId: string }>) => {
+  update: async (
+    id: string,
+    data: Partial<{
+      type: string;
+      title: string;
+      description: string;
+      contactId: string;
+      dealId: string;
+    }>,
+  ) => {
     const res = await fetch(`${API_BASE}/activities/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...getOrgHeader() },
@@ -278,14 +549,120 @@ export const dashboardApi = {
       return res.json() as Promise<DashboardStats>;
     } catch (e) {
       console.error("dashboardApi.getStats error:", e);
-      return { totalContacts: 0, contactsChange: 0, activeDeals: 0, dealsChange: 0, conversionRate: 0, conversionChange: 0, revenue: 0, revenueChange: 0, recentActivities: [], pipeline: [] };
+      return {
+        totalContacts: 0,
+        contactsChange: 0,
+        activeDeals: 0,
+        dealsChange: 0,
+        conversionRate: 0,
+        conversionChange: 0,
+        revenue: 0,
+        revenueChange: 0,
+        recentActivities: [],
+        pipeline: [],
+      };
     }
   },
 };
 
 // ============ ASSETS ============
+type LocalAsset = {
+  id: string;
+  name: string;
+  type: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+const LOCAL_ASSETS_KEY = "nucleo_local_assets";
+
+function readLocalAssets(): LocalAsset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_ASSETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LocalAsset[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalAssets(assets: LocalAsset[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LOCAL_ASSETS_KEY, JSON.stringify(assets));
+}
+
+function sortLocalAssetsByDate(assets: LocalAsset[]) {
+  return [...assets].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+function filterLocalAssets(
+  assets: LocalAsset[],
+  params?: { search?: string; page?: number; limit?: number },
+) {
+  const searchLower = params?.search?.trim().toLowerCase();
+  const filtered = searchLower
+    ? assets.filter((asset) => asset.name.toLowerCase().includes(searchLower))
+    : assets;
+
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? (filtered.length || 50);
+  const start = (page - 1) * limit;
+  return {
+    data: filtered.slice(start, start + limit),
+    total: filtered.length,
+  };
+}
+
+function generateLocalAssetTags(
+  asset: Pick<LocalAsset, "name" | "mimeType" | "tags">,
+) {
+  const tags = new Set(asset.tags || []);
+  const extension = asset.name.split(".").pop()?.toLowerCase();
+  const [category, subtype = ""] = asset.mimeType.toLowerCase().split("/");
+  if (category) tags.add(category);
+  if (subtype) tags.add(subtype);
+  if (extension) tags.add(extension);
+  tags.add("ai-generated");
+  return Array.from(tags).slice(0, 10);
+}
+
+function createLocalAsset(input: {
+  name: string;
+  mimeType: string;
+  size: number;
+  url?: string;
+}): LocalAsset {
+  const now = new Date().toISOString();
+  const asset: LocalAsset = {
+    id: crypto.randomUUID(),
+    name: input.name,
+    type: input.mimeType,
+    mimeType: input.mimeType,
+    size: input.size,
+    url: input.url || "",
+    tags: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  const assets = readLocalAssets();
+  writeLocalAssets([asset, ...assets]);
+  return asset;
+}
+
 export const assetsApi = {
-  list: async (params?: { search?: string; contactId?: string; dealId?: string; page?: number; limit?: number }) => {
+  list: async (params?: {
+    search?: string;
+    contactId?: string;
+    dealId?: string;
+    page?: number;
+    limit?: number;
+  }) => {
     try {
       const query = new URLSearchParams();
       if (params?.search) query.set("search", params.search);
@@ -301,62 +678,135 @@ export const assetsApi = {
       return { data: data.data || [], total: data.total || 0 };
     } catch (e) {
       console.error("assetsApi.list error:", e);
-      return { data: [], total: 0 };
+      return filterLocalAssets(sortLocalAssetsByDate(readLocalAssets()), {
+        search: params?.search,
+        page: params?.page,
+        limit: params?.limit,
+      });
     }
   },
   get: async (id: string) => {
-    const res = await fetch(`${API_BASE}/assets/${id}`, {
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-    });
-    if (!res.ok) throw new Error("Failed to get asset");
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to get asset");
+      return res.json();
+    } catch (error) {
+      console.error("assetsApi.get error:", error);
+      const asset = readLocalAssets().find((item) => item.id === id);
+      if (!asset) throw new Error("Failed to get asset");
+      return asset;
+    }
   },
-  create: async (data: { name: string; originalName?: string; mimeType: string; size: string; r2Key?: string; contactId?: string; dealId?: string; leadId?: string }) => {
-    const res = await fetch(`${API_BASE}/assets`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to create asset");
-    return res.json();
+  create: async (data: {
+    name: string;
+    originalName?: string;
+    mimeType: string;
+    size: string;
+    r2Key?: string;
+    contactId?: string;
+    dealId?: string;
+    leadId?: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/assets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create asset");
+      return res.json();
+    } catch (error) {
+      console.error("assetsApi.create error:", error);
+      return createLocalAsset({
+        name: data.name,
+        mimeType: data.mimeType,
+        size: Number(data.size) || 0,
+      });
+    }
   },
   delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/assets/${id}`, {
-      method: "DELETE",
-      headers: getOrgHeader(),
-    });
-    if (!res.ok) throw new Error("Failed to delete asset");
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}`, {
+        method: "DELETE",
+        headers: getOrgHeader(),
+      });
+      if (!res.ok) throw new Error("Failed to delete asset");
+    } catch (error) {
+      console.error("assetsApi.delete error:", error);
+      const assets = readLocalAssets();
+      writeLocalAssets(assets.filter((asset) => asset.id !== id));
+    }
   },
-  generateTags: async (id: string) => {
-    return rpc.assets?.generateTags?.({ id });
+  generateTags: async (id: string): Promise<{ tags: string[] }> => {
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to generate tags");
+      const payload = (await res.json()) as { tags?: unknown };
+      return {
+        tags: Array.isArray(payload.tags)
+          ? payload.tags.map((tag) => String(tag))
+          : [],
+      };
+    } catch (error) {
+      console.error("assetsApi.generateTags error:", error);
+      const assets = readLocalAssets();
+      const next = assets.map((asset) =>
+        asset.id === id
+          ? {
+              ...asset,
+              tags: generateLocalAssetTags(asset),
+              updatedAt: new Date().toISOString(),
+            }
+          : asset,
+      );
+      writeLocalAssets(next);
+      const updated = next.find((asset) => asset.id === id);
+      return { tags: updated?.tags || [] };
+    }
   },
   getSignedUrl: async (data: { filename: string; contentType: string }) => {
     return rpc.assets?.getSignedUrl?.(data);
   },
-  confirmUpload: async (data: { name: string; type: string; size: number; key: string }) => {
+  confirmUpload: async (data: {
+    name: string;
+    type: string;
+    size: number;
+    key: string;
+  }) => {
     return rpc.assets?.confirmUpload?.(data);
   },
   upload: async (data: { name: string; type: string; content: string }) => {
-    // Try RPC first, fallback to REST
     try {
-      const result = await rpc.assets?.upload?.(data);
-      if (result) return result;
-    } catch (e) {
-      console.warn("RPC upload failed, trying REST:", e);
-    }
-    // Fallback to REST API
-    const res = await fetch("/api/v1/assets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      body: JSON.stringify({
+      // Use REST API as source of truth so upload/list/tag flows stay consistent.
+      const formData = new FormData();
+      formData.append('file', new Blob([Uint8Array.from(atob(data.content), c => c.charCodeAt(0))], { type: data.type }), data.name);
+      formData.append('name', data.name);
+      formData.append('mimeType', data.type);
+      formData.append('size', Math.floor(data.content.length * 0.75).toString());
+      const res = await fetch("/api/v1/assets", {
+        method: "POST",
+        headers: { ...getOrgHeader() },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    } catch (error) {
+      console.error("assetsApi.upload error:", error);
+      const localAsset = createLocalAsset({
         name: data.name,
         mimeType: data.type,
         size: Math.floor(data.content.length * 0.75),
-        content: data.content,
-      }),
-    });
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json();
+        url: data.type.startsWith("image/")
+          ? `data:${data.type};base64,${data.content}`
+          : "",
+      });
+      return localAsset;
+    }
   },
 };
 
@@ -406,6 +856,19 @@ interface DocumentInsightResult {
   actionItems: string[];
 }
 
+interface SegmentRecommendation {
+  name: string;
+  description: string;
+  criteria: string;
+  estimatedSize: number;
+}
+
+interface MarketingAsset {
+  type: "email" | "social" | "ad";
+  title: string;
+  content: string;
+}
+
 export const aiApi = {
   scoreLead: async (data: {
     email?: string;
@@ -437,7 +900,11 @@ export const aiApi = {
     });
     return response.json();
   },
-  enrichContact: async (data: { name: string; email?: string; companyName?: string }) => {
+  enrichContact: async (data: {
+    name: string;
+    email?: string;
+    companyName?: string;
+  }) => {
     const response = await fetch("/api/ai/contact/enrich", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -509,6 +976,28 @@ export const aiApi = {
     });
     return response.json() as Promise<{ result?: DocumentInsightResult }>;
   },
+  suggestSegments: async (
+    goal: string,
+  ): Promise<{ result?: SegmentRecommendation[] }> => {
+    const response = await fetch("/api/ai/marketing/segments/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal }),
+    });
+    return response.json() as Promise<{ result?: SegmentRecommendation[] }>;
+  },
+  generateMarketingAssets: async (data: {
+    campaignName: string;
+    goal: string;
+    channel: string;
+  }): Promise<{ result?: MarketingAsset[] }> => {
+    const response = await fetch("/api/ai/marketing/assets/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return response.json() as Promise<{ result?: MarketingAsset[] }>;
+  },
 };
 
 async function withRpcTimeout<T>(
@@ -536,6 +1025,33 @@ export const modulesApi = {
   setEnabled: async (key: string, enabled: boolean) =>
     rpc.modules?.setEnabled?.({ key, enabled }),
 };
+
+type LocalNucleoDocument = {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const LOCAL_NUCLEO_DOCUMENTS_KEY = "nucleo_local_documents";
+
+function readLocalNucleoDocuments(): LocalNucleoDocument[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_NUCLEO_DOCUMENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LocalNucleoDocument[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalNucleoDocuments(docs: LocalNucleoDocument[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LOCAL_NUCLEO_DOCUMENTS_KEY, JSON.stringify(docs));
+}
 
 // ============ NUCLEO UNIFIED ============
 export const nucleoApi = {
@@ -581,7 +1097,11 @@ export const nucleoApi = {
     }) => rpc.nucleo?.customersCreate?.(data),
   },
   projects: {
-    list: async (params?: { page?: number; limit?: number; status?: string }): Promise<any> => {
+    list: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    }): Promise<any> => {
       const page = params?.page ?? 1;
       const limit = params?.limit ?? 50;
       try {
@@ -595,7 +1115,23 @@ export const nucleoApi = {
         );
       } catch (error) {
         console.error("nucleoApi.projects.list error:", error);
-        return { data: [], page, limit };
+        // Fall back to localStorage
+        try {
+          const raw = localStorage.getItem("nucleo_local_projects");
+          const all: any[] = raw ? JSON.parse(raw) : [];
+          const filtered = params?.status
+            ? all.filter((p) => p.status === params.status)
+            : all;
+          const start = (page - 1) * limit;
+          return {
+            data: filtered.slice(start, start + limit),
+            total: filtered.length,
+            page,
+            limit,
+          };
+        } catch {
+          return { data: [], page, limit };
+        }
       }
     },
     create: async (data: {
@@ -604,7 +1140,38 @@ export const nucleoApi = {
       customerId?: string;
       dueDate?: string;
       priority?: "low" | "medium" | "high";
-    }) => rpc.nucleo?.projectsCreate?.(data),
+    }) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.projectsCreate?.(data),
+          "nucleo.projectsCreate",
+        );
+      } catch (error) {
+        console.error(
+          "nucleoApi.projects.create error (using local fallback):",
+          error,
+        );
+        const now = new Date().toISOString();
+        const project = {
+          id: crypto.randomUUID(),
+          name: data.name,
+          description: data.description ?? "",
+          status: "planning",
+          priority: data.priority ?? "medium",
+          dueDate: data.dueDate ?? null,
+          customerId: data.customerId ?? null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const raw = localStorage.getItem("nucleo_local_projects");
+        const all: any[] = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nucleo_local_projects",
+          JSON.stringify([project, ...all]),
+        );
+        return project;
+      }
+    },
     update: async (
       id: string,
       data: {
@@ -614,8 +1181,214 @@ export const nucleoApi = {
         priority?: string;
         dueDate?: string;
       },
-    ) => rpc.nucleo?.projectsUpdate?.({ id, ...data }),
-    delete: async (id: string) => rpc.nucleo?.projectsDelete?.({ id }),
+    ) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.projectsUpdate?.({ id, ...data }),
+          "nucleo.projectsUpdate",
+        );
+      } catch (error) {
+        console.error(
+          "nucleoApi.projects.update error (using local fallback):",
+          error,
+        );
+        const raw = localStorage.getItem("nucleo_local_projects");
+        const all: any[] = raw ? JSON.parse(raw) : [];
+        const next = all.map((p) =>
+          p.id === id
+            ? { ...p, ...data, updatedAt: new Date().toISOString() }
+            : p,
+        );
+        localStorage.setItem("nucleo_local_projects", JSON.stringify(next));
+        return next.find((p) => p.id === id) ?? null;
+      }
+    },
+    delete: async (id: string) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.projectsDelete?.({ id }),
+          "nucleo.projectsDelete",
+        );
+      } catch (error) {
+        console.error(
+          "nucleoApi.projects.delete error (using local fallback):",
+          error,
+        );
+        const raw = localStorage.getItem("nucleo_local_projects");
+        const all: any[] = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nucleo_local_projects",
+          JSON.stringify(all.filter((p) => p.id !== id)),
+        );
+        return { success: true };
+      }
+    },
+    tasks: {
+      list: async (projectId: string, params?: { page?: number; limit?: number }) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectTasksList?.({ projectId, ...params }),
+            "nucleo.projectTasksList",
+          );
+        } catch (error) {
+          console.error("error fetching tasks:", error);
+          const raw = localStorage.getItem(`nucleo_project_tasks_${projectId}`);
+          return { data: raw ? JSON.parse(raw) : [] };
+        }
+      },
+      create: async (projectId: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectTasksCreate?.({ projectId, ...data }),
+            "nucleo.projectTasksCreate",
+          );
+        } catch (error) {
+          const raw = localStorage.getItem(`nucleo_project_tasks_${projectId}`);
+          const tasks = raw ? JSON.parse(raw) : [];
+          const task = { id: crypto.randomUUID(), projectId, ...data };
+          localStorage.setItem(`nucleo_project_tasks_${projectId}`, JSON.stringify([task, ...tasks]));
+          return task;
+        }
+      },
+      update: async (projectId: string, id: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectTasksUpdate?.({ projectId, id, ...data }),
+            "nucleo.projectTasksUpdate",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_tasks_${projectId}`);
+          let tasks: any[] = raw ? JSON.parse(raw) : [];
+          tasks = tasks.map((t) => (t.id === id ? { ...t, ...data } : t));
+          localStorage.setItem(`nucleo_project_tasks_${projectId}`, JSON.stringify(tasks));
+          return tasks.find((t) => t.id === id);
+        }
+      },
+      delete: async (projectId: string, id: string) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectTasksDelete?.({ projectId, id }),
+            "nucleo.projectTasksDelete",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_tasks_${projectId}`);
+          let tasks: any[] = raw ? JSON.parse(raw) : [];
+          tasks = tasks.filter((t) => t.id !== id);
+          localStorage.setItem(`nucleo_project_tasks_${projectId}`, JSON.stringify(tasks));
+          return { success: true };
+        }
+      },
+    },
+    milestones: {
+      list: async (projectId: string, params?: { page?: number; limit?: number }) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectMilestonesList?.({ projectId, ...params }),
+            "nucleo.projectMilestonesList",
+          );
+        } catch (error) {
+          const raw = localStorage.getItem(`nucleo_project_milestones_${projectId}`);
+          return { data: raw ? JSON.parse(raw) : [] };
+        }
+      },
+      create: async (projectId: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectMilestonesCreate?.({ projectId, ...data }),
+            "nucleo.projectMilestonesCreate",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_milestones_${projectId}`);
+          const items = raw ? JSON.parse(raw) : [];
+          const it = { id: crypto.randomUUID(), projectId, ...data };
+          localStorage.setItem(`nucleo_project_milestones_${projectId}`, JSON.stringify([it, ...items]));
+          return it;
+        }
+      },
+      update: async (projectId: string, id: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectMilestonesUpdate?.({ projectId, id, ...data }),
+            "nucleo.projectMilestonesUpdate",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_milestones_${projectId}`);
+          let items: any[] = raw ? JSON.parse(raw) : [];
+          items = items.map((t) => (t.id === id ? { ...t, ...data } : t));
+          localStorage.setItem(`nucleo_project_milestones_${projectId}`, JSON.stringify(items));
+          return items.find((t) => t.id === id);
+        }
+      },
+      delete: async (projectId: string, id: string) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectMilestonesDelete?.({ projectId, id }),
+            "nucleo.projectMilestonesDelete",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_milestones_${projectId}`);
+          let items: any[] = raw ? JSON.parse(raw) : [];
+          items = items.filter((t) => t.id !== id);
+          localStorage.setItem(`nucleo_project_milestones_${projectId}`, JSON.stringify(items));
+          return { success: true };
+        }
+      },
+    },
+    resources: {
+      list: async (projectId: string, params?: { page?: number; limit?: number }) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectResourcesList?.({ projectId, ...params }),
+            "nucleo.projectResourcesList",
+          );
+        } catch (error) {
+          const raw = localStorage.getItem(`nucleo_project_resources_${projectId}`);
+          return { data: raw ? JSON.parse(raw) : [] };
+        }
+      },
+      create: async (projectId: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectResourcesCreate?.({ projectId, ...data }),
+            "nucleo.projectResourcesCreate",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_resources_${projectId}`);
+          const items = raw ? JSON.parse(raw) : [];
+          const it = { id: crypto.randomUUID(), projectId, ...data };
+          localStorage.setItem(`nucleo_project_resources_${projectId}`, JSON.stringify([it, ...items]));
+          return it;
+        }
+      },
+      update: async (projectId: string, id: string, data: any) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectResourcesUpdate?.({ projectId, id, ...data }),
+            "nucleo.projectResourcesUpdate",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_resources_${projectId}`);
+          let items: any[] = raw ? JSON.parse(raw) : [];
+          items = items.map((t) => (t.id === id ? { ...t, ...data } : t));
+          localStorage.setItem(`nucleo_project_resources_${projectId}`, JSON.stringify(items));
+          return items.find((t) => t.id === id);
+        }
+      },
+      delete: async (projectId: string, id: string) => {
+        try {
+          return await withRpcTimeout(
+            rpc.nucleo?.projectResourcesDelete?.({ projectId, id }),
+            "nucleo.projectResourcesDelete",
+          );
+        } catch {
+          const raw = localStorage.getItem(`nucleo_project_resources_${projectId}`);
+          let items: any[] = raw ? JSON.parse(raw) : [];
+          items = items.filter((t) => t.id !== id);
+          localStorage.setItem(`nucleo_project_resources_${projectId}`, JSON.stringify(items));
+          return { success: true };
+        }
+      },
+    },
   },
   tickets: {
     list: async (params?: {
@@ -665,7 +1438,11 @@ export const nucleoApi = {
     delete: async (id: string) => rpc.nucleo?.ticketsDelete?.({ id }),
   },
   queue: {
-    list: async (params?: { page?: number; limit?: number; status?: string }): Promise<any> => {
+    list: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    }): Promise<any> => {
       const page = params?.page ?? 1;
       const limit = params?.limit ?? 50;
       try {
@@ -724,7 +1501,11 @@ export const nucleoApi = {
         );
       } catch (error) {
         console.error("nucleoApi.documents.list error:", error);
-        return { data: [], page, limit };
+        const docs = readLocalNucleoDocuments().sort((a, b) =>
+          b.updatedAt.localeCompare(a.updatedAt),
+        );
+        const start = (page - 1) * limit;
+        return { data: docs.slice(start, start + limit), page, limit };
       }
     },
     create: async (data: {
@@ -733,15 +1514,69 @@ export const nucleoApi = {
       customerId?: string;
       projectId?: string;
       ticketId?: string;
-    }) => rpc.nucleo?.documentsCreate?.(data),
+    }) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.documentsCreate?.(data),
+          "nucleo.documentsCreate",
+        );
+      } catch (error) {
+        console.error("nucleoApi.documents.create error:", error);
+        const now = new Date().toISOString();
+        const doc: LocalNucleoDocument = {
+          id: crypto.randomUUID(),
+          title: data.title,
+          status: "draft",
+          createdAt: now,
+          updatedAt: now,
+        };
+        const docs = readLocalNucleoDocuments();
+        writeLocalNucleoDocuments([doc, ...docs]);
+        return doc;
+      }
+    },
     update: async (
       id: string,
       data: {
         title?: string;
         status?: string;
       },
-    ) => rpc.nucleo?.documentsUpdate?.({ id, ...data }),
-    delete: async (id: string) => rpc.nucleo?.documentsDelete?.({ id }),
+    ) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.documentsUpdate?.({ id, ...data }),
+          "nucleo.documentsUpdate",
+        );
+      } catch (error) {
+        console.error("nucleoApi.documents.update error:", error);
+        const docs = readLocalNucleoDocuments();
+        const next = docs.map((doc) =>
+          doc.id === id
+            ? {
+                ...doc,
+                ...(data.title !== undefined && { title: data.title }),
+                ...(data.status !== undefined && { status: data.status }),
+                updatedAt: new Date().toISOString(),
+              }
+            : doc,
+        );
+        writeLocalNucleoDocuments(next);
+        return next.find((doc) => doc.id === id) || null;
+      }
+    },
+    delete: async (id: string) => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.documentsDelete?.({ id }),
+          "nucleo.documentsDelete",
+        );
+      } catch (error) {
+        console.error("nucleoApi.documents.delete error:", error);
+        const docs = readLocalNucleoDocuments();
+        writeLocalNucleoDocuments(docs.filter((doc) => doc.id !== id));
+        return { success: true };
+      }
+    },
   },
   invoices: {
     list: async (params?: { page?: number; limit?: number }): Promise<any> => {
@@ -885,7 +1720,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.hrm?.employeesDelete?.({ id }),
     },
     attendance: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -920,7 +1758,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.hrm?.attendanceDelete?.({ id }),
     },
     leaveRequests: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -955,7 +1796,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.hrm?.leaveDelete?.({ id }),
     },
     reviews: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -990,7 +1834,10 @@ export const nucleoApi = {
     },
     recruitment: {
       requisitions: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -999,7 +1846,10 @@ export const nucleoApi = {
               "hrm.requisitionsList",
             );
           } catch (error) {
-            console.error("nucleoApi.hrm.recruitment.requisitions.list error:", error);
+            console.error(
+              "nucleoApi.hrm.recruitment.requisitions.list error:",
+              error,
+            );
             return { data: [], page, limit };
           }
         },
@@ -1019,7 +1869,10 @@ export const nucleoApi = {
         delete: async (id: string) => rpc.hrm?.requisitionsDelete?.({ id }),
       },
       candidates: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -1028,7 +1881,10 @@ export const nucleoApi = {
               "hrm.candidatesList",
             );
           } catch (error) {
-            console.error("nucleoApi.hrm.recruitment.candidates.list error:", error);
+            console.error(
+              "nucleoApi.hrm.recruitment.candidates.list error:",
+              error,
+            );
             return { data: [], page, limit };
           }
         },
@@ -1050,7 +1906,10 @@ export const nucleoApi = {
     },
     training: {
       programs: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -1078,7 +1937,10 @@ export const nucleoApi = {
         delete: async (id: string) => rpc.hrm?.trainingProgramsDelete?.({ id }),
       },
       records: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -1106,7 +1968,10 @@ export const nucleoApi = {
     },
     payroll: {
       runs: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -1122,10 +1987,14 @@ export const nucleoApi = {
         create: async (data: any) => rpc.operations?.payrollRunsCreate?.(data),
         update: async (id: string, data: any) =>
           rpc.operations?.payrollRunsUpdate?.({ id, ...data }),
-        delete: async (id: string) => rpc.operations?.payrollRunsDelete?.({ id }),
+        delete: async (id: string) =>
+          rpc.operations?.payrollRunsDelete?.({ id }),
       },
       entries: {
-        list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        list: async (params?: {
+          page?: number;
+          limit?: number;
+        }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
@@ -1138,10 +2007,12 @@ export const nucleoApi = {
             return { data: [], page, limit };
           }
         },
-        create: async (data: any) => rpc.operations?.payrollEntriesCreate?.(data),
+        create: async (data: any) =>
+          rpc.operations?.payrollEntriesCreate?.(data),
         update: async (id: string, data: any) =>
           rpc.operations?.payrollEntriesUpdate?.({ id, ...data }),
-        delete: async (id: string) => rpc.operations?.payrollEntriesDelete?.({ id }),
+        delete: async (id: string) =>
+          rpc.operations?.payrollEntriesDelete?.({ id }),
       },
     },
   },
@@ -1154,11 +2025,20 @@ export const nucleoApi = {
         );
       } catch (error) {
         console.error("nucleoApi.enterprise.summary error:", error);
-        return { roles: 0, workflows: 0, auditEvents: 0, ssoProviders: 0, scimJobs: 0 };
+        return {
+          roles: 0,
+          workflows: 0,
+          auditEvents: 0,
+          ssoProviders: 0,
+          scimJobs: 0,
+        };
       }
     },
     roles: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1188,7 +2068,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.enterprise?.rolesDelete?.({ id }),
     },
     workflows: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1222,7 +2105,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.enterprise?.workflowsDelete?.({ id }),
     },
     auditEvents: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1237,7 +2123,10 @@ export const nucleoApi = {
       },
     },
     ssoProviders: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1263,10 +2152,14 @@ export const nucleoApi = {
           status?: string;
         },
       ) => rpc.enterprise?.ssoProvidersUpdate?.({ id, ...data }),
-      delete: async (id: string) => rpc.enterprise?.ssoProvidersDelete?.({ id }),
+      delete: async (id: string) =>
+        rpc.enterprise?.ssoProvidersDelete?.({ id }),
     },
     scimSyncJobs: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1294,7 +2187,10 @@ export const nucleoApi = {
       }
     },
     agentRuns: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1327,7 +2223,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.intelligence?.agentRunsDelete?.({ id }),
     },
     forecasts: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1364,7 +2263,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.intelligence?.forecastsDelete?.({ id }),
     },
     kpis: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1422,7 +2324,10 @@ export const nucleoApi = {
       }
     },
     vendors: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1441,7 +2346,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.operations?.vendorsDelete?.({ id }),
     },
     purchaseRequests: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1450,18 +2358,25 @@ export const nucleoApi = {
             "operations.purchaseRequestsList",
           );
         } catch (error) {
-          console.error("nucleoApi.operations.purchaseRequests.list error:", error);
+          console.error(
+            "nucleoApi.operations.purchaseRequests.list error:",
+            error,
+          );
           return { data: [], page, limit };
         }
       },
-      create: async (data: any) => rpc.operations?.purchaseRequestsCreate?.(data),
+      create: async (data: any) =>
+        rpc.operations?.purchaseRequestsCreate?.(data),
       update: async (id: string, data: any) =>
         rpc.operations?.purchaseRequestsUpdate?.({ id, ...data }),
       delete: async (id: string) =>
         rpc.operations?.purchaseRequestsDelete?.({ id }),
     },
     contracts: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1480,7 +2395,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.operations?.contractsDelete?.({ id }),
     },
     complianceControls: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1502,7 +2420,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.operations?.controlsDelete?.({ id }),
     },
     complianceRisks: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1511,7 +2432,10 @@ export const nucleoApi = {
             "operations.risksList",
           );
         } catch (error) {
-          console.error("nucleoApi.operations.complianceRisks.list error:", error);
+          console.error(
+            "nucleoApi.operations.complianceRisks.list error:",
+            error,
+          );
           return { data: [], page, limit };
         }
       },
@@ -1521,7 +2445,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.operations?.risksDelete?.({ id }),
     },
     retentionPolicies: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1545,7 +2472,10 @@ export const nucleoApi = {
         rpc.operations?.retentionPoliciesDelete?.({ id }),
     },
     drDrills: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1564,7 +2494,10 @@ export const nucleoApi = {
       delete: async (id: string) => rpc.operations?.drDrillsDelete?.({ id }),
     },
     financeTransactions: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1588,7 +2521,10 @@ export const nucleoApi = {
         rpc.operations?.financeTransactionsDelete?.({ id }),
     },
     payrollRuns: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {
@@ -1624,14 +2560,18 @@ export const nucleoApi = {
             "operations.payrollEntriesList",
           );
         } catch (error) {
-          console.error("nucleoApi.operations.payrollEntries.list error:", error);
+          console.error(
+            "nucleoApi.operations.payrollEntries.list error:",
+            error,
+          );
           return { data: [], page, limit };
         }
       },
       create: async (data: any) => rpc.operations?.payrollEntriesCreate?.(data),
       update: async (id: string, data: any) =>
         rpc.operations?.payrollEntriesUpdate?.({ id, ...data }),
-      delete: async (id: string) => rpc.operations?.payrollEntriesDelete?.({ id }),
+      delete: async (id: string) =>
+        rpc.operations?.payrollEntriesDelete?.({ id }),
     },
     ticketComments: {
       list: async (params?: {
@@ -1651,15 +2591,22 @@ export const nucleoApi = {
             "operations.ticketCommentsList",
           );
         } catch (error) {
-          console.error("nucleoApi.operations.ticketComments.list error:", error);
+          console.error(
+            "nucleoApi.operations.ticketComments.list error:",
+            error,
+          );
           return { data: [], page, limit };
         }
       },
       create: async (data: any) => rpc.operations?.ticketCommentsCreate?.(data),
-      delete: async (id: string) => rpc.operations?.ticketCommentsDelete?.({ id }),
+      delete: async (id: string) =>
+        rpc.operations?.ticketCommentsDelete?.({ id }),
     },
     knowledgeArticles: {
-      list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+      }): Promise<any> => {
         const page = params?.page ?? 1;
         const limit = params?.limit ?? 50;
         try {

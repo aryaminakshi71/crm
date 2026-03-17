@@ -1,5 +1,7 @@
-const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
-const AI_MODEL = process.env.OPENROUTER_MODEL || process.env.OPENAI_MODEL || "openai/gpt-5.2";
+const OPENROUTER_BASE_URL =
+  process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+const AI_MODEL =
+  process.env.OPENROUTER_MODEL || process.env.OPENAI_MODEL || "openai/gpt-5.2";
 const AI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
 const AI_RETRIES = Math.max(0, Number(process.env.OPENAI_RETRIES || 1));
 const PLATFORM_PROMPT_VERSION = process.env.PLATFORM_PROMPT_VERSION || "v1";
@@ -44,7 +46,10 @@ export async function requestStructuredAi(
         body: JSON.stringify({
           model: AI_MODEL,
           messages: [
-            { role: "system", content: `[prompt-version:${promptVersion}] ${systemPrompt}` },
+            {
+              role: "system",
+              content: `[prompt-version:${promptVersion}] ${systemPrompt}`,
+            },
             { role: "user", content: userContent },
           ],
           response_format: { type: "json_object" },

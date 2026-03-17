@@ -15,7 +15,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@crm/tsconfig": "file:../tsconfig",

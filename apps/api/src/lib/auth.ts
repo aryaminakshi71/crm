@@ -4,6 +4,7 @@ import { createDb, schema } from "@crm/storage";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
+import { bearer } from "better-auth/plugins/bearer";
 
 // Create scoped logger for auth module
 const log = logger.child({ module: "auth" });
@@ -52,6 +53,7 @@ export function createAuth(connectionString: string) {
           : undefined,
     },
     plugins: [
+      bearer(),
       organization({
         allowUserToCreateOrganization: true,
         organizationCreation: {

@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundaryWrapper } from "../components/error-boundary-wrapper";
 import { PostHogProvider } from "../components/providers/posthog-provider";

@@ -7,7 +7,10 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -21,6 +24,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",
     "@aws-sdk/s3-request-presigner": "^3.821.0",
+    "@smithy/fetch-http-handler": "^4.0.0",
     "@crm/core": "file:../core",
     "@crm/env": "file:../env",
     "@neondatabase/serverless": "^0.10.0",

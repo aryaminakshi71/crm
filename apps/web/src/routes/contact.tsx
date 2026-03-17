@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Button, Card, CardContent, Input, Textarea } from "@crm/ui";
 import { Link, createFileRoute } from "@tanstack/react-router";
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { leadsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/contact")({
   head: () => {
@@ -74,13 +76,24 @@ function ContactPage() {
     }
 
     setSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSubmitting(false);
-    setSubmitted(true);
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setTimeout(() => setSubmitted(false), 5000);
+    try {
+      await leadsApi.create({
+        email: formData.email,
+        firstName: formData.name.split(" ")[0] || "",
+        lastName: formData.name.split(" ").slice(1).join(" ") || "",
+        source: "website",
+        notes: `Subject: ${formData.subject}\n\nMessage: ${formData.message}`
+      });
+
+      setSubmitted(true);
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      toast.error("Failed to send the message. Please try again later.");
+    } finally {
+      setSubmitting(false);
+      setTimeout(() => setSubmitted(false), 5000);
+    }
   };
 
   return (
@@ -119,11 +132,9 @@ function ContactPage() {
                       Email
                     </h3>
                     <p className="text-muted-foreground">
-                      support@crmplatform.com
+                      support@nucleoone.com
                     </p>
-                    <p className="text-muted-foreground">
-                      sales@crmplatform.com
-                    </p>
+                    <p className="text-muted-foreground">sales@nucleoone.com</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -296,6 +307,7 @@ function ContactPage() {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

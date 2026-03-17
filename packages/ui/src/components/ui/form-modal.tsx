@@ -24,7 +24,9 @@ export interface FormModalProps {
   // OLD API (ADD THIS - for backward compatibility)
   isLoading?: boolean;
   loading?: boolean; // alias for isLoading
-  onSubmit?: (data: Record<string, any>) => void | Promise<void>;
+  onSubmit?: (
+    data: Record<string, any> | React.FormEvent<HTMLFormElement>,
+  ) => void | Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -44,26 +46,54 @@ const FormModal = ({
 }: FormModalProps) => {
   // Support both isLoading and loading prop
   const loadingState = loading ?? isLoading;
+  const childrenFormRef = React.useRef<HTMLFormElement | null>(null);
+
   // OLD API: If children are provided, use children pattern
   if (children) {
     const handleChildrenSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (onSubmit) {
-        // Pass empty object - onSubmit handlers should not expect event
-        // They should work with the component's internal state
-        onSubmit({} as any);
+        // Backward compatibility: children-based consumers historically
+        // expect the native form event for preventDefault().
+        onSubmit(e as React.FormEvent<HTMLFormElement>);
+      }
+    };
+
+    const triggerChildrenSubmit = () => {
+      const form = childrenFormRef.current;
+      if (!form) return;
+
+      if (typeof form.requestSubmit === "function") {
+        form.requestSubmit();
+        return;
+      }
+
+      if (form.checkValidity()) {
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+      } else {
+        form.reportValidity();
       }
     };
 
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={title}>
-        <form onSubmit={handleChildrenSubmit} className="space-y-4">
+        <form
+          ref={childrenFormRef}
+          onSubmit={handleChildrenSubmit}
+          className="space-y-4"
+        >
           {children}
           <div className="mt-6 flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loadingState}>
+            <Button
+              type="button"
+              disabled={loadingState}
+              onClick={triggerChildrenSubmit}
+            >
               {loadingState ? "Loading..." : submitText}
             </Button>
           </div>

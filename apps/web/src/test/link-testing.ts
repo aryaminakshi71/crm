@@ -157,13 +157,33 @@ export const LINKS_TO_VERIFY = {
     { selector: 'a[href="/app/crm"]', text: "CRM", type: "sidebar" },
     { selector: 'a[href="/app/helpdesk"]', text: "Helpdesk", type: "sidebar" },
     { selector: 'a[href="/app/finance"]', text: "Finance", type: "sidebar" },
-    { selector: 'a[href="/app/procurement"]', text: "Procurement", type: "sidebar" },
-    { selector: 'a[href="/app/contracts"]', text: "Contracts", type: "sidebar" },
-    { selector: 'a[href="/app/compliance"]', text: "Compliance", type: "sidebar" },
+    {
+      selector: 'a[href="/app/procurement"]',
+      text: "Procurement",
+      type: "sidebar",
+    },
+    {
+      selector: 'a[href="/app/contracts"]',
+      text: "Contracts",
+      type: "sidebar",
+    },
+    {
+      selector: 'a[href="/app/compliance"]',
+      text: "Compliance",
+      type: "sidebar",
+    },
     { selector: 'a[href="/app/policies"]', text: "Policies", type: "sidebar" },
-    { selector: 'a[href="/app/enterprise"]', text: "Enterprise", type: "sidebar" },
+    {
+      selector: 'a[href="/app/enterprise"]',
+      text: "Enterprise",
+      type: "sidebar",
+    },
     { selector: 'a[href="/app/hrm"]', text: "HRM", type: "sidebar" },
-    { selector: 'a[href="/app/intelligence"]', text: "AI & BI", type: "sidebar" },
+    {
+      selector: 'a[href="/app/intelligence"]',
+      text: "AI & BI",
+      type: "sidebar",
+    },
     {
       selector: 'a[href="/app/activities"]',
       text: "Activities",

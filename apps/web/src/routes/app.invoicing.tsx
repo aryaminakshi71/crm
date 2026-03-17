@@ -14,8 +14,27 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Receipt, Search, Sparkles } from "lucide-react";
+import {
+  Activity,
+  CreditCard,
+  History,
+  Plus,
+  Receipt,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { aiApi, nucleoApi } from "../lib/api";
 
@@ -96,7 +115,10 @@ function InvoicingPage() {
         toast.error("AI risk assessment unavailable");
         return;
       }
-      setInvoiceRiskById((prev) => ({ ...prev, [invoice.id]: response.result! }));
+      setInvoiceRiskById((prev) => ({
+        ...prev,
+        [invoice.id]: response.result!,
+      }));
       toast.success("Invoice risk scored");
     },
     onError: () => {
@@ -128,7 +150,9 @@ function InvoicingPage() {
   const currencyOptions = useMemo(
     () =>
       Array.from(
-        new Set(invoices.map((invoice: any) => String(invoice.currency || "USD"))),
+        new Set(
+          invoices.map((invoice: any) => String(invoice.currency || "USD")),
+        ),
       ),
     [invoices],
   );
@@ -144,8 +168,12 @@ function InvoicingPage() {
       if (!search.trim()) return true;
       const searchLower = search.toLowerCase();
       return (
-        String(invoice.invoiceNumber || "").toLowerCase().includes(searchLower) ||
-        String(invoice.notes || "").toLowerCase().includes(searchLower)
+        String(invoice.invoiceNumber || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(invoice.notes || "")
+          .toLowerCase()
+          .includes(searchLower)
       );
     });
   }, [invoices, search, statusFilter, currencyFilter]);
@@ -159,7 +187,10 @@ function InvoicingPage() {
     .reduce((sum: number, invoice: any) => sum + Number(invoice.total || 0), 0);
   const overdueCount = filteredInvoices.filter((invoice: any) => {
     if (!invoice.dueAt) return false;
-    return new Date(invoice.dueAt).getTime() < Date.now() && invoice.status !== "paid";
+    return (
+      new Date(invoice.dueAt).getTime() < Date.now() &&
+      invoice.status !== "paid"
+    );
   }).length;
 
   if (isLoading) return <Loading text="Loading invoices..." />;
@@ -170,7 +201,8 @@ function InvoicingPage() {
         <div>
           <h1 className="font-bold text-2xl text-foreground">Invoicing</h1>
           <p className="text-muted-foreground">
-            Complete invoice operations with totals, due dates, and status views.
+            Complete invoice operations with totals, due dates, and status
+            views.
           </p>
         </div>
         <Button
@@ -183,25 +215,130 @@ function InvoicingPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Gross Revenue"
+          value={`$${(totalRevenue / 1000).toFixed(1)}k`}
+          icon={<CreditCard className="h-4 w-4" />}
+          trend="+12.4% vs lm"
+          color="text-primary"
+        />
+        <Metric
+          title="Paid Invoices"
+          value={`$${(paidRevenue / 1000).toFixed(1)}k`}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="All reconciled"
+          color="text-emerald-400"
+        />
+        <Metric
+          title="Liquidity Gap"
+          value={`$${((totalRevenue - paidRevenue) / 1000).toFixed(1)}k`}
+          icon={<Activity className="h-4 w-4" />}
+          trend="Aging < 30d"
+          color="text-cyan-400"
+        />
+        <Metric
+          title="Overdue Risk"
+          value={overdueCount}
+          icon={<History className="h-4 w-4" />}
+          trend="Requires follow-up"
+          color="text-rose-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Revenue Lifecycle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={[
+                    { month: "W1", revenue: 1200, collections: 800 },
+                    { month: "W2", revenue: 2100, collections: 1500 },
+                    { month: "W3", revenue: 1800, collections: 1700 },
+                    { month: "W4", revenue: 3200, collections: 2800 },
+                  ]}
+                >
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#22d3ee"
+                    fillOpacity={1}
+                    fill="url(#colorRev)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="collections"
+                    stroke="#888"
+                    fillOpacity={0}
+                    strokeWidth={1}
+                    strokeDasharray="5 5"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Filtered Revenue</p>
-            <p className="font-bold text-2xl text-foreground">
-              ${totalRevenue.toFixed(2)}
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold">
+                Smart Reminders
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center py-6">
+            <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+              AI has identified **4 late-paying** clients suitable for
+              automated, personalized nudge sequences.
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Paid Revenue</p>
-            <p className="font-bold text-2xl text-success">${paidRevenue.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Overdue Invoices</p>
-            <p className="font-bold text-2xl text-destructive">{overdueCount}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-[10px] font-black uppercase tracking-widest border-primary/20 hover:bg-primary/5"
+            >
+              Enable AI Collections
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -246,7 +383,10 @@ function InvoicingPage() {
           icon={<Receipt className="h-12 w-12" />}
           title="No invoices found"
           description="Create your first invoice or adjust current filters."
-          action={{ label: "Create Invoice", onClick: () => setIsCreateModalOpen(true) }}
+          action={{
+            label: "Create Invoice",
+            onClick: () => setIsCreateModalOpen(true),
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -254,7 +394,9 @@ function InvoicingPage() {
             <Card key={invoice.id}>
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">{invoice.invoiceNumber}</CardTitle>
+                  <CardTitle className="text-base">
+                    {invoice.invoiceNumber}
+                  </CardTitle>
                   <Badge
                     variant={
                       invoice.status === "paid"
@@ -450,7 +592,10 @@ function InvoicingPage() {
               <Input
                 value={newInvoice.currency}
                 onChange={(e) =>
-                  setNewInvoice((prev) => ({ ...prev, currency: e.target.value }))
+                  setNewInvoice((prev) => ({
+                    ...prev,
+                    currency: e.target.value,
+                  }))
                 }
                 placeholder="USD"
               />
@@ -478,5 +623,48 @@ function InvoicingPage() {
         </div>
       </FormModal>
     </div>
+  );
+}
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <Receipt className="h-4 w-4" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -27,6 +27,7 @@ export interface AppEnv {
   GITHUB_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  BETTER_AUTH_BASE_URL?: string;
   VITE_PUBLIC_SITE_URL: string;
   NODE_ENV: string;
 }

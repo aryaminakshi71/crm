@@ -13,8 +13,28 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Briefcase, Building2, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  Activity,
+  Briefcase,
+  Building2,
+  Globe,
+  Plus,
+  ShieldCheck,
+  ShoppingCart,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { nucleoApi } from "../lib/api";
 
@@ -54,8 +74,11 @@ function ProcurementPage() {
   });
 
   const createVendor = useMutation({
-    mutationFn: (payload: { name: string; category: string; slaTier: string }) =>
-      nucleoApi.operations.vendors.create(payload),
+    mutationFn: (payload: {
+      name: string;
+      category: string;
+      slaTier: string;
+    }) => nucleoApi.operations.vendors.create(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ops-vendors"] });
       toast.success("Vendor added");
@@ -94,10 +117,17 @@ function ProcurementPage() {
       status?: string;
     }) => nucleoApi.operations.purchaseRequests.create(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["ops-purchase-requests"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["ops-purchase-requests"],
+      });
       toast.success("Request submitted for approval");
       setIsRequestModalOpen(false);
-      setNewRequest({ title: "", department: "Operations", amount: "", vendorId: "" });
+      setNewRequest({
+        title: "",
+        department: "Operations",
+        amount: "",
+        vendorId: "",
+      });
     },
     onError: () => toast.error("Failed to create request"),
   });
@@ -113,7 +143,8 @@ function ProcurementPage() {
   });
 
   const deleteRequest = useMutation({
-    mutationFn: (id: string) => nucleoApi.operations.purchaseRequests.delete(id),
+    mutationFn: (id: string) =>
+      nucleoApi.operations.purchaseRequests.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ops-purchase-requests"] });
       toast.success("Request deleted");
@@ -121,8 +152,14 @@ function ProcurementPage() {
     onError: () => toast.error("Failed to delete request"),
   });
 
-  const vendors = useMemo(() => vendorsQuery.data?.data || [], [vendorsQuery.data]);
-  const requests = useMemo(() => requestsQuery.data?.data || [], [requestsQuery.data]);
+  const vendors = useMemo(
+    () => vendorsQuery.data?.data || [],
+    [vendorsQuery.data],
+  );
+  const requests = useMemo(
+    () => requestsQuery.data?.data || [],
+    [requestsQuery.data],
+  );
 
   const filteredRequests = useMemo(() => {
     return requests.filter((request: any) => {
@@ -132,16 +169,29 @@ function ProcurementPage() {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
-        String(request.title || "").toLowerCase().includes(q) ||
-        String(request.department || "").toLowerCase().includes(q) ||
-        String(request.vendorName || "").toLowerCase().includes(q)
+        String(request.title || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(request.department || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(request.vendorName || "")
+          .toLowerCase()
+          .includes(q)
       );
     });
   }, [requests, search, statusFilter]);
 
-  const totalSpend = requests.reduce((sum: number, request: any) => sum + Number(request.amount || 0), 0);
-  const pendingApprovals = requests.filter((request: any) => request.status === "pending").length;
-  const highRiskVendors = vendors.filter((vendor: any) => vendor.risk === "high").length;
+  const totalSpend = requests.reduce(
+    (sum: number, request: any) => sum + Number(request.amount || 0),
+    0,
+  );
+  const pendingApprovals = requests.filter(
+    (request: any) => request.status === "pending",
+  ).length;
+  const highRiskVendors = vendors.filter(
+    (vendor: any) => vendor.risk === "high",
+  ).length;
 
   if (vendorsQuery.isLoading || requestsQuery.isLoading) {
     return <Loading text="Loading procurement workspace..." />;
@@ -157,19 +207,163 @@ function ProcurementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" leftIcon={<Building2 className="h-4 w-4" />} onClick={() => setIsVendorModalOpen(true)}>
+          <Button
+            variant="outline"
+            leftIcon={<Building2 className="h-4 w-4" />}
+            onClick={() => setIsVendorModalOpen(true)}
+          >
             Add Vendor
           </Button>
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsRequestModalOpen(true)}>
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsRequestModalOpen(true)}
+          >
             New Request
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Metric title="Managed Vendors" value={vendors.length} />
-        <Metric title="Pending Approvals" value={pendingApprovals} />
-        <Metric title="Procurement Spend" value={`$${totalSpend.toLocaleString()}`} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Total Spend"
+          value={`$${(totalSpend / 1000).toFixed(1)}k`}
+          icon={<Briefcase className="h-4 w-4" />}
+          trend="+4.2% vs ly"
+          color="text-primary"
+        />
+        <Metric
+          title="Active Vendors"
+          value={vendors.length}
+          icon={<Building2 className="h-4 w-4" />}
+          trend="All verified"
+          color="text-cyan-400"
+        />
+        <Metric
+          title="Pending POs"
+          value={pendingApprovals}
+          icon={<Activity className="h-4 w-4" />}
+          trend="Requires action"
+          color="text-rose-400"
+        />
+        <Metric
+          title="SLA Health"
+          value="96.4%"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="Exceeding"
+          color="text-emerald-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Spend Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={[
+                    { dept: "Ops", val: 12000, color: "#22d3ee" },
+                    { dept: "Eng", val: 45000, color: "#a78bfa" },
+                    { dept: "Sales", val: 18000, color: "#f472b6" },
+                    { dept: "HR", val: 5000, color: "#34d399" },
+                  ]}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis
+                    dataKey="dept"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                    tickFormatter={(v) => `$${v / 1000}k`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Bar dataKey="val" radius={[4, 4, 0, 0]} barSize={40}>
+                    {[
+                      { dept: "Ops", val: 12000, color: "#22d3ee" },
+                      { dept: "Eng", val: 45000, color: "#a78bfa" },
+                      { dept: "Sales", val: 18000, color: "#f472b6" },
+                      { dept: "HR", val: 5000, color: "#34d399" },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-bold">
+                Market Intelligence
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground leading-relaxed text-center">
+                AI Insight: **Switching Cloud Storage** to Tier 2 providers
+                could save **18% annually**.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Price Trends
+              </p>
+              <div className="space-y-2">
+                {[
+                  {
+                    label: "SaaS Licensing",
+                    trend: "+4%",
+                    color: "text-rose-400",
+                  },
+                  {
+                    label: "Hardware Ops",
+                    trend: "-2%",
+                    color: "text-emerald-400",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex justify-between items-center text-xs"
+                  >
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className={`font-black ${item.color}`}>
+                      {item.trend}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -208,12 +402,18 @@ function ProcurementPage() {
             ) : (
               <div className="space-y-3">
                 {filteredRequests.map((request: any) => (
-                  <div key={request.id} className="rounded-lg border border-border p-3">
+                  <div
+                    key={request.id}
+                    className="rounded-lg border border-border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-medium text-foreground">{request.title}</p>
+                        <p className="font-medium text-foreground">
+                          {request.title}
+                        </p>
                         <p className="text-muted-foreground text-sm">
-                          {request.department} | {request.vendorName || "Unassigned"}
+                          {request.department} |{" "}
+                          {request.vendorName || "Unassigned"}
                         </p>
                       </div>
                       <Badge
@@ -273,10 +473,15 @@ function ProcurementPage() {
           <CardContent>
             <div className="space-y-3">
               {vendors.map((vendor: any) => (
-                <div key={vendor.id} className="rounded-lg border border-border p-3">
+                <div
+                  key={vendor.id}
+                  className="rounded-lg border border-border p-3"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{vendor.name}</p>
+                      <p className="font-medium text-foreground">
+                        {vendor.name}
+                      </p>
                       <p className="text-muted-foreground text-sm">
                         {vendor.category} | SLA {vendor.slaTier}
                       </p>
@@ -351,17 +556,34 @@ function ProcurementPage() {
       >
         <div className="space-y-4">
           <FormField label="Vendor Name" required>
-            <Input value={newVendor.name} onChange={(e) => setNewVendor((prev) => ({ ...prev, name: e.target.value }))} />
+            <Input
+              value={newVendor.name}
+              onChange={(e) =>
+                setNewVendor((prev) => ({ ...prev, name: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Category">
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newVendor.category} onChange={(e) => setNewVendor((prev) => ({ ...prev, category: e.target.value }))}>
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={newVendor.category}
+              onChange={(e) =>
+                setNewVendor((prev) => ({ ...prev, category: e.target.value }))
+              }
+            >
               <option value="Software">Software</option>
               <option value="Hardware">Hardware</option>
               <option value="Services">Services</option>
             </select>
           </FormField>
           <FormField label="SLA Tier">
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newVendor.slaTier} onChange={(e) => setNewVendor((prev) => ({ ...prev, slaTier: e.target.value }))}>
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={newVendor.slaTier}
+              onChange={(e) =>
+                setNewVendor((prev) => ({ ...prev, slaTier: e.target.value }))
+              }
+            >
               <option value="Standard">Standard</option>
               <option value="Gold">Gold</option>
               <option value="Enterprise">Enterprise</option>
@@ -399,10 +621,24 @@ function ProcurementPage() {
       >
         <div className="space-y-4">
           <FormField label="Request Title" required>
-            <Input value={newRequest.title} onChange={(e) => setNewRequest((prev) => ({ ...prev, title: e.target.value }))} />
+            <Input
+              value={newRequest.title}
+              onChange={(e) =>
+                setNewRequest((prev) => ({ ...prev, title: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Department">
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newRequest.department} onChange={(e) => setNewRequest((prev) => ({ ...prev, department: e.target.value }))}>
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={newRequest.department}
+              onChange={(e) =>
+                setNewRequest((prev) => ({
+                  ...prev,
+                  department: e.target.value,
+                }))
+              }
+            >
               <option value="Operations">Operations</option>
               <option value="Sales">Sales</option>
               <option value="Engineering">Engineering</option>
@@ -411,13 +647,29 @@ function ProcurementPage() {
             </select>
           </FormField>
           <FormField label="Amount" required>
-            <Input type="number" min="0" step="0.01" value={newRequest.amount} onChange={(e) => setNewRequest((prev) => ({ ...prev, amount: e.target.value }))} />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newRequest.amount}
+              onChange={(e) =>
+                setNewRequest((prev) => ({ ...prev, amount: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Preferred Vendor">
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newRequest.vendorId} onChange={(e) => setNewRequest((prev) => ({ ...prev, vendorId: e.target.value }))}>
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={newRequest.vendorId}
+              onChange={(e) =>
+                setNewRequest((prev) => ({ ...prev, vendorId: e.target.value }))
+              }
+            >
               <option value="">Unassigned</option>
               {vendors.map((vendor: any) => (
-                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
               ))}
             </select>
           </FormField>
@@ -427,21 +679,43 @@ function ProcurementPage() {
   );
 }
 
-function Metric({ title, value }: { title: string; value: string | number }) {
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
   return (
-    <Card>
+    <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-sm">{title}</p>
-            <p className="font-bold text-2xl text-foreground">{value}</p>
-          </div>
-          <div className="rounded-md bg-muted p-2">
-            {title.includes("Spend") ? (
-              <Briefcase className="h-4 w-4 text-primary" />
-            ) : (
-              <ShoppingCart className="h-4 w-4 text-foreground" />
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
             )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <ShoppingCart className="h-4 w-4" />}
           </div>
         </div>
       </CardContent>

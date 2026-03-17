@@ -53,4 +53,3 @@ export const featureFlagsRelations = relations(featureFlags, ({ one }) => ({
     references: [users.id],
   }),
 }));
-

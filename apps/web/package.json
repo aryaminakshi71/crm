@@ -13,7 +13,9 @@
     "test:coverage": "vitest --coverage",
     "build:analyze": "ANALYZE=true vite build",
     "health": "node scripts/platform-healthcheck.mjs",
-    "start": "bun run dev"
+    "start": "bun run dev",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@orpc/client": "^1.13.4",

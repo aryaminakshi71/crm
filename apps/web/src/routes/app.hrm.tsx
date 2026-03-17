@@ -13,12 +13,52 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, Clock3, Plus, Search, Trash2, UserRoundCog, Users } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  Brain,
+  Briefcase,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
+  GraduationCap,
+  Heart,
+  Plus,
+  Search,
+  Trash2,
+  TrendingUp,
+  Users,
+  X,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+} from "recharts";
 import { toast } from "sonner";
+import { z } from "zod";
+import { CsvImportModal } from "../components/CsvImportModal";
 import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm")({
+  validateSearch: z.object({
+    view: z
+      .enum([
+        "directory",
+        "attendance",
+        "leave",
+        "performance",
+        "recruitment",
+        "training",
+        "payroll",
+      ])
+      .optional(),
+  }),
   component: HrmPage,
 });
 
@@ -45,9 +85,19 @@ function toIsoDateTime(date: string): string {
 }
 
 function HrmPage() {
-  const [view, setView] = useState<HrmView>("directory");
+  const { view: viewParam } = Route.useSearch();
+  const [view, setView] = useState<HrmView>(viewParam ?? "directory");
   const [search, setSearch] = useState("");
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  const onCsvImport = async (data: any) => {
+    await createCandidate.mutateAsync({
+      fullName: data.fullName,
+      email: data.email,
+    });
+  };
+
   const queryClient = useQueryClient();
 
   const [newEmployee, setNewEmployee] = useState({
@@ -122,17 +172,20 @@ function HrmPage() {
 
   const requisitionsQuery = useQuery({
     queryKey: ["hrm-requisitions"],
-    queryFn: () => nucleoApi.hrm.recruitment.requisitions.list({ page: 1, limit: 100 }),
+    queryFn: () =>
+      nucleoApi.hrm.recruitment.requisitions.list({ page: 1, limit: 100 }),
   });
 
   const candidatesQuery = useQuery({
     queryKey: ["hrm-candidates"],
-    queryFn: () => nucleoApi.hrm.recruitment.candidates.list({ page: 1, limit: 100 }),
+    queryFn: () =>
+      nucleoApi.hrm.recruitment.candidates.list({ page: 1, limit: 100 }),
   });
 
   const trainingProgramsQuery = useQuery({
     queryKey: ["hrm-training-programs"],
-    queryFn: () => nucleoApi.hrm.training.programs.list({ page: 1, limit: 100 }),
+    queryFn: () =>
+      nucleoApi.hrm.training.programs.list({ page: 1, limit: 100 }),
   });
 
   const trainingRecordsQuery = useQuery({
@@ -174,7 +227,8 @@ function HrmPage() {
   });
 
   const approveLeave = useMutation({
-    mutationFn: (id: string) => nucleoApi.hrm.leaveRequests.updateStatus(id, "approved"),
+    mutationFn: (id: string) =>
+      nucleoApi.hrm.leaveRequests.updateStatus(id, "approved"),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -185,7 +239,8 @@ function HrmPage() {
   });
 
   const rejectLeave = useMutation({
-    mutationFn: (id: string) => nucleoApi.hrm.leaveRequests.updateStatus(id, "rejected"),
+    mutationFn: (id: string) =>
+      nucleoApi.hrm.leaveRequests.updateStatus(id, "rejected"),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -219,7 +274,8 @@ function HrmPage() {
   });
 
   const completeReview = useMutation({
-    mutationFn: (id: string) => nucleoApi.hrm.reviews.update(id, { status: "completed" }),
+    mutationFn: (id: string) =>
+      nucleoApi.hrm.reviews.update(id, { status: "completed" }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -241,8 +297,11 @@ function HrmPage() {
   });
 
   const createRequisition = useMutation({
-    mutationFn: (payload: { title: string; department: string; openings: number }) =>
-      nucleoApi.hrm.recruitment.requisitions.create(payload),
+    mutationFn: (payload: {
+      title: string;
+      department: string;
+      openings: number;
+    }) => nucleoApi.hrm.recruitment.requisitions.create(payload),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -255,17 +314,23 @@ function HrmPage() {
   const updateRequisition = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       nucleoApi.hrm.recruitment.requisitions.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-requisitions"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-requisitions"] }),
   });
 
   const deleteRequisition = useMutation({
-    mutationFn: (id: string) => nucleoApi.hrm.recruitment.requisitions.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-requisitions"] }),
+    mutationFn: (id: string) =>
+      nucleoApi.hrm.recruitment.requisitions.delete(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-requisitions"] }),
   });
 
   const createCandidate = useMutation({
-    mutationFn: (payload: { requisitionId?: string; fullName: string; email: string }) =>
-      nucleoApi.hrm.recruitment.candidates.create(payload),
+    mutationFn: (payload: {
+      requisitionId?: string;
+      fullName: string;
+      email: string;
+    }) => nucleoApi.hrm.recruitment.candidates.create(payload),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -278,17 +343,22 @@ function HrmPage() {
   const updateCandidate = useMutation({
     mutationFn: ({ id, stage }: { id: string; stage: string }) =>
       nucleoApi.hrm.recruitment.candidates.update(id, { stage }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-candidates"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-candidates"] }),
   });
 
   const deleteCandidate = useMutation({
     mutationFn: (id: string) => nucleoApi.hrm.recruitment.candidates.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-candidates"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-candidates"] }),
   });
 
   const createTrainingProgram = useMutation({
-    mutationFn: (payload: { title: string; category: string; durationHours: number }) =>
-      nucleoApi.hrm.training.programs.create(payload),
+    mutationFn: (payload: {
+      title: string;
+      category: string;
+      durationHours: number;
+    }) => nucleoApi.hrm.training.programs.create(payload),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -301,17 +371,22 @@ function HrmPage() {
   const updateTrainingProgram = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       nucleoApi.hrm.training.programs.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-training-programs"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-training-programs"] }),
   });
 
   const deleteTrainingProgram = useMutation({
     mutationFn: (id: string) => nucleoApi.hrm.training.programs.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-training-programs"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-training-programs"] }),
   });
 
   const createTrainingRecord = useMutation({
-    mutationFn: (payload: { employeeId: string; programId: string; progress: number }) =>
-      nucleoApi.hrm.training.records.create(payload),
+    mutationFn: (payload: {
+      employeeId: string;
+      programId: string;
+      progress: number;
+    }) => nucleoApi.hrm.training.records.create(payload),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["hrm-summary"] }),
@@ -322,14 +397,20 @@ function HrmPage() {
   });
 
   const updateTrainingRecord = useMutation({
-    mutationFn: ({ id, completionStatus, progress }: { id: string; completionStatus: string; progress?: number }) =>
+    mutationFn: ({
+      id,
+      completionStatus,
+      progress,
+    }: { id: string; completionStatus: string; progress?: number }) =>
       nucleoApi.hrm.training.records.update(id, { completionStatus, progress }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-training-records"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-training-records"] }),
   });
 
   const deleteTrainingRecord = useMutation({
     mutationFn: (id: string) => nucleoApi.hrm.training.records.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-training-records"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-training-records"] }),
   });
 
   const createPayrollRun = useMutation({
@@ -354,12 +435,14 @@ function HrmPage() {
   const updatePayrollRun = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       nucleoApi.hrm.payroll.runs.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-payroll-runs"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-payroll-runs"] }),
   });
 
   const deletePayrollRun = useMutation({
     mutationFn: (id: string) => nucleoApi.hrm.payroll.runs.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-payroll-runs"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-payroll-runs"] }),
   });
 
   const createPayrollEntry = useMutation({
@@ -383,24 +466,56 @@ function HrmPage() {
   const updatePayrollEntry = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       nucleoApi.hrm.payroll.entries.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-payroll-entries"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-payroll-entries"] }),
   });
 
   const deletePayrollEntry = useMutation({
     mutationFn: (id: string) => nucleoApi.hrm.payroll.entries.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hrm-payroll-entries"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hrm-payroll-entries"] }),
   });
 
-  const employees = useMemo(() => employeesQuery.data?.data || [], [employeesQuery.data]);
-  const attendance = useMemo(() => attendanceQuery.data?.data || [], [attendanceQuery.data]);
-  const leaveRequests = useMemo(() => leaveQuery.data?.data || [], [leaveQuery.data]);
-  const reviews = useMemo(() => reviewsQuery.data?.data || [], [reviewsQuery.data]);
-  const requisitions = useMemo(() => requisitionsQuery.data?.data || [], [requisitionsQuery.data]);
-  const candidates = useMemo(() => candidatesQuery.data?.data || [], [candidatesQuery.data]);
-  const trainingPrograms = useMemo(() => trainingProgramsQuery.data?.data || [], [trainingProgramsQuery.data]);
-  const trainingRecords = useMemo(() => trainingRecordsQuery.data?.data || [], [trainingRecordsQuery.data]);
-  const payrollRuns = useMemo(() => payrollRunsQuery.data?.data || [], [payrollRunsQuery.data]);
-  const payrollEntries = useMemo(() => payrollEntriesQuery.data?.data || [], [payrollEntriesQuery.data]);
+  const employees = useMemo(
+    () => employeesQuery.data?.data || [],
+    [employeesQuery.data],
+  );
+  const attendance = useMemo(
+    () => attendanceQuery.data?.data || [],
+    [attendanceQuery.data],
+  );
+  const leaveRequests = useMemo(
+    () => leaveQuery.data?.data || [],
+    [leaveQuery.data],
+  );
+  const reviews = useMemo(
+    () => reviewsQuery.data?.data || [],
+    [reviewsQuery.data],
+  );
+  const requisitions = useMemo(
+    () => requisitionsQuery.data?.data || [],
+    [requisitionsQuery.data],
+  );
+  const candidates = useMemo(
+    () => candidatesQuery.data?.data || [],
+    [candidatesQuery.data],
+  );
+  const trainingPrograms = useMemo(
+    () => trainingProgramsQuery.data?.data || [],
+    [trainingProgramsQuery.data],
+  );
+  const trainingRecords = useMemo(
+    () => trainingRecordsQuery.data?.data || [],
+    [trainingRecordsQuery.data],
+  );
+  const payrollRuns = useMemo(
+    () => payrollRunsQuery.data?.data || [],
+    [payrollRunsQuery.data],
+  );
+  const payrollEntries = useMemo(
+    () => payrollEntriesQuery.data?.data || [],
+    [payrollEntriesQuery.data],
+  );
 
   const isLoadingAny =
     summaryQuery.isLoading ||
@@ -417,8 +532,10 @@ function HrmPage() {
 
   const summary = summaryQuery.data || {
     headcount: employees.length,
-    presentToday: attendance.filter((item: any) => item.status === "present").length,
-    pendingLeave: leaveRequests.filter((item: any) => item.status === "pending").length,
+    presentToday: attendance.filter((item: any) => item.status === "present")
+      .length,
+    pendingLeave: leaveRequests.filter((item: any) => item.status === "pending")
+      .length,
     avgGoalProgress: 0,
     requisitions: requisitions.length,
     candidates: candidates.length,
@@ -432,7 +549,8 @@ function HrmPage() {
         <div>
           <h1 className="font-bold text-2xl text-foreground">HRM</h1>
           <p className="text-muted-foreground">
-            Full personnel suite: directory, attendance, leave, performance, recruitment, training, and payroll.
+            Full personnel suite: directory, attendance, leave, performance,
+            recruitment, training, and payroll.
           </p>
         </div>
         <Button
@@ -451,28 +569,208 @@ function HrmPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-8">
-          <Metric title="Headcount" value={summary.headcount || 0} />
-          <Metric title="Present" value={summary.presentToday || 0} />
-          <Metric title="Pending Leave" value={summary.pendingLeave || 0} />
-          <Metric title="Goal Progress" value={`${summary.avgGoalProgress || 0}%`} />
-          <Metric title="Reqs" value={summary.requisitions || 0} />
-          <Metric title="Candidates" value={summary.candidates || 0} />
-          <Metric title="Training" value={summary.trainingPrograms || 0} />
-          <Metric title="Payroll Runs" value={summary.payrollRuns || 0} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <Metric
+              title="Headcount"
+              value={summary.headcount || 0}
+              icon={<Users className="h-4 w-4" />}
+              trend="Current Staff"
+              color="text-primary"
+            />
+            <Metric
+              title="Presence"
+              value={summary.presentToday || 0}
+              icon={<CalendarDays className="h-4 w-4" />}
+              trend="Active today"
+              color="text-emerald-400"
+            />
+            <Metric
+              title="Pending Leave"
+              value={summary.pendingLeave || 0}
+              icon={<Clock3 className="h-4 w-4" />}
+              trend="Awaiting review"
+              color="text-amber-400"
+            />
+            <Metric
+              title="Succession"
+              value="84%"
+              icon={<TrendingUp className="h-4 w-4" />}
+              trend="Growth index"
+              color="text-violet-400"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <Metric
+              title="Openings"
+              value={summary.requisitions || 0}
+              icon={<Briefcase className="h-4 w-4" />}
+              trend="Talent pipe"
+              color="text-sky-400"
+            />
+            <Metric
+              title="Candidates"
+              value={summary.candidates || 0}
+              icon={<Users className="h-4 w-4" />}
+              trend="In pipeline"
+              color="text-cyan-400"
+            />
+            <Metric
+              title="Training"
+              value={summary.trainingPrograms || 0}
+              icon={<GraduationCap className="h-4 w-4" />}
+              trend="Live programs"
+              color="text-indigo-400"
+            />
+            <Metric
+              title="Health Score"
+              value="92"
+              icon={<Heart className="h-4 w-4" />}
+              trend="Wellness rating"
+              color="text-rose-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
+                  <Brain className="h-4 w-4" /> AI Workforce Intelligence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-lg bg-card border border-border">
+                      <p className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                        Churn Risk Analysis
+                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs">Engineering</span>
+                        <span className="text-xs font-bold text-success">
+                          Low (2.4%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full">
+                        <div
+                          className="h-full bg-success rounded-full"
+                          style={{ width: "2.4%" }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-3 mb-1">
+                        <span className="text-xs">Sales</span>
+                        <span className="text-xs font-bold text-warning">
+                          Medium (12.8%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full">
+                        <div
+                          className="h-full bg-warning rounded-full"
+                          style={{ width: "12.8%" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-lg bg-card border border-border h-full">
+                      <p className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                        Departmental Sentiment
+                      </p>
+                      <div className="h-32">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={[
+                              { name: "Eng", val: 88, color: "#3b82f6" },
+                              { name: "Sales", val: 74, color: "#eab308" },
+                              { name: "Ops", val: 92, color: "#22c55e" },
+                              { name: "HR", val: 81, color: "#a855f7" },
+                            ]}
+                          >
+                            <XAxis
+                              dataKey="name"
+                              fontSize={10}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip
+                              cursor={{ fill: "transparent" }}
+                              contentStyle={{
+                                borderRadius: "8px",
+                                border: "none",
+                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                              }}
+                            />
+                            <Bar dataKey="val" radius={[4, 4, 0, 0]}>
+                              {[0, 1, 2, 3].map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    [
+                                      "#3b82f6",
+                                      "#eab308",
+                                      "#22c55e",
+                                      "#a855f7",
+                                    ][index]
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Activity className="h-4 w-4" /> System Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3 p-2 rounded-lg bg-warning/10 border border-warning/20">
+                  <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-warning">
+                      Compliance Warning
+                    </p>
+                    <p className="text-[10px] text-warning/80">
+                      3 employee contracts are expiring next week.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Briefcase className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-primary">
+                      New Hire Onboarding
+                    </p>
+                    <p className="text-[10px] text-primary/80">
+                      4 candidates accepted offers today.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {([
-          ["directory", "Directory"],
-          ["attendance", "Attendance"],
-          ["leave", "Leave"],
-          ["performance", "Performance"],
-          ["recruitment", "Recruitment"],
-          ["training", "Training"],
-          ["payroll", "Payroll"],
-        ] as const).map(([key, label]) => (
+        {(
+          [
+            ["directory", "Directory"],
+            ["attendance", "Attendance"],
+            ["leave", "Leave"],
+            ["performance", "Performance"],
+            ["recruitment", "Recruitment"],
+            ["training", "Training"],
+            ["payroll", "Payroll"],
+          ] as const
+        ).map(([key, label]) => (
           <Button
             key={key}
             size="sm"
@@ -501,7 +799,10 @@ function HrmPage() {
               icon={<Users className="h-12 w-12" />}
               title="No employees found"
               description="Add personnel records to build your HR directory."
-              action={{ label: "Add Employee", onClick: () => setIsEmployeeModalOpen(true) }}
+              action={{
+                label: "Add Employee",
+                onClick: () => setIsEmployeeModalOpen(true),
+              }}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -510,25 +811,38 @@ function HrmPage() {
                   <CardContent className="space-y-2 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-foreground">{employee.fullName}</p>
-                        <p className="text-muted-foreground text-sm">{employee.jobTitle || "Team Member"}</p>
+                        <p className="font-semibold text-foreground">
+                          {employee.fullName}
+                        </p>
                         <p className="text-muted-foreground text-sm">
-                          {employee.department} | {employee.location || "Remote"}
+                          {employee.jobTitle || "Team Member"}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          {employee.department} |{" "}
+                          {employee.location || "Remote"}
                         </p>
                       </div>
-                      <Badge variant={employee.status === "active" ? "success" : "outline"}>
+                      <Badge
+                        variant={
+                          employee.status === "active" ? "success" : "outline"
+                        }
+                      >
                         {employee.status}
                       </Badge>
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      {employee.workEmail} | Manager: {employee.managerName || "-"}
+                      {employee.workEmail} | Manager:{" "}
+                      {employee.managerName || "-"}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <select
                         className="flex h-8 rounded border border-border bg-card px-2 text-xs"
                         value={employee.status || "active"}
                         onChange={(e) =>
-                          updateEmployeeStatus.mutate({ id: employee.id, status: e.target.value })
+                          updateEmployeeStatus.mutate({
+                            id: employee.id,
+                            status: e.target.value,
+                          })
                         }
                       >
                         <option value="active">active</option>
@@ -553,64 +867,323 @@ function HrmPage() {
       ) : null}
 
       {view === "attendance" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Attendance Ledger</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {attendance.map((item: any) => (
-              <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">{item.employee || "Unknown"}</p>
-                  <p className="text-muted-foreground text-sm">
-                    {formatDate(item.date)} | {Number(item.hours || 0)}h logged
+                  <CardTitle className="text-sm font-bold">
+                    Daily Presence Matrix
+                  </CardTitle>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                    Last 14 Days Tracking
                   </p>
                 </div>
-                <Badge variant={item.status === "present" ? "success" : item.status === "late" ? "warning" : "outline"}>
-                  {item.status}
+                <Badge variant="outline" className="text-[10px] h-5">
+                  Rolling Window
                 </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto pb-2">
+                  <div className="min-w-[500px]">
+                    <div className="flex gap-1 mb-2">
+                      <div className="w-32 shrink-0" />
+                      {Array.from({ length: 14 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 text-center text-[9px] font-black text-muted-foreground/40"
+                        >
+                          {i + 1}
+                        </div>
+                      ))}
+                    </div>
+                    {employees.slice(0, 8).map((e: any) => (
+                      <div key={e.id} className="flex gap-1 mb-1 group">
+                        <div className="w-32 shrink-0 text-xs truncate font-semibold flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-success" />{" "}
+                          {e.fullName}
+                        </div>
+                        {Array.from({ length: 14 }).map((_, i) => {
+                          const status =
+                            i === 4 || i === 11
+                              ? "late"
+                              : Math.random() > 0.9
+                                ? "absent"
+                                : "present";
+                          return (
+                            <div
+                              key={i}
+                              className={`flex-1 h-5 rounded border border-border/50 transition-all hover:scale-110 cursor-pointer ${
+                                status === "present"
+                                  ? "bg-success/20 border-success/20"
+                                  : status === "late"
+                                    ? "bg-warning/20 border-warning/20"
+                                    : "bg-destructive/10 border-destructive/20"
+                              }`}
+                              title={status}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-6 text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-32">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-sm bg-success/20" /> Present
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-sm bg-warning/20" /> Late /
+                    Partial
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-sm bg-destructive/10" />{" "}
+                    Absent
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="text-sm font-bold">
+                  Attendance Trends
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Overall Punctuality
+                    </span>
+                    <span className="font-bold text-success">94.2%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-muted rounded-full">
+                    <div
+                      className="h-full bg-success rounded-full"
+                      style={{ width: "94.2%" }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg border border-border bg-card">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">
+                      Weekly Summary
+                    </p>
+                    <div className="grid grid-cols-5 gap-1 pt-1">
+                      {["M", "T", "W", "T", "F"].map((d, i) => (
+                        <div key={d + i} className="text-center space-y-1">
+                          <div
+                            className={`h-8 rounded-sm ${i === 4 ? "bg-warning/20" : "bg-primary/20"}`}
+                          />
+                          <span className="text-[9px] font-bold text-muted-foreground">
+                            {d}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader className="pb-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold uppercase text-muted-foreground tracking-tighter">
+                  Recent Logs
+                </CardTitle>
+                <Button size="sm" variant="ghost" className="text-[10px] h-7">
+                  View Full Ledger
+                </Button>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-1 pt-4">
+              {attendance.slice(0, 5).map((item: any) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/10 transition-colors border-b border-border/50 last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-2 w-2 rounded-full ${item.status === "present" ? "bg-success" : "bg-warning"}`}
+                    />
+                    <div>
+                      <p className="text-xs font-bold leading-none">
+                        {item.employee || "Unknown"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {formatDate(item.date)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold">
+                      {Number(item.hours || 0)}h
+                    </p>
+                    <Badge
+                      className="text-[8px] h-4 py-0"
+                      variant={
+                        item.status === "present" ? "success" : "outline"
+                      }
+                    >
+                      {item.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       {view === "leave" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Leave Management</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {leaveRequests.map((request: any) => (
-              <div key={request.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-foreground">{request.employee || "Unknown"}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {request.leaveType} leave | {formatDate(request.startDate)} to {formatDate(request.endDate)}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-bold">
+                  Leave Approval Pipeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {leaveRequests.filter((r: any) => r.status === "pending")
+                  .length === 0 ? (
+                  <div className="text-center py-8">
+                    <Heart className="h-10 w-10 text-success/20 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No pending leave requests
                     </p>
-                    <p className="text-muted-foreground text-xs">{request.reason || "No reason provided"}</p>
                   </div>
+                ) : (
+                  leaveRequests
+                    .filter((r: any) => r.status === "pending")
+                    .map((request: any) => (
+                      <div
+                        key={request.id}
+                        className="rounded-xl border border-border bg-card p-4 hover:border-primary/40 transition-all group"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                              {request.employee?.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground">
+                                {request.employee || "Unknown"}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {request.leaveType} ·{" "}
+                                {formatDate(request.startDate)} to{" "}
+                                {formatDate(request.endDate)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-success hover:bg-success/10 border-success/20"
+                              onClick={() => approveLeave.mutate(request.id)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:bg-destructive/10 border-destructive/20"
+                              onClick={() => rejectLeave.mutate(request.id)}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                          <Badge variant="warning">pending</Badge>
+                        </div>
+                        <div className="mt-3 p-2 bg-muted/30 rounded text-xs italic text-muted-foreground">
+                          "{request.reason || "No reason provided"}"
+                        </div>
+                      </div>
+                    ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-xs font-bold uppercase text-muted-foreground">
+                  History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {leaveRequests
+                  .filter((r: any) => r.status !== "pending")
+                  .slice(0, 5)
+                  .map((request: any) => (
+                    <div
+                      key={request.id}
+                      className="flex items-center justify-between p-2 border-b border-border/50 last:border-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium">
+                          {request.employee}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {request.leaveType}
+                        </span>
+                      </div>
+                      <Badge
+                        variant={
+                          request.status === "approved" ? "success" : "outline"
+                        }
+                        className="text-[9px]"
+                      >
+                        {request.status}
+                      </Badge>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-sm font-bold">
+                Leave Policy Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Annual Leave Utilized
+                  </span>
+                  <span className="font-bold text-primary">72%</span>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: "72%" }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                  Upcoming Absences
+                </p>
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Badge variant={request.status === "approved" ? "success" : request.status === "pending" ? "warning" : "outline"}>
-                      {request.status}
-                    </Badge>
-                    {request.status === "pending" ? (
-                      <>
-                        <Button size="sm" variant="outline" onClick={() => approveLeave.mutate(request.id)}>
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => rejectLeave.mutate(request.id)}>
-                          Reject
-                        </Button>
-                      </>
-                    ) : null}
+                    <div className="h-7 w-7 rounded-sm bg-muted flex flex-col items-center justify-center text-[10px]">
+                      <span className="font-bold">24</span>
+                      <span className="text-[8px]">DEC</span>
+                    </div>
+                    <p className="text-xs">Company Holiday (Christmas)</p>
                   </div>
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       {view === "performance" ? (
@@ -620,10 +1193,15 @@ function HrmPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {reviews.map((review: any) => (
-              <div key={review.id} className="rounded-lg border border-border p-3">
+              <div
+                key={review.id}
+                className="rounded-lg border border-border p-3"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-foreground">{review.employee || "Unknown"}</p>
+                    <p className="font-medium text-foreground">
+                      {review.employee || "Unknown"}
+                    </p>
                     <p className="text-muted-foreground text-sm">
                       Cycle: {review.reviewCycle} | Rating: {review.rating}
                     </p>
@@ -631,13 +1209,21 @@ function HrmPage() {
                       Goals progress: {Number(review.goalsProgress || 0)}%
                     </p>
                   </div>
-                  <Badge variant={review.status === "in_review" ? "warning" : "outline"}>
+                  <Badge
+                    variant={
+                      review.status === "in_review" ? "warning" : "outline"
+                    }
+                  >
                     {review.status}
                   </Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {review.status !== "completed" ? (
-                    <Button size="sm" variant="outline" onClick={() => completeReview.mutate(review.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => completeReview.mutate(review.id)}
+                    >
                       Mark Completed
                     </Button>
                   ) : null}
@@ -657,168 +1243,278 @@ function HrmPage() {
       ) : null}
 
       {view === "recruitment" ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Requisitions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <Input
-                  placeholder="Role title"
-                  value={newRequisition.title}
-                  onChange={(e) => setNewRequisition((prev) => ({ ...prev, title: e.target.value }))}
-                />
-                <Input
-                  placeholder="Department"
-                  value={newRequisition.department}
-                  onChange={(e) => setNewRequisition((prev) => ({ ...prev, department: e.target.value }))}
-                />
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="Openings"
-                  value={newRequisition.openings}
-                  onChange={(e) => setNewRequisition((prev) => ({ ...prev, openings: e.target.value }))}
-                />
-              </div>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (!newRequisition.title.trim()) {
-                    toast.error("Requisition title is required");
-                    return;
-                  }
-                  createRequisition.mutate(
-                    {
-                      title: newRequisition.title.trim(),
-                      department: newRequisition.department || "General",
-                      openings: Math.max(1, Number(newRequisition.openings || 1)),
-                    },
-                    {
-                      onSuccess: () =>
-                        setNewRequisition({ title: "", department: "Engineering", openings: "1" }),
-                    },
-                  );
-                }}
-              >
-                Create Requisition
-              </Button>
-
-              {requisitions.map((req: any) => (
-                <div key={req.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{req.title}</p>
-                      <p className="text-muted-foreground text-xs">{req.department} | openings: {req.openings}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deleteRequisition.mutate(req.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: "Sourcing",
+                count: 24,
+                progress: 100,
+                color: "bg-primary",
+              },
+              {
+                label: "Interview",
+                count: 8,
+                progress: 65,
+                color: "bg-warning",
+              },
+              { label: "Offer", count: 3, progress: 30, color: "bg-success" },
+              {
+                label: "Hired",
+                count: 12,
+                progress: 15,
+                color: "bg-muted-foreground",
+              },
+            ].map((step, i) => (
+              <Card key={step.label} className="relative overflow-hidden">
+                <CardContent className="p-4 pt-6 text-center">
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    {step.label}
+                  </p>
+                  <p className="text-2xl font-black">{step.count}</p>
+                  <div className="absolute bottom-0 left-0 h-1 bg-muted w-full">
+                    <div
+                      className={`h-full ${step.color}`}
+                      style={{ width: `${step.progress}%` }}
+                    />
                   </div>
-                  <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={req.status || "open"}
-                    onChange={(e) => updateRequisition.mutate({ id: req.id, status: e.target.value })}
-                  >
-                    <option value="open">open</option>
-                    <option value="on_hold">on_hold</option>
-                    <option value="closed">closed</option>
-                  </select>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                  {i < 3 && (
+                    <div className="absolute top-1/2 -right-2 -translate-y-1/2 z-10 text-muted-foreground/30">
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Candidate Pipeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Input
-                  placeholder="Candidate name"
-                  value={newCandidate.fullName}
-                  onChange={(e) => setNewCandidate((prev) => ({ ...prev, fullName: e.target.value }))}
-                />
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={newCandidate.email}
-                  onChange={(e) => setNewCandidate((prev) => ({ ...prev, email: e.target.value }))}
-                />
-                <select
-                  className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                  value={newCandidate.requisitionId}
-                  onChange={(e) => setNewCandidate((prev) => ({ ...prev, requisitionId: e.target.value }))}
-                >
-                  <option value="">Assign requisition (optional)</option>
-                  {requisitions.map((req: any) => (
-                    <option key={req.id} value={req.id}>{req.title}</option>
-                  ))}
-                </select>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    if (!newCandidate.fullName.trim() || !newCandidate.email.trim()) {
-                      toast.error("Candidate name and email are required");
-                      return;
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-bold">
+                  Active Requisitions
+                </CardTitle>
+                <Badge variant="outline">{requisitions.length} Open</Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <Input
+                    placeholder="Role title"
+                    className="h-8 text-xs"
+                    value={newRequisition.title}
+                    onChange={(e) =>
+                      setNewRequisition((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
                     }
-                    createCandidate.mutate(
-                      {
-                        requisitionId: newCandidate.requisitionId || undefined,
-                        fullName: newCandidate.fullName.trim(),
-                        email: newCandidate.email.trim(),
-                      },
-                      {
-                        onSuccess: () =>
-                          setNewCandidate({ requisitionId: "", fullName: "", email: "" }),
-                      },
-                    );
-                  }}
-                >
-                  Add Candidate
-                </Button>
-              </div>
+                  />
+                  <Input
+                    placeholder="Department"
+                    className="h-8 text-xs"
+                    value={newRequisition.department}
+                    onChange={(e) =>
+                      setNewRequisition((prev) => ({
+                        ...prev,
+                        department: e.target.value,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      if (!newRequisition.title.trim()) {
+                        toast.error("Requisition title is required");
+                        return;
+                      }
+                      createRequisition.mutate(
+                        {
+                          title: newRequisition.title.trim(),
+                          department: newRequisition.department || "General",
+                          openings: 1,
+                        },
+                        {
+                          onSuccess: () =>
+                            setNewRequisition({
+                              title: "",
+                              department: "Engineering",
+                              openings: "1",
+                            }),
+                        },
+                      );
+                    }}
+                  >
+                    Post Job
+                  </Button>
+                </div>
 
-              {candidates.map((candidate: any) => (
-                <div key={candidate.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{candidate.fullName}</p>
-                      <p className="text-muted-foreground text-xs">{candidate.email}</p>
-                      <p className="text-muted-foreground text-xs">{candidate.requisitionTitle || "Unassigned"}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deleteCandidate.mutate(candidate.id)}
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                  {requisitions.map((req: any) => (
+                    <div
+                      key={req.id}
+                      className="rounded-xl border border-border bg-muted/10 p-3 hover:bg-muted/20 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-bold text-sm text-foreground">
+                            {req.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              className="text-[9px] h-4 py-0"
+                              variant="outline"
+                            >
+                              {req.department}
+                            </Badge>
+                            <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-tighter">
+                              1 Opening
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <select
+                            className="h-6 rounded border border-border bg-card px-1 text-[10px]"
+                            value={req.status || "open"}
+                            onChange={(e) =>
+                              updateRequisition.mutate({
+                                id: req.id,
+                                status: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="open">open</option>
+                            <option value="on_hold">hold</option>
+                            <option value="closed">closed</option>
+                          </select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => deleteRequisition.mutate(req.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-bold">
+                  Candidate Sourcing
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px]"
+                  leftIcon={<Plus className="h-3 w-3" />}
+                  onClick={() => setIsImportModalOpen(true)}
+                >
+                  Import CSV
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Candidate name"
+                    className="h-8 text-xs"
+                    value={newCandidate.fullName}
+                    onChange={(e) =>
+                      setNewCandidate((prev) => ({
+                        ...prev,
+                        fullName: e.target.value,
+                      }))
+                    }
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Email"
+                      type="email"
+                      className="h-8 text-xs flex-1"
+                      value={newCandidate.email}
+                      onChange={(e) =>
+                        setNewCandidate((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => {
+                        if (
+                          !newCandidate.fullName.trim() ||
+                          !newCandidate.email.trim()
+                        ) {
+                          toast.error("Required fields");
+                          return;
+                        }
+                        createCandidate.mutate(
+                          {
+                            fullName: newCandidate.fullName.trim(),
+                            email: newCandidate.email.trim(),
+                          },
+                          {
+                            onSuccess: () =>
+                              setNewCandidate({
+                                requisitionId: "",
+                                fullName: "",
+                                email: "",
+                              }),
+                          },
+                        );
+                      }}
+                    >
+                      Add
                     </Button>
                   </div>
-                  <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={candidate.stage || "sourced"}
-                    onChange={(e) => updateCandidate.mutate({ id: candidate.id, stage: e.target.value })}
-                  >
-                    <option value="sourced">sourced</option>
-                    <option value="screening">screening</option>
-                    <option value="interview">interview</option>
-                    <option value="offer">offer</option>
-                    <option value="hired">hired</option>
-                    <option value="rejected">rejected</option>
-                  </select>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {candidates.map((candidate: any) => (
+                    <div
+                      key={candidate.id}
+                      className="rounded-xl border border-border p-3 flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase">
+                          {candidate.fullName?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs">
+                            {candidate.fullName}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {candidate.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] h-5">
+                          {candidate.stage || "Sourced"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => deleteCandidate.mutate(candidate.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : null}
 
@@ -831,167 +1527,193 @@ function HrmPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <Input
+                  className="h-8 text-xs"
                   placeholder="Program title"
                   value={newProgram.title}
-                  onChange={(e) => setNewProgram((prev) => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setNewProgram((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
                 />
                 <Input
+                  className="h-8 text-xs"
                   placeholder="Category"
                   value={newProgram.category}
-                  onChange={(e) => setNewProgram((prev) => ({ ...prev, category: e.target.value }))}
-                />
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="Duration hrs"
-                  value={newProgram.durationHours}
-                  onChange={(e) => setNewProgram((prev) => ({ ...prev, durationHours: e.target.value }))}
-                />
-              </div>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (!newProgram.title.trim()) {
-                    toast.error("Program title is required");
-                    return;
+                  onChange={(e) =>
+                    setNewProgram((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
                   }
-                  createTrainingProgram.mutate(
-                    {
-                      title: newProgram.title.trim(),
-                      category: newProgram.category || "General",
-                      durationHours: Math.max(1, Number(newProgram.durationHours || 1)),
-                    },
-                    {
-                      onSuccess: () =>
-                        setNewProgram({ title: "", category: "General", durationHours: "8" }),
-                    },
-                  );
-                }}
-              >
-                Create Program
-              </Button>
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (!newProgram.title.trim()) {
+                      toast.error("Program title is required");
+                      return;
+                    }
+                    createTrainingProgram.mutate(
+                      {
+                        title: newProgram.title.trim(),
+                        category: newProgram.category || "General",
+                        durationHours: 8,
+                      },
+                      {
+                        onSuccess: () =>
+                          setNewProgram({
+                            title: "",
+                            category: "General",
+                            durationHours: "8",
+                          }),
+                      },
+                    );
+                  }}
+                >
+                  Create
+                </Button>
+              </div>
 
-              {trainingPrograms.map((program: any) => (
-                <div key={program.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{program.title}</p>
-                      <p className="text-muted-foreground text-xs">{program.category} | {program.durationHours}h</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deleteTrainingProgram.mutate(program.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={program.status || "active"}
-                    onChange={(e) => updateTrainingProgram.mutate({ id: program.id, status: e.target.value })}
+              <div className="space-y-2">
+                {trainingPrograms.map((program: any) => (
+                  <div
+                    key={program.id}
+                    className="rounded-xl border border-border p-3 group"
                   >
-                    <option value="draft">draft</option>
-                    <option value="active">active</option>
-                    <option value="completed">completed</option>
-                  </select>
-                </div>
-              ))}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-sm text-foreground">
+                          {program.title}
+                        </p>
+                        <p className="text-muted-foreground text-[10px] uppercase font-bold">
+                          {program.category} · {program.durationHours}h
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => deleteTrainingProgram.mutate(program.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Employee Training Records</CardTitle>
+              <CardTitle>Employee Progress</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <select
-                  className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                  className="w-full h-8 rounded border border-border bg-card px-2 text-xs"
                   value={newTrainingRecord.employeeId}
-                  onChange={(e) => setNewTrainingRecord((prev) => ({ ...prev, employeeId: e.target.value }))}
+                  onChange={(e) =>
+                    setNewTrainingRecord((prev) => ({
+                      ...prev,
+                      employeeId: e.target.value,
+                    }))
+                  }
                 >
-                  <option value="">Select employee</option>
+                  <option value="">Assign Employee</option>
                   {employees.map((employee: any) => (
-                    <option key={employee.id} value={employee.id}>{employee.fullName}</option>
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName}
+                    </option>
                   ))}
                 </select>
-                <select
-                  className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                  value={newTrainingRecord.programId}
-                  onChange={(e) => setNewTrainingRecord((prev) => ({ ...prev, programId: e.target.value }))}
-                >
-                  <option value="">Select program</option>
-                  {trainingPrograms.map((program: any) => (
-                    <option key={program.id} value={program.id}>{program.title}</option>
-                  ))}
-                </select>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="Progress %"
-                  value={newTrainingRecord.progress}
-                  onChange={(e) => setNewTrainingRecord((prev) => ({ ...prev, progress: e.target.value }))}
-                />
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    if (!newTrainingRecord.employeeId || !newTrainingRecord.programId) {
-                      toast.error("Employee and program are required");
-                      return;
-                    }
-                    createTrainingRecord.mutate(
-                      {
-                        employeeId: newTrainingRecord.employeeId,
-                        programId: newTrainingRecord.programId,
-                        progress: Math.max(0, Math.min(100, Number(newTrainingRecord.progress || 0))),
-                      },
-                      {
-                        onSuccess: () =>
-                          setNewTrainingRecord({ employeeId: "", programId: "", progress: "0" }),
-                      },
-                    );
-                  }}
-                >
-                  Assign Program
-                </Button>
-              </div>
-
-              {trainingRecords.map((record: any) => (
-                <div key={record.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{record.employee || "Unknown"}</p>
-                      <p className="text-muted-foreground text-xs">{record.program || "Program"} | {record.progress}%</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deleteTrainingRecord.mutate(record.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="flex gap-2">
                   <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={record.completionStatus || "assigned"}
+                    className="flex-1 h-8 rounded border border-border bg-card px-2 text-xs"
+                    value={newTrainingRecord.programId}
                     onChange={(e) =>
-                      updateTrainingRecord.mutate({
-                        id: record.id,
-                        completionStatus: e.target.value,
-                        progress: e.target.value === "completed" ? 100 : Number(record.progress || 0),
-                      })
+                      setNewTrainingRecord((prev) => ({
+                        ...prev,
+                        programId: e.target.value,
+                      }))
                     }
                   >
-                    <option value="assigned">assigned</option>
-                    <option value="in_progress">in_progress</option>
-                    <option value="completed">completed</option>
+                    <option value="">Select Program</option>
+                    {trainingPrograms.map((program: any) => (
+                      <option key={program.id} value={program.id}>
+                        {program.title}
+                      </option>
+                    ))}
                   </select>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      if (
+                        !newTrainingRecord.employeeId ||
+                        !newTrainingRecord.programId
+                      ) {
+                        toast.error("Required fields missing");
+                        return;
+                      }
+                      createTrainingRecord.mutate(
+                        {
+                          employeeId: newTrainingRecord.employeeId,
+                          programId: newTrainingRecord.programId,
+                          progress: 0,
+                        },
+                        {
+                          onSuccess: () =>
+                            setNewTrainingRecord({
+                              employeeId: "",
+                              programId: "",
+                              progress: "0",
+                            }),
+                        },
+                      );
+                    }}
+                  >
+                    Assign
+                  </Button>
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-3">
+                {trainingRecords.map((record: any) => (
+                  <div
+                    key={record.id}
+                    className="rounded-xl border border-border p-3"
+                  >
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div>
+                        <p className="font-bold text-xs">{record.employee}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {record.program}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          record.completionStatus === "completed"
+                            ? "success"
+                            : "outline"
+                        }
+                        className="text-[9px]"
+                      >
+                        {record.completionStatus}
+                      </Badge>
+                    </div>
+                    <div className="h-1 w-full bg-muted rounded-full">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{ width: `${record.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1000,173 +1722,153 @@ function HrmPage() {
       {view === "payroll" ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Payroll Runs</CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px]"
+                leftIcon={<Plus className="h-3 w-3" />}
+              >
+                New Period
+              </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <Input
-                  placeholder="Period label (e.g. Mar 2026)"
+                  className="h-8 text-xs"
+                  placeholder="Period (e.g. Mar 2026)"
                   value={newPayrollRun.periodLabel}
-                  onChange={(e) => setNewPayrollRun((prev) => ({ ...prev, periodLabel: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPayrollRun((prev) => ({
+                      ...prev,
+                      periodLabel: e.target.value,
+                    }))
+                  }
                 />
                 <Input
+                  className="h-8 text-xs"
                   type="date"
                   value={newPayrollRun.payDate}
-                  onChange={(e) => setNewPayrollRun((prev) => ({ ...prev, payDate: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPayrollRun((prev) => ({
+                      ...prev,
+                      payDate: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <Button
                 variant="primary"
+                size="sm"
                 onClick={() => {
-                  if (!newPayrollRun.periodLabel.trim() || !newPayrollRun.payDate) {
-                    toast.error("Period label and pay date are required");
+                  if (!newPayrollRun.periodLabel || !newPayrollRun.payDate) {
+                    toast.error("Missing fields");
                     return;
                   }
                   createPayrollRun.mutate(
                     {
-                      periodLabel: newPayrollRun.periodLabel.trim(),
+                      periodLabel: newPayrollRun.periodLabel,
                       payDate: toIsoDateTime(newPayrollRun.payDate),
                     },
                     {
-                      onSuccess: () => setNewPayrollRun({ periodLabel: "", payDate: "" }),
+                      onSuccess: () =>
+                        setNewPayrollRun({ periodLabel: "", payDate: "" }),
                     },
                   );
                 }}
               >
-                Create Payroll Run
+                Initalize Payroll
               </Button>
 
-              {payrollRuns.map((run: any) => (
-                <div key={run.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{run.periodLabel}</p>
-                      <p className="text-muted-foreground text-xs">Pay date: {formatDate(run.payDate)}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deletePayrollRun.mutate(run.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={run.status || "draft"}
-                    onChange={(e) => updatePayrollRun.mutate({ id: run.id, status: e.target.value })}
+              <div className="space-y-2">
+                {payrollRuns.map((run: any) => (
+                  <div
+                    key={run.id}
+                    className="rounded-xl border border-border p-3 flex items-center justify-between group"
                   >
-                    <option value="draft">draft</option>
-                    <option value="approved">approved</option>
-                    <option value="paid">paid</option>
-                  </select>
-                </div>
-              ))}
+                    <div>
+                      <p className="font-bold text-sm">{run.periodLabel}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                        Pay Date: {formatDate(run.payDate)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={run.status === "paid" ? "success" : "warning"}
+                        className="text-[9px] h-5"
+                      >
+                        {run.status}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={() => deletePayrollRun.mutate(run.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Payroll Entries</CardTitle>
+              <CardTitle>Distribution Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <select
-                  className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                  value={newPayrollEntry.payrollRunId}
-                  onChange={(e) => setNewPayrollEntry((prev) => ({ ...prev, payrollRunId: e.target.value }))}
-                >
-                  <option value="">Select payroll run</option>
-                  {payrollRuns.map((run: any) => (
-                    <option key={run.id} value={run.id}>{run.periodLabel}</option>
-                  ))}
-                </select>
-                <select
-                  className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                  value={newPayrollEntry.employeeId}
-                  onChange={(e) => setNewPayrollEntry((prev) => ({ ...prev, employeeId: e.target.value }))}
-                >
-                  <option value="">Select employee</option>
-                  {employees.map((employee: any) => (
-                    <option key={employee.id} value={employee.id}>{employee.fullName}</option>
-                  ))}
-                </select>
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Gross pay"
-                    value={newPayrollEntry.grossPay}
-                    onChange={(e) => setNewPayrollEntry((prev) => ({ ...prev, grossPay: e.target.value }))}
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Deductions"
-                    value={newPayrollEntry.deductions}
-                    onChange={(e) => setNewPayrollEntry((prev) => ({ ...prev, deductions: e.target.value }))}
-                  />
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-xl bg-muted/20 border border-border text-center">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">
+                  Total Net Disbursement
+                </p>
+                <p className="text-2xl font-black text-foreground">
+                  $142,500.00
+                </p>
+                <div className="flex items-center justify-center gap-4 mt-3">
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground font-bold">
+                      STAFF
+                    </p>
+                    <p className="text-xs font-bold">42</p>
+                  </div>
+                  <div className="h-8 w-px bg-border" />
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground font-bold">
+                      STATUS
+                    </p>
+                    <p className="text-xs font-bold text-warning">Draft</p>
+                  </div>
                 </div>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    const gross = Number(newPayrollEntry.grossPay || 0);
-                    const deductions = Number(newPayrollEntry.deductions || 0);
-                    if (!newPayrollEntry.payrollRunId || !Number.isFinite(gross) || gross <= 0) {
-                      toast.error("Payroll run and gross pay are required");
-                      return;
-                    }
-                    const net = Math.max(0, gross - deductions);
-                    createPayrollEntry.mutate(
-                      {
-                        payrollRunId: newPayrollEntry.payrollRunId,
-                        employeeId: newPayrollEntry.employeeId || undefined,
-                        grossPay: gross,
-                        deductions,
-                        netPay: net,
-                      },
-                      {
-                        onSuccess: () =>
-                          setNewPayrollEntry({ payrollRunId: "", employeeId: "", grossPay: "", deductions: "0" }),
-                      },
-                    );
-                  }}
-                >
-                  Add Entry
-                </Button>
               </div>
 
-              {payrollEntries.map((entry: any) => (
-                <div key={entry.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{entry.employeeName || "Unassigned"}</p>
-                      <p className="text-muted-foreground text-xs">
-                        Gross {Number(entry.grossPay || 0).toLocaleString()} | Net {Number(entry.netPay || 0).toLocaleString()}
+              <div className="space-y-2">
+                {payrollEntries.slice(0, 5).map((entry: any) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-2 border-b border-border/50 last:border-0 hover:bg-muted/10"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary">
+                        {entry.employeeName?.charAt(0)}
+                      </div>
+                      <span className="text-xs font-medium">
+                        {entry.employeeName}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold">
+                        ${Number(entry.netPay || 0).toLocaleString()}
+                      </p>
+                      <p className="text-[8px] text-muted-foreground uppercase">
+                        Net Pay
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deletePayrollEntry.mutate(entry.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                  <select
-                    className="mt-2 flex h-8 rounded border border-border bg-card px-2 text-xs"
-                    value={entry.status || "draft"}
-                    onChange={(e) => updatePayrollEntry.mutate({ id: entry.id, status: e.target.value })}
-                  >
-                    <option value="draft">draft</option>
-                    <option value="approved">approved</option>
-                    <option value="paid">paid</option>
-                  </select>
-                </div>
-              ))}
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1211,16 +1913,38 @@ function HrmPage() {
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField label="Full Name" required>
-            <Input value={newEmployee.fullName} onChange={(e) => setNewEmployee((prev) => ({ ...prev, fullName: e.target.value }))} />
+            <Input
+              value={newEmployee.fullName}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  fullName: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <FormField label="Work Email" required>
-            <Input type="email" value={newEmployee.workEmail} onChange={(e) => setNewEmployee((prev) => ({ ...prev, workEmail: e.target.value }))} />
+            <Input
+              type="email"
+              value={newEmployee.workEmail}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  workEmail: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <FormField label="Department">
             <select
               className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
               value={newEmployee.department}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, department: e.target.value }))}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  department: e.target.value,
+                }))
+              }
             >
               <option value="Engineering">Engineering</option>
               <option value="Sales">Sales</option>
@@ -1230,39 +1954,96 @@ function HrmPage() {
             </select>
           </FormField>
           <FormField label="Role">
-            <Input value={newEmployee.jobTitle} onChange={(e) => setNewEmployee((prev) => ({ ...prev, jobTitle: e.target.value }))} />
+            <Input
+              value={newEmployee.jobTitle}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  jobTitle: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <FormField label="Manager">
-            <Input value={newEmployee.managerName} onChange={(e) => setNewEmployee((prev) => ({ ...prev, managerName: e.target.value }))} />
+            <Input
+              value={newEmployee.managerName}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  managerName: e.target.value,
+                }))
+              }
+            />
           </FormField>
           <FormField label="Location">
-            <Input value={newEmployee.location} onChange={(e) => setNewEmployee((prev) => ({ ...prev, location: e.target.value }))} />
+            <Input
+              value={newEmployee.location}
+              onChange={(e) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  location: e.target.value,
+                }))
+              }
+            />
           </FormField>
         </div>
       </FormModal>
+
+      <CsvImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={onCsvImport}
+        title="Import Candidates"
+        fields={[
+          { key: "fullName", label: "Full Name", required: true },
+          { key: "email", label: "Email", required: true },
+          { key: "phone", label: "Phone" },
+          { key: "jobTitle", label: "Current Role" },
+          { key: "location", label: "Location" },
+          { key: "notes", label: "Notes" },
+        ]}
+      />
     </div>
   );
 }
 
-function Metric({ title, value }: { title: string; value: string | number }) {
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
   return (
-    <Card>
+    <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-xs">{title}</p>
-            <p className="font-bold text-xl text-foreground">{value}</p>
-          </div>
-          <div className="rounded-md bg-muted p-2">
-            {title.includes("Headcount") ? (
-              <Users className="h-4 w-4 text-primary" />
-            ) : title.includes("Present") ? (
-              <Clock3 className="h-4 w-4 text-success" />
-            ) : title.includes("Leave") ? (
-              <CalendarDays className="h-4 w-4 text-warning" />
-            ) : (
-              <UserRoundCog className="h-4 w-4 text-foreground" />
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
             )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <Users className="h-4 w-4" />}
           </div>
         </div>
       </CardContent>

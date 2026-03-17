@@ -36,13 +36,22 @@ export function Header({ showTryDemo = true }: HeaderProps) {
             Nucleo One
           </Link>
           <div className="hidden items-center gap-4 md:flex">
-            <Link to="/pricing" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+            <Link
+              to="/pricing"
+              className="font-medium text-muted-foreground text-sm hover:text-foreground"
+            >
               Pricing
             </Link>
-            <Link to="/blog" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+            <Link
+              to="/blog"
+              className="font-medium text-muted-foreground text-sm hover:text-foreground"
+            >
               Blog
             </Link>
-            <Link to="/docs" className="font-medium text-muted-foreground text-sm hover:text-foreground">
+            <Link
+              to="/docs"
+              className="font-medium text-muted-foreground text-sm hover:text-foreground"
+            >
               Docs
             </Link>
           </div>

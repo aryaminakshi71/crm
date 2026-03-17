@@ -238,6 +238,7 @@ export interface EnvTemplateVars {
   DATABASE_URL: string;
 
   // URLs
+  BETTER_AUTH_BASE_URL: string;
   VITE_PUBLIC_SITE_URL: string;
   VITE_API_URL: string;
 }

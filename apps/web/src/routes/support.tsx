@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
 import { Link, createFileRoute } from "@tanstack/react-router";
@@ -266,6 +267,7 @@ function SupportPage() {
           </Card>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

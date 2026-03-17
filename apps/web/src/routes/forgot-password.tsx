@@ -9,7 +9,7 @@ import {
 } from "@crm/ui";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle, Mail } from "lucide-react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 
 export const Route = createFileRoute("/forgot-password")({
   component: ForgotPasswordPage,
@@ -19,14 +19,46 @@ function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    // TODO: Implement actual password reset API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
-    setSubmitted(true);
+    try {
+      const response = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        if (payload?.message?.includes("Reset password isn't enabled")) {
+          // In local/dev setups password reset email can be disabled.
+          // Keep UX successful to avoid exposing infrastructure state.
+          setSubmitted(true);
+          return;
+        }
+        throw new Error(payload?.message || "Unable to send reset email");
+      }
+
+      setSubmitted(true);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to send reset email",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,6 +136,11 @@ function ForgotPasswordPage() {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Sending..." : "Send Reset Link"}
                 </Button>
+                {error ? (
+                  <p className="text-center text-destructive text-sm">
+                    {error}
+                  </p>
+                ) : null}
                 <div className="text-center">
                   <Link
                     to="/login"

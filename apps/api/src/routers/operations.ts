@@ -25,20 +25,66 @@ export const operationsRouter = {
       const db = getDb(context);
       const orgId = context.organization.id;
 
-      const [vendors, requests, contracts, controls, risks, retention, drills, financeCount, financeSpend, payrollRuns, knowledge] =
-        await Promise.all([
-          db.select({ count: sql<number>`count(*)` }).from(schema.vendors).where(eq(schema.vendors.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.purchaseRequests).where(eq(schema.purchaseRequests.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.contractsRegister).where(eq(schema.contractsRegister.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.complianceControls).where(eq(schema.complianceControls.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.complianceRisks).where(eq(schema.complianceRisks.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.retentionPolicies).where(eq(schema.retentionPolicies.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.drDrills).where(eq(schema.drDrills.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.financeTransactions).where(eq(schema.financeTransactions.organizationId, orgId)),
-          db.select({ total: sql<number>`coalesce(sum(${schema.financeTransactions.amount}), 0)` }).from(schema.financeTransactions).where(eq(schema.financeTransactions.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.payrollRuns).where(eq(schema.payrollRuns.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.knowledgeArticles).where(eq(schema.knowledgeArticles.organizationId, orgId)),
-        ]);
+      const [
+        vendors,
+        requests,
+        contracts,
+        controls,
+        risks,
+        retention,
+        drills,
+        financeCount,
+        financeSpend,
+        payrollRuns,
+        knowledge,
+      ] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.vendors)
+          .where(eq(schema.vendors.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.purchaseRequests)
+          .where(eq(schema.purchaseRequests.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.contractsRegister)
+          .where(eq(schema.contractsRegister.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.complianceControls)
+          .where(eq(schema.complianceControls.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.complianceRisks)
+          .where(eq(schema.complianceRisks.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.retentionPolicies)
+          .where(eq(schema.retentionPolicies.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.drDrills)
+          .where(eq(schema.drDrills.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.financeTransactions)
+          .where(eq(schema.financeTransactions.organizationId, orgId)),
+        db
+          .select({
+            total: sql<number>`coalesce(sum(${schema.financeTransactions.amount}), 0)`,
+          })
+          .from(schema.financeTransactions)
+          .where(eq(schema.financeTransactions.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.payrollRuns)
+          .where(eq(schema.payrollRuns.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.knowledgeArticles)
+          .where(eq(schema.knowledgeArticles.organizationId, orgId)),
+      ]);
 
       return {
         vendors: Number(vendors[0]?.count || 0),
@@ -56,7 +102,12 @@ export const operationsRouter = {
     }),
 
   vendorsList: orgAuthed
-    .route({ method: "GET", path: "/operations/vendors", summary: "List vendors", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/vendors",
+      summary: "List vendors",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
@@ -72,7 +123,12 @@ export const operationsRouter = {
     }),
 
   vendorsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/vendors", summary: "Create vendor", tags: ["Operations"] })
+    .route({
+      method: "POST",
+      path: "/operations/vendors",
+      summary: "Create vendor",
+      tags: ["Operations"],
+    })
     .input(
       z.object({
         name: z.string().min(1),
@@ -107,8 +163,25 @@ export const operationsRouter = {
     }),
 
   vendorsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/vendors/:id", summary: "Update vendor", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), name: z.string().optional(), category: z.string().optional(), slaTier: z.string().optional(), risk: z.string().optional(), onTimeRate: z.number().int().min(0).max(100).optional(), status: z.string().optional(), contactEmail: z.string().email().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/vendors/:id",
+      summary: "Update vendor",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().optional(),
+        category: z.string().optional(),
+        slaTier: z.string().optional(),
+        risk: z.string().optional(),
+        onTimeRate: z.number().int().min(0).max(100).optional(),
+        status: z.string().optional(),
+        contactEmail: z.string().email().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
@@ -119,30 +192,54 @@ export const operationsRouter = {
           ...(input.category !== undefined ? { category: input.category } : {}),
           ...(input.slaTier !== undefined ? { slaTier: input.slaTier } : {}),
           ...(input.risk !== undefined ? { risk: input.risk } : {}),
-          ...(input.onTimeRate !== undefined ? { onTimeRate: input.onTimeRate } : {}),
+          ...(input.onTimeRate !== undefined
+            ? { onTimeRate: input.onTimeRate }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.contactEmail !== undefined ? { contactEmail: input.contactEmail } : {}),
+          ...(input.contactEmail !== undefined
+            ? { contactEmail: input.contactEmail }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.vendors.id, input.id), eq(schema.vendors.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.vendors.id, input.id),
+            eq(schema.vendors.organizationId, context.organization.id),
+          ),
+        )
         .returning();
       return row;
     }),
 
   vendorsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/vendors/:id", summary: "Delete vendor", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/vendors/:id",
+      summary: "Delete vendor",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.vendors)
-        .where(and(eq(schema.vendors.id, input.id), eq(schema.vendors.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.vendors.id, input.id),
+            eq(schema.vendors.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   purchaseRequestsList: orgAuthed
-    .route({ method: "GET", path: "/operations/purchase-requests", summary: "List purchase requests", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/purchase-requests",
+      summary: "List purchase requests",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
@@ -162,8 +259,13 @@ export const operationsRouter = {
           updatedAt: schema.purchaseRequests.updatedAt,
         })
         .from(schema.purchaseRequests)
-        .leftJoin(schema.vendors, eq(schema.purchaseRequests.vendorId, schema.vendors.id))
-        .where(eq(schema.purchaseRequests.organizationId, context.organization.id))
+        .leftJoin(
+          schema.vendors,
+          eq(schema.purchaseRequests.vendorId, schema.vendors.id),
+        )
+        .where(
+          eq(schema.purchaseRequests.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.purchaseRequests.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -171,8 +273,23 @@ export const operationsRouter = {
     }),
 
   purchaseRequestsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/purchase-requests", summary: "Create purchase request", tags: ["Operations"] })
-    .input(z.object({ title: z.string().min(1), department: z.string().default("Operations"), amount: z.number().nonnegative(), currency: z.string().default("USD"), vendorId: z.string().uuid().optional(), status: z.string().default("pending"), notes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/purchase-requests",
+      summary: "Create purchase request",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        title: z.string().min(1),
+        department: z.string().default("Operations"),
+        amount: z.number().nonnegative(),
+        currency: z.string().default("USD"),
+        vendorId: z.string().uuid().optional(),
+        status: z.string().default("pending"),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -193,48 +310,92 @@ export const operationsRouter = {
     }),
 
   purchaseRequestsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/purchase-requests/:id", summary: "Update purchase request", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), title: z.string().optional(), department: z.string().optional(), amount: z.number().nonnegative().optional(), currency: z.string().optional(), vendorId: z.string().uuid().optional(), status: z.string().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/purchase-requests/:id",
+      summary: "Update purchase request",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        department: z.string().optional(),
+        amount: z.number().nonnegative().optional(),
+        currency: z.string().optional(),
+        vendorId: z.string().uuid().optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.purchaseRequests)
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.department !== undefined ? { department: input.department } : {}),
-          ...(input.amount !== undefined ? { amount: String(input.amount) } : {}),
+          ...(input.department !== undefined
+            ? { department: input.department }
+            : {}),
+          ...(input.amount !== undefined
+            ? { amount: String(input.amount) }
+            : {}),
           ...(input.currency !== undefined ? { currency: input.currency } : {}),
           ...(input.vendorId !== undefined ? { vendorId: input.vendorId } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
-          ...(input.status === "approved" ? { approvedBy: context.user.id } : {}),
+          ...(input.status === "approved"
+            ? { approvedBy: context.user.id }
+            : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.purchaseRequests.id, input.id), eq(schema.purchaseRequests.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.purchaseRequests.id, input.id),
+            eq(schema.purchaseRequests.organizationId, context.organization.id),
+          ),
+        )
         .returning();
       return row;
     }),
 
   purchaseRequestsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/purchase-requests/:id", summary: "Delete purchase request", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/purchase-requests/:id",
+      summary: "Delete purchase request",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.purchaseRequests)
-        .where(and(eq(schema.purchaseRequests.id, input.id), eq(schema.purchaseRequests.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.purchaseRequests.id, input.id),
+            eq(schema.purchaseRequests.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   contractsList: orgAuthed
-    .route({ method: "GET", path: "/operations/contracts", summary: "List contracts", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/contracts",
+      summary: "List contracts",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.contractsRegister)
-        .where(eq(schema.contractsRegister.organizationId, context.organization.id))
+        .where(
+          eq(schema.contractsRegister.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.contractsRegister.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -242,8 +403,22 @@ export const operationsRouter = {
     }),
 
   contractsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/contracts", summary: "Create contract", tags: ["Operations"] })
-    .input(z.object({ title: z.string().min(1), counterparty: z.string().min(1), ownerTeam: z.string().default("Legal"), status: z.string().default("draft"), renewalDate: z.string().datetime().optional(), complianceNotes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/contracts",
+      summary: "Create contract",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        title: z.string().min(1),
+        counterparty: z.string().min(1),
+        ownerTeam: z.string().default("Legal"),
+        status: z.string().default("draft"),
+        renewalDate: z.string().datetime().optional(),
+        complianceNotes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -263,46 +438,97 @@ export const operationsRouter = {
     }),
 
   contractsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/contracts/:id", summary: "Update contract", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), title: z.string().optional(), counterparty: z.string().optional(), ownerTeam: z.string().optional(), status: z.string().optional(), renewalDate: z.string().datetime().optional(), complianceNotes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/contracts/:id",
+      summary: "Update contract",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        counterparty: z.string().optional(),
+        ownerTeam: z.string().optional(),
+        status: z.string().optional(),
+        renewalDate: z.string().datetime().optional(),
+        complianceNotes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.contractsRegister)
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.counterparty !== undefined ? { counterparty: input.counterparty } : {}),
-          ...(input.ownerTeam !== undefined ? { ownerTeam: input.ownerTeam } : {}),
+          ...(input.counterparty !== undefined
+            ? { counterparty: input.counterparty }
+            : {}),
+          ...(input.ownerTeam !== undefined
+            ? { ownerTeam: input.ownerTeam }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.renewalDate !== undefined ? { renewalDate: new Date(input.renewalDate) } : {}),
-          ...(input.complianceNotes !== undefined ? { complianceNotes: input.complianceNotes } : {}),
+          ...(input.renewalDate !== undefined
+            ? { renewalDate: new Date(input.renewalDate) }
+            : {}),
+          ...(input.complianceNotes !== undefined
+            ? { complianceNotes: input.complianceNotes }
+            : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.contractsRegister.id, input.id), eq(schema.contractsRegister.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.contractsRegister.id, input.id),
+            eq(
+              schema.contractsRegister.organizationId,
+              context.organization.id,
+            ),
+          ),
+        )
         .returning();
       return row;
     }),
 
   contractsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/contracts/:id", summary: "Delete contract", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/contracts/:id",
+      summary: "Delete contract",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.contractsRegister)
-        .where(and(eq(schema.contractsRegister.id, input.id), eq(schema.contractsRegister.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.contractsRegister.id, input.id),
+            eq(
+              schema.contractsRegister.organizationId,
+              context.organization.id,
+            ),
+          ),
+        );
       return { success: true };
     }),
 
   controlsList: orgAuthed
-    .route({ method: "GET", path: "/operations/compliance-controls", summary: "List compliance controls", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/compliance-controls",
+      summary: "List compliance controls",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.complianceControls)
-        .where(eq(schema.complianceControls.organizationId, context.organization.id))
+        .where(
+          eq(schema.complianceControls.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.complianceControls.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -310,8 +536,22 @@ export const operationsRouter = {
     }),
 
   controlsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/compliance-controls", summary: "Create compliance control", tags: ["Operations"] })
-    .input(z.object({ framework: z.string().default("SOC2"), control: z.string().min(1), owner: z.string().default("Security"), status: z.string().default("planned"), evidenceDue: z.string().datetime().optional(), notes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/compliance-controls",
+      summary: "Create compliance control",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        framework: z.string().default("SOC2"),
+        control: z.string().min(1),
+        owner: z.string().default("Security"),
+        status: z.string().default("planned"),
+        evidenceDue: z.string().datetime().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -331,46 +571,93 @@ export const operationsRouter = {
     }),
 
   controlsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/compliance-controls/:id", summary: "Update compliance control", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), framework: z.string().optional(), control: z.string().optional(), owner: z.string().optional(), status: z.string().optional(), evidenceDue: z.string().datetime().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/compliance-controls/:id",
+      summary: "Update compliance control",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        framework: z.string().optional(),
+        control: z.string().optional(),
+        owner: z.string().optional(),
+        status: z.string().optional(),
+        evidenceDue: z.string().datetime().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.complianceControls)
         .set({
-          ...(input.framework !== undefined ? { framework: input.framework } : {}),
+          ...(input.framework !== undefined
+            ? { framework: input.framework }
+            : {}),
           ...(input.control !== undefined ? { control: input.control } : {}),
           ...(input.owner !== undefined ? { owner: input.owner } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.evidenceDue !== undefined ? { evidenceDue: new Date(input.evidenceDue) } : {}),
+          ...(input.evidenceDue !== undefined
+            ? { evidenceDue: new Date(input.evidenceDue) }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.complianceControls.id, input.id), eq(schema.complianceControls.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.complianceControls.id, input.id),
+            eq(
+              schema.complianceControls.organizationId,
+              context.organization.id,
+            ),
+          ),
+        )
         .returning();
       return row;
     }),
 
   controlsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/compliance-controls/:id", summary: "Delete compliance control", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/compliance-controls/:id",
+      summary: "Delete compliance control",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.complianceControls)
-        .where(and(eq(schema.complianceControls.id, input.id), eq(schema.complianceControls.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.complianceControls.id, input.id),
+            eq(
+              schema.complianceControls.organizationId,
+              context.organization.id,
+            ),
+          ),
+        );
       return { success: true };
     }),
 
   risksList: orgAuthed
-    .route({ method: "GET", path: "/operations/compliance-risks", summary: "List compliance risks", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/compliance-risks",
+      summary: "List compliance risks",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.complianceRisks)
-        .where(eq(schema.complianceRisks.organizationId, context.organization.id))
+        .where(
+          eq(schema.complianceRisks.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.complianceRisks.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -378,8 +665,21 @@ export const operationsRouter = {
     }),
 
   risksCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/compliance-risks", summary: "Create compliance risk", tags: ["Operations"] })
-    .input(z.object({ title: z.string().min(1), severity: z.enum(["low", "medium", "high"]).default("medium"), owner: z.string().default("Security"), mitigation: z.string().optional(), status: z.string().default("open") }))
+    .route({
+      method: "POST",
+      path: "/operations/compliance-risks",
+      summary: "Create compliance risk",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        title: z.string().min(1),
+        severity: z.enum(["low", "medium", "high"]).default("medium"),
+        owner: z.string().default("Security"),
+        mitigation: z.string().optional(),
+        status: z.string().default("open"),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -398,8 +698,22 @@ export const operationsRouter = {
     }),
 
   risksUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/compliance-risks/:id", summary: "Update compliance risk", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), title: z.string().optional(), severity: z.string().optional(), owner: z.string().optional(), mitigation: z.string().optional(), status: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/compliance-risks/:id",
+      summary: "Update compliance risk",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        severity: z.string().optional(),
+        owner: z.string().optional(),
+        mitigation: z.string().optional(),
+        status: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -408,35 +722,59 @@ export const operationsRouter = {
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.severity !== undefined ? { severity: input.severity } : {}),
           ...(input.owner !== undefined ? { owner: input.owner } : {}),
-          ...(input.mitigation !== undefined ? { mitigation: input.mitigation } : {}),
+          ...(input.mitigation !== undefined
+            ? { mitigation: input.mitigation }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.complianceRisks.id, input.id), eq(schema.complianceRisks.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.complianceRisks.id, input.id),
+            eq(schema.complianceRisks.organizationId, context.organization.id),
+          ),
+        )
         .returning();
       return row;
     }),
 
   risksDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/compliance-risks/:id", summary: "Delete compliance risk", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/compliance-risks/:id",
+      summary: "Delete compliance risk",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.complianceRisks)
-        .where(and(eq(schema.complianceRisks.id, input.id), eq(schema.complianceRisks.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.complianceRisks.id, input.id),
+            eq(schema.complianceRisks.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   retentionPoliciesList: orgAuthed
-    .route({ method: "GET", path: "/operations/retention-policies", summary: "List retention policies", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/retention-policies",
+      summary: "List retention policies",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.retentionPolicies)
-        .where(eq(schema.retentionPolicies.organizationId, context.organization.id))
+        .where(
+          eq(schema.retentionPolicies.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.retentionPolicies.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -444,8 +782,21 @@ export const operationsRouter = {
     }),
 
   retentionPoliciesCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/retention-policies", summary: "Create retention policy", tags: ["Operations"] })
-    .input(z.object({ dataClass: z.string().min(1), retentionPeriod: z.string().min(1), backupFrequency: z.string().default("Daily"), archivePolicy: z.string().optional(), status: z.string().default("active") }))
+    .route({
+      method: "POST",
+      path: "/operations/retention-policies",
+      summary: "Create retention policy",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        dataClass: z.string().min(1),
+        retentionPeriod: z.string().min(1),
+        backupFrequency: z.string().default("Daily"),
+        archivePolicy: z.string().optional(),
+        status: z.string().default("active"),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -464,38 +815,86 @@ export const operationsRouter = {
     }),
 
   retentionPoliciesUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/retention-policies/:id", summary: "Update retention policy", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), dataClass: z.string().optional(), retentionPeriod: z.string().optional(), backupFrequency: z.string().optional(), archivePolicy: z.string().optional(), status: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/retention-policies/:id",
+      summary: "Update retention policy",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        dataClass: z.string().optional(),
+        retentionPeriod: z.string().optional(),
+        backupFrequency: z.string().optional(),
+        archivePolicy: z.string().optional(),
+        status: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.retentionPolicies)
         .set({
-          ...(input.dataClass !== undefined ? { dataClass: input.dataClass } : {}),
-          ...(input.retentionPeriod !== undefined ? { retentionPeriod: input.retentionPeriod } : {}),
-          ...(input.backupFrequency !== undefined ? { backupFrequency: input.backupFrequency } : {}),
-          ...(input.archivePolicy !== undefined ? { archivePolicy: input.archivePolicy } : {}),
+          ...(input.dataClass !== undefined
+            ? { dataClass: input.dataClass }
+            : {}),
+          ...(input.retentionPeriod !== undefined
+            ? { retentionPeriod: input.retentionPeriod }
+            : {}),
+          ...(input.backupFrequency !== undefined
+            ? { backupFrequency: input.backupFrequency }
+            : {}),
+          ...(input.archivePolicy !== undefined
+            ? { archivePolicy: input.archivePolicy }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.retentionPolicies.id, input.id), eq(schema.retentionPolicies.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.retentionPolicies.id, input.id),
+            eq(
+              schema.retentionPolicies.organizationId,
+              context.organization.id,
+            ),
+          ),
+        )
         .returning();
       return row;
     }),
 
   retentionPoliciesDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/retention-policies/:id", summary: "Delete retention policy", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/retention-policies/:id",
+      summary: "Delete retention policy",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.retentionPolicies)
-        .where(and(eq(schema.retentionPolicies.id, input.id), eq(schema.retentionPolicies.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.retentionPolicies.id, input.id),
+            eq(
+              schema.retentionPolicies.organizationId,
+              context.organization.id,
+            ),
+          ),
+        );
       return { success: true };
     }),
 
   drDrillsList: orgAuthed
-    .route({ method: "GET", path: "/operations/dr-drills", summary: "List DR drills", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/dr-drills",
+      summary: "List DR drills",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
@@ -510,8 +909,22 @@ export const operationsRouter = {
     }),
 
   drDrillsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/dr-drills", summary: "Create DR drill", tags: ["Operations"] })
-    .input(z.object({ scenario: z.string().min(1), rto: z.string().min(1), rpo: z.string().min(1), drillDate: z.string().datetime().optional(), status: z.string().default("planned"), notes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/dr-drills",
+      summary: "Create DR drill",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        scenario: z.string().min(1),
+        rto: z.string().min(1),
+        rpo: z.string().min(1),
+        drillDate: z.string().datetime().optional(),
+        status: z.string().default("planned"),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -531,8 +944,23 @@ export const operationsRouter = {
     }),
 
   drDrillsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/dr-drills/:id", summary: "Update DR drill", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), scenario: z.string().optional(), rto: z.string().optional(), rpo: z.string().optional(), drillDate: z.string().datetime().optional(), status: z.string().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/dr-drills/:id",
+      summary: "Update DR drill",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        scenario: z.string().optional(),
+        rto: z.string().optional(),
+        rpo: z.string().optional(),
+        drillDate: z.string().datetime().optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -541,36 +969,63 @@ export const operationsRouter = {
           ...(input.scenario !== undefined ? { scenario: input.scenario } : {}),
           ...(input.rto !== undefined ? { rto: input.rto } : {}),
           ...(input.rpo !== undefined ? { rpo: input.rpo } : {}),
-          ...(input.drillDate !== undefined ? { drillDate: new Date(input.drillDate) } : {}),
+          ...(input.drillDate !== undefined
+            ? { drillDate: new Date(input.drillDate) }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.drDrills.id, input.id), eq(schema.drDrills.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.drDrills.id, input.id),
+            eq(schema.drDrills.organizationId, context.organization.id),
+          ),
+        )
         .returning();
       return row;
     }),
 
   drDrillsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/dr-drills/:id", summary: "Delete DR drill", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/dr-drills/:id",
+      summary: "Delete DR drill",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.drDrills)
-        .where(and(eq(schema.drDrills.id, input.id), eq(schema.drDrills.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.drDrills.id, input.id),
+            eq(schema.drDrills.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   financeTransactionsList: orgAuthed
-    .route({ method: "GET", path: "/operations/finance-transactions", summary: "List finance transactions", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/finance-transactions",
+      summary: "List finance transactions",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.financeTransactions)
-        .where(eq(schema.financeTransactions.organizationId, context.organization.id))
+        .where(
+          eq(
+            schema.financeTransactions.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.financeTransactions.transactionDate))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -578,15 +1033,34 @@ export const operationsRouter = {
     }),
 
   financeTransactionsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/finance-transactions", summary: "Create finance transaction", tags: ["Operations"] })
-    .input(z.object({ transactionDate: z.string().datetime().optional(), type: z.string().default("expense"), category: z.string().default("general"), reference: z.string().optional(), amount: z.number(), currency: z.string().default("USD"), status: z.string().default("posted"), counterparty: z.string().optional(), description: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/finance-transactions",
+      summary: "Create finance transaction",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        transactionDate: z.string().datetime().optional(),
+        type: z.string().default("expense"),
+        category: z.string().default("general"),
+        reference: z.string().optional(),
+        amount: z.number(),
+        currency: z.string().default("USD"),
+        status: z.string().default("posted"),
+        counterparty: z.string().optional(),
+        description: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .insert(schema.financeTransactions)
         .values({
           organizationId: context.organization.id,
-          transactionDate: input.transactionDate ? new Date(input.transactionDate) : new Date(),
+          transactionDate: input.transactionDate
+            ? new Date(input.transactionDate)
+            : new Date(),
           type: input.type,
           category: input.category,
           reference: input.reference || null,
@@ -602,42 +1076,96 @@ export const operationsRouter = {
     }),
 
   financeTransactionsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/finance-transactions/:id", summary: "Update finance transaction", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), transactionDate: z.string().datetime().optional(), type: z.string().optional(), category: z.string().optional(), reference: z.string().optional(), amount: z.number().optional(), currency: z.string().optional(), status: z.string().optional(), counterparty: z.string().optional(), description: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/finance-transactions/:id",
+      summary: "Update finance transaction",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        transactionDate: z.string().datetime().optional(),
+        type: z.string().optional(),
+        category: z.string().optional(),
+        reference: z.string().optional(),
+        amount: z.number().optional(),
+        currency: z.string().optional(),
+        status: z.string().optional(),
+        counterparty: z.string().optional(),
+        description: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.financeTransactions)
         .set({
-          ...(input.transactionDate !== undefined ? { transactionDate: new Date(input.transactionDate) } : {}),
+          ...(input.transactionDate !== undefined
+            ? { transactionDate: new Date(input.transactionDate) }
+            : {}),
           ...(input.type !== undefined ? { type: input.type } : {}),
           ...(input.category !== undefined ? { category: input.category } : {}),
-          ...(input.reference !== undefined ? { reference: input.reference } : {}),
-          ...(input.amount !== undefined ? { amount: String(input.amount) } : {}),
+          ...(input.reference !== undefined
+            ? { reference: input.reference }
+            : {}),
+          ...(input.amount !== undefined
+            ? { amount: String(input.amount) }
+            : {}),
           ...(input.currency !== undefined ? { currency: input.currency } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.counterparty !== undefined ? { counterparty: input.counterparty } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.counterparty !== undefined
+            ? { counterparty: input.counterparty }
+            : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.financeTransactions.id, input.id), eq(schema.financeTransactions.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.financeTransactions.id, input.id),
+            eq(
+              schema.financeTransactions.organizationId,
+              context.organization.id,
+            ),
+          ),
+        )
         .returning();
       return row;
     }),
 
   financeTransactionsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/finance-transactions/:id", summary: "Delete finance transaction", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/finance-transactions/:id",
+      summary: "Delete finance transaction",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.financeTransactions)
-        .where(and(eq(schema.financeTransactions.id, input.id), eq(schema.financeTransactions.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.financeTransactions.id, input.id),
+            eq(
+              schema.financeTransactions.organizationId,
+              context.organization.id,
+            ),
+          ),
+        );
       return { success: true };
     }),
 
   payrollRunsList: orgAuthed
-    .route({ method: "GET", path: "/operations/payroll-runs", summary: "List payroll runs", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/payroll-runs",
+      summary: "List payroll runs",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
@@ -652,8 +1180,23 @@ export const operationsRouter = {
     }),
 
   payrollRunsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/payroll-runs", summary: "Create payroll run", tags: ["Operations"] })
-    .input(z.object({ periodLabel: z.string().min(1), payDate: z.string().datetime(), status: z.string().default("draft"), totalGross: z.number().nonnegative().default(0), totalDeductions: z.number().nonnegative().default(0), totalNet: z.number().nonnegative().default(0), notes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/payroll-runs",
+      summary: "Create payroll run",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        periodLabel: z.string().min(1),
+        payDate: z.string().datetime(),
+        status: z.string().default("draft"),
+        totalGross: z.number().nonnegative().default(0),
+        totalDeductions: z.number().nonnegative().default(0),
+        totalNet: z.number().nonnegative().default(0),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -674,47 +1217,97 @@ export const operationsRouter = {
     }),
 
   payrollRunsUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/payroll-runs/:id", summary: "Update payroll run", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), periodLabel: z.string().optional(), payDate: z.string().datetime().optional(), status: z.string().optional(), totalGross: z.number().nonnegative().optional(), totalDeductions: z.number().nonnegative().optional(), totalNet: z.number().nonnegative().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/payroll-runs/:id",
+      summary: "Update payroll run",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        periodLabel: z.string().optional(),
+        payDate: z.string().datetime().optional(),
+        status: z.string().optional(),
+        totalGross: z.number().nonnegative().optional(),
+        totalDeductions: z.number().nonnegative().optional(),
+        totalNet: z.number().nonnegative().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
         .update(schema.payrollRuns)
         .set({
-          ...(input.periodLabel !== undefined ? { periodLabel: input.periodLabel } : {}),
-          ...(input.payDate !== undefined ? { payDate: new Date(input.payDate) } : {}),
+          ...(input.periodLabel !== undefined
+            ? { periodLabel: input.periodLabel }
+            : {}),
+          ...(input.payDate !== undefined
+            ? { payDate: new Date(input.payDate) }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.totalGross !== undefined ? { totalGross: String(input.totalGross) } : {}),
-          ...(input.totalDeductions !== undefined ? { totalDeductions: String(input.totalDeductions) } : {}),
-          ...(input.totalNet !== undefined ? { totalNet: String(input.totalNet) } : {}),
+          ...(input.totalGross !== undefined
+            ? { totalGross: String(input.totalGross) }
+            : {}),
+          ...(input.totalDeductions !== undefined
+            ? { totalDeductions: String(input.totalDeductions) }
+            : {}),
+          ...(input.totalNet !== undefined
+            ? { totalNet: String(input.totalNet) }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.payrollRuns.id, input.id), eq(schema.payrollRuns.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.payrollRuns.id, input.id),
+            eq(schema.payrollRuns.organizationId, context.organization.id),
+          ),
+        )
         .returning();
       return row;
     }),
 
   payrollRunsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/payroll-runs/:id", summary: "Delete payroll run", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/payroll-runs/:id",
+      summary: "Delete payroll run",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.payrollRuns)
-        .where(and(eq(schema.payrollRuns.id, input.id), eq(schema.payrollRuns.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.payrollRuns.id, input.id),
+            eq(schema.payrollRuns.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   payrollEntriesList: orgAuthed
-    .route({ method: "GET", path: "/operations/payroll-entries", summary: "List payroll entries", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/payroll-entries",
+      summary: "List payroll entries",
+      tags: ["Operations"],
+    })
     .input(pageInput.extend({ payrollRunId: z.string().uuid().optional() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
-      const conditions = [eq(schema.payrollRuns.organizationId, context.organization.id)];
+      const conditions = [
+        eq(schema.payrollRuns.organizationId, context.organization.id),
+      ];
       if (input.payrollRunId) {
-        conditions.push(eq(schema.payrollEntries.payrollRunId, input.payrollRunId));
+        conditions.push(
+          eq(schema.payrollEntries.payrollRunId, input.payrollRunId),
+        );
       }
 
       const data = await db
@@ -732,8 +1325,14 @@ export const operationsRouter = {
           updatedAt: schema.payrollEntries.updatedAt,
         })
         .from(schema.payrollEntries)
-        .leftJoin(schema.payrollRuns, eq(schema.payrollEntries.payrollRunId, schema.payrollRuns.id))
-        .leftJoin(schema.employees, eq(schema.payrollEntries.employeeId, schema.employees.id))
+        .leftJoin(
+          schema.payrollRuns,
+          eq(schema.payrollEntries.payrollRunId, schema.payrollRuns.id),
+        )
+        .leftJoin(
+          schema.employees,
+          eq(schema.payrollEntries.employeeId, schema.employees.id),
+        )
         .where(conditions.length > 1 ? and(...conditions) : conditions[0])
         .orderBy(desc(schema.payrollEntries.createdAt))
         .limit(input.limit)
@@ -743,8 +1342,23 @@ export const operationsRouter = {
     }),
 
   payrollEntriesCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/payroll-entries", summary: "Create payroll entry", tags: ["Operations"] })
-    .input(z.object({ payrollRunId: z.string().uuid(), employeeId: z.string().uuid().optional(), grossPay: z.number().nonnegative(), deductions: z.number().nonnegative().default(0), netPay: z.number().nonnegative(), status: z.string().default("draft"), notes: z.string().optional() }))
+    .route({
+      method: "POST",
+      path: "/operations/payroll-entries",
+      summary: "Create payroll entry",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        payrollRunId: z.string().uuid(),
+        employeeId: z.string().uuid().optional(),
+        grossPay: z.number().nonnegative(),
+        deductions: z.number().nonnegative().default(0),
+        netPay: z.number().nonnegative(),
+        status: z.string().default("draft"),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -763,16 +1377,36 @@ export const operationsRouter = {
     }),
 
   payrollEntriesUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/payroll-entries/:id", summary: "Update payroll entry", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), grossPay: z.number().nonnegative().optional(), deductions: z.number().nonnegative().optional(), netPay: z.number().nonnegative().optional(), status: z.string().optional(), notes: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/payroll-entries/:id",
+      summary: "Update payroll entry",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        grossPay: z.number().nonnegative().optional(),
+        deductions: z.number().nonnegative().optional(),
+        netPay: z.number().nonnegative().optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ input, context }) => {
       const [row] = await getDb(context)
         .update(schema.payrollEntries)
         .set({
-          ...(input.grossPay !== undefined ? { grossPay: String(input.grossPay) } : {}),
-          ...(input.deductions !== undefined ? { deductions: String(input.deductions) } : {}),
-          ...(input.netPay !== undefined ? { netPay: String(input.netPay) } : {}),
+          ...(input.grossPay !== undefined
+            ? { grossPay: String(input.grossPay) }
+            : {}),
+          ...(input.deductions !== undefined
+            ? { deductions: String(input.deductions) }
+            : {}),
+          ...(input.netPay !== undefined
+            ? { netPay: String(input.netPay) }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
@@ -783,16 +1417,28 @@ export const operationsRouter = {
     }),
 
   payrollEntriesDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/payroll-entries/:id", summary: "Delete payroll entry", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/payroll-entries/:id",
+      summary: "Delete payroll entry",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ input, context }) => {
-      await getDb(context).delete(schema.payrollEntries).where(eq(schema.payrollEntries.id, input.id));
+      await getDb(context)
+        .delete(schema.payrollEntries)
+        .where(eq(schema.payrollEntries.id, input.id));
       return { success: true };
     }),
 
   ticketCommentsList: orgAuthed
-    .route({ method: "GET", path: "/operations/ticket-comments", summary: "List ticket comments", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/ticket-comments",
+      summary: "List ticket comments",
+      tags: ["Operations"],
+    })
     .input(pageInput.extend({ ticketId: z.string().uuid().optional() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
@@ -815,8 +1461,19 @@ export const operationsRouter = {
     }),
 
   ticketCommentsCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/ticket-comments", summary: "Create ticket comment", tags: ["Operations"] })
-    .input(z.object({ ticketId: z.string().uuid(), message: z.string().min(1), isInternal: z.boolean().default(false) }))
+    .route({
+      method: "POST",
+      path: "/operations/ticket-comments",
+      summary: "Create ticket comment",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        ticketId: z.string().uuid(),
+        message: z.string().min(1),
+        isInternal: z.boolean().default(false),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -833,25 +1490,42 @@ export const operationsRouter = {
     }),
 
   ticketCommentsDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/ticket-comments/:id", summary: "Delete ticket comment", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/ticket-comments/:id",
+      summary: "Delete ticket comment",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.ticketComments)
-        .where(and(eq(schema.ticketComments.id, input.id), eq(schema.ticketComments.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.ticketComments.id, input.id),
+            eq(schema.ticketComments.organizationId, context.organization.id),
+          ),
+        );
       return { success: true };
     }),
 
   knowledgeArticlesList: orgAuthed
-    .route({ method: "GET", path: "/operations/knowledge-articles", summary: "List knowledge articles", tags: ["Operations"] })
+    .route({
+      method: "GET",
+      path: "/operations/knowledge-articles",
+      summary: "List knowledge articles",
+      tags: ["Operations"],
+    })
     .input(pageInput)
     .output(z.any())
     .handler(async ({ context, input }) => {
       const data = await getDb(context)
         .select()
         .from(schema.knowledgeArticles)
-        .where(eq(schema.knowledgeArticles.organizationId, context.organization.id))
+        .where(
+          eq(schema.knowledgeArticles.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.knowledgeArticles.updatedAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -859,8 +1533,20 @@ export const operationsRouter = {
     }),
 
   knowledgeArticlesCreate: orgAuthed
-    .route({ method: "POST", path: "/operations/knowledge-articles", summary: "Create knowledge article", tags: ["Operations"] })
-    .input(z.object({ title: z.string().min(1), category: z.string().default("General"), content: z.string().min(1), status: z.string().default("draft") }))
+    .route({
+      method: "POST",
+      path: "/operations/knowledge-articles",
+      summary: "Create knowledge article",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        title: z.string().min(1),
+        category: z.string().default("General"),
+        content: z.string().min(1),
+        status: z.string().default("draft"),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -879,8 +1565,21 @@ export const operationsRouter = {
     }),
 
   knowledgeArticlesUpdate: orgAuthed
-    .route({ method: "PATCH", path: "/operations/knowledge-articles/:id", summary: "Update knowledge article", tags: ["Operations"] })
-    .input(z.object({ id: z.string().uuid(), title: z.string().optional(), category: z.string().optional(), content: z.string().optional(), status: z.string().optional() }))
+    .route({
+      method: "PATCH",
+      path: "/operations/knowledge-articles/:id",
+      summary: "Update knowledge article",
+      tags: ["Operations"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        category: z.string().optional(),
+        content: z.string().optional(),
+        status: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const [row] = await getDb(context)
@@ -893,19 +1592,40 @@ export const operationsRouter = {
           updatedBy: context.user.id,
           updatedAt: new Date(),
         })
-        .where(and(eq(schema.knowledgeArticles.id, input.id), eq(schema.knowledgeArticles.organizationId, context.organization.id)))
+        .where(
+          and(
+            eq(schema.knowledgeArticles.id, input.id),
+            eq(
+              schema.knowledgeArticles.organizationId,
+              context.organization.id,
+            ),
+          ),
+        )
         .returning();
       return row;
     }),
 
   knowledgeArticlesDelete: orgAuthed
-    .route({ method: "DELETE", path: "/operations/knowledge-articles/:id", summary: "Delete knowledge article", tags: ["Operations"] })
+    .route({
+      method: "DELETE",
+      path: "/operations/knowledge-articles/:id",
+      summary: "Delete knowledge article",
+      tags: ["Operations"],
+    })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(async ({ context, input }) => {
       await getDb(context)
         .delete(schema.knowledgeArticles)
-        .where(and(eq(schema.knowledgeArticles.id, input.id), eq(schema.knowledgeArticles.organizationId, context.organization.id)));
+        .where(
+          and(
+            eq(schema.knowledgeArticles.id, input.id),
+            eq(
+              schema.knowledgeArticles.organizationId,
+              context.organization.id,
+            ),
+          ),
+        );
       return { success: true };
     }),
 };

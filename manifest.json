@@ -17,23 +17,15 @@
       "crm.contact.updated",
       "crm.ai.lead_scored"
     ],
-    "subscribed": [
-      "invoicing.payment.received",
-      "helpdesk.ticket.created"
-    ]
+    "subscribed": ["invoicing.payment.received", "helpdesk.ticket.created"]
   },
   "ai": {
     "assistant": {
       "enabled": true,
       "entrypoint": "/api/ai/lead/score"
     },
-    "automationAgents": [
-      "crm-lead-enrichment-agent",
-      "crm-followup-agent"
-    ],
-    "analyticsAgent": [
-      "crm-pipeline-insights-agent"
-    ],
+    "automationAgents": ["crm-lead-enrichment-agent", "crm-followup-agent"],
+    "analyticsAgent": ["crm-pipeline-insights-agent"],
     "guardrails": {
       "dataClass": "pii"
     }

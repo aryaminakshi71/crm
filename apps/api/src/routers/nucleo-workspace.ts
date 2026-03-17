@@ -26,20 +26,64 @@ export const nucleoWorkspaceRouter = {
       const db = getDb(context);
       const orgId = context.organization.id;
 
-      const [customers, projects, tickets, assets, documents, invoices, campaigns, queue, hrmEmployees, enterpriseRoles, intelligenceKpis] =
-        await Promise.all([
-          db.select({ count: sql<number>`count(*)` }).from(schema.customers).where(eq(schema.customers.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.projects).where(eq(schema.projects.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.tickets).where(eq(schema.tickets.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.digitalAssets).where(eq(schema.digitalAssets.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.documents).where(eq(schema.documents.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.invoices).where(eq(schema.invoices.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.campaigns).where(eq(schema.campaigns.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.queueTokens).where(eq(schema.queueTokens.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(eq(schema.employees.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.enterpriseRoles).where(eq(schema.enterpriseRoles.organizationId, orgId)),
-          db.select({ count: sql<number>`count(*)` }).from(schema.executiveKpiSnapshots).where(eq(schema.executiveKpiSnapshots.organizationId, orgId)),
-        ]);
+      const [
+        customers,
+        projects,
+        tickets,
+        assets,
+        documents,
+        invoices,
+        campaigns,
+        queue,
+        hrmEmployees,
+        enterpriseRoles,
+        intelligenceKpis,
+      ] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.customers)
+          .where(eq(schema.customers.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.projects)
+          .where(eq(schema.projects.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.tickets)
+          .where(eq(schema.tickets.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.digitalAssets)
+          .where(eq(schema.digitalAssets.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.documents)
+          .where(eq(schema.documents.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.invoices)
+          .where(eq(schema.invoices.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.campaigns)
+          .where(eq(schema.campaigns.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.queueTokens)
+          .where(eq(schema.queueTokens.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.employees)
+          .where(eq(schema.employees.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.enterpriseRoles)
+          .where(eq(schema.enterpriseRoles.organizationId, orgId)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.executiveKpiSnapshots)
+          .where(eq(schema.executiveKpiSnapshots.organizationId, orgId)),
+      ]);
 
       return {
         customers: Number(customers[0]?.count || 0),
@@ -65,18 +109,23 @@ export const nucleoWorkspaceRouter = {
     })
     .input(pageInput)
     .output(z.any())
-    .handler(async ({ context, input }: { context: OrgContext; input: { page: number; limit: number } }) => {
-      const db = getDb(context);
-      const items = await db
-        .select()
-        .from(schema.customers)
-        .where(eq(schema.customers.organizationId, context.organization.id))
-        .orderBy(desc(schema.customers.createdAt))
-        .limit(input.limit)
-        .offset(toOffset(input.page, input.limit));
+    .handler(
+      async ({
+        context,
+        input,
+      }: { context: OrgContext; input: { page: number; limit: number } }) => {
+        const db = getDb(context);
+        const items = await db
+          .select()
+          .from(schema.customers)
+          .where(eq(schema.customers.organizationId, context.organization.id))
+          .orderBy(desc(schema.customers.createdAt))
+          .limit(input.limit)
+          .offset(toOffset(input.page, input.limit));
 
-      return { data: items, page: input.page, limit: input.limit };
-    }),
+        return { data: items, page: input.page, limit: input.limit };
+      },
+    ),
 
   customersCreate: orgAuthed
     .route({
@@ -150,7 +199,7 @@ export const nucleoWorkspaceRouter = {
         name: z.string().min(1),
         description: z.string().optional(),
         customerId: z.string().uuid().optional(),
-        dueDate: z.string().datetime().optional(),
+        dueDate: z.string().optional(),
         priority: z.enum(["low", "medium", "high"]).default("medium"),
       }),
     )
@@ -164,7 +213,7 @@ export const nucleoWorkspaceRouter = {
           name: input.name,
           description: input.description || null,
           customerId: input.customerId || null,
-          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          dueDate: input.dueDate && input.dueDate !== '' ? new Date(input.dueDate) : null,
           priority: input.priority,
           ownerId: context.user.id,
         })
@@ -197,10 +246,14 @@ export const nucleoWorkspaceRouter = {
         .update(schema.projects)
         .set({
           ...(input.name !== undefined ? { name: input.name } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
-          ...(input.dueDate !== undefined ? { dueDate: new Date(input.dueDate) } : {}),
+          ...(input.dueDate !== undefined
+            ? { dueDate: new Date(input.dueDate) }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
@@ -236,6 +289,377 @@ export const nucleoWorkspaceRouter = {
       return { success: true };
     }),
 
+  projectTasksList: orgAuthed
+    .route({
+      method: "GET",
+      path: "/nucleo/projects/:projectId/tasks",
+      summary: "List project tasks",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid() }).extend(pageInput.shape))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const items = await db
+        .select()
+        .from(schema.projectTasks)
+        .where(
+          and(
+            eq(schema.projectTasks.organizationId, context.organization.id),
+            eq(schema.projectTasks.projectId, input.projectId),
+          ),
+        )
+        .orderBy(desc(schema.projectTasks.createdAt))
+        .limit(input.limit)
+        .offset(toOffset(input.page, input.limit));
+      return { data: items, page: input.page, limit: input.limit };
+    }),
+
+  projectTasksCreate: orgAuthed
+    .route({
+      method: "POST",
+      path: "/nucleo/projects/:projectId/tasks",
+      summary: "Create project task",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        status: z.string().default("todo"),
+        priority: z.string().default("medium"),
+        assigneeId: z.string().optional(),
+        dueDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [task] = await db
+        .insert(schema.projectTasks)
+        .values({
+          organizationId: context.organization.id,
+          projectId: input.projectId,
+          title: input.title,
+          description: input.description,
+          status: input.status,
+          priority: input.priority,
+          assigneeId: input.assigneeId,
+          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        })
+        .returning();
+      return task;
+    }),
+
+  projectTasksUpdate: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/nucleo/projects/:projectId/tasks/:id",
+      summary: "Update project task",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        status: z.string().optional(),
+        priority: z.string().optional(),
+        assigneeId: z.string().optional(),
+        dueDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [task] = await db
+        .update(schema.projectTasks)
+        .set({
+          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+          ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+          ...(input.dueDate !== undefined ? { dueDate: input.dueDate ? new Date(input.dueDate) : null } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.projectTasks.id, input.id),
+            eq(schema.projectTasks.organizationId, context.organization.id),
+          ),
+        )
+        .returning();
+      return task;
+    }),
+
+  projectTasksDelete: orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/nucleo/projects/:projectId/tasks/:id",
+      summary: "Delete project task",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid(), id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      await db
+        .delete(schema.projectTasks)
+        .where(
+          and(
+            eq(schema.projectTasks.id, input.id),
+            eq(schema.projectTasks.organizationId, context.organization.id),
+          ),
+        );
+      return { success: true };
+    }),
+
+  projectMilestonesList: orgAuthed
+    .route({
+      method: "GET",
+      path: "/nucleo/projects/:projectId/milestones",
+      summary: "List project milestones",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid() }).extend(pageInput.shape))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const items = await db
+        .select()
+        .from(schema.projectMilestones)
+        .where(
+          and(
+            eq(schema.projectMilestones.organizationId, context.organization.id),
+            eq(schema.projectMilestones.projectId, input.projectId),
+          ),
+        )
+        .orderBy(desc(schema.projectMilestones.createdAt))
+        .limit(input.limit)
+        .offset(toOffset(input.page, input.limit));
+      return { data: items, page: input.page, limit: input.limit };
+    }),
+
+  projectMilestonesCreate: orgAuthed
+    .route({
+      method: "POST",
+      path: "/nucleo/projects/:projectId/milestones",
+      summary: "Create project milestone",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        title: z.string().min(1),
+        status: z.string().default("in_progress"),
+        targetDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [milestone] = await db
+        .insert(schema.projectMilestones)
+        .values({
+          organizationId: context.organization.id,
+          projectId: input.projectId,
+          title: input.title,
+          status: input.status,
+          targetDate: input.targetDate ? new Date(input.targetDate) : null,
+        })
+        .returning();
+      return milestone;
+    }),
+
+  projectMilestonesUpdate: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/nucleo/projects/:projectId/milestones/:id",
+      summary: "Update project milestone",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        id: z.string().uuid(),
+        title: z.string().optional(),
+        status: z.string().optional(),
+        targetDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [milestone] = await db
+        .update(schema.projectMilestones)
+        .set({
+          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.targetDate !== undefined ? { targetDate: input.targetDate ? new Date(input.targetDate) : null } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.projectMilestones.id, input.id),
+            eq(schema.projectMilestones.organizationId, context.organization.id),
+          ),
+        )
+        .returning();
+      return milestone;
+    }),
+
+  projectMilestonesDelete: orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/nucleo/projects/:projectId/milestones/:id",
+      summary: "Delete project milestone",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid(), id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      await db
+        .delete(schema.projectMilestones)
+        .where(
+          and(
+            eq(schema.projectMilestones.id, input.id),
+            eq(schema.projectMilestones.organizationId, context.organization.id),
+          ),
+        );
+      return { success: true };
+    }),
+
+  projectResourcesList: orgAuthed
+    .route({
+      method: "GET",
+      path: "/nucleo/projects/:projectId/resources",
+      summary: "List project resources",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid() }).extend(pageInput.shape))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const items = await db
+        .select()
+        .from(schema.projectResources)
+        .where(
+          and(
+            eq(schema.projectResources.organizationId, context.organization.id),
+            eq(schema.projectResources.projectId, input.projectId),
+          ),
+        )
+        .orderBy(desc(schema.projectResources.createdAt))
+        .limit(input.limit)
+        .offset(toOffset(input.page, input.limit));
+      return { data: items, page: input.page, limit: input.limit };
+    }),
+
+  projectResourcesCreate: orgAuthed
+    .route({
+      method: "POST",
+      path: "/nucleo/projects/:projectId/resources",
+      summary: "Create project resource",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        userId: z.string().optional(),
+        name: z.string(),
+        role: z.string().optional(),
+        allocation: z.number().int().min(0).max(100).default(100),
+        startDate: z.string().datetime().optional(),
+        endDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [resource] = await db
+        .insert(schema.projectResources)
+        .values({
+          organizationId: context.organization.id,
+          projectId: input.projectId,
+          userId: input.userId || null,
+          name: input.name,
+          role: input.role,
+          allocation: input.allocation,
+          startDate: input.startDate ? new Date(input.startDate) : null,
+          endDate: input.endDate ? new Date(input.endDate) : null,
+        })
+        .returning();
+      return resource;
+    }),
+
+  projectResourcesUpdate: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/nucleo/projects/:projectId/resources/:id",
+      summary: "Update project resource",
+      tags: ["Nucleo"],
+    })
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        id: z.string().uuid(),
+        userId: z.string().optional(),
+        name: z.string().optional(),
+        role: z.string().optional(),
+        allocation: z.number().int().min(0).max(100).optional(),
+        startDate: z.string().datetime().optional(),
+        endDate: z.string().datetime().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [resource] = await db
+        .update(schema.projectResources)
+        .set({
+          ...(input.userId !== undefined ? { userId: input.userId } : {}),
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.role !== undefined ? { role: input.role } : {}),
+          ...(input.allocation !== undefined ? { allocation: input.allocation } : {}),
+          ...(input.startDate !== undefined ? { startDate: input.startDate ? new Date(input.startDate) : null } : {}),
+          ...(input.endDate !== undefined ? { endDate: input.endDate ? new Date(input.endDate) : null } : {}),
+        })
+        .where(
+          and(
+            eq(schema.projectResources.id, input.id),
+            eq(schema.projectResources.organizationId, context.organization.id),
+          ),
+        )
+        .returning();
+      return resource;
+    }),
+
+  projectResourcesDelete: orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/nucleo/projects/:projectId/resources/:id",
+      summary: "Delete project resource",
+      tags: ["Nucleo"],
+    })
+    .input(z.object({ projectId: z.string().uuid(), id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      await db
+        .delete(schema.projectResources)
+        .where(
+          and(
+            eq(schema.projectResources.id, input.id),
+            eq(schema.projectResources.organizationId, context.organization.id),
+          ),
+        );
+      return { success: true };
+    }),
+
   ticketsList: orgAuthed
     .route({
       method: "GET",
@@ -243,12 +667,20 @@ export const nucleoWorkspaceRouter = {
       summary: "List tickets",
       tags: ["Nucleo"],
     })
-    .input(pageInput.extend({ status: z.string().optional(), queue: z.string().optional() }))
+    .input(
+      pageInput.extend({
+        status: z.string().optional(),
+        queue: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
-      const conditions = [eq(schema.tickets.organizationId, context.organization.id)];
-      if (input.status) conditions.push(eq(schema.tickets.status, input.status));
+      const conditions = [
+        eq(schema.tickets.organizationId, context.organization.id),
+      ];
+      if (input.status)
+        conditions.push(eq(schema.tickets.status, input.status));
       if (input.queue) conditions.push(eq(schema.tickets.queue, input.queue));
 
       const where = conditions.length > 1 ? and(...conditions) : conditions[0];
@@ -356,7 +788,9 @@ export const nucleoWorkspaceRouter = {
         .update(schema.tickets)
         .set({
           ...(input.subject !== undefined ? { subject: input.subject } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
           ...(input.queue !== undefined ? { queue: input.queue } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
@@ -406,7 +840,10 @@ export const nucleoWorkspaceRouter = {
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
-      const base = eq(schema.queueTokens.organizationId, context.organization.id);
+      const base = eq(
+        schema.queueTokens.organizationId,
+        context.organization.id,
+      );
       const where = input.status
         ? and(base, eq(schema.queueTokens.status, input.status))
         : base;
@@ -440,7 +877,9 @@ export const nucleoWorkspaceRouter = {
       const db = getDb(context);
 
       const [nextNumberRow] = await db
-        .select({ nextNumber: sql<number>`coalesce(max(${schema.queueTokens.tokenNumber}), 0) + 1` })
+        .select({
+          nextNumber: sql<number>`coalesce(max(${schema.queueTokens.tokenNumber}), 0) + 1`,
+        })
         .from(schema.queueTokens)
         .where(eq(schema.queueTokens.organizationId, context.organization.id));
 
@@ -464,7 +903,13 @@ export const nucleoWorkspaceRouter = {
       summary: "Update queue token status",
       tags: ["Nucleo"],
     })
-    .input(z.object({ id: z.string().uuid(), status: z.string(), counter: z.string().optional() }))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        status: z.string(),
+        counter: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
@@ -703,7 +1148,13 @@ export const nucleoWorkspaceRouter = {
       summary: "Create document version",
       tags: ["Nucleo"],
     })
-    .input(z.object({ id: z.string().uuid(), content: z.string().optional(), storageKey: z.string().optional() }))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        content: z.string().optional(),
+        storageKey: z.string().optional(),
+      }),
+    )
     .output(z.any())
     .handler(async ({ context, input }) => {
       const db = getDb(context);
@@ -834,10 +1285,14 @@ export const nucleoWorkspaceRouter = {
         .update(schema.invoices)
         .set({
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.subtotal !== undefined ? { subtotal: String(input.subtotal) } : {}),
+          ...(input.subtotal !== undefined
+            ? { subtotal: String(input.subtotal) }
+            : {}),
           ...(input.tax !== undefined ? { tax: String(input.tax) } : {}),
           ...(input.total !== undefined ? { total: String(input.total) } : {}),
-          ...(input.dueAt !== undefined ? { dueAt: new Date(input.dueAt) } : {}),
+          ...(input.dueAt !== undefined
+            ? { dueAt: new Date(input.dueAt) }
+            : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           ...(input.status === "paid" ? { paidAt: new Date() } : {}),
           updatedAt: new Date(),
@@ -960,7 +1415,9 @@ export const nucleoWorkspaceRouter = {
           ...(input.channel !== undefined ? { channel: input.channel } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.goal !== undefined ? { goal: input.goal } : {}),
-          ...(input.budget !== undefined ? { budget: String(input.budget) } : {}),
+          ...(input.budget !== undefined
+            ? { budget: String(input.budget) }
+            : {}),
           updatedAt: new Date(),
         })
         .where(

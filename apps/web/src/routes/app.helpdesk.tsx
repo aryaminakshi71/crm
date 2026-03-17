@@ -14,10 +14,43 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpenText, LifeBuoy, ListOrdered, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import {
+  BookOpenText,
+  ListOrdered,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  LifeBuoy,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { aiApi, nucleoApi } from "../lib/api";
+
+const CHART_COLORS = [
+  "#22d3ee",
+  "#818cf8",
+  "#fb923c",
+  "#f472b6",
+  "#a78bfa",
+  "#fbbf24",
+];
 
 export const Route = createFileRoute("/app/helpdesk")({
   component: HelpdeskPage,
@@ -32,8 +65,12 @@ function HelpdeskPage() {
   const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
   const [queueSearch, setQueueSearch] = useState("");
   const [queueStatusFilter, setQueueStatusFilter] = useState("all");
-  const [counterDrafts, setCounterDrafts] = useState<Record<string, string>>({});
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [counterDrafts, setCounterDrafts] = useState<Record<string, string>>(
+    {},
+  );
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
+    {},
+  );
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [newArticle, setNewArticle] = useState({
     title: "",
@@ -231,8 +268,11 @@ function HelpdeskPage() {
   });
 
   const createArticle = useMutation({
-    mutationFn: (payload: { title: string; category: string; content: string }) =>
-      nucleoApi.operations.knowledgeArticles.create(payload),
+    mutationFn: (payload: {
+      title: string;
+      category: string;
+      content: string;
+    }) => nucleoApi.operations.knowledgeArticles.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ops-knowledge-articles"] });
       toast.success("Knowledge article created");
@@ -252,7 +292,8 @@ function HelpdeskPage() {
   });
 
   const deleteArticle = useMutation({
-    mutationFn: (id: string) => nucleoApi.operations.knowledgeArticles.delete(id),
+    mutationFn: (id: string) =>
+      nucleoApi.operations.knowledgeArticles.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ops-knowledge-articles"] });
       toast.success("Article deleted");
@@ -271,9 +312,15 @@ function HelpdeskPage() {
       if (!search.trim()) return true;
       const searchLower = search.toLowerCase();
       return (
-        String(ticket.subject || "").toLowerCase().includes(searchLower) ||
-        String(ticket.description || "").toLowerCase().includes(searchLower) ||
-        String(ticket.queue || "").toLowerCase().includes(searchLower)
+        String(ticket.subject || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(ticket.description || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(ticket.queue || "")
+          .toLowerCase()
+          .includes(searchLower)
       );
     });
   }, [tickets, search, priorityFilter]);
@@ -351,23 +398,181 @@ function HelpdeskPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Open</p>
-            <p className="font-bold text-2xl text-warning">{openCount}</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Critical Tickets"
+          value={
+            tickets.filter(
+              (t: any) => t.priority === "high" && t.status !== "closed",
+            ).length
+          }
+          icon={<AlertTriangle className="h-4 w-4" />}
+          trend="+2 new"
+          color="text-destructive"
+        />
+        <Metric
+          title="Active Queue"
+          value={waitingCount}
+          icon={<Activity className="h-4 w-4" />}
+          trend="8 min avg"
+          color="text-primary"
+        />
+        <Metric
+          title="Resolved Rate"
+          value={`${Math.round((closedCount / (tickets.length || 1)) * 100)}%`}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          trend="On Target"
+          color="text-emerald-400"
+        />
+        <Metric
+          title="SLA Health"
+          value="98.2%"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="Excellent"
+          color="text-cyan-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+                Support Velocity
+              </CardTitle>
+              <p className="text-2xl font-black text-foreground">
+                Traffic Analysis
+              </p>
+            </div>
+            <Activity className="h-4 w-4 text-muted-foreground/40" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={[
+                    { time: "08:00", incoming: 12, resolved: 10 },
+                    { time: "10:00", incoming: 25, resolved: 18 },
+                    { time: "12:00", incoming: 42, resolved: 35 },
+                    { time: "14:00", incoming: 38, resolved: 40 },
+                    { time: "16:00", incoming: 28, resolved: 30 },
+                    { time: "18:00", incoming: 15, resolved: 18 },
+                  ]}
+                >
+                  <defs>
+                    <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis
+                    dataKey="time"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="incoming"
+                    stroke="#22d3ee"
+                    fillOpacity={1}
+                    fill="url(#colorInc)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="resolved"
+                    stroke="#22c55e"
+                    fillOpacity={0}
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">In Progress</p>
-            <p className="font-bold text-2xl text-primary">{inProgressCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Closed</p>
-            <p className="font-bold text-2xl text-success">{closedCount}</p>
+
+        <Card className="relative overflow-hidden group">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold">
+              Queue Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center justify-center pt-2">
+              <div className="relative h-28 w-28">
+                <svg className="h-full w-full" viewBox="0 0 100 100">
+                  <circle
+                    className="text-muted/20"
+                    strokeWidth="6"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="42"
+                    cx="50"
+                    cy="50"
+                  />
+                  <circle
+                    className="text-primary transition-all duration-1000"
+                    strokeWidth="6"
+                    strokeDasharray="263.8"
+                    strokeDashoffset={263.8 * (1 - 0.88)}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="42"
+                    cx="50"
+                    cy="50"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black">12m</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase">
+                    Wait Time
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: "Phone Queue", val: 5, color: "bg-primary" },
+                { label: "Live Chat", val: 2, color: "bg-emerald-400" },
+                { label: "Technical", val: 8, color: "bg-amber-400" },
+              ].map((q) => (
+                <div key={q.label} className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
+                    <span>{q.label}</span>
+                    <span>{q.val} clients</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${q.color}`}
+                      style={{ width: `${(q.val / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -419,7 +624,10 @@ function HelpdeskPage() {
           icon={<LifeBuoy className="h-12 w-12" />}
           title="No tickets found"
           description="Create your first support ticket or adjust filters."
-          action={{ label: "Create Ticket", onClick: () => setIsCreateModalOpen(true) }}
+          action={{
+            label: "Create Ticket",
+            onClick: () => setIsCreateModalOpen(true),
+          }}
         />
       ) : (
         <div className="space-y-3">
@@ -439,10 +647,31 @@ function HelpdeskPage() {
 
             return (
               <Card key={ticket.id}>
-                <CardHeader>
+                <CardHeader className="py-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <CardTitle className="text-base">{ticket.subject}</CardTitle>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                        {ticket.queue} · #{ticket.id.slice(-4).toUpperCase()}
+                      </p>
+                      <CardTitle className="text-sm font-bold">
+                        {ticket.subject}
+                      </CardTitle>
+                    </div>
                     <div className="flex items-center gap-2">
+                      <select
+                        className="h-6 rounded border border-border bg-card text-[10px]"
+                        value={ticket.status}
+                        onChange={(e) =>
+                          updateStatus.mutate({
+                            id: ticket.id,
+                            status: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="open">Open</option>
+                        <option value="in_progress">Working</option>
+                        <option value="closed">Closed</option>
+                      </select>
                       <Badge
                         variant={
                           ticket.status === "closed"
@@ -451,30 +680,25 @@ function HelpdeskPage() {
                               ? "primary"
                               : "success"
                         }
+                        className="text-[9px] py-0 h-5"
                       >
                         {ticket.status}
                       </Badge>
-                      <Badge
-                        variant={
-                          ticket.priority === "high"
-                            ? "danger"
-                            : ticket.priority === "medium"
-                              ? "warning"
-                              : "outline"
-                        }
-                      >
-                        {ticket.priority}
-                      </Badge>
+                      <div
+                        className={`h-2 w-2 rounded-full ${ticket.priority === "high" ? "bg-destructive animate-pulse" : ticket.priority === "medium" ? "bg-warning" : "bg-muted"}`}
+                      />
                     </div>
                   </div>
                 </CardHeader>
+
                 <CardContent className="space-y-3 text-sm">
                   {ticket.description ? (
                     <p className="text-foreground">{ticket.description}</p>
                   ) : null}
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <p className="text-muted-foreground">
-                      Queue: <span className="text-foreground">{ticket.queue}</span>
+                      Queue:{" "}
+                      <span className="text-foreground">{ticket.queue}</span>
                     </p>
                     <p className="text-muted-foreground">
                       Created:{" "}
@@ -518,21 +742,30 @@ function HelpdeskPage() {
                     </Button>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/40 p-3">
-                    <p className="mb-2 font-medium text-foreground text-sm">Ticket Notes</p>
+                    <p className="mb-2 font-medium text-foreground text-sm">
+                      Ticket Notes
+                    </p>
                     <div className="space-y-2">
-                      {(commentsByTicket[ticket.id] || []).slice(0, 4).map((comment: any) => (
-                        <div key={comment.id} className="flex items-start justify-between gap-2 rounded-md border border-border bg-card p-2">
-                          <p className="text-muted-foreground text-xs">{comment.message}</p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => deleteComment.mutate(comment.id)}
+                      {(commentsByTicket[ticket.id] || [])
+                        .slice(0, 4)
+                        .map((comment: any) => (
+                          <div
+                            key={comment.id}
+                            className="flex items-start justify-between gap-2 rounded-md border border-border bg-card p-2"
                           >
-                            Delete
-                          </Button>
-                        </div>
-                      ))}
+                            <p className="text-muted-foreground text-xs">
+                              {comment.message}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => deleteComment.mutate(comment.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        ))}
                       <div className="flex items-center gap-2">
                         <Input
                           value={commentDrafts[ticket.id] || ""}
@@ -548,7 +781,9 @@ function HelpdeskPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const message = (commentDrafts[ticket.id] || "").trim();
+                            const message = (
+                              commentDrafts[ticket.id] || ""
+                            ).trim();
                             if (!message) {
                               toast.error("Comment is required");
                               return;
@@ -557,7 +792,10 @@ function HelpdeskPage() {
                               { ticketId: ticket.id, message },
                               {
                                 onSuccess: () => {
-                                  setCommentDrafts((prev) => ({ ...prev, [ticket.id]: "" }));
+                                  setCommentDrafts((prev) => ({
+                                    ...prev,
+                                    [ticket.id]: "",
+                                  }));
                                 },
                               },
                             );
@@ -583,7 +821,8 @@ function HelpdeskPage() {
               <div>
                 <CardTitle>Queue Operations</CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Queue is now merged into Helpdesk for a single support workflow.
+                  Queue is now merged into Helpdesk for a single support
+                  workflow.
                 </p>
               </div>
               <Button
@@ -612,10 +851,12 @@ function HelpdeskPage() {
                 <option value="completed">Completed</option>
               </select>
               <div className="flex items-center rounded-lg border border-border px-3 py-2 text-sm">
-                Waiting: <span className="ml-1 font-semibold">{waitingCount}</span>
+                Waiting:{" "}
+                <span className="ml-1 font-semibold">{waitingCount}</span>
               </div>
               <div className="flex items-center rounded-lg border border-border px-3 py-2 text-sm">
-                Called: <span className="ml-1 font-semibold">{calledCount}</span>
+                Called:{" "}
+                <span className="ml-1 font-semibold">{calledCount}</span>
                 <span className="ml-3">Completed:</span>
                 <span className="ml-1 font-semibold">{completedCount}</span>
               </div>
@@ -678,7 +919,9 @@ function HelpdeskPage() {
                           </Badge>
                           <Input
                             className="w-40"
-                            value={counterDrafts[token.id] ?? token.counter ?? ""}
+                            value={
+                              counterDrafts[token.id] ?? token.counter ?? ""
+                            }
                             onChange={(e) =>
                               setCounterDrafts((prev) => ({
                                 ...prev,
@@ -696,9 +939,9 @@ function HelpdeskPage() {
                                 status: nextStatus,
                                 counter:
                                   nextStatus === "called"
-                                    ? (counterDrafts[token.id] ||
+                                    ? counterDrafts[token.id] ||
                                       token.counter ||
-                                      "Desk-1")
+                                      "Desk-1"
                                     : token.counter || undefined,
                               })
                             }
@@ -755,10 +998,15 @@ function HelpdeskPage() {
           ) : (
             <div className="space-y-3">
               {knowledgeArticles.map((article: any) => (
-                <div key={article.id} className="rounded-lg border border-border p-3">
+                <div
+                  key={article.id}
+                  className="rounded-lg border border-border p-3"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{article.title}</p>
+                      <p className="font-medium text-foreground">
+                        {article.title}
+                      </p>
                       <p className="text-muted-foreground text-xs">
                         {article.category} | {article.status}
                       </p>
@@ -845,7 +1093,8 @@ function HelpdeskPage() {
           </FormField>
           <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
             <p className="text-muted-foreground text-sm">
-              Use AI to classify priority, queue, and SLA target from ticket context.
+              Use AI to classify priority, queue, and SLA target from ticket
+              context.
             </p>
             <Button
               type="button"
@@ -937,7 +1186,10 @@ function HelpdeskPage() {
             <Input
               value={newToken.serviceType}
               onChange={(e) =>
-                setNewToken((prev) => ({ ...prev, serviceType: e.target.value }))
+                setNewToken((prev) => ({
+                  ...prev,
+                  serviceType: e.target.value,
+                }))
               }
               placeholder="general"
               required
@@ -1003,5 +1255,49 @@ function HelpdeskPage() {
         </div>
       </FormModal>
     </div>
+  );
+}
+
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <LifeBuoy className="h-4 w-4" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

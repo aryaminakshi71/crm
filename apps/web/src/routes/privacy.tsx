@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { createFileRoute } from "@tanstack/react-router";
 import { Eye, FileText, Lock, Shield } from "lucide-react";
@@ -180,10 +181,10 @@ function PrivacyPage() {
                 <p>
                   To exercise these rights, please contact us at{" "}
                   <a
-                    href="mailto:privacy@crmplatform.com"
+                    href="mailto:privacy@nucleoone.com"
                     className="text-primary hover:underline"
                   >
-                    privacy@crmplatform.com
+                    privacy@nucleoone.com
                   </a>
                   .
                 </p>
@@ -192,7 +193,62 @@ function PrivacyPage() {
 
             <section>
               <h2 className="mb-4 font-bold text-2xl text-foreground">
-                6. Cookies and Tracking
+                6. GDPR Compliance (EU Users)
+              </h2>
+              <div className="space-y-3 text-foreground">
+                <p>
+                  For users in the European Union, we process your personal
+                  information in accordance with the General Data Protection
+                  Regulation (GDPR). Our legal bases for processing include:
+                </p>
+                <ul className="list-disc space-y-2 pl-6">
+                  <li>Performance of a contract (providing our services)</li>
+                  <li>Compliance with legal obligations</li>
+                  <li>Your explicit consent</li>
+                  <li>Our legitimate business interests</li>
+                </ul>
+                <p>
+                  You have specific rights under GDPR, including the right to
+                  lodge a complaint with a supervisory authority.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-4 font-bold text-2xl text-foreground">
+                7. CCPA/CPRA Compliance (California Users)
+              </h2>
+              <div className="space-y-3 text-foreground">
+                <p>
+                  The California Consumer Privacy Act (CCPA) provides California
+                  residents with specific rights regarding their personal
+                  information:
+                </p>
+                <ul className="list-disc space-y-2 pl-6">
+                  <li>
+                    The right to know what personal information is collected
+                  </li>
+                  <li>
+                    The right to delete personal information (with some
+                    exceptions)
+                  </li>
+                  <li>
+                    The right to opt-out of the sale of personal information
+                  </li>
+                  <li>
+                    The right to non-discrimination for exercising these rights
+                  </li>
+                </ul>
+                <p>
+                  Nucleo One does not sell your personal information. To submit
+                  a request under CCPA, please contact our privacy team.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-4 font-bold text-2xl text-foreground">
+                8. Cookies and Tracking
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
@@ -206,7 +262,7 @@ function PrivacyPage() {
 
             <section>
               <h2 className="mb-4 font-bold text-2xl text-foreground">
-                7. Children's Privacy
+                9. Children's Privacy
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
@@ -220,7 +276,7 @@ function PrivacyPage() {
 
             <section>
               <h2 className="mb-4 font-bold text-2xl text-foreground">
-                8. Changes to This Policy
+                10. Changes to This Policy
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
@@ -235,7 +291,7 @@ function PrivacyPage() {
 
             <section>
               <h2 className="mb-4 font-bold text-2xl text-foreground">
-                9. Contact Us
+                11. Contact Us
               </h2>
               <div className="space-y-3 text-foreground">
                 <p>
@@ -247,10 +303,10 @@ function PrivacyPage() {
                   <p>
                     Email:{" "}
                     <a
-                      href="mailto:privacy@crmplatform.com"
+                      href="mailto:privacy@nucleoone.com"
                       className="text-primary hover:underline"
                     >
-                      privacy@crmplatform.com
+                      privacy@nucleoone.com
                     </a>
                   </p>
                   <p>
@@ -263,6 +319,7 @@ function PrivacyPage() {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

@@ -70,6 +70,29 @@ export function getCRMRoutes(): SitemapRoute[] {
     lastmod: post.publishedAt,
   }));
 
-  return [...staticRoutes, ...blogRoutes];
+  const competitors = ["hubspot", "zoho", "monday", "salesforce"];
+  const vsRoutes: SitemapRoute[] = competitors.map((c) => ({
+    path: `/vs/${c}`,
+    changefreq: "monthly",
+    priority: 0.8,
+  }));
+
+  const industryListing = [
+    "real-estate",
+    "education",
+    "healthcare",
+    "legal",
+    "retail",
+    "technology",
+    "consulting",
+    "banking",
+  ];
+  const industryRoutes: SitemapRoute[] = industryListing.map((i) => ({
+    path: `/industries/${i}`,
+    changefreq: "monthly",
+    priority: 0.8,
+  }));
+
+  return [...staticRoutes, ...blogRoutes, ...vsRoutes, ...industryRoutes];
 }
 import { blogPosts } from "./blog-content";

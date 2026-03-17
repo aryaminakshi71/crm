@@ -25,7 +25,7 @@ describe("Contacts Router", () => {
     await testDb.delete(schema.user);
 
     // Create test organization
-    const { organizations } = await import("@crm/storage/db/schema");
+    const { organizations } = await import("@crm/storage/schema");
     const [org] = await testDb
       .insert(organizations)
       .values({

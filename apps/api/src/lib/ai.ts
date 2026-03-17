@@ -85,11 +85,12 @@ export async function analyzeText(
   if (!ai) throw new Error("AI client not configured");
 
   if (ai.type === "openrouter" || ai.type === "openai") {
-    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const model =
+      ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
     const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
-    
+
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ 
+    const openai = new OpenAI({
       apiKey: ai.apiKey,
       baseURL,
     });
@@ -152,11 +153,12 @@ export async function generateSuggestions(
   };
 
   if (ai.type === "openrouter" || ai.type === "openai") {
-    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const model =
+      ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
     const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
-    
+
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ 
+    const openai = new OpenAI({
       apiKey: ai.apiKey,
       baseURL,
     });
@@ -188,11 +190,12 @@ export async function autoTag(
   if (!ai) throw new Error("AI client not configured");
 
   if (ai.type === "openrouter" || ai.type === "openai") {
-    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const model =
+      ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
     const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
-    
+
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ 
+    const openai = new OpenAI({
       apiKey: ai.apiKey,
       baseURL,
     });
@@ -227,11 +230,12 @@ export async function predictScore(
   if (!ai) throw new Error("AI client not configured");
 
   if (ai.type === "openrouter" || ai.type === "openai") {
-    const model = ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
+    const model =
+      ai.type === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4o-mini";
     const baseURL = ai.type === "openrouter" ? ai.baseURL : undefined;
-    
+
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ 
+    const openai = new OpenAI({
       apiKey: ai.apiKey,
       baseURL,
     });

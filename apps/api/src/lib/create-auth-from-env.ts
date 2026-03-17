@@ -10,7 +10,10 @@ import type { Database } from "@crm/storage";
 import type { AppEnv } from "../context";
 
 export function createAuthFromEnv(db: Database, env: AppEnv) {
-  const baseURL = env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
+  const baseURL =
+    env.BETTER_AUTH_BASE_URL ||
+    env.VITE_PUBLIC_SITE_URL ||
+    "http://localhost:3001";
 
   return createAuth({
     db,
@@ -21,6 +24,8 @@ export function createAuthFromEnv(db: Database, env: AppEnv) {
       "http://localhost:3001",
       "http://localhost:3002",
       "http://127.0.0.1:3001",
+      "http://localhost:8787",
+      "http://127.0.0.1:8787",
     ],
     oauth: {
       google: env.GOOGLE_CLIENT_ID

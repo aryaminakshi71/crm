@@ -5,7 +5,10 @@ type PlatformObservabilityOptions = {
 
 let initialized = false;
 
-function emitTelemetry(name: string, attributes: Record<string, unknown>): void {
+function emitTelemetry(
+  name: string,
+  attributes: Record<string, unknown>,
+): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent("platform:telemetry", {
@@ -18,11 +21,18 @@ function emitTelemetry(name: string, attributes: Record<string, unknown>): void 
   );
 }
 
-export function initPlatformObservability(options: PlatformObservabilityOptions): void {
+export function initPlatformObservability(
+  options: PlatformObservabilityOptions,
+): void {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 
-  const environment = options.environment || (typeof import.meta !== "undefined" ? (import.meta as any).env?.MODE : "unknown") || "unknown";
+  const environment =
+    options.environment ||
+    (typeof import.meta !== "undefined"
+      ? (import.meta as any).env?.MODE
+      : "unknown") ||
+    "unknown";
 
   // Baseline tags for Sentry/OpenTelemetry correlation.
   emitTelemetry("observability.init", {
@@ -42,7 +52,10 @@ export function initPlatformObservability(options: PlatformObservabilityOptions)
     });
 
     window.addEventListener("unhandledrejection", (event) => {
-      const reason = event.reason instanceof Error ? event.reason.message : String(event.reason ?? "unknown");
+      const reason =
+        event.reason instanceof Error
+          ? event.reason.message
+          : String(event.reason ?? "unknown");
       emitTelemetry("frontend.unhandledrejection", {
         appId: options.appId,
         reason,
@@ -77,7 +90,9 @@ export function initPlatformObservability(options: PlatformObservabilityOptions)
   if (supportsBuffered("layout-shift")) {
     let cls = 0;
     const clsObserver = new PerformanceObserver((entryList) => {
-      for (const entry of entryList.getEntries() as Array<PerformanceEntry & { value?: number; hadRecentInput?: boolean }>) {
+      for (const entry of entryList.getEntries() as Array<
+        PerformanceEntry & { value?: number; hadRecentInput?: boolean }
+      >) {
         if (!entry.hadRecentInput) {
           cls += entry.value || 0;
         }
@@ -93,7 +108,9 @@ export function initPlatformObservability(options: PlatformObservabilityOptions)
   if (supportsBuffered("first-input")) {
     const fidObserver = new PerformanceObserver((entryList) => {
       const entries = entryList.getEntries();
-      const first = entries[0] as PerformanceEntry & { processingStart?: number };
+      const first = entries[0] as PerformanceEntry & {
+        processingStart?: number;
+      };
       if (!first || typeof first.processingStart !== "number") return;
       emitTelemetry("web-vitals.fid", {
         appId: options.appId,

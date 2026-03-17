@@ -13,9 +13,27 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Plus, ShieldCheck, ShieldX, Trash2, TriangleAlert } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  History,
+  Plus,
+  Scale,
+  ShieldCheck,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { nucleoApi } from "../lib/api";
 
@@ -50,7 +68,8 @@ function CompliancePage() {
 
   const risksQuery = useQuery({
     queryKey: ["ops-compliance-risks"],
-    queryFn: () => nucleoApi.operations.complianceRisks.list({ page: 1, limit: 200 }),
+    queryFn: () =>
+      nucleoApi.operations.complianceRisks.list({ page: 1, limit: 200 }),
   });
 
   const createControl = useMutation({
@@ -60,7 +79,12 @@ function CompliancePage() {
       queryClient.invalidateQueries({ queryKey: ["ops-compliance-controls"] });
       toast.success("Control added");
       setIsControlModalOpen(false);
-      setNewControl({ framework: "SOC2", control: "", owner: "Security", evidenceDue: "" });
+      setNewControl({
+        framework: "SOC2",
+        control: "",
+        owner: "Security",
+        evidenceDue: "",
+      });
     },
     onError: () => toast.error("Failed to add control"),
   });
@@ -76,7 +100,8 @@ function CompliancePage() {
   });
 
   const deleteControl = useMutation({
-    mutationFn: (id: string) => nucleoApi.operations.complianceControls.delete(id),
+    mutationFn: (id: string) =>
+      nucleoApi.operations.complianceControls.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ops-compliance-controls"] });
       toast.success("Control deleted");
@@ -85,12 +110,18 @@ function CompliancePage() {
   });
 
   const createRisk = useMutation({
-    mutationFn: (payload: any) => nucleoApi.operations.complianceRisks.create(payload),
+    mutationFn: (payload: any) =>
+      nucleoApi.operations.complianceRisks.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ops-compliance-risks"] });
       toast.success("Risk logged");
       setIsRiskModalOpen(false);
-      setNewRisk({ title: "", severity: "medium", owner: "Security", mitigation: "" });
+      setNewRisk({
+        title: "",
+        severity: "medium",
+        owner: "Security",
+        mitigation: "",
+      });
     },
     onError: () => toast.error("Failed to log risk"),
   });
@@ -114,12 +145,21 @@ function CompliancePage() {
     onError: () => toast.error("Failed to delete risk"),
   });
 
-  const controls = useMemo(() => controlsQuery.data?.data || [], [controlsQuery.data]);
+  const controls = useMemo(
+    () => controlsQuery.data?.data || [],
+    [controlsQuery.data],
+  );
   const risks = useMemo(() => risksQuery.data?.data || [], [risksQuery.data]);
 
-  const implemented = controls.filter((control: any) => control.status === "implemented").length;
-  const inProgress = controls.filter((control: any) => control.status === "in_progress").length;
-  const openHighRisks = risks.filter((risk: any) => risk.severity === "high" && risk.status !== "closed").length;
+  const implemented = controls.filter(
+    (control: any) => control.status === "implemented",
+  ).length;
+  const inProgress = controls.filter(
+    (control: any) => control.status === "in_progress",
+  ).length;
+  const openHighRisks = risks.filter(
+    (risk: any) => risk.severity === "high" && risk.status !== "closed",
+  ).length;
 
   const complianceScore = useMemo(() => {
     if (!controls.length) return 0;
@@ -134,26 +174,164 @@ function CompliancePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-2xl text-foreground">Policy & Compliance Center</h1>
+          <h1 className="font-bold text-2xl text-foreground">
+            Policy & Compliance Center
+          </h1>
           <p className="text-muted-foreground">
             SOC2 and ISO control tracking, evidence pipeline, and risk register.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsControlModalOpen(true)}>
+          <Button
+            variant="outline"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsControlModalOpen(true)}
+          >
             Add Control
           </Button>
-          <Button variant="primary" leftIcon={<TriangleAlert className="h-4 w-4" />} onClick={() => setIsRiskModalOpen(true)}>
+          <Button
+            variant="primary"
+            leftIcon={<AlertTriangle className="h-4 w-4" />}
+            onClick={() => setIsRiskModalOpen(true)}
+          >
             Log Risk
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Tile title="Compliance Score" value={`${complianceScore}%`} icon={<ShieldCheck className="h-4 w-4 text-primary" />} />
-        <Tile title="Implemented Controls" value={implemented} icon={<CheckCircle2 className="h-4 w-4 text-success" />} />
-        <Tile title="In Progress Controls" value={inProgress} icon={<ShieldX className="h-4 w-4 text-warning" />} />
-        <Tile title="High Risks" value={openHighRisks} icon={<TriangleAlert className="h-4 w-4 text-destructive" />} />
+        <Metric
+          title="Compliance Score"
+          value={`${complianceScore}%`}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="On Target"
+          color="text-primary"
+        />
+        <Metric
+          title="Active Audits"
+          value="2"
+          icon={<Activity className="h-4 w-4" />}
+          trend="+1 scheduled"
+          color="text-cyan-400"
+        />
+        <Metric
+          title="High Risks"
+          value={openHighRisks}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          trend="Requires action"
+          color="text-rose-400"
+        />
+        <Metric
+          title="Policy Drift"
+          value="-1.2%"
+          icon={<Scale className="h-4 w-4" />}
+          trend="Stable"
+          color="text-amber-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Framework Readiness
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={[
+                    { name: "SOC2", val: 82, color: "#22d3ee" },
+                    { name: "ISO27k", val: 65, color: "#a78bfa" },
+                    { name: "HIPAA", val: 45, color: "#f472b6" },
+                    { name: "GDPR", val: 92, color: "#34d399" },
+                  ]}
+                  layout="vertical"
+                  margin={{ left: 20 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    horizontal={true}
+                    vertical={false}
+                    stroke="rgba(255,255,255,0.05)"
+                  />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    stroke="#888"
+                    width={60}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                  />
+                  <Bar dataKey="val" radius={[0, 4, 4, 0]} barSize={20}>
+                    {[
+                      { name: "SOC2", val: 82, color: "#22d3ee" },
+                      { name: "ISO27k", val: 65, color: "#a78bfa" },
+                      { name: "HIPAA", val: 45, color: "#f472b6" },
+                      { name: "GDPR", val: 92, color: "#34d399" },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-bold">
+                Audit Timeline
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              {
+                date: "Oct 12",
+                event: "Internal SOC2 Dry Run",
+                status: "Done",
+              },
+              { date: "Nov 05", event: "Vendor Assessment", status: "Pending" },
+              {
+                date: "Dec 15",
+                event: "External Audit Window",
+                status: "Scheduled",
+              },
+            ].map((item) => (
+              <div
+                key={item.event}
+                className="flex gap-4 border-l border-border/40 pl-4 py-1 relative"
+              >
+                <div className="absolute -left-[5px] top-2 h-2 w-2 rounded-full bg-primary" />
+                <div className="space-y-0.5">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground">
+                    {item.date}
+                  </p>
+                  <p className="text-xs font-bold leading-none">{item.event}</p>
+                  <p className="text-[10px] text-primary font-medium">
+                    {item.status}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -163,12 +341,21 @@ function CompliancePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {controls.map((control: any) => (
-              <div key={control.id} className="rounded-lg border border-border p-3">
+              <div
+                key={control.id}
+                className="rounded-lg border border-border p-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-foreground">{control.control}</p>
+                    <p className="font-medium text-foreground">
+                      {control.control}
+                    </p>
                     <p className="text-muted-foreground text-sm">
-                      {control.framework} | Owner: {control.owner} | Evidence Due: {control.evidenceDue ? new Date(control.evidenceDue).toLocaleDateString() : "-"}
+                      {control.framework} | Owner: {control.owner} | Evidence
+                      Due:{" "}
+                      {control.evidenceDue
+                        ? new Date(control.evidenceDue).toLocaleDateString()
+                        : "-"}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -221,12 +408,19 @@ function CompliancePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {risks.map((risk: any) => (
-              <div key={risk.id} className="rounded-lg border border-border p-3">
+              <div
+                key={risk.id}
+                className="rounded-lg border border-border p-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-foreground">{risk.title}</p>
-                    <p className="text-muted-foreground text-sm">Owner: {risk.owner}</p>
-                    <p className="mt-1 text-muted-foreground text-xs">{risk.mitigation || "Mitigation pending"}</p>
+                    <p className="text-muted-foreground text-sm">
+                      Owner: {risk.owner}
+                    </p>
+                    <p className="mt-1 text-muted-foreground text-xs">
+                      {risk.mitigation || "Mitigation pending"}
+                    </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <Badge
@@ -297,20 +491,48 @@ function CompliancePage() {
       >
         <div className="space-y-4">
           <FormField label="Framework">
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newControl.framework} onChange={(e) => setNewControl((prev) => ({ ...prev, framework: e.target.value }))}>
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={newControl.framework}
+              onChange={(e) =>
+                setNewControl((prev) => ({
+                  ...prev,
+                  framework: e.target.value,
+                }))
+              }
+            >
               <option value="SOC2">SOC2</option>
               <option value="ISO27001">ISO27001</option>
               <option value="GDPR">GDPR</option>
             </select>
           </FormField>
           <FormField label="Control" required>
-            <Input value={newControl.control} onChange={(e) => setNewControl((prev) => ({ ...prev, control: e.target.value }))} />
+            <Input
+              value={newControl.control}
+              onChange={(e) =>
+                setNewControl((prev) => ({ ...prev, control: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Owner">
-            <Input value={newControl.owner} onChange={(e) => setNewControl((prev) => ({ ...prev, owner: e.target.value }))} />
+            <Input
+              value={newControl.owner}
+              onChange={(e) =>
+                setNewControl((prev) => ({ ...prev, owner: e.target.value }))
+              }
+            />
           </FormField>
           <FormField label="Evidence Due Date">
-            <Input type="date" value={newControl.evidenceDue} onChange={(e) => setNewControl((prev) => ({ ...prev, evidenceDue: e.target.value }))} />
+            <Input
+              type="date"
+              value={newControl.evidenceDue}
+              onChange={(e) =>
+                setNewControl((prev) => ({
+                  ...prev,
+                  evidenceDue: e.target.value,
+                }))
+              }
+            />
           </FormField>
         </div>
       </FormModal>
@@ -338,22 +560,44 @@ function CompliancePage() {
       >
         <div className="space-y-4">
           <FormField label="Risk Title" required>
-            <Input value={newRisk.title} onChange={(e) => setNewRisk((prev) => ({ ...prev, title: e.target.value }))} />
+            <Input
+              value={newRisk.title}
+              onChange={(e) =>
+                setNewRisk((prev) => ({ ...prev, title: e.target.value }))
+              }
+            />
           </FormField>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Severity">
-              <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" value={newRisk.severity} onChange={(e) => setNewRisk((prev) => ({ ...prev, severity: e.target.value }))}>
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                value={newRisk.severity}
+                onChange={(e) =>
+                  setNewRisk((prev) => ({ ...prev, severity: e.target.value }))
+                }
+              >
                 <option value="low">low</option>
                 <option value="medium">medium</option>
                 <option value="high">high</option>
               </select>
             </FormField>
             <FormField label="Owner">
-              <Input value={newRisk.owner} onChange={(e) => setNewRisk((prev) => ({ ...prev, owner: e.target.value }))} />
+              <Input
+                value={newRisk.owner}
+                onChange={(e) =>
+                  setNewRisk((prev) => ({ ...prev, owner: e.target.value }))
+                }
+              />
             </FormField>
           </div>
           <FormField label="Mitigation Plan">
-            <Textarea rows={3} value={newRisk.mitigation} onChange={(e) => setNewRisk((prev) => ({ ...prev, mitigation: e.target.value }))} />
+            <Textarea
+              rows={3}
+              value={newRisk.mitigation}
+              onChange={(e) =>
+                setNewRisk((prev) => ({ ...prev, mitigation: e.target.value }))
+              }
+            />
           </FormField>
         </div>
       </FormModal>
@@ -361,16 +605,44 @@ function CompliancePage() {
   );
 }
 
-function Tile({ title, value, icon }: { title: string; value: string | number; icon: ReactNode }) {
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
   return (
-    <Card>
+    <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-sm">{title}</p>
-            <p className="font-bold text-2xl text-foreground">{value}</p>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="rounded-md bg-muted p-2">{icon}</div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <ShieldCheck className="h-4 w-4" />}
+          </div>
         </div>
       </CardContent>
     </Card>

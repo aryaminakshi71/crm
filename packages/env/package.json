@@ -13,7 +13,10 @@
     "./cloudflare": "./src/cloudflare.d.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "zod": "^4.1.13"

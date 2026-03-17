@@ -9,27 +9,22 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
 test.describe("API Validation E2E", () => {
   test("should validate contact form submission", async ({ page, request }) => {
     // Test API endpoint directly
-    const response = await request.post(`${BASE_URL}/api/contacts`, {
+    const response = await request.post(`${BASE_URL}/api/v1/contacts`, {
       data: {
         firstName: "",
         lastName: "Doe",
       },
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer test-token",
+        "x-organization-id": "demo-org",
       },
     });
 
-    // Should return 400 (validation error), 401 (unauthorized), or 404 (endpoint not implemented in dev)
-    expect([400, 401, 404]).toContain(response.status());
-    if (response.status() === 400) {
-      const data = await response.json();
-      expect(data.success).toBe(false);
-    }
+    expect([400, 401]).toContain(response.status());
   });
 
   test("should accept valid contact data", async ({ page, request }) => {
-    const response = await request.post(`${BASE_URL}/api/contacts`, {
+    const response = await request.post(`${BASE_URL}/api/v1/contacts`, {
       data: {
         firstName: "John",
         lastName: "Doe",
@@ -37,23 +32,22 @@ test.describe("API Validation E2E", () => {
       },
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer test-token",
+        "x-organization-id": "demo-org",
       },
     });
 
-    // Should either succeed (201), require auth (401), validation error (400), or 404 (endpoint not implemented in dev)
-    // All are valid responses indicating the API is reachable
-    expect([201, 400, 401, 404]).toContain(response.status());
+    expect([200, 201, 401]).toContain(response.status());
   });
 
   test("should validate deal creation", async ({ page, request }) => {
-    const response = await request.post(`${BASE_URL}/api/deals`, {
+    const response = await request.post(`${BASE_URL}/api/v1/deals`, {
       data: {
         title: "",
         value: -100, // Invalid negative value
       },
       headers: {
         "Content-Type": "application/json",
+        "x-organization-id": "demo-org",
       },
     });
 

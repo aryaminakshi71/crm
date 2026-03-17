@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Heart, Target, Zap } from "lucide-react";
@@ -198,6 +199,7 @@ function AboutPage() {
           </Link>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

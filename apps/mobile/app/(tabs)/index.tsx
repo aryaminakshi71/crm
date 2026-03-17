@@ -1,107 +1,178 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-const stats = [
-  { label: "Total Children", value: "15", icon: "👶" },
-  { label: "Sessions Today", value: "8", icon: "📅" },
-  { label: "Completed", value: "45", icon: "✅" },
-  { label: "Progress", value: "78%", icon: "📈" },
-];
-const upcomingSessions = [
-  {
-    id: "1",
-    child: "Alex",
-    activity: "Speech Therapy",
-    time: "10:00 AM",
-    status: "Upcoming",
-  },
-  {
-    id: "2",
-    child: "Emma",
-    activity: "OT Session",
-    time: "11:30 AM",
-    status: "Upcoming",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { StyleSheet, Text, View } from "react-native";
+import {
+  HeaderBlock,
+  MetricCard,
+  Panel,
+  Pill,
+  Screen,
+  SectionLabel,
+} from "../../src/components/mobile-ui";
+import { useCrmClient } from "../../src/lib/api";
+import { useMobileConfig } from "../../src/lib/mobile-config";
+import {
+  formatCurrency,
+  formatPersonName,
+  formatRelativeDate,
+  theme,
+} from "../../src/lib/theme";
+
 export default function HomeScreen() {
+  const client = useCrmClient();
+  const { apiBaseUrl, demoMode, organizationId } = useMobileConfig();
+  const cacheScope = [apiBaseUrl, demoMode, organizationId];
+  const contactsQuery = useQuery({
+    queryKey: ["mobile", "contacts", ...cacheScope],
+    queryFn: client.contacts.list,
+  });
+  const leadsQuery = useQuery({
+    queryKey: ["mobile", "leads", ...cacheScope],
+    queryFn: client.leads.list,
+  });
+  const dealsQuery = useQuery({
+    queryKey: ["mobile", "deals", ...cacheScope],
+    queryFn: client.deals.list,
+  });
+  const activitiesQuery = useQuery({
+    queryKey: ["mobile", "activities", ...cacheScope],
+    queryFn: client.activities.list,
+  });
+
+  const contacts = contactsQuery.data?.data ?? [];
+  const leads = leadsQuery.data?.data ?? [];
+  const deals = dealsQuery.data?.data ?? [];
+  const activities = activitiesQuery.data?.data ?? [];
+  const openDeals = deals.filter((deal) => deal.stage !== "won");
+  const pipelineValue = openDeals.reduce(
+    (sum, deal) => sum + Number(deal.value ?? 0),
+    0,
+  );
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Autism Care</Text>
-        <Text style={styles.subtitle}>Supporting your child</Text>
+    <Screen scroll>
+      <HeaderBlock
+        eyebrow="Native command deck"
+        title="Nucleo on the move"
+        subtitle="A field-ready mobile view of the live app. Use this on iPhone or Android with the same API the web app uses."
+        sidecar={<Pill label="Live sync" tone="accent" />}
+      />
+
+      <View style={styles.metricsRow}>
+        <MetricCard
+          label="Contacts"
+          value={String(contacts.length)}
+          note="Portable relationship memory"
+        />
+        <MetricCard
+          label="Open pipeline"
+          value={formatCurrency(pipelineValue)}
+          note={`${openDeals.length} active deals`}
+        />
       </View>
-      <View style={styles.statsGrid}>
-        {stats.map((stat, index) => (
-          <View key={index} style={styles.statCard}>
-            <Text style={styles.statIcon}>{stat.icon}</Text>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
+      <View style={styles.metricsRow}>
+        <MetricCard
+          label="Fresh leads"
+          value={String(
+            leads.filter((lead) => lead.status !== "converted").length,
+          )}
+          note="Ready for follow-up"
+        />
+        <MetricCard
+          label="Recent activity"
+          value={String(activities.length)}
+          note="Calls, notes, and next steps"
+        />
       </View>
-      <Text style={styles.sectionTitle}>Today's Sessions</Text>
-      {upcomingSessions.map((session) => (
-        <View key={session.id} style={styles.sessionCard}>
-          <View style={styles.sessionInfo}>
-            <Text style={styles.childName}>{session.child}</Text>
-            <Text style={styles.activity}>{session.activity}</Text>
-            <Text style={styles.time}>{session.time}</Text>
+
+      <SectionLabel title="Pipeline pulse" />
+      <Panel accent={theme.colors.accent}>
+        <Text style={styles.panelTitle}>What needs attention first</Text>
+        <Text style={styles.panelCopy}>
+          {openDeals.length > 0
+            ? `${openDeals[0]?.name ?? "Latest opportunity"} is still active. Keep deal momentum visible for the team outside the office.`
+            : "No open deals yet. Create one from the Pipeline tab and this radar view will update automatically."}
+        </Text>
+      </Panel>
+
+      <SectionLabel title="Newest contacts" />
+      {contacts.slice(0, 3).map((contact) => (
+        <Panel key={contact.id} accent={theme.colors.ocean}>
+          <View style={styles.row}>
+            <View>
+              <Text style={styles.itemTitle}>
+                {formatPersonName(contact.firstName, contact.lastName)}
+              </Text>
+              <Text style={styles.itemMeta}>
+                {contact.companyName || contact.email || "No company yet"}
+              </Text>
+            </View>
+            <Pill label={formatRelativeDate(contact.createdAt)} />
           </View>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{session.status}</Text>
-          </View>
-        </View>
+        </Panel>
       ))}
-    </ScrollView>
+
+      <SectionLabel title="Recent activity" />
+      {activities.slice(0, 3).map((activity) => (
+        <Panel key={activity.id} accent={theme.colors.gold}>
+          <View style={styles.row}>
+            <View style={styles.flex}>
+              <Text style={styles.itemTitle}>
+                {activity.title || activity.subject || "Untitled activity"}
+              </Text>
+              <Text style={styles.itemMeta}>
+                {(activity.type || "note").toUpperCase()} ·{" "}
+                {formatRelativeDate(activity.createdAt)}
+              </Text>
+            </View>
+            <Pill label={activity.type || "note"} tone="accent" />
+          </View>
+          {activity.description ? (
+            <Text style={styles.description}>{activity.description}</Text>
+          ) : null}
+        </Panel>
+      ))}
+    </Screen>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  header: { padding: 20, paddingTop: 60, backgroundColor: "#8B5CF6" },
-  title: { fontSize: 28, fontWeight: "bold", color: "#fff" },
-  subtitle: { fontSize: 14, color: "#EDE9FE", marginTop: 4 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12 },
-  statCard: {
-    width: "46%",
-    margin: "2%",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 2,
-  },
-  statIcon: { fontSize: 28 },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginTop: 8,
-  },
-  statLabel: { fontSize: 12, color: "#6B7280", marginTop: 4 },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  sessionCard: {
+  metricsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 16,
-    borderRadius: 12,
   },
-  sessionInfo: { flex: 1 },
-  childName: { fontSize: 16, fontWeight: "600", color: "#1F2937" },
-  activity: { fontSize: 14, color: "#6B7280", marginTop: 2 },
-  time: { fontSize: 12, color: "#8B5CF6", marginTop: 2 },
-  statusBadge: {
-    backgroundColor: "#EDE9FE",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
+  panelTitle: {
+    fontSize: 20,
+    color: theme.colors.ink,
+    fontFamily: "Georgia",
+    marginBottom: theme.spacing.xs,
   },
-  statusText: { fontSize: 12, fontWeight: "600", color: "#8B5CF6" },
+  panelCopy: {
+    color: theme.colors.muted,
+    lineHeight: 20,
+    fontSize: 14,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  flex: {
+    flex: 1,
+  },
+  itemTitle: {
+    color: theme.colors.ink,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  itemMeta: {
+    color: theme.colors.muted,
+    fontSize: 13,
+    marginTop: 4,
+  },
+  description: {
+    marginTop: theme.spacing.sm,
+    color: theme.colors.muted,
+    lineHeight: 20,
+  },
 });

@@ -5,6 +5,9 @@
 import { expect, test } from "@playwright/test";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
+const CONTACTS_VIEW_URL = /\/app\/crm(?:\?[^#]*\bview=contacts\b[^#]*)?$/;
+const DEALS_VIEW_URL = /\/app\/crm(?:\?[^#]*\bview=deals\b[^#]*)?$/;
+const LEADS_VIEW_URL = /\/app\/crm(?:\?[^#]*\bview=leads\b[^#]*)?$/;
 
 test.describe("Form Submissions E2E", () => {
   test.beforeEach(async ({ page }) => {
@@ -26,7 +29,7 @@ test.describe("Form Submissions E2E", () => {
   });
 
   test("should create a new contact", async ({ page }) => {
-    await page.goto(`${BASE_URL}/app/contacts`);
+    await page.goto(`${BASE_URL}/app/crm?view=contacts`);
     await page.waitForTimeout(1000);
 
     // Look for Add Contact button with multiple strategies
@@ -67,11 +70,11 @@ test.describe("Form Submissions E2E", () => {
     }
 
     // Test passes if we reached the contacts page
-    await expect(page).toHaveURL(/\/contacts/, { timeout: 5000 });
+    await expect(page).toHaveURL(CONTACTS_VIEW_URL, { timeout: 5000 });
   });
 
   test("should create a new deal", async ({ page }) => {
-    await page.goto(`${BASE_URL}/app/deals`);
+    await page.goto(`${BASE_URL}/app/crm?view=deals`);
     await page.waitForTimeout(1000);
 
     // Check if redirected to login
@@ -113,11 +116,11 @@ test.describe("Form Submissions E2E", () => {
     }
 
     // Test passes if we're on deals page
-    await expect(page).toHaveURL(/\/app\/deals/, { timeout: 5000 });
+    await expect(page).toHaveURL(DEALS_VIEW_URL, { timeout: 5000 });
   });
 
   test("should create a new lead", async ({ page }) => {
-    await page.goto(`${BASE_URL}/app/leads`);
+    await page.goto(`${BASE_URL}/app/crm?view=leads`);
     await page.waitForTimeout(1000);
 
     // Open modal if needed
@@ -158,13 +161,13 @@ test.describe("Form Submissions E2E", () => {
     }
 
     // Verify we're still on leads page
-    await expect(page).toHaveURL(/\/app\/leads/, { timeout: 5000 });
+    await expect(page).toHaveURL(LEADS_VIEW_URL, { timeout: 5000 });
   });
 
   test("should show validation errors for invalid form data", async ({
     page,
   }) => {
-    await page.goto(`${BASE_URL}/app/contacts`);
+    await page.goto(`${BASE_URL}/app/crm?view=contacts`);
     await page.waitForTimeout(1000);
 
     const addButton = page

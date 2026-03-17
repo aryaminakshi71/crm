@@ -8,8 +8,8 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import { platformFetch } from "./platform-api-client";
 import { useAppStore } from "../stores/app-store";
+import { platformFetch } from "./platform-api-client";
 
 /**
  * Create the RPC link with fetch

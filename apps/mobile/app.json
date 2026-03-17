@@ -1,25 +1,43 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Nucleo One",
+    "slug": "nucleo-one-mobile",
+    "description": "Field-ready access for Nucleo One teams on Android and iPhone.",
+    "scheme": "nucleoone",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#7C3AED"
+      "backgroundColor": "#182033"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nucleo.one",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserTrackingUsageDescription": "Nucleo One uses analytics to improve onboarding and mobile workflows.",
+        "LSApplicationQueriesSchemes": ["https", "http"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#7C3AED"
+        "backgroundColor": "#182033"
       },
+      "package": "com.nucleo.one",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

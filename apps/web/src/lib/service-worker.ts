@@ -54,7 +54,9 @@ export function unregisterServiceWorker({
   Promise.resolve()
     .then(async () => {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.unregister()));
+      await Promise.all(
+        registrations.map((registration) => registration.unregister()),
+      );
       if (clearCaches && "caches" in window) {
         const cacheNames = await caches.keys();
         await Promise.all(

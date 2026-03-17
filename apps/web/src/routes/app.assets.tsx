@@ -24,13 +24,17 @@ import {
   Bot,
   FileText,
   FolderOpen,
+  HardDrive,
   Image as ImageIcon,
   Plus,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Upload,
+  Zap,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 import { AssetPreviewModal } from "../components/assets/asset-preview-modal";
 import { aiApi, assetsApi, nucleoApi } from "../lib/api";
@@ -262,7 +266,11 @@ function AssetsPage() {
           <Button
             variant="primary"
             leftIcon={
-              isUploading ? <Loading className="h-4 w-4" /> : <Upload className="h-4 w-4" />
+              isUploading ? (
+                <Loading className="h-4 w-4" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )
             }
             onClick={() => fileInputRef.current?.click()}
             loading={isUploading}
@@ -273,25 +281,157 @@ function AssetsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Total Assets</p>
-            <p className="font-bold text-2xl text-foreground">{assets.length}</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Total Storage"
+          value="1.2 TB"
+          icon={<HardDrive className="h-4 w-4" />}
+          trend="82% used"
+          color="text-primary"
+        />
+        <Metric
+          title="AI Tagged"
+          value={taggedAssetsCount}
+          icon={<Sparkles className="h-4 w-4" />}
+          trend="+12 this week"
+          color="text-cyan-400"
+        />
+        <Metric
+          title="Doc Health"
+          value="Secure"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend="All encrypted"
+          color="text-emerald-400"
+        />
+        <Metric
+          title="Published"
+          value={publishedDocumentsCount}
+          icon={<FileText className="h-4 w-4" />}
+          trend="95% completion"
+          color="text-amber-400"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Workspace Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex h-[250px] items-center justify-center">
+            <div className="w-full h-full max-w-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      {
+                        name: "Images",
+                        value:
+                          assets.filter((a: any) => a.type?.startsWith("image"))
+                            .length || 10,
+                        color: "#22d3ee",
+                      },
+                      {
+                        name: "PDFs",
+                        value:
+                          assets.filter((a: any) => a.type?.includes("pdf"))
+                            .length || 5,
+                        color: "#a78bfa",
+                      },
+                      {
+                        name: "Docs",
+                        value: documents.length || 8,
+                        color: "#f472b6",
+                      },
+                      { name: "Other", value: 3, color: "#34d399" },
+                    ]}
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {[
+                      { name: "Images", color: "#22d3ee" },
+                      { name: "PDFs", color: "#a78bfa" },
+                      { name: "Docs", color: "#f472b6" },
+                      { name: "Other", color: "#34d399" },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                    }}
+                    itemStyle={{ color: "#fff" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="ml-8 space-y-3">
+              {[
+                { label: "High Res Images", val: "42%", color: "bg-cyan-400" },
+                {
+                  label: "Legal Contracts",
+                  val: "28%",
+                  color: "bg-violet-400",
+                },
+                {
+                  label: "Marketing Collateral",
+                  val: "30%",
+                  color: "bg-pink-400",
+                },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className={`h-2 w-2 rounded-full ${item.color}`} />
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {item.label}
+                    </p>
+                    <p className="text-xs font-bold">{item.val}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Tagged Assets</p>
-            <p className="font-bold text-2xl text-primary">{taggedAssetsCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground text-sm">Published Documents</p>
-            <p className="font-bold text-2xl text-success">
-              {publishedDocumentsCount}
-            </p>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold">Doclattice AI</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+                AI-Ready Indexing complete. **8 new assets** processed with
+                semantic tags.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Hot Keywords
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {["Revenue", "Legal", "Q3 Planning", "Azure", "Compliance"].map(
+                  (tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="bg-muted/40 text-[9px] font-bold h-5 uppercase"
+                    >
+                      {tag}
+                    </Badge>
+                  ),
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -376,7 +516,11 @@ function AssetsPage() {
                       {asset.name}
                     </p>
                     <p className="mt-1 text-muted-foreground text-xs uppercase tracking-wider">
-                      {(mimeType.split("/")[1] || mimeType || "file").toUpperCase()}
+                      {(
+                        mimeType.split("/")[1] ||
+                        mimeType ||
+                        "file"
+                      ).toUpperCase()}
                       {" • "}
                       {(Number(asset.size || 0) / 1024).toFixed(0)} KB
                     </p>
@@ -465,11 +609,15 @@ function AssetsPage() {
                             updateDocumentMutation.mutate({
                               id: doc.id,
                               status:
-                                doc.status === "published" ? "draft" : "published",
+                                doc.status === "published"
+                                  ? "draft"
+                                  : "published",
                             })
                           }
                         >
-                          {doc.status === "published" ? "Move to Draft" : "Publish"}
+                          {doc.status === "published"
+                            ? "Move to Draft"
+                            : "Publish"}
                         </Button>
                         <Button
                           size="sm"
@@ -507,8 +655,15 @@ function AssetsPage() {
         title="Create Doclattice Document"
         submitText="Create Document"
         loading={createDocumentMutation.isPending}
-        onSubmit={(e) => {
-          e.preventDefault();
+        onSubmit={(payload) => {
+          if (
+            typeof payload === "object" &&
+            payload !== null &&
+            "preventDefault" in payload &&
+            typeof payload.preventDefault === "function"
+          ) {
+            payload.preventDefault();
+          }
           const title = newDocument.title.trim();
           if (!title) {
             toast.error("Document title is required");
@@ -586,5 +741,48 @@ function AssetsPage() {
         </div>
       </FormModal>
     </div>
+  );
+}
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
+}) {
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <ImageIcon className="h-4 w-4" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

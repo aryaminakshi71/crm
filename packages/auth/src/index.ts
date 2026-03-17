@@ -10,12 +10,12 @@
 
 import type { KVNamespace } from "@cloudflare/workers-types";
 import type { Database } from "@crm/storage";
+import * as authSchema from "@crm/storage/schema";
+import bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey, openAPI, organization } from "better-auth/plugins";
-import bcrypt from "bcryptjs";
 import { createKVStorage } from "./kv-storage";
-import * as authSchema from "@crm/storage/schema";
 
 export interface AuthConfig {
   /** Database instance from @crm/storage */

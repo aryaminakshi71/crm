@@ -6,6 +6,10 @@ import { expect, test } from "@playwright/test";
  */
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
+const BASE_ORIGIN = new URL(BASE_URL).origin;
+const CONTACTS_VIEW_URL = "/app/crm?view=contacts";
+const LEADS_VIEW_URL = "/app/crm?view=leads";
+const DEALS_VIEW_URL = "/app/crm?view=deals";
 
 test.describe("CRM E2E Tests", () => {
   test.beforeEach(async ({ page }) => {
@@ -101,7 +105,7 @@ test.describe("CRM E2E Tests", () => {
         const isValidState =
           url.includes("/app") ||
           url.includes("/login") ||
-          url.includes("localhost");
+          url.startsWith(BASE_ORIGIN);
         expect(isValidState).toBe(true);
       } else {
         expect(page.url()).toContain("/login");
@@ -342,55 +346,30 @@ test.describe("CRM E2E Tests", () => {
       }
 
       const links = [
-        { href: "/app/contacts", text: /Contacts/i },
-        { href: "/app/leads", text: /Leads/i },
-        { href: "/app/deals", text: /Deals/i },
+        { href: CONTACTS_VIEW_URL, text: /Contacts/i },
+        { href: LEADS_VIEW_URL, text: /Leads/i },
+        { href: DEALS_VIEW_URL, text: /Deals/i },
       ];
 
       let successCount = 0;
       for (const link of links) {
-        try {
-          await page.goto(`${BASE_URL}/app`, {
-            waitUntil: "domcontentloaded",
-            timeout: 5000,
-          });
-          await page.waitForTimeout(500);
+        let linkElement = page.getByRole("link", { name: link.text });
 
-          let linkElement = page.getByRole("link", { name: link.text });
+        if ((await linkElement.count()) === 0) {
+          linkElement = page.locator(`a[href="${link.href}"]`);
+        }
 
-          if ((await linkElement.count()) === 0) {
-            linkElement = page.locator(`a[href="${link.href}"]`);
-          }
+        if ((await linkElement.count()) === 0) {
+          continue;
+        }
 
-          if ((await linkElement.count()) > 0) {
-            await linkElement.first().click();
-            try {
-              await page.waitForURL(`**${link.href}**`, { timeout: 4000 });
-              const url = page.url();
-              if (url.includes(link.href) && !url.includes("/login")) {
-                successCount++;
-              }
-              await page.waitForTimeout(500);
-            } catch (error) {
-              await page.waitForTimeout(1000);
-              const url = page.url();
-              if (url.includes(link.href) && !url.includes("/login")) {
-                successCount++;
-              }
-            }
-          }
-        } catch (error) {
-          // Continue to next link
+        const href = await linkElement.first().getAttribute("href");
+        if (href === link.href) {
+          successCount++;
         }
       }
 
-      const finalUrl = page.url();
-      const isValidPage =
-        successCount > 0 ||
-        finalUrl.includes("/login") ||
-        finalUrl.includes("/app") ||
-        finalUrl.includes("localhost");
-      expect(isValidPage).toBe(true);
+      expect(successCount).toBe(links.length);
     });
   });
 
@@ -447,7 +426,7 @@ test.describe("CRM E2E Tests", () => {
     });
 
     test("contacts page should load", async ({ page }) => {
-      await page.goto(`${BASE_URL}/app/contacts`, {
+      await page.goto(`${BASE_URL}${CONTACTS_VIEW_URL}`, {
         waitUntil: "domcontentloaded",
         timeout: 15000,
       });
@@ -455,32 +434,32 @@ test.describe("CRM E2E Tests", () => {
 
       const url = page.url();
       const isValidState =
-        url.includes("/app/contacts") ||
+        url.includes(CONTACTS_VIEW_URL) ||
         url.includes("/login") ||
-        url.includes("localhost");
+        url.startsWith(BASE_ORIGIN);
       expect(isValidState).toBe(true);
     });
 
     test("leads page should load", async ({ page }) => {
-      await page.goto(`${BASE_URL}/app/leads`, {
+      await page.goto(`${BASE_URL}${LEADS_VIEW_URL}`, {
         waitUntil: "domcontentloaded",
         timeout: 15000,
       });
       await page.waitForTimeout(2000);
 
       const url = page.url();
-      expect(url.includes("/app/leads") || url.includes("/login")).toBe(true);
+      expect(url.includes(LEADS_VIEW_URL) || url.includes("/login")).toBe(true);
     });
 
     test("deals page should load", async ({ page }) => {
-      await page.goto(`${BASE_URL}/app/deals`, {
+      await page.goto(`${BASE_URL}${DEALS_VIEW_URL}`, {
         waitUntil: "domcontentloaded",
         timeout: 15000,
       });
       await page.waitForTimeout(2000);
 
       const url = page.url();
-      expect(url.includes("/app/deals") || url.includes("/login")).toBe(true);
+      expect(url.includes(DEALS_VIEW_URL) || url.includes("/login")).toBe(true);
     });
 
     test("apps page should load", async ({ page }) => {
@@ -512,7 +491,7 @@ test.describe("CRM E2E Tests", () => {
         expect(
           finalUrl.includes("/app") ||
             finalUrl.includes("/demo") ||
-            finalUrl.includes("localhost"),
+            finalUrl.startsWith(BASE_ORIGIN),
         ).toBe(true);
       } else {
         await page.goto(`${BASE_URL}/app`, {
@@ -538,7 +517,7 @@ test.describe("CRM E2E Tests", () => {
       expect(
         url.includes("/app/activities") ||
           url.includes("/login") ||
-          url.includes("localhost"),
+          url.startsWith(BASE_ORIGIN),
       ).toBe(true);
     });
 
@@ -557,7 +536,7 @@ test.describe("CRM E2E Tests", () => {
       expect(
         url.includes("/app/settings") ||
           url.includes("/login") ||
-          url.includes("localhost"),
+          url.startsWith(BASE_ORIGIN),
       ).toBe(true);
     });
   });

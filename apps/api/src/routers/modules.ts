@@ -1,13 +1,15 @@
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import {
   MODULE_CATALOG,
   MODULE_KEYS,
   type NucleoModuleKey,
 } from "../lib/nucleo-modules";
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
 import { adminOnly, getDb, orgAuthed, schema } from "../procedures";
 
-const moduleKeyEnum = z.enum(MODULE_KEYS as [NucleoModuleKey, ...NucleoModuleKey[]]);
+const moduleKeyEnum = z.enum(
+  MODULE_KEYS as [NucleoModuleKey, ...NucleoModuleKey[]],
+);
 
 export const modulesRouter = {
   list: orgAuthed

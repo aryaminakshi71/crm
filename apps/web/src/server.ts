@@ -28,9 +28,12 @@ export default withSentry(
   (env: Env = {}) => {
     const safeEnv = env || process.env || {};
     return {
-      dsn: (safeEnv as any).SENTRY_DSN || (safeEnv as any).VITE_PUBLIC_SENTRY_DSN,
+      dsn:
+        (safeEnv as any).SENTRY_DSN || (safeEnv as any).VITE_PUBLIC_SENTRY_DSN,
       environment:
-        (safeEnv as any).SENTRY_ENVIRONMENT || (safeEnv as any).NODE_ENV || "development",
+        (safeEnv as any).SENTRY_ENVIRONMENT ||
+        (safeEnv as any).NODE_ENV ||
+        "development",
       release: (safeEnv as any).SENTRY_RELEASE,
       tracesSampleRate: (safeEnv as any).NODE_ENV === "production" ? 0.1 : 1.0,
       integrations: [honoIntegration()],

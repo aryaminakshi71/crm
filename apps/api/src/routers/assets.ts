@@ -1,33 +1,8 @@
-import { z } from "zod";
-import type { OrgContext } from "../context";
-import { orgAuthed } from "../procedures";
 import { createR2ClientFromEnv } from "@crm/storage/r2";
+import { and, desc, eq, ilike, inArray } from "drizzle-orm";
+import { z } from "zod";
+import { getDb, orgAuthed, schema } from "../procedures";
 
-// In-memory asset storage for demo (replace with database in production)
-let mockAssets: any[] = [
-  {
-    id: "asset-1",
-    name: "contract-draft.pdf",
-    url: "https://example.com/assets/contract.pdf",
-    type: "application/pdf",
-    size: 1024 * 500,
-    tags: ["contract", "legal"],
-    createdAt: new Date().toISOString(),
-    organizationId: "demo-org",
-  },
-  {
-    id: "asset-2",
-    name: "office-photo.jpg",
-    url: "https://images.unsplash.com/photo-1497366216548-37526070297c",
-    type: "image/jpeg",
-    size: 1024 * 1024 * 2,
-    tags: ["office", "interior"],
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    organizationId: "demo-org",
-  },
-];
-
-// Get R2 client (will be null if env vars not set)
 function getR2() {
   try {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -45,10 +20,92 @@ function getR2() {
   }
 }
 
+function sanitizeFilename(value: string) {
+  return value.replace(/[^a-zA-Z0-9.-]/g, "_");
+}
+
+function buildStorageKey(orgId: string, filename: string) {
+  return `${orgId}/${Date.now()}-${sanitizeFilename(filename)}`;
+}
+
+function buildFileUrl(key: string) {
+  const cdnUrl = process.env.VITE_PUBLIC_CDN_URL || process.env.CDN_URL;
+  if (cdnUrl) {
+    return `${cdnUrl}/${key}`;
+  }
+
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const bucketName = process.env.R2_BUCKET_NAME;
+  if (accountId && bucketName) {
+    return `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${key}`;
+  }
+
+  return null;
+}
+
+function generateAssetTags(
+  name: string,
+  mimeType: string,
+  existing: string[] = [],
+) {
+  const normalized = new Set(
+    existing.map((tag) => tag.trim().toLowerCase()).filter(Boolean),
+  );
+
+  const extension = name.split(".").pop()?.toLowerCase();
+  const [category, subtypeRaw = ""] = mimeType.toLowerCase().split("/");
+  const subtype = subtypeRaw.split(";")[0];
+
+  if (category) normalized.add(category);
+  if (subtype) normalized.add(subtype);
+  if (extension && extension !== subtype) normalized.add(extension);
+
+  const keywordBase = name
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/, "")
+    .split(/[^a-z0-9]+/)
+    .filter((part) => part.length > 2);
+
+  for (const token of keywordBase) {
+    normalized.add(token);
+    if (normalized.size >= 10) break;
+  }
+
+  if (category === "image") normalized.add("visual");
+  if (mimeType.includes("pdf")) normalized.add("document");
+  if (mimeType.includes("spreadsheet") || extension === "csv") {
+    normalized.add("data");
+  }
+
+  return Array.from(normalized).slice(0, 10);
+}
+
+function mapAsset(
+  row: typeof schema.digitalAssets.$inferSelect,
+  tags: string[] = [],
+  urlOverride: string | null = null,
+) {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.mimeType,
+    mimeType: row.mimeType,
+    size: row.size,
+    storageKey: row.storageKey,
+    url: urlOverride ?? buildFileUrl(row.storageKey),
+    tags,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function resolveCreatedBy(orgId: string, userId: string | undefined) {
+  if (!userId) return null;
+  if (orgId === "demo-org" || userId.startsWith("demo-")) return null;
+  return userId;
+}
+
 export const assetsRouter = {
-  /**
-   * List assets
-   */
   list: orgAuthed
     .route({
       method: "GET",
@@ -58,8 +115,9 @@ export const assetsRouter = {
     })
     .input(
       z.object({
-        limit: z.number().optional().default(50),
-        cursor: z.number().optional().default(0),
+        limit: z.number().min(1).max(200).optional().default(50),
+        cursor: z.number().min(0).optional().default(0),
+        search: z.string().optional(),
       }),
     )
     .output(
@@ -68,19 +126,60 @@ export const assetsRouter = {
         nextCursor: z.number().nullable(),
       }),
     )
-    .handler(async ({ context }: { context: OrgContext }) => {
-      const orgAssets = mockAssets.filter(
-        (a) => a.organizationId === context.organization.id,
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const where = input.search
+        ? and(
+            eq(schema.digitalAssets.organizationId, context.organization.id),
+            ilike(schema.digitalAssets.name, `%${input.search}%`),
+          )
+        : eq(schema.digitalAssets.organizationId, context.organization.id);
+
+      const rows = await db
+        .select()
+        .from(schema.digitalAssets)
+        .where(where)
+        .orderBy(desc(schema.digitalAssets.createdAt))
+        .limit(input.limit + 1)
+        .offset(input.cursor);
+
+      const hasMore = rows.length > input.limit;
+      const pageRows: Array<typeof schema.digitalAssets.$inferSelect> = hasMore
+        ? rows.slice(0, input.limit)
+        : rows;
+      const assetIds = pageRows.map(
+        (asset: typeof schema.digitalAssets.$inferSelect) => asset.id,
       );
+
+      const tagsByAsset = new Map<string, string[]>();
+      if (assetIds.length > 0) {
+        const tagRows = await db
+          .select({
+            assetId: schema.digitalAssetTags.assetId,
+            name: schema.assetTags.name,
+          })
+          .from(schema.digitalAssetTags)
+          .innerJoin(
+            schema.assetTags,
+            eq(schema.assetTags.id, schema.digitalAssetTags.tagId),
+          )
+          .where(inArray(schema.digitalAssetTags.assetId, assetIds));
+
+        for (const tag of tagRows) {
+          const current = tagsByAsset.get(tag.assetId) || [];
+          current.push(tag.name);
+          tagsByAsset.set(tag.assetId, current);
+        }
+      }
+
       return {
-        items: orgAssets,
-        nextCursor: null,
+        items: pageRows.map((asset: typeof schema.digitalAssets.$inferSelect) =>
+          mapAsset(asset, tagsByAsset.get(asset.id) || []),
+        ),
+        nextCursor: hasMore ? input.cursor + input.limit : null,
       };
     }),
 
-  /**
-   * Create asset metadata
-   */
   create: orgAuthed
     .route({
       method: "POST",
@@ -90,36 +189,33 @@ export const assetsRouter = {
     })
     .input(
       z.object({
-        name: z.string(),
-        type: z.string(),
-        size: z.number(),
+        name: z.string().min(1),
+        type: z.string().min(1),
+        size: z.number().nonnegative(),
+        storageKey: z.string().optional(),
       }),
     )
     .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { name: string; type: string; size: number };
-      }) => {
-        const newAsset = {
-          id: `asset-${Date.now()}`,
-          ...input,
-          url: "https://via.placeholder.com/300", // Mock URL
-          tags: [],
-          createdAt: new Date().toISOString(),
-          organizationId: context.organization.id,
-        };
-        mockAssets.unshift(newAsset);
-        return newAsset;
-      },
-    ),
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+      const key = input.storageKey || buildStorageKey(orgId, input.name);
 
-  /**
-   * Generate AI tags for an asset
-   */
+      const [asset] = await db
+        .insert(schema.digitalAssets)
+        .values({
+          organizationId: orgId,
+          name: input.name,
+          mimeType: input.type,
+          size: input.size,
+          storageKey: key,
+          createdBy: resolveCreatedBy(orgId, context.user.id),
+        })
+        .returning();
+
+      return mapAsset(asset, []);
+    }),
+
   generateTags: orgAuthed
     .route({
       method: "POST",
@@ -127,40 +223,105 @@ export const assetsRouter = {
       summary: "Generate AI tags",
       tags: ["Assets"],
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ tags: z.array(z.string()) }))
-    .handler(
-      async ({
-        context,
-        input,
-      }: { context: OrgContext; input: { id: string } }) => {
-        const asset = mockAssets.find(
-          (a) =>
-            a.id === input.id && a.organizationId === context.organization.id,
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      const [asset] = await db
+        .select()
+        .from(schema.digitalAssets)
+        .where(
+          and(
+            eq(schema.digitalAssets.id, input.id),
+            eq(schema.digitalAssets.organizationId, orgId),
+          ),
+        )
+        .limit(1);
+
+      if (!asset) {
+        throw new Error("Asset not found");
+      }
+
+      const existingTagRows = (await db
+        .select({
+          tagId: schema.assetTags.id,
+          name: schema.assetTags.name,
+        })
+        .from(schema.digitalAssetTags)
+        .innerJoin(
+          schema.assetTags,
+          eq(schema.assetTags.id, schema.digitalAssetTags.tagId),
+        )
+        .where(eq(schema.digitalAssetTags.assetId, asset.id))) as Array<{
+        tagId: string;
+        name: string;
+      }>;
+
+      const existingTagNames = existingTagRows.map(
+        (row: { name: string }) => row.name,
+      );
+      const nextTags = generateAssetTags(
+        asset.name,
+        asset.mimeType,
+        existingTagNames,
+      );
+
+      const existingTagRecords: Array<typeof schema.assetTags.$inferSelect> =
+        nextTags.length > 0
+          ? await db
+              .select()
+              .from(schema.assetTags)
+              .where(
+                and(
+                  eq(schema.assetTags.organizationId, orgId),
+                  inArray(schema.assetTags.name, nextTags),
+                ),
+              )
+          : [];
+
+      const existingNameSet = new Set(
+        existingTagRecords.map(
+          (tag: typeof schema.assetTags.$inferSelect) => tag.name,
+        ),
+      );
+      const missingNames = nextTags.filter((tag) => !existingNameSet.has(tag));
+
+      const insertedTags: Array<typeof schema.assetTags.$inferSelect> =
+        missingNames.length > 0
+          ? await db
+              .insert(schema.assetTags)
+              .values(
+                missingNames.map((name) => ({
+                  organizationId: orgId,
+                  name,
+                })),
+              )
+              .returning()
+          : [];
+
+      const allTags = [...existingTagRecords, ...insertedTags];
+      const existingLinkTagIds = new Set(
+        existingTagRows.map((row: { tagId: string }) => row.tagId),
+      );
+      const missingLinkTagIds = allTags
+        .map((tag) => tag.id)
+        .filter((tagId) => !existingLinkTagIds.has(tagId));
+
+      if (missingLinkTagIds.length > 0) {
+        await db.insert(schema.digitalAssetTags).values(
+          missingLinkTagIds.map((tagId) => ({
+            assetId: asset.id,
+            tagId,
+            isAiGenerated: 1,
+          })),
         );
-        if (!asset) throw new Error("Asset not found");
+      }
 
-        // Mock AI processing delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      return { tags: nextTags };
+    }),
 
-        // Generate mock tags based on asset name/type
-        const newTags = [
-          "ai-generated",
-          asset.type.split("/")[1],
-          "analyzed",
-          Math.random() > 0.5 ? "priority" : "archive",
-        ];
-
-        // Update asset tags
-        asset.tags = [...new Set([...asset.tags, ...newTags])];
-
-        return { tags: asset.tags };
-      },
-    ),
-
-  /**
-   * Upload file directly (proxy through API to avoid CORS)
-   */
   upload: orgAuthed
     .route({
       method: "POST",
@@ -168,42 +329,36 @@ export const assetsRouter = {
       summary: "Upload file directly",
       tags: ["Assets"],
     })
-    .input(z.object({ name: z.string(), type: z.string(), content: z.string() }))
+    .input(
+      z.object({ name: z.string(), type: z.string(), content: z.string() }),
+    )
     .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { name: string; type: string; content: string };
-      }) => {
-        const orgId = context.organization.id;
-        const sanitizedFilename = input.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-        const key = `${orgId}/${Date.now()}-${sanitizedFilename}`;
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+      const key = buildStorageKey(orgId, input.name);
+      const fileData = Buffer.from(input.content, "base64");
+      const r2 = getR2();
+      if (!r2) {
+        throw new Error("R2 storage is not configured");
+      }
+      await r2.put(key, fileData, { contentType: input.type });
 
-        // Create asset without actual file upload (demo mode)
-        // In production, you'd upload to R2/S3 here
-        const isImage = input.type.startsWith("image/");
-        const newAsset = {
-          id: `asset-${Date.now()}`,
-          name: input.name,
-          type: input.type,
-          size: Math.floor(input.content.length * 0.75),
-          url: null, // No URL for demo - will show icon
-          key: key,
-          tags: [],
-          createdAt: new Date().toISOString(),
+      const [asset] = await db
+        .insert(schema.digitalAssets)
+        .values({
           organizationId: orgId,
-        };
-        mockAssets.unshift(newAsset);
-        return newAsset;
-      },
-    ),
+          name: input.name,
+          mimeType: input.type,
+          size: fileData.length,
+          storageKey: key,
+          createdBy: resolveCreatedBy(orgId, context.user.id),
+        })
+        .returning();
 
-  /**
-   * Get signed URL for upload (for advanced use cases)
-   */
+      return mapAsset(asset, []);
+    }),
+
   getSignedUrl: orgAuthed
     .route({
       method: "POST",
@@ -212,51 +367,28 @@ export const assetsRouter = {
       tags: ["Assets"],
     })
     .input(z.object({ filename: z.string(), contentType: z.string() }))
-    .output(z.object({ uploadUrl: z.string(), fileUrl: z.string(), key: z.string() }))
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { filename: string; contentType: string };
-      }) => {
-        const r2 = getR2();
-        const orgId = context.organization.id;
-        const key = `${orgId}/${Date.now()}-${input.filename}`;
+    .output(
+      z.object({ uploadUrl: z.string(), fileUrl: z.string(), key: z.string() }),
+    )
+    .handler(async ({ context, input }) => {
+      const r2 = getR2();
+      if (!r2) {
+        throw new Error("R2 storage is not configured");
+      }
+      const orgId = context.organization.id;
+      const key = buildStorageKey(orgId, input.filename);
 
-        // Generate unique key for the file
-        const sanitizedFilename = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
-        const uniqueKey = `${orgId}/${Date.now()}-${sanitizedFilename}`;
+      const uploadUrl = await r2.getSignedUploadUrl(key, {
+        contentType: input.contentType,
+        expiresIn: 3600,
+      });
+      return {
+        uploadUrl,
+        fileUrl: buildFileUrl(key) || uploadUrl.split("?")[0],
+        key,
+      };
+    }),
 
-        if (r2) {
-          // Use R2 for signed upload URL
-          const uploadUrl = await r2.getSignedUploadUrl(uniqueKey, {
-            contentType: input.contentType,
-            expiresIn: 3600,
-          });
-
-          // Get CDN URL or R2 public URL
-          const cdnUrl = process.env.VITE_PUBLIC_CDN_URL || process.env.CDN_URL;
-          const fileUrl = cdnUrl
-            ? `${cdnUrl}/${uniqueKey}`
-            : `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${uniqueKey}`;
-
-          return { uploadUrl, fileUrl, key: uniqueKey };
-        } else {
-          // Fallback for local dev without R2 - return mock URLs
-          return {
-            uploadUrl: `https://fake-s3-upload.com/${uniqueKey}`,
-            fileUrl: `https://fake-s3-upload.com/files/${uniqueKey}`,
-            key: uniqueKey,
-          };
-        }
-      },
-    ),
-
-  /**
-   * Confirm upload - save metadata after file is uploaded
-   */
   confirmUpload: orgAuthed
     .route({
       method: "POST",
@@ -273,32 +405,22 @@ export const assetsRouter = {
       }),
     )
     .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { name: string; type: string; size: number; key: string };
-      }) => {
-        const cdnUrl = process.env.VITE_PUBLIC_CDN_URL || process.env.CDN_URL;
-        const fileUrl = cdnUrl
-          ? `${cdnUrl}/${input.key}`
-          : `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${input.key}`;
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
 
-        const newAsset = {
-          id: `asset-${Date.now()}`,
+      const [asset] = await db
+        .insert(schema.digitalAssets)
+        .values({
+          organizationId: orgId,
           name: input.name,
-          type: input.type,
+          mimeType: input.type,
           size: input.size,
-          url: fileUrl,
-          key: input.key,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          organizationId: context.organization.id,
-        };
-        mockAssets.unshift(newAsset);
-        return newAsset;
-      },
-    ),
+          storageKey: input.key,
+          createdBy: resolveCreatedBy(orgId, context.user.id),
+        })
+        .returning();
+
+      return mapAsset(asset, []);
+    }),
 };

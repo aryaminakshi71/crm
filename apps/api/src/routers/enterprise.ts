@@ -25,28 +25,30 @@ export const enterpriseRouter = {
       const db = getDb(context);
       const orgId = context.organization.id;
 
-      const [roles, workflows, audits, providers, scimJobs] = await Promise.all([
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(schema.enterpriseRoles)
-          .where(eq(schema.enterpriseRoles.organizationId, orgId)),
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(schema.approvalWorkflows)
-          .where(eq(schema.approvalWorkflows.organizationId, orgId)),
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(schema.enterpriseAuditEvents)
-          .where(eq(schema.enterpriseAuditEvents.organizationId, orgId)),
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(schema.ssoProviders)
-          .where(eq(schema.ssoProviders.organizationId, orgId)),
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(schema.scimSyncJobs)
-          .where(eq(schema.scimSyncJobs.organizationId, orgId)),
-      ]);
+      const [roles, workflows, audits, providers, scimJobs] = await Promise.all(
+        [
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(schema.enterpriseRoles)
+            .where(eq(schema.enterpriseRoles.organizationId, orgId)),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(schema.approvalWorkflows)
+            .where(eq(schema.approvalWorkflows.organizationId, orgId)),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(schema.enterpriseAuditEvents)
+            .where(eq(schema.enterpriseAuditEvents.organizationId, orgId)),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(schema.ssoProviders)
+            .where(eq(schema.ssoProviders.organizationId, orgId)),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(schema.scimSyncJobs)
+            .where(eq(schema.scimSyncJobs.organizationId, orgId)),
+        ],
+      );
 
       return {
         roles: Number(roles[0]?.count || 0),
@@ -71,7 +73,9 @@ export const enterpriseRouter = {
       const items = await db
         .select()
         .from(schema.enterpriseRoles)
-        .where(eq(schema.enterpriseRoles.organizationId, context.organization.id))
+        .where(
+          eq(schema.enterpriseRoles.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.enterpriseRoles.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -134,8 +138,12 @@ export const enterpriseRouter = {
         .set({
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.scope !== undefined ? { scope: input.scope } : {}),
-          ...(input.riskLevel !== undefined ? { riskLevel: input.riskLevel } : {}),
-          ...(input.assignedUsers !== undefined ? { assignedUsers: input.assignedUsers } : {}),
+          ...(input.riskLevel !== undefined
+            ? { riskLevel: input.riskLevel }
+            : {}),
+          ...(input.assignedUsers !== undefined
+            ? { assignedUsers: input.assignedUsers }
+            : {}),
           updatedAt: new Date(),
         })
         .where(
@@ -183,7 +191,9 @@ export const enterpriseRouter = {
       const items = await db
         .select()
         .from(schema.approvalWorkflows)
-        .where(eq(schema.approvalWorkflows.organizationId, context.organization.id))
+        .where(
+          eq(schema.approvalWorkflows.organizationId, context.organization.id),
+        )
         .orderBy(desc(schema.approvalWorkflows.createdAt))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -248,8 +258,12 @@ export const enterpriseRouter = {
         .update(schema.approvalWorkflows)
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.ownerTeam !== undefined ? { ownerTeam: input.ownerTeam } : {}),
-          ...(input.stageCount !== undefined ? { stageCount: input.stageCount } : {}),
+          ...(input.ownerTeam !== undefined
+            ? { ownerTeam: input.ownerTeam }
+            : {}),
+          ...(input.stageCount !== undefined
+            ? { stageCount: input.stageCount }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
           updatedAt: new Date(),
@@ -257,7 +271,10 @@ export const enterpriseRouter = {
         .where(
           and(
             eq(schema.approvalWorkflows.id, input.id),
-            eq(schema.approvalWorkflows.organizationId, context.organization.id),
+            eq(
+              schema.approvalWorkflows.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -284,7 +301,10 @@ export const enterpriseRouter = {
         .where(
           and(
             eq(schema.approvalWorkflows.id, input.id),
-            eq(schema.approvalWorkflows.organizationId, context.organization.id),
+            eq(
+              schema.approvalWorkflows.organizationId,
+              context.organization.id,
+            ),
           ),
         )
         .returning();
@@ -307,7 +327,10 @@ export const enterpriseRouter = {
         .where(
           and(
             eq(schema.approvalWorkflows.id, input.id),
-            eq(schema.approvalWorkflows.organizationId, context.organization.id),
+            eq(
+              schema.approvalWorkflows.organizationId,
+              context.organization.id,
+            ),
           ),
         );
       return { success: true };
@@ -327,7 +350,12 @@ export const enterpriseRouter = {
       const items = await db
         .select()
         .from(schema.enterpriseAuditEvents)
-        .where(eq(schema.enterpriseAuditEvents.organizationId, context.organization.id))
+        .where(
+          eq(
+            schema.enterpriseAuditEvents.organizationId,
+            context.organization.id,
+          ),
+        )
         .orderBy(desc(schema.enterpriseAuditEvents.eventTime))
         .limit(input.limit)
         .offset(toOffset(input.page, input.limit));
@@ -408,8 +436,12 @@ export const enterpriseRouter = {
       const [provider] = await db
         .update(schema.ssoProviders)
         .set({
-          ...(input.providerName !== undefined ? { providerName: input.providerName } : {}),
-          ...(input.providerType !== undefined ? { providerType: input.providerType } : {}),
+          ...(input.providerName !== undefined
+            ? { providerName: input.providerName }
+            : {}),
+          ...(input.providerType !== undefined
+            ? { providerType: input.providerType }
+            : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.status === "connected" ? { lastSyncAt: new Date() } : {}),
           updatedAt: new Date(),
@@ -470,7 +502,10 @@ export const enterpriseRouter = {
           createdAt: schema.scimSyncJobs.createdAt,
         })
         .from(schema.scimSyncJobs)
-        .leftJoin(schema.ssoProviders, eq(schema.scimSyncJobs.providerId, schema.ssoProviders.id))
+        .leftJoin(
+          schema.ssoProviders,
+          eq(schema.scimSyncJobs.providerId, schema.ssoProviders.id),
+        )
         .where(eq(schema.scimSyncJobs.organizationId, context.organization.id))
         .orderBy(desc(schema.scimSyncJobs.createdAt))
         .limit(input.limit)

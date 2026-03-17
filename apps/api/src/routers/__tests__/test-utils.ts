@@ -118,7 +118,7 @@ export async function createTestContact(
     email?: string;
   } = {},
 ) {
-  const { contacts } = await import("@crm/storage/db/schema");
+  const { contacts } = await import("@crm/storage/schema");
 
   const [contact] = await db
     .insert(contacts)

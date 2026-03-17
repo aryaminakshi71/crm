@@ -18,7 +18,8 @@ export const MODULE_CATALOG: Array<{
   {
     key: "crm",
     name: "Core Workspace",
-    description: "Shared customer workspace: contacts, deals, leads, and activity.",
+    description:
+      "Shared customer workspace: contacts, deals, leads, and activity.",
     phase: "core",
     defaultEnabled: true,
   },

@@ -1,54 +1,189 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
+  Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-const activities = [
-  { id: "1", name: "Speech Therapy", duration: "45 min", children: 5 },
-  { id: "2", name: "OT Session", duration: "30 min", children: 3 },
-];
+import {
+  EmptyState,
+  Field,
+  HeaderBlock,
+  Panel,
+  Pill,
+  PrimaryButton,
+  Screen,
+  SectionLabel,
+  Sheet,
+} from "../../src/components/mobile-ui";
+import { useCrmClient } from "../../src/lib/api";
+import { useMobileConfig } from "../../src/lib/mobile-config";
+import { formatRelativeDate, theme } from "../../src/lib/theme";
+
 export default function ActivitiesScreen() {
+  const client = useCrmClient();
+  const { apiBaseUrl, demoMode, organizationId } = useMobileConfig();
+  const cacheScope = [apiBaseUrl, demoMode, organizationId];
+  const queryClient = useQueryClient();
+  const [showComposer, setShowComposer] = useState(false);
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState("call");
+  const [description, setDescription] = useState("");
+
+  const activitiesQuery = useQuery({
+    queryKey: ["mobile", "activities", ...cacheScope],
+    queryFn: client.activities.list,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: client.activities.create,
+    onSuccess: async () => {
+      setShowComposer(false);
+      setTitle("");
+      setType("call");
+      setDescription("");
+      await queryClient.invalidateQueries({
+        queryKey: ["mobile", "activities"],
+      });
+    },
+    onError: (error) => {
+      Alert.alert("Could not create activity", error.message);
+    },
+  });
+
+  const activities = activitiesQuery.data?.data ?? [];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Activities</Text>
-        <Text style={styles.subtitle}>{activities.length} activities</Text>
-      </View>
+    <Screen>
       <FlatList
         data={activities}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={activitiesQuery.isRefetching}
+            onRefresh={() => activitiesQuery.refetch()}
+            tintColor={theme.colors.accent}
+          />
+        }
+        ListHeaderComponent={
+          <View>
+            <HeaderBlock
+              eyebrow="Signal log"
+              title="Activity feed"
+              subtitle="Calls, emails, and notes stay visible for teams working from the field."
+              sidecar={
+                <PrimaryButton
+                  label="New activity"
+                  onPress={() => setShowComposer(true)}
+                />
+              }
+            />
+            <SectionLabel title="Recent motion" />
+          </View>
+        }
+        contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.activityCard}>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityName}>{item.name}</Text>
-              <Text style={styles.duration}>{item.duration}</Text>
+          <Panel accent={theme.colors.gold}>
+            <View style={styles.row}>
+              <View style={styles.flex}>
+                <Text style={styles.title}>
+                  {item.title || item.subject || "Untitled activity"}
+                </Text>
+                <Text style={styles.meta}>
+                  {formatRelativeDate(item.createdAt)} ·{" "}
+                  {(item.type || "note").toUpperCase()}
+                </Text>
+              </View>
+              <Pill label={item.type || "note"} tone="accent" />
             </View>
-            <Text style={styles.children}>{item.children} children</Text>
-          </TouchableOpacity>
+            {item.description ? (
+              <Text style={styles.description}>{item.description}</Text>
+            ) : null}
+          </Panel>
         )}
+        ListEmptyComponent={
+          activitiesQuery.isLoading ? (
+            <Panel accent={theme.colors.mint}>
+              <Text style={styles.meta}>Loading activity feed...</Text>
+            </Panel>
+          ) : (
+            <EmptyState
+              title="No activity yet"
+              copy="Log calls, send follow-up notes, or capture meeting outcomes from the phone."
+            />
+          )
+        }
+        showsVerticalScrollIndicator={false}
       />
-    </View>
+
+      <Sheet
+        visible={showComposer}
+        title="Capture field activity"
+        subtitle="Keep the mobile timeline alive with notes, calls, or meetings."
+        onClose={() => setShowComposer(false)}
+      >
+        <Field
+          label="Title"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Investor callback"
+        />
+        <Field
+          label="Type"
+          value={type}
+          onChangeText={setType}
+          placeholder="call, meeting, note"
+        />
+        <Field
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="What happened?"
+          multiline
+        />
+        <PrimaryButton
+          label={createMutation.isPending ? "Saving..." : "Save activity"}
+          onPress={() =>
+            createMutation.mutate({
+              title,
+              type,
+              description,
+            })
+          }
+        />
+      </Sheet>
+    </Screen>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  header: { padding: 20, paddingTop: 60, backgroundColor: "#8B5CF6" },
-  title: { fontSize: 28, fontWeight: "bold", color: "#fff" },
-  subtitle: { fontSize: 14, color: "#EDE9FE", marginTop: 4 },
-  activityCard: {
+  listContent: {
+    paddingBottom: 32,
+  },
+  row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 16,
-    borderRadius: 12,
+    gap: theme.spacing.md,
   },
-  activityInfo: { flex: 1 },
-  activityName: { fontSize: 16, fontWeight: "600", color: "#1F2937" },
-  duration: { fontSize: 14, color: "#6B7280", marginTop: 2 },
-  children: { fontSize: 14, color: "#8B5CF6", fontWeight: "600" },
+  flex: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: theme.colors.ink,
+  },
+  meta: {
+    marginTop: 4,
+    color: theme.colors.muted,
+    fontSize: 13,
+  },
+  description: {
+    marginTop: theme.spacing.sm,
+    color: theme.colors.muted,
+    lineHeight: 20,
+  },
 });

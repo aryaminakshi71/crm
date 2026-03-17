@@ -5,7 +5,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "dev": "wrangler dev src/index.ts",
-    "deploy": "wrangler deploy --minify src/index.ts"
+    "deploy": "wrangler deploy --minify src/index.ts",
+    "test:integration": "vitest run --config vitest.config.ts",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -36,6 +39,7 @@
     "@crm/tsconfig": "file:../../packages/tsconfig",
     "@cloudflare/workers-types": "^4.20250109.0",
     "@types/node": "^22.19.2",
+    "vitest": "^2.1.8",
     "typescript": "^5.9.3",
     "wrangler": "^4.63.0"
   }

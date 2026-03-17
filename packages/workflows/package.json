@@ -7,7 +7,10 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "vitest run src/integration --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@crm/tsconfig": "file:../tsconfig",

@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
@@ -56,10 +57,11 @@ function SecurityPage() {
           </p>
           <h2 className="font-bold text-2xl text-foreground">Contact</h2>
           <p className="text-foreground">
-            Email security@nucleo.one with details.
+            Email security@nucleoone.com with details.
           </p>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

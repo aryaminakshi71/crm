@@ -6,6 +6,40 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { FetchHttpHandler } from "@smithy/fetch-http-handler";
+
+// Polyfill DOMParser for Cloudflare Workers
+// @ts-ignore
+if (typeof globalThis.DOMParser === 'undefined') {
+  // Simple XML parser for AWS S3 error responses
+  function parseXML(str: string) {
+    const codeMatch = str.match(/<Code>(.*?)<\/Code>/);
+    const messageMatch = str.match(/<Message>(.*?)<\/Message>/);
+    return {
+      documentElement: {
+        getElementsByTagName: (tag: string) => {
+          if (tag === 'Error') {
+            return [{
+              getElementsByTagName: (subTag: string) => {
+                if (subTag === 'Code') return [{ textContent: codeMatch ? codeMatch[1] : 'Unknown' }];
+                if (subTag === 'Message') return [{ textContent: messageMatch ? messageMatch[1] : 'Unknown error' }];
+                return [];
+              }
+            }];
+          }
+          return [];
+        }
+      }
+    };
+  }
+
+  // @ts-ignore
+  globalThis.DOMParser = class DOMParser {
+    parseFromString(str: string, contentType: string) {
+      return parseXML(str);
+    }
+  } as any;
+}
 
 export interface R2Config {
   accountId: string;
@@ -16,6 +50,7 @@ export interface R2Config {
 
 /**
  * Create R2 client using S3-compatible API
+ * Uses custom endpoint and region for Cloudflare R2
  */
 export function createR2Client(config: R2Config) {
   const client = new S3Client({
@@ -25,6 +60,8 @@ export function createR2Client(config: R2Config) {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+    requestHandler: new FetchHttpHandler(),
+    forcePathStyle: true,
   });
 
   return {
@@ -50,8 +87,16 @@ export function createR2Client(config: R2Config) {
         Metadata: options?.metadata,
       });
 
-      await client.send(command);
-      return key;
+      try {
+        await client.send(command);
+        return key;
+      } catch (error: any) {
+        // Log the error but don't crash on XML parsing issues
+        console.error("R2 upload error:", error?.message || error);
+        throw new Error(
+          `R2 upload failed: ${error?.message || "Unknown error"}`,
+        );
+      }
     },
 
     /**
@@ -63,8 +108,13 @@ export function createR2Client(config: R2Config) {
         Key: key,
       });
 
-      const response = await client.send(command);
-      return response;
+      try {
+        const response = await client.send(command);
+        return response;
+      } catch (error: any) {
+        console.error("R2 get error:", error?.message || error);
+        throw new Error(`R2 get failed: ${error?.message || "Unknown error"}`);
+      }
     },
 
     /**
@@ -76,7 +126,14 @@ export function createR2Client(config: R2Config) {
         Key: key,
       });
 
-      await client.send(command);
+      try {
+        await client.send(command);
+      } catch (error: any) {
+        console.error("R2 delete error:", error?.message || error);
+        throw new Error(
+          `R2 delete failed: ${error?.message || "Unknown error"}`,
+        );
+      }
     },
 
     /**
@@ -96,8 +153,13 @@ export function createR2Client(config: R2Config) {
         MaxKeys: maxKeys,
       });
 
-      const response = await client.send(command);
-      return response.Contents ?? [];
+      try {
+        const response = await client.send(command);
+        return response.Contents ?? [];
+      } catch (error: any) {
+        console.error("R2 list error:", error?.message || error);
+        throw new Error(`R2 list failed: ${error?.message || "Unknown error"}`);
+      }
     },
 
     /**

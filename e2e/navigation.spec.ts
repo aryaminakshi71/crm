@@ -5,6 +5,18 @@
 import { expect, test } from "@playwright/test";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
+const APP_ROUTES = [
+  "/",
+  "/login",
+  "/demo",
+  "/industries",
+  "/app",
+  "/app/crm?view=contacts",
+  "/app/crm?view=deals",
+  "/app/crm?view=leads",
+  "/app/activities",
+  "/app/settings",
+];
 
 test.describe("Navigation E2E Tests", () => {
   test.beforeEach(async ({ page }) => {
@@ -12,19 +24,12 @@ test.describe("Navigation E2E Tests", () => {
   });
 
   test("should navigate to all main pages", async ({ page }) => {
-    const routes = [
-      { name: "Dashboard", path: "/dashboard" },
-      { name: "Contacts", path: "/contacts" },
-      { name: "Deals", path: "/deals" },
-      { name: "Leads", path: "/leads" },
-      { name: "Activities", path: "/activities" },
-      { name: "Analytics", path: "/dashboard/analytics" },
-      { name: "Settings", path: "/settings" },
-    ];
-
-    for (const route of routes) {
-      await page.goto(`${BASE_URL}${route.path}`);
-      await expect(page).toHaveURL(new RegExp(route.path), { timeout: 5000 });
+    for (const route of APP_ROUTES) {
+      await page.goto(`${BASE_URL}${route}`);
+      await expect(page).toHaveURL(
+        new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+        { timeout: 5000 },
+      );
     }
   });
 
@@ -46,13 +51,13 @@ test.describe("Navigation E2E Tests", () => {
     });
 
     // Navigate to dashboard
-    await page.goto(`${BASE_URL}/dashboard`);
+    await page.goto(`${BASE_URL}/app`);
     await page.waitForTimeout(2000);
 
     // Check if redirected to login
     if (page.url().includes("/login")) {
       // Test passes if page exists
-      expect(page.url()).toContain("localhost:3004");
+      expect(page.url()).toContain("/login");
       return;
     }
 
@@ -68,14 +73,16 @@ test.describe("Navigation E2E Tests", () => {
 
       // Try to find and click sublink
       const pipelineLink = page
-        .locator('a:has-text("Pipeline View")')
-        .or(page.locator('a[href*="/deals/pipeline"]'))
+        .locator('a:has-text("Deals")')
+        .or(page.locator('a[href*="/app/crm"][href*="view=deals"]'))
         .first();
 
       if ((await pipelineLink.count()) > 0) {
         await pipelineLink.click();
         await page.waitForTimeout(1000);
-        await expect(page).toHaveURL(/\/deals/, { timeout: 5000 });
+        await expect(page).toHaveURL(/\/app\/crm\?view=deals/, {
+          timeout: 5000,
+        });
       }
     }
   });
