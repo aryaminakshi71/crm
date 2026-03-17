@@ -46,7 +46,7 @@ export const contactsRouter = {
     )
     .output(
       z.object({
-        data: z.array(z.instanceof(Contact)),
+        data: z.array(contactSchema),
         total: z.number(),
         page: z.number(),
         limit: z.number(),
