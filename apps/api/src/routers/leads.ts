@@ -4,9 +4,11 @@
  * Lead management operations.
  */
 
+import { getOrCache, invalidateCache } from "@crm/storage/redis";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
+import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { leads, contacts } = schema;
@@ -69,52 +71,72 @@ export const leadsRouter = {
           search?: string;
         };
       }) => {
-        const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
         const search = input.search?.trim();
 
-        // Build where conditions
-        const conditions = [eq(leads.organizationId, context.organization.id)];
-        if (input.status) {
-          conditions.push(eq(leads.status, input.status));
-        }
-        if (search) {
-          conditions.push(
-            or(
-              ilike(leads.email, `%${search}%`),
-              ilike(leads.firstName, `%${search}%`),
-              ilike(leads.lastName, `%${search}%`),
-              ilike(leads.companyName, `%${search}%`),
-              ilike(leads.notes, `%${search}%`),
-            )!,
-          );
-        }
-        const whereConditions =
-          conditions.length > 1 ? and(...conditions) : conditions[0];
+        // Cache key for list queries
+        const cacheKey = `leads:list:${context.organization.id}:${input.page}:${input.limit}:${input.status || "all"}:${search || "all"}`;
 
-        // Get total count using SQL COUNT()
-        const countResult = await db
-          .select({ count: count() })
-          .from(leads)
-          .where(whereConditions);
-        const total = countResult[0]?.count ?? 0;
+        // Use cache for list queries (5 min TTL)
+        return getOrCache<{
+          data: any[];
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        }>(
+          cacheKey,
+          async () => {
+            const db = getDb(context);
 
-        // Get paginated results
-        const paginatedLeads = await db
-          .select()
-          .from(leads)
-          .where(whereConditions)
-          .orderBy(desc(leads.createdAt))
-          .limit(input.limit)
-          .offset(offset);
+            // Build where conditions
+            const conditions = [eq(leads.organizationId, context.organization.id)];
+            if (input.status) {
+              conditions.push(eq(leads.status, input.status));
+            }
+            if (search) {
+              conditions.push(
+                or(
+                  ilike(leads.email, `%${search}%`),
+                  ilike(leads.firstName, `%${search}%`),
+                  ilike(leads.lastName, `%${search}%`),
+                  ilike(leads.companyName, `%${search}%`),
+                  ilike(leads.notes, `%${search}%`),
+                )!,
+              );
+            }
+            const whereConditions =
+              conditions.length > 1 ? and(...conditions) : conditions[0];
 
-        return {
-          data: paginatedLeads,
-          total,
-          page: input.page,
-          limit: input.limit,
-          totalPages: Math.ceil(total / input.limit),
-        };
+            // Get total count using SQL COUNT()
+            const countResult = await trackQuery("listLeadsCount", () =>
+              db.select({ count: count() }).from(leads).where(whereConditions),
+            );
+            const total = countResult[0]?.count ?? 0;
+
+            // Get paginated results
+            const paginatedLeads = await trackQuery(
+              "listLeadsPaginated",
+              () =>
+                db
+                  .select()
+                  .from(leads)
+                  .where(whereConditions)
+                  .orderBy(desc(leads.createdAt))
+                  .limit(input.limit)
+                  .offset(offset),
+            );
+
+            return {
+              data: paginatedLeads,
+              total,
+              page: input.page,
+              limit: input.limit,
+              totalPages: Math.ceil(total / input.limit),
+            };
+          },
+          300, // 5 minutes TTL
+        );
       },
     ),
 
@@ -217,6 +239,9 @@ export const leadsRouter = {
             createdBy: context.user.id,
           })
           .returning();
+
+        // Invalidate list cache
+        await invalidateCache(`leads:list:${context.organization.id}`);
 
         return lead;
       },
