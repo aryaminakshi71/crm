@@ -8,6 +8,7 @@ import { getOrCache, invalidateCache } from "@crm/storage/redis";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
+import { APIError } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
@@ -157,7 +158,7 @@ export const contactsRouter = {
                 .limit(1);
 
               if (!result) {
-                throw new Error("Contact not found");
+                throw new APIError("Contact not found", 404);
               }
 
               return result;
@@ -236,7 +237,7 @@ export const contactsRouter = {
         )) as any[];
 
         if (!contact) {
-          throw new Error("Contact not found");
+          throw new APIError("Contact not found", 404);
         }
 
         await invalidateCache(`contact:${input.id}`);

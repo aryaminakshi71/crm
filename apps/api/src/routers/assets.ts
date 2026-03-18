@@ -1,6 +1,7 @@
 import { createR2ClientFromEnv } from "@crm/storage/r2";
 import { and, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { APIError } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 function getR2() {
@@ -241,7 +242,7 @@ export const assetsRouter = {
         .limit(1);
 
       if (!asset) {
-        throw new Error("Asset not found");
+        throw new APIError("Asset not found", 404);
       }
 
       const existingTagRows = (await db
@@ -340,7 +341,7 @@ export const assetsRouter = {
       const fileData = Buffer.from(input.content, "base64");
       const r2 = getR2();
       if (!r2) {
-        throw new Error("R2 storage is not configured");
+        throw new APIError("R2 storage is not configured", 500);
       }
       await r2.put(key, fileData, { contentType: input.type });
 
@@ -373,7 +374,7 @@ export const assetsRouter = {
     .handler(async ({ context, input }) => {
       const r2 = getR2();
       if (!r2) {
-        throw new Error("R2 storage is not configured");
+        throw new APIError("R2 storage is not configured", 500);
       }
       const orgId = context.organization.id;
       const key = buildStorageKey(orgId, input.filename);
