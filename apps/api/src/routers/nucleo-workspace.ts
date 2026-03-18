@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
+import { APIError } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const pageInput = z.object({
@@ -1171,7 +1172,7 @@ export const nucleoWorkspaceRouter = {
         .limit(1);
 
       if (!doc) {
-        throw new Error("Document not found");
+        throw new APIError("Document not found", 404);
       }
 
       const nextVersion = (doc.currentVersion || 1) + 1;
