@@ -35,10 +35,12 @@ export const customers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_customers_org").on(table.organizationId),
     nameIdx: index("idx_customers_name").on(table.name),
+    deletedAtIdx: index("idx_customers_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -88,6 +90,7 @@ export const projects = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_projects_org").on(table.organizationId),
@@ -98,6 +101,7 @@ export const projects = pgTable(
       table.status,
       table.createdAt,
     ),
+    deletedAtIdx: index("idx_projects_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -125,11 +129,14 @@ export const projectTasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_project_tasks_org").on(table.organizationId),
     projectIdx: index("idx_project_tasks_project").on(table.projectId),
     statusIdx: index("idx_project_tasks_status").on(table.status),
+    assigneeIdx: index("idx_project_tasks_assignee").on(table.assigneeId),
+    deletedAtIdx: index("idx_project_tasks_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -222,17 +229,20 @@ export const tickets = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_tickets_org").on(table.organizationId),
     statusIdx: index("idx_tickets_status").on(table.status),
     queueIdx: index("idx_tickets_queue").on(table.queue),
+    assignedToIdx: index("idx_tickets_assigned_to").on(table.assignedToId),
     orgStatusQueueCreatedIdx: index("idx_tickets_org_status_queue_created").on(
       table.organizationId,
       table.status,
       table.queue,
       table.createdAt,
     ),
+    deletedAtIdx: index("idx_tickets_deleted_at").on(table.deletedAt),
   }),
 );
 

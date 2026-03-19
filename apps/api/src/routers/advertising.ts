@@ -171,7 +171,7 @@ export const advertisingRouter = {
       const adNetworks = ["google_ads", "microsoft_ads", "facebook_ads"];
 
       return adNetworks.map((network) => {
-        const account = accounts.find((a) => a.integrationType === network);
+        const account = accounts.find((a: typeof accounts[number]) => a.integrationType === network);
         return {
           adNetwork: network,
           connected: !!account,
@@ -424,18 +424,18 @@ export const advertisingRouter = {
       return {
         totalConversions: totalResult.count,
         totalValue: Number(valueResult.total) || 0,
-        byNetwork: byNetwork.map((n) => ({
+        byNetwork: byNetwork.map((n: typeof byNetwork[number]) => ({
           adNetwork: n.adNetwork,
           count: n.count,
           value: Number(n.value) || 0,
         })),
-        byCampaign: byCampaign.map((c) => ({
+        byCampaign: byCampaign.map((c: typeof byCampaign[number]) => ({
           campaignId: c.campaignId,
           utmCampaign: c.utmCampaign,
           count: c.count,
           value: Number(c.value) || 0,
         })),
-        byType: byType.map((t) => ({
+        byType: byType.map((t: typeof byType[number]) => ({
           conversionType: t.conversionType,
           count: t.count,
         })),
@@ -487,7 +487,7 @@ export const advertisingRouter = {
         .groupBy(adConversions.campaignId, adConversions.utmCampaign, adConversions.adNetwork);
 
       // Return mock data combined with tracked conversions
-      return conversions.map((c) => ({
+      return conversions.map((c: typeof conversions[number]) => ({
         campaignId: c.campaignId || "unknown",
         campaignName: c.utmCampaign || c.campaignId || "Direct Traffic",
         adNetwork: c.adNetwork,

@@ -126,8 +126,8 @@ export const workflowExecutions = pgTable(
   }),
 );
 
-// API keys table
-export const apiKeys = pgTable(
+// API keys table (user-scoped for integrations)
+export const integrationApiKeys = pgTable(
   "api_keys",
   {
     id: uuid("id").primaryKey().defaultRandom(),

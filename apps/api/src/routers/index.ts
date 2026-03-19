@@ -27,6 +27,7 @@ import { nucleoWorkspaceRouter } from "./nucleo-workspace";
 import { operationsRouter } from "./operations";
 import { organizationSettingsRouter } from "./organization-settings";
 import { rbacRouter } from "./rbac";
+import { realtimeRouter } from "./realtime";
 
 import { assetsRouter } from "./assets";
 
@@ -54,6 +55,7 @@ export const appRouter = {
   apiKeys: apiKeysRouter,
   audit: auditRouter,
   billing: billingRouter,
+  realtime: realtimeRouter,
 };
 
 export type AppRouter = typeof appRouter;

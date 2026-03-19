@@ -91,7 +91,7 @@ export const contactsRouter = {
           cacheKey,
           async () => {
             // Get total count using SQL COUNT()
-            const countResult = await trackQuery("listContactsCount", () =>
+            const countResult: { count: number }[] = await trackQuery("listContactsCount", () =>
               db.select({ count: count() }).from(contacts).where(whereConditions),
             );
             const total = countResult[0]?.count ?? 0;

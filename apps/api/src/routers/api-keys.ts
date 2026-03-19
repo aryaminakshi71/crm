@@ -11,7 +11,9 @@ import type { OrgContext } from "../context";
 import { APIError } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { apiKeys, webhooks } = schema;
+const { webhooks } = schema;
+// apiKeysOrg is the organization-scoped API keys table from agents.schema
+const apiKeysOrg = schema.apiKeys as typeof schema.apiKeys;
 
 const apiKeySchema = z.object({
   id: z.string().uuid(),
@@ -51,13 +53,13 @@ export const apiKeysRouter = {
       const db = getDb(context);
       const data = await db
         .select()
-        .from(apiKeys)
-        .where(eq(apiKeys.organizationId, context.organization.id))
-        .orderBy(desc(apiKeys.createdAt));
+        .from(apiKeysOrg)
+        .where(eq(apiKeysOrg.organizationId, context.organization.id))
+        .orderBy(desc(apiKeysOrg.createdAt));
 
       // Remove sensitive data
       return {
-        data: data.map((k) => ({
+        data: data.map((k: typeof data[number]) => ({
           ...k,
           // Don't expose keyHash
         })),
@@ -98,7 +100,7 @@ export const apiKeysRouter = {
           : null;
 
         const [apiKey] = await db
-          .insert(apiKeys)
+          .insert(apiKeysOrg)
           .values({
             organizationId: context.organization.id,
             name: input.name,
@@ -131,11 +133,11 @@ export const apiKeysRouter = {
       async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
         const db = getDb(context);
         await db
-          .delete(apiKeys)
+          .delete(apiKeysOrg)
           .where(
             and(
-              eq(apiKeys.id, input.id),
-              eq(apiKeys.organizationId, context.organization.id),
+              eq(apiKeysOrg.id, input.id),
+              eq(apiKeysOrg.organizationId, context.organization.id),
             ),
           );
         return { success: true };

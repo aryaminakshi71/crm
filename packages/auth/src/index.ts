@@ -14,7 +14,7 @@ import * as authSchema from "@crm/storage/schema";
 import bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { apiKey, openAPI, organization } from "better-auth/plugins";
+import { apiKey, openAPI, organization, mfa } from "better-auth/plugins";
 import { createKVStorage } from "./kv-storage";
 
 export interface AuthConfig {
@@ -75,6 +75,18 @@ export function createAuth(config: AuthConfig) {
           `Invitation to ${email} for org ${organization.name} from ${inviter.user.name}`,
         );
       },
+    }),
+
+    // Multi-factor authentication (TOTP)
+    mfa({
+      // Require MFA for admin/owner roles
+      enforceOnAllOperations: false,
+      // How long until a new code is required (in seconds)
+      maxAge: 300,
+      // Limit TOTP setup to one per account
+      limit: 3,
+      // Custom TOTP issuer name
+      issuer: "Nucleo CRM",
     }),
 
     // API key authentication

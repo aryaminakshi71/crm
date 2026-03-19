@@ -12,6 +12,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./auth.schema.js";
 
+// Soft delete mixin - can be used with .extends()
+export const softDelete = {
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+};
+
 // Contacts table
 export const contacts = pgTable(
   "contacts",
@@ -45,6 +50,7 @@ export const contacts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     organizationIdIdx: index("idx_contacts_organization_id").on(
@@ -52,6 +58,13 @@ export const contacts = pgTable(
     ),
     emailIdx: index("idx_contacts_email").on(table.email),
     ownerIdIdx: index("idx_contacts_owner_id").on(table.ownerId),
+    // Composite index for common query pattern
+    orgEmailIdx: index("idx_contacts_org_email").on(
+      table.organizationId,
+      table.email,
+    ),
+    // Index for soft delete queries
+    deletedAtIdx: index("idx_contacts_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -84,6 +97,7 @@ export const deals = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     organizationIdIdx: index("idx_deals_organization_id").on(
@@ -91,6 +105,16 @@ export const deals = pgTable(
     ),
     contactIdIdx: index("idx_deals_contact_id").on(table.contactId),
     stageIdx: index("idx_deals_stage").on(table.stage),
+    // Composite indexes for common queries
+    orgStageIdx: index("idx_deals_org_stage").on(
+      table.organizationId,
+      table.stage,
+    ),
+    orgValueIdx: index("idx_deals_org_value").on(
+      table.organizationId,
+      table.value,
+    ),
+    deletedAtIdx: index("idx_deals_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -125,6 +149,7 @@ export const leads = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     organizationIdIdx: index("idx_leads_organization_id").on(
@@ -132,6 +157,16 @@ export const leads = pgTable(
     ),
     emailIdx: index("idx_leads_email").on(table.email),
     statusIdx: index("idx_leads_status").on(table.status),
+    // Composite indexes for common queries
+    orgStatusIdx: index("idx_leads_org_status").on(
+      table.organizationId,
+      table.status,
+    ),
+    orgSourceIdx: index("idx_leads_org_source").on(
+      table.organizationId,
+      table.source,
+    ),
+    deletedAtIdx: index("idx_leads_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -166,6 +201,7 @@ export const activities = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     organizationIdIdx: index("idx_activities_organization_id").on(
@@ -174,28 +210,52 @@ export const activities = pgTable(
     contactIdIdx: index("idx_activities_contact_id").on(table.contactId),
     dealIdIdx: index("idx_activities_deal_id").on(table.dealId),
     typeIdx: index("idx_activities_type").on(table.type),
+    // Composite indexes
+    orgTypeIdx: index("idx_activities_org_type").on(
+      table.organizationId,
+      table.type,
+    ),
+    orgDueDateIdx: index("idx_activities_org_due_date").on(
+      table.organizationId,
+      table.dueDate,
+    ),
+    deletedAtIdx: index("idx_activities_deleted_at").on(table.deletedAt),
   }),
 );
 
 // Files/Attachments table
-export const files = pgTable("files", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  originalName: varchar("original_name", { length: 255 }).notNull(),
-  mimeType: varchar("mime_type", { length: 100 }).notNull(),
-  size: varchar("size", { length: 50 }).notNull(),
-  r2Key: text("r2_key").notNull(),
-  contactId: uuid("contact_id"),
-  dealId: uuid("deal_id"),
-  leadId: uuid("lead_id"),
-  uploadedById: text("uploaded_by_id").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const files = pgTable(
+  "files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    originalName: varchar("original_name", { length: 255 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    size: varchar("size", { length: 50 }).notNull(),
+    r2Key: text("r2_key").notNull(),
+    contactId: uuid("contact_id"),
+    dealId: uuid("deal_id"),
+    leadId: uuid("lead_id"),
+    uploadedById: text("uploaded_by_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => ({
+    organizationIdIdx: index("idx_files_organization_id").on(
+      table.organizationId,
+    ),
+    contactIdIdx: index("idx_files_contact_id").on(table.contactId),
+    dealIdIdx: index("idx_files_deal_id").on(table.dealId),
+    leadIdIdx: index("idx_files_lead_id").on(table.leadId),
+    mimeTypeIdx: index("idx_files_mime_type").on(table.mimeType),
+    deletedAtIdx: index("idx_files_deleted_at").on(table.deletedAt),
+  }),
+);
 
 // Relations
 export const contactsRelations = relations(contacts, ({ one, many }) => ({

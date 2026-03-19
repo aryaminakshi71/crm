@@ -4,7 +4,7 @@
  * Client-side hooks and utilities for authentication.
  */
 
-import { organizationClient } from "better-auth/client/plugins";
+import { mfaClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 /**
@@ -14,14 +14,14 @@ export function createClient(baseURL: string) {
   return createAuthClient({
     baseURL,
     basePath: "/api/auth",
-    plugins: [organizationClient()],
+    plugins: [organizationClient(), mfaClient()],
   });
 }
 
 // Default client for convenience (uses window.location.origin in browser)
 export const authClient = createAuthClient({
   basePath: "/api/auth",
-  plugins: [organizationClient()],
+  plugins: [organizationClient(), mfaClient()],
 });
 
 // Export hooks from default client

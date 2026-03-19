@@ -9,8 +9,14 @@ import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
 import {
+  createCheckoutSession as createStripeCheckout,
+  createPortalSession as createStripePortal,
+  getOrCreateStripeCustomer,
+} from "../lib/stripe";
+import {
   getDb,
   orgAuthed,
+  pub,
   schema,
   adminOnly,
 } from "../procedures";
@@ -124,29 +130,52 @@ export const billingRouter = {
       }),
     )
     .handler(async ({ input, context }) => {
-      // TODO: Implement actual Stripe checkout
-      // For now return mock session
-      const plan = await getDb(context)
-        .query.plans.findFirst({
-          where: eq(plans.key, input.planKey),
-        });
+      const db = getDb(context);
+
+      // Get plan
+      const plan = await db.query.plans.findFirst({
+        where: eq(plans.key, input.planKey),
+      });
 
       if (!plan) {
         throw new APIError(ErrorCode.NOT_FOUND, "Plan not found", 404);
       }
 
-      return {
-        sessionId: `cs_mock_${Date.now()}`,
-        url: input.successUrl,
-        // In real implementation:
-        // const session = await stripe.checkout.sessions.create({
-        //   mode: 'subscription',
-        //   customer: subscription.stripeCustomerId,
-        //   line_items: [{ price: input.billingCycle === 'monthly' ? plan.stripePriceIdMonthly : plan.stripePriceIdAnnual }],
-        //   success_url: input.successUrl,
-        //   cancel_url: input.cancelUrl,
-        // });
-      };
+      // Get organization
+      const org = await db.query.organizations.findFirst({
+        where: eq(organizations.id, context.organization.id),
+      });
+
+      if (!org) {
+        throw new APIError(ErrorCode.NOT_FOUND, "Organization not found", 404);
+      }
+
+      // Get organization owner email
+      const member = await db.query.members.findFirst({
+        where: eq(schema.members.organizationId, context.organization.id),
+        with: { user: true },
+      });
+
+      const email = member?.user?.email || "unknown@example.com";
+
+      // Get or create Stripe customer
+      const customerId = await getOrCreateStripeCustomer(
+        context.organization.id,
+        org.name,
+        email
+      );
+
+      // Create Stripe checkout session
+      const result = await createStripeCheckout({
+        customerId,
+        planKey: input.planKey,
+        billingCycle: input.billingCycle,
+        successUrl: input.successUrl,
+        cancelUrl: input.cancelUrl,
+        organizationId: context.organization.id,
+      });
+
+      return result;
     }),
 
   portalSession: orgAuthed
@@ -162,17 +191,24 @@ export const billingRouter = {
       }),
     )
     .handler(async ({ input, context }) => {
-      // TODO: Implement actual Stripe portal
-      // const subscription = await getSubscription(context);
-      // const session = await stripe.billingPortal.sessions.create({
-      //   customer: subscription.stripeCustomerId,
-      //   return_url: input.returnUrl,
-      // });
+      const db = getDb(context);
 
-      return {
-        sessionId: `ps_mock_${Date.now()}`,
-        url: input.returnUrl,
-      };
+      // Get subscription with Stripe customer ID
+      const subscription = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.organizationId, context.organization.id),
+      });
+
+      if (!subscription?.stripeCustomerId) {
+        throw new APIError(ErrorCode.NOT_FOUND, "No Stripe customer found. Please subscribe first.", 404);
+      }
+
+      // Create Stripe portal session
+      const result = await createStripePortal({
+        customerId: subscription.stripeCustomerId,
+        returnUrl: input.returnUrl,
+      });
+
+      return result;
     }),
 
   // ─── Usage Tracking ────────────────────────────────────────────────────────
@@ -650,5 +686,31 @@ export const billingRouter = {
         recentInvoices,
         recentPayments,
       };
+    }),
+
+  // ─── Stripe Webhook ─────────────────────────────────────────────────────────
+
+  stripeWebhook: pub
+    .route({
+      method: "POST",
+      path: "/billing/webhook",
+      summary: "Handle Stripe webhook events",
+      tags: ["Billing"],
+    })
+    .input(
+      z.object({
+        payload: z.string(),
+        signature: z.string(),
+      }),
+    )
+    .handler(async ({ input }) => {
+      const { handleStripeWebhook } = await import("../lib/stripe");
+      const result = await handleStripeWebhook(input.payload, input.signature);
+
+      if (!result.success) {
+        throw new APIError(ErrorCode.BAD_REQUEST, result.error || "Webhook processing failed", 400);
+      }
+
+      return { received: true };
     }),
 };

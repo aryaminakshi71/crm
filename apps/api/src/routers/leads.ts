@@ -15,7 +15,7 @@ import { getDb, orgAuthed, schema } from "../procedures";
 const { leads, contacts, adConversions } = schema;
 
 // Create a Zod schema from the leads table columns
-const leadSchema = schema.leads ? z.object({
+const leadSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
   firstName: z.string().nullable(),
@@ -29,7 +29,7 @@ const leadSchema = schema.leads ? z.object({
   assignedTo: z.string().uuid().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
-}).passthrough() : z.unknown();
+}).passthrough();
 
 export const leadsRouter = {
   /**
@@ -48,15 +48,6 @@ export const leadsRouter = {
         limit: z.number().min(1).max(200).default(50),
         status: z.string().optional(),
         search: z.string().optional(),
-      }),
-    )
-    .output(
-      z.object({
-        data: z.array(leadSchema),
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-        totalPages: z.number(),
       }),
     )
     .handler(
@@ -110,7 +101,7 @@ export const leadsRouter = {
               conditions.length > 1 ? and(...conditions) : conditions[0];
 
             // Get total count using SQL COUNT()
-            const countResult = await trackQuery("listLeadsCount", () =>
+            const countResult: { count: number }[] = await trackQuery("listLeadsCount", () =>
               db.select({ count: count() }).from(leads).where(whereConditions),
             );
             const total = countResult[0]?.count ?? 0;
@@ -126,10 +117,10 @@ export const leadsRouter = {
                   .orderBy(desc(leads.createdAt))
                   .limit(input.limit)
                   .offset(offset),
-            );
+            ) as typeof leads.$inferSelect[];
 
             return {
-              data: paginatedLeads,
+              data: paginatedLeads as any[],
               total,
               page: input.page,
               limit: input.limit,
@@ -152,7 +143,6 @@ export const leadsRouter = {
       tags: ["Leads"],
     })
     .input(z.object({ id: z.string().uuid() }))
-    .output(leadSchema)
     .handler(
       async ({
         context,
