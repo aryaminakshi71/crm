@@ -26,8 +26,20 @@ import { useState } from "react";
 export const Route = createFileRoute("/pricing")({
   head: () => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
-    const canonical = `${baseUrl.replace(/\/$/, "")}/pricing`;
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://nucleo.one";
+    const canonical = `${baseUrl}/pricing`;
+
+    const faqData = FAQS.map(faq => ({
+      "@type": "Question",
+      "name": faq.q,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.a
+      }
+    }));
+
     return {
       meta: [
         { title: "Pricing | Nucleo One — AI-Powered Business OS" },
@@ -36,8 +48,46 @@ export const Route = createFileRoute("/pricing")({
           content:
             "Simple, transparent pricing for Nucleo One. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month.",
         },
+        { name: "robots", content: "index, follow" },
+        // Open Graph
+        { property: "og:title", content: "Pricing | Nucleo One — AI-Powered Business OS" },
+        { property: "og:description", content: "Simple, transparent pricing. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month." },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+        // Twitter
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: "Pricing | Nucleo One" },
+        { name: "twitter:description", content: "Simple, transparent pricing. From $15/user/month." },
+        // FAQPage Schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": faqData
+        })},
+        // BreadcrumbList schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": baseUrl
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Pricing",
+              "item": canonical
+            }
+          ]
+        })}
       ],
-      links: [{ rel: "canonical", href: canonical }],
+      links: [
+        { rel: "canonical", href: canonical },
+        { rel: "alternate", hreflang: "en", href: canonical }
+      ]
     };
   },
   component: PricingPage,

@@ -1743,3 +1743,6 @@ export const campaignContactsRelations = relations(
     }),
   }),
 );
+
+// Re-export organizations and users for use in other schemas
+export { organizations, users } from "./auth.schema.js";

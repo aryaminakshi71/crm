@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
+  Bot,
   Brain,
   Briefcase,
   Building2,
@@ -19,8 +20,10 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Puzzle,
   Receipt,
   Scale,
+  Search,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -28,6 +31,7 @@ import {
   Users,
   X,
   Zap,
+  Activity,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -191,6 +195,16 @@ function useNavigationGroups(badges: {
             { name: "Audience", href: "/app/marketing" },
             { name: "Analytics", href: "/app/marketing" },
           ],
+        },
+        {
+          name: "Campaign Pro",
+          href: "/app/campaign-pro",
+          icon: Sparkles,
+        },
+        {
+          name: "Search Advertising",
+          href: "/app/search-advertising",
+          icon: Search,
         },
       ],
     },
@@ -384,6 +398,45 @@ function useNavigationGroups(badges: {
           ],
         },
         { name: "Settings", href: "/app/settings", icon: Settings },
+      ],
+    },
+    {
+      label: "Platform",
+      items: [
+        {
+          name: "Integrations",
+          href: "/app/integrations",
+          icon: Puzzle,
+          children: [
+            { name: "Overview", href: "/app/integrations" },
+            { name: "Connectors", href: "/app/integrations/connectors" },
+            { name: "Workflows", href: "/app/integrations/workflows" },
+            { name: "Events", href: "/app/integrations/events" },
+          ],
+        },
+        {
+          name: "AI Agents",
+          href: "/app/agents",
+          icon: Bot,
+          children: [
+            { name: "All Agents", href: "/app/agents" },
+            { name: "Templates", href: "/app/agents/templates" },
+            { name: "Settings", href: "/app/agents/settings" },
+          ],
+        },
+        {
+          name: "Monitoring",
+          href: "/app/monitoring",
+          icon: Activity,
+          children: [
+            { name: "Dashboard", href: "/app/monitoring" },
+            { name: "Analytics", href: "/app/monitoring/analytics" },
+            { name: "Errors", href: "/app/monitoring/errors" },
+            { name: "Uptime", href: "/app/monitoring/uptime" },
+            { name: "Performance", href: "/app/monitoring/performance" },
+            { name: "Catalog", href: "/app/monitoring/catalog" },
+          ],
+        },
       ],
     },
   ];

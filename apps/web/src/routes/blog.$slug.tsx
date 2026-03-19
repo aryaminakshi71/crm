@@ -15,17 +15,86 @@ export const Route = createFileRoute("/blog/$slug")({
   },
   head: ({ loaderData }) => {
     const baseUrl =
-      import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
-    const canonical = `${baseUrl.replace(/\/$/, "")}/blog/${loaderData?.post.slug || ""}`;
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://nucleo.one";
+    const canonical = `${baseUrl}/blog/${loaderData?.post.slug || ""}`;
+    const post = loaderData?.post;
+    const publishedDate = post?.publishedAt || new Date().toISOString();
+
     return {
       meta: [
-        { title: `${loaderData?.post.title || "Blog"} | Nucleo One` },
-        {
-          name: "description",
-          content: loaderData?.post.excerpt || "Nucleo One blog article",
-        },
+        { title: `${post?.title || "Blog"} | Nucleo One` },
+        { name: "description", content: post?.excerpt || "Nucleo One blog article" },
+        { name: "robots", content: "index, follow" },
+        // Open Graph
+        { property: "og:title", content: `${post?.title || "Blog"} | Nucleo One` },
+        { property: "og:description", content: post?.excerpt || "Nucleo One blog article" },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: canonical },
+        { property: "article:published_time", content: publishedDate },
+        { property: "article:author", content: post?.author || "Nucleo One" },
+        { property: "article:section", content: post?.category || "Blog" },
+        // Twitter
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: `${post?.title || "Blog"} | Nucleo One` },
+        { name: "twitter:description", content: post?.excerpt || "Nucleo One blog article" },
+        // Schema.org Article
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": post?.title,
+          "description": post?.excerpt,
+          "image": `${baseUrl}/og-image.png`,
+          "author": {
+            "@type": "Person",
+            "name": post?.author || "Nucleo One"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Nucleo One",
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${baseUrl}/logo.png`
+            }
+          },
+          "datePublished": publishedDate,
+          "dateModified": publishedDate,
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": canonical
+          }
+        })},
+        // BreadcrumbList schema for navigation
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": baseUrl
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blog",
+              "item": `${baseUrl}/blog`
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": post?.title,
+              "item": canonical
+            }
+          ]
+        })}
       ],
-      links: [{ rel: "canonical", href: canonical }],
+      links: [
+        { rel: "canonical", href: canonical },
+        { rel: "alternate", hreflang: "en", href: canonical }
+      ]
     };
   },
   component: BlogPostPage,

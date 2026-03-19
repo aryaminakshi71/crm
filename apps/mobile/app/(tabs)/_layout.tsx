@@ -64,6 +64,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="platform"
+        options={{
+          title: "Platform",
+          tabBarAccessibilityLabel: "Platform - Integrations and Agents",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>PX</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Setup",

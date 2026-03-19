@@ -2631,3 +2631,114 @@ export const nucleoApi = {
     },
   },
 };
+
+// ============ ADVERTISING ============
+export const advertisingApi = {
+  // Connection management
+  connect: async (data: {
+    adNetwork: "google_ads" | "microsoft_ads" | "facebook_ads";
+    accessToken?: string;
+    refreshToken?: string;
+    customerId?: string;
+    accountName?: string;
+  }) => rpc.advertising?.connect?.(data),
+
+  disconnect: async (adNetwork: "google_ads" | "microsoft_ads" | "facebook_ads") =>
+    rpc.advertising?.disconnect?.({ adNetwork }),
+
+  getStatus: async () => {
+    try {
+      return await withRpcTimeout(rpc.advertising?.status?.({}), "advertising.status");
+    } catch (error) {
+      console.error("advertisingApi.getStatus error:", error);
+      return [];
+    }
+  },
+
+  // Conversion tracking
+  trackConversion: async (data: {
+    leadId?: string;
+    contactId?: string;
+    adNetwork?: "google_ads" | "microsoft_ads" | "facebook_ads";
+    campaignId?: string;
+    conversionType?: "form_submission" | "page_view" | "purchase" | "signup";
+    conversionValue?: number;
+    formId?: string;
+    formName?: string;
+    pageUrl?: string;
+    pagePath?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmTerm?: string;
+    utmContent?: string;
+    gclid?: string;
+    msclkid?: string;
+    fbclid?: string;
+  }) => rpc.advertising?.trackConversion?.(data),
+
+  listConversions: async (params?: {
+    page?: number;
+    limit?: number;
+    adNetwork?: "google_ads" | "microsoft_ads" | "facebook_ads";
+    campaignId?: string;
+    conversionType?: "form_submission" | "page_view" | "purchase" | "signup";
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 50;
+    try {
+      return await withRpcTimeout(
+        rpc.advertising?.listConversions?.({
+          page,
+          limit,
+          adNetwork: params?.adNetwork,
+          campaignId: params?.campaignId,
+          conversionType: params?.conversionType,
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        }),
+        "advertising.listConversions",
+      );
+    } catch (error) {
+      console.error("advertisingApi.listConversions error:", error);
+      return { data: [], total: 0, page, limit, totalPages: 0 };
+    }
+  },
+
+  // Dashboard
+  overview: async (params?: { startDate?: string; endDate?: string }) => {
+    try {
+      return await withRpcTimeout(
+        rpc.advertising?.overview?.({
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        }),
+        "advertising.overview",
+      );
+    } catch (error) {
+      console.error("advertisingApi.overview error:", error);
+      return {
+        totalConversions: 0,
+        totalValue: 0,
+        byNetwork: [],
+        byCampaign: [],
+        byType: [],
+        recentConversions: [],
+      };
+    }
+  },
+
+  campaigns: async () => {
+    try {
+      return await withRpcTimeout(rpc.advertising?.campaigns?.({}), "advertising.campaigns");
+    } catch (error) {
+      console.error("advertisingApi.campaigns error:", error);
+      return [];
+    }
+  },
+
+  syncConversion: async (id: string) =>
+    rpc.advertising?.syncConversion?.({ id }),
+};

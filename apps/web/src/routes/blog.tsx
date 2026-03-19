@@ -18,6 +18,25 @@ export const Route = createFileRoute("/blog")({
           content:
             "Insights on enterprise CRM, helpdesk, projects, finance, HRM, and go-to-market operations.",
         },
+        // BreadcrumbList schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": baseUrl
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blog",
+              "item": canonical
+            }
+          ]
+        })}
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

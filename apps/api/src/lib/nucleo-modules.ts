@@ -6,7 +6,14 @@ export type NucleoModuleKey =
   | "queue"
   | "invoicing"
   | "campaign_pro"
-  | "doclattice";
+  | "doclattice"
+  | "integrations"
+  | "ai_agents"
+  | "monitoring"
+  | "api_webhooks"
+  | "notifications"
+  | "rbac"
+  | "audit";
 
 export const MODULE_CATALOG: Array<{
   key: NucleoModuleKey;
@@ -70,6 +77,55 @@ export const MODULE_CATALOG: Array<{
     name: "Doclattice AI",
     description: "Document intake, OCR, extraction, review, and routing.",
     phase: "ai",
+    defaultEnabled: false,
+  },
+  {
+    key: "integrations",
+    name: "Integrations",
+    description: "Connect CRM, helpdesk, invoicing, and workflow automation.",
+    phase: "growth",
+    defaultEnabled: false,
+  },
+  {
+    key: "ai_agents",
+    name: "AI Agents",
+    description: "Autonomous AI coding and data analysis agents.",
+    phase: "ai",
+    defaultEnabled: false,
+  },
+  {
+    key: "monitoring",
+    name: "Monitoring",
+    description: "Platform observability: analytics, errors, uptime, performance.",
+    phase: "ops",
+    defaultEnabled: false,
+  },
+  {
+    key: "api_webhooks",
+    name: "API & Webhooks",
+    description: "API key management and webhook configuration.",
+    phase: "ops",
+    defaultEnabled: false,
+  },
+  {
+    key: "notifications",
+    name: "Notifications",
+    description: "Email, SMS, push, and in-app notifications.",
+    phase: "core",
+    defaultEnabled: true,
+  },
+  {
+    key: "rbac",
+    name: "Access Control",
+    description: "Role-based access control, departments, and teams.",
+    phase: "core",
+    defaultEnabled: true,
+  },
+  {
+    key: "audit",
+    name: "Audit Logs",
+    description: "Audit logging and compliance reporting.",
+    phase: "ops",
     defaultEnabled: false,
   },
 ];

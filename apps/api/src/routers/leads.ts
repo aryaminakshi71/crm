@@ -12,7 +12,7 @@ import { APIError } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { leads, contacts } = schema;
+const { leads, contacts, adConversions } = schema;
 
 // Create a Zod schema from the leads table columns
 const leadSchema = schema.leads ? z.object({
@@ -207,6 +207,18 @@ export const leadsRouter = {
           ])
           .default("website"),
         notes: z.string().optional(),
+        // UTM tracking data
+        utmSource: z.string().optional(),
+        utmMedium: z.string().optional(),
+        utmCampaign: z.string().optional(),
+        utmTerm: z.string().optional(),
+        utmContent: z.string().optional(),
+        gclid: z.string().optional(),
+        msclkid: z.string().optional(),
+        fbclid: z.string().optional(),
+        adNetwork: z.enum(["google_ads", "microsoft_ads", "facebook_ads"]).optional(),
+        campaignId: z.string().optional(),
+        pagePath: z.string().optional(),
       }),
     )
     .output(leadSchema)
@@ -224,6 +236,17 @@ export const leadsRouter = {
           phone?: string;
           source: string;
           notes?: string;
+          utmSource?: string;
+          utmMedium?: string;
+          utmCampaign?: string;
+          utmTerm?: string;
+          utmContent?: string;
+          gclid?: string;
+          msclkid?: string;
+          fbclid?: string;
+          adNetwork?: string;
+          campaignId?: string;
+          pagePath?: string;
         };
       }) => {
         const db = getDb(context);
@@ -240,6 +263,35 @@ export const leadsRouter = {
             createdBy: context.user.id,
           })
           .returning();
+
+        // Create ad conversion record if UTM data or ad click IDs are present
+        const hasAdData =
+          input.gclid ||
+          input.msclkid ||
+          input.fbclid ||
+          input.utmSource ||
+          input.utmMedium ||
+          input.utmCampaign;
+
+        if (hasAdData) {
+          await db.insert(adConversions).values({
+            organizationId: context.organization.id,
+            leadId: lead.id,
+            adNetwork: (input.adNetwork as "google_ads" | "microsoft_ads" | "facebook_ads") || "google_ads",
+            campaignId: input.campaignId,
+            conversionType: "form_submission",
+            utmSource: input.utmSource,
+            utmMedium: input.utmMedium,
+            utmCampaign: input.utmCampaign,
+            utmTerm: input.utmTerm,
+            utmContent: input.utmContent,
+            gclid: input.gclid,
+            msclkid: input.msclkid,
+            fbclid: input.fbclid,
+            pagePath: input.pagePath,
+            conversionTimestamp: new Date(),
+          });
+        }
 
         // Invalidate list cache
         await invalidateCache(`leads:list:${context.organization.id}`);
