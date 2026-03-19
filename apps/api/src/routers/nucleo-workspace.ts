@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
+import { cacheKeys, getCache, invalidateOrgCache, setCache } from "../lib/cache";
 
 const pageInput = z.object({
   page: z.number().min(1).default(1),
@@ -26,6 +27,25 @@ export const nucleoWorkspaceRouter = {
     .handler(async ({ context }: { context: OrgContext }) => {
       const db = getDb(context);
       const orgId = context.organization.id;
+
+      // Try cache first (5 minute TTL for summary)
+      const cacheKey = cacheKeys.summary(orgId);
+      const cached = getCache<{
+        customers: number;
+        projects: number;
+        tickets: number;
+        assets: number;
+        documents: number;
+        invoices: number;
+        campaigns: number;
+        queueTokens: number;
+        hrmEmployees: number;
+        enterpriseRoles: number;
+        intelligenceKpis: number;
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
 
       const [
         customers,
@@ -86,7 +106,7 @@ export const nucleoWorkspaceRouter = {
           .where(eq(schema.executiveKpiSnapshots.organizationId, orgId)),
       ]);
 
-      return {
+      const result = {
         customers: Number(customers[0]?.count || 0),
         projects: Number(projects[0]?.count || 0),
         tickets: Number(tickets[0]?.count || 0),
@@ -99,6 +119,11 @@ export const nucleoWorkspaceRouter = {
         enterpriseRoles: Number(enterpriseRoles[0]?.count || 0),
         intelligenceKpis: Number(intelligenceKpis[0]?.count || 0),
       };
+
+      // Cache for 5 minutes
+      setCache(cacheKey, result, { ttl: 300_000 });
+
+      return result;
     }),
 
   customersList: orgAuthed
@@ -157,6 +182,9 @@ export const nucleoWorkspaceRouter = {
           ownerId: context.user.id,
         })
         .returning();
+
+      // Invalidate summary cache
+      invalidateOrgCache(context.organization.id);
 
       return customer;
     }),

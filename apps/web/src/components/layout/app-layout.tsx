@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowRight,
+  BarChart3,
   BookOpen,
   Bot,
   Brain,
@@ -139,7 +140,10 @@ function useNavigationGroups(badges: {
   return [
     {
       label: "Overview",
-      items: [{ name: "Dashboard", href: "/app", icon: LayoutDashboard }],
+      items: [
+        { name: "Dashboard", href: "/app", icon: LayoutDashboard },
+        { name: "Analytics", href: "/app/analytics", icon: BarChart3 },
+      ],
     },
     {
       label: "Customer",
@@ -398,6 +402,7 @@ function useNavigationGroups(badges: {
           ],
         },
         { name: "Settings", href: "/app/settings", icon: Settings },
+        { name: "Onboarding", href: "/app/onboarding", icon: Sparkles },
       ],
     },
     {

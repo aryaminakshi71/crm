@@ -18,13 +18,18 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  DollarSign,
   FolderKanban,
+  Gauge,
+  Headphones,
   History,
   LifeBuoy,
   Mail,
   Megaphone,
+  PieChart,
   Receipt,
   Scale,
+  Settings,
   ShieldCheck,
   Sparkles,
   Target,
@@ -370,9 +375,316 @@ function OnboardingChecklist() {
   );
 }
 
+// ─── Role Selector & Widget System ──────────────────────────────────────────
+
+const ROLES = [
+  { id: "all", label: "Executive View", icon: Gauge },
+  { id: "sales", label: "Sales Rep", icon: Target },
+  { id: "support", label: "Support Agent", icon: Headphones },
+  { id: "projects", label: "Project Manager", icon: FolderKanban },
+  { id: "finance", label: "Finance", icon: DollarSign },
+];
+
+// Sales Rep Widgets
+function SalesRepWidgets({ deals, leads, campaigns }: { deals: any[]; leads: any[]; campaigns: any[] }) {
+  const pipelineByStage = deals.reduce((acc: Record<string, number>, d: any) => {
+    acc[d.stage || "unknown"] = (acc[d.stage || "unknown"] || 0) + (d.value || 0);
+    return acc;
+  }, {});
+
+  const topDeals = [...deals].sort((a: any, b: any) => (b.value || 0) - (a.value || 0)).slice(0, 5);
+  const hotLeads = leads.filter((l: any) => l.score && l.score >= 80).slice(0, 5);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Pipeline Summary */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-cyan-500" /> My Pipeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {Object.entries(pipelineByStage).slice(0, 4).map(([stage, value]) => (
+            <div key={stage} className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground capitalize">{stage.replace(/_/g, " ")}</span>
+              <span className="font-semibold text-foreground">${((value as number) || 0).toLocaleString()}</span>
+            </div>
+          ))}
+          <div className="border-t border-border pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground">Total</span>
+              <span className="font-bold text-primary">${Object.values(pipelineByStage).reduce((a, b) => (a as number) + (b as number), 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Deals */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Target className="h-4 w-4 text-violet-500" /> Top Deals
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {topDeals.map((d: any, i) => (
+            <div key={d.id} className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">{i + 1}.</span>
+                <span className="text-foreground truncate max-w-[120px]">{d.name}</span>
+              </div>
+              <span className="font-semibold text-success">${(d.value || 0).toLocaleString()}</span>
+            </div>
+          ))}
+          {topDeals.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No deals yet</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Hot Leads */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-pink-500" /> Hot Leads
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {hotLeads.map((l: any) => (
+            <div key={l.id} className="flex items-center justify-between text-sm">
+              <div>
+                <p className="text-foreground text-xs font-medium">{l.firstName} {l.lastName}</p>
+                <p className="text-muted-foreground text-[10px]">{l.company || l.email}</p>
+              </div>
+              <Badge variant={l.score >= 90 ? "success" : "warning"} className="text-[10px]">
+                {l.score}
+              </Badge>
+            </div>
+          ))}
+          {hotLeads.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No hot leads</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Support Agent Widgets
+function SupportAgentWidgets({ tickets }: { tickets: any[] }) {
+  const openTickets = tickets.filter((t: any) => t.status === "open" || t.status === "pending");
+  const myTickets = openTickets.slice(0, 8);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {/* My Queue */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Headphones className="h-4 w-4 text-orange-500" /> My Ticket Queue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {myTickets.map((t: any) => (
+            <Link key={t.id} to="/app/helpdesk">
+              <div className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-2 -mx-2 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground text-xs font-medium truncate">{t.subject}</p>
+                  <p className="text-muted-foreground text-[10px]">
+                    {t.priority || "Normal"} · {t.status}
+                  </p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-muted-foreground ml-2" />
+              </div>
+            </Link>
+          ))}
+          {myTickets.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No open tickets</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SLA Status */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-500" /> SLA Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            { label: "At Risk", count: openTickets.filter((t: any) => t.priority === "high" || t.priority === "urgent").length, color: "text-destructive" },
+            { label: "Breaching Soon", count: Math.floor(openTickets.length * 0.2), color: "text-warning" },
+            { label: "On Track", count: Math.floor(openTickets.length * 0.6), color: "text-success" },
+            { label: "Total Open", count: openTickets.length, color: "text-foreground" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{item.label}</span>
+              <span className={`font-bold text-sm ${item.color}`}>{item.count}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Project Manager Widgets
+function ProjectManagerWidgets({ projects }: { projects: any[] }) {
+  const activeProjects = projects.filter((p: any) => p.status === "active");
+  const atRiskProjects = projects.filter((p: any) => p.status === "active" && (p.progress || 0) < 40);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {/* Active Projects */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-violet-500" /> Active Projects
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {activeProjects.slice(0, 4).map((p: any) => (
+            <div key={p.id} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.progress || 0}%</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full transition-all"
+                  style={{ width: `${p.progress || 0}%` }}
+                />
+              </div>
+            </div>
+          ))}
+          {activeProjects.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No active projects</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* At Risk */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> At Risk
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {atRiskProjects.slice(0, 4).map((p: any) => (
+            <div key={p.id} className="flex items-center justify-between py-1">
+              <span className="text-xs text-foreground truncate">{p.name}</span>
+              <Badge variant="danger" className="text-[10px]">{p.progress || 0}%</Badge>
+            </div>
+          ))}
+          {atRiskProjects.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">All projects on track</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Finance Widgets
+function FinanceWidgets({ invoices }: { invoices: any[] }) {
+  const overdue = invoices.filter((i: any) => i.status === "overdue");
+  const pending = invoices.filter((i: any) => i.status === "sent" || i.status === "draft");
+  const totalOutstanding = pending.reduce((a: number, i: any) => a + (i.total || 0), 0);
+  const totalOverdue = overdue.reduce((a: number, i: any) => a + (i.total || 0), 0);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Outstanding */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-emerald-500" /> Outstanding
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-black text-foreground">${totalOutstanding.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">{pending.length} pending invoices</p>
+        </CardContent>
+      </Card>
+
+      {/* Overdue */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> Overdue
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-black text-destructive">${totalOverdue.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">{overdue.length} overdue invoices</p>
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <PieChart className="h-4 w-4 text-primary" /> Quick Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Paid (30d)</span>
+            <span className="font-semibold text-success">{invoices.filter((i: any) => i.status === "paid").length}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Total Invoices</span>
+            <span className="font-semibold">{invoices.length}</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Role Selector ─────────────────────────────────────────────────────────────
+
+function RoleSelector({ current, onChange }: { current: string; onChange: (role: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 bg-card/50 rounded-xl p-1 border border-border/40">
+      {ROLES.map((role) => {
+        const isActive = current === role.id;
+        return (
+          <button
+            key={role.id}
+            onClick={() => onChange(role.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            <role.icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{role.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function DashboardPage() {
+  // Role selector state
+  const [selectedRole, setSelectedRole] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dashboard_role") || "all";
+    }
+    return "all";
+  });
+
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dashboard_role", role);
+    }
+  };
+
   const summaryQuery = useQuery({
     queryKey: ["nucleo-summary-dashboard"],
     queryFn: () => nucleoApi.summary(),
@@ -697,6 +1009,7 @@ function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <RoleSelector current={selectedRole} onChange={handleRoleChange} />
           <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 shadow-sm">
             <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
             <span className="text-foreground text-xs font-semibold tabular-nums uppercase tracking-wider">
@@ -708,6 +1021,24 @@ function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Role-Specific Widgets */}
+      {selectedRole !== "all" && (
+        <div className="space-y-4">
+          {selectedRole === "sales" && (
+            <SalesRepWidgets deals={deals} leads={leads} campaigns={campaigns} />
+          )}
+          {selectedRole === "support" && (
+            <SupportAgentWidgets tickets={tickets} />
+          )}
+          {selectedRole === "projects" && (
+            <ProjectManagerWidgets projects={allProjects} />
+          )}
+          {selectedRole === "finance" && (
+            <FinanceWidgets invoices={invoices} />
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Metric

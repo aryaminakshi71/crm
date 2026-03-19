@@ -227,6 +227,52 @@ const testimonials = [
   },
 ];
 
+// Customer logos for social proof
+const customerLogos = [
+  { name: "TechFlow", abbr: "TF" },
+  { name: "DataSync", abbr: "DS" },
+  { name: "CloudNine", abbr: "C9" },
+  { name: "FinScale", abbr: "FS" },
+  { name: "TrustLayer", abbr: "TL" },
+  { name: "Lyra", abbr: "LY" },
+];
+
+// Security & compliance badges
+const securityBadges = [
+  { name: "SOC 2 Type II", icon: "🛡️" },
+  { name: "GDPR Compliant", icon: "🇪🇺" },
+  { name: "ISO 27001", icon: "🔒" },
+  { name: "HIPAA Ready", icon: "⚕️" },
+];
+
+// FAQ items
+const faqItems = [
+  {
+    q: "How long does it take to set up?",
+    a: "Most teams are up and running within 15 minutes. Our guided onboarding walks you through initial setup, and you can import existing data from CSV or via our integrations.",
+  },
+  {
+    q: "Can I migrate from my current tools?",
+    a: "Yes! We offer free migration assistance for all paid plans. Import contacts, deals, projects, and more from Salesforce, HubSpot, Zendesk, and 50+ other tools.",
+  },
+  {
+    q: "Is there a free trial?",
+    a: "Absolutely. Every paid plan starts with a 14-day free trial. No credit card required. Cancel anytime.",
+  },
+  {
+    q: "What kind of support do you offer?",
+    a: "Growth and Enterprise plans include priority support with 1-hour response time. We also offer live chat, extensive documentation, and video tutorials.",
+  },
+  {
+    q: "Can I use Nucleo One on mobile?",
+    a: "Yes! We have native iOS and Android apps, plus a responsive web app that works on any device.",
+  },
+  {
+    q: "How does pricing work for large teams?",
+    a: "Per-seat pricing scales predictably. Contact us for volume discounts on teams over 50 users, or for custom enterprise agreements.",
+  },
+];
+
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/")({
@@ -381,16 +427,37 @@ function LandingPage() {
               Watch Demo
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </Link>
+            <Link
+              to="/roi-calculator"
+              className="inline-flex items-center gap-2 rounded-xl text-primary font-semibold hover:underline transition-all duration-200"
+            >
+              Calculate ROI
+            </Link>
           </div>
 
           {/* Social proof micro-line */}
-          <p className="mt-6 text-muted-foreground text-sm">
-            Trusted by{" "}
-            <span className="font-semibold text-foreground">
-              500+ organizations
-            </span>{" "}
-            across 40 countries
-          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {["SC", "MW", "PN", "AK", "JL"].map((initials) => (
+                  <div
+                    key={initials}
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 border-2 border-background font-bold text-xs text-primary"
+                  >
+                    {initials}
+                  </div>
+                ))}
+              </div>
+              <span className="text-muted-foreground">
+                <span className="font-semibold text-foreground">500+ teams</span> joined this month
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-amber-400">
+              <Star className="h-4 w-4 fill-amber-400" />
+              <span className="font-semibold text-foreground">4.8/5</span>
+              <span className="text-muted-foreground">from 2,847 reviews</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -403,6 +470,48 @@ function LandingPage() {
               <p className="mt-1 text-muted-foreground text-sm">{s.label}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Customer Logos ── */}
+      <section className="border-b border-border/60 bg-background px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <p className="mb-8 text-center text-muted-foreground text-sm font-medium uppercase tracking-wider">
+            Trusted by forward-thinking companies
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+            {customerLogos.map((logo) => (
+              <div
+                key={logo.name}
+                className="flex items-center gap-2 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted font-bold text-sm">
+                  {logo.abbr}
+                </div>
+                <span className="font-semibold text-sm">{logo.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Security Badges ── */}
+      <section className="border-b border-border/60 bg-card/30 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <p className="mb-6 text-center text-muted-foreground text-sm font-medium">
+            Enterprise-grade security built in
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            {securityBadges.map((badge) => (
+              <div
+                key={badge.name}
+                className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
+              >
+                <span className="text-base">{badge.icon}</span>
+                {badge.name}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -611,6 +720,70 @@ function LandingPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-border px-10 py-4 font-semibold text-foreground text-lg hover:bg-card transition-all duration-200"
             >
               Talk to Sales
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="mb-12 text-center font-bold text-4xl text-foreground">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-6">
+            {faqItems.map((item, i) => (
+              <details
+                key={i}
+                className="group rounded-xl border border-border/60 bg-card open:border-primary/30"
+              >
+                <summary className="flex cursor-pointer items-center justify-between gap-4 p-5 font-semibold text-foreground list-none">
+                  {item.q}
+                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="px-5 pb-5 text-muted-foreground leading-relaxed">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <p className="text-muted-foreground">
+              Still have questions?{" "}
+              <Link to="/contact" className="text-primary font-semibold hover:underline">
+                Talk to our team
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Video Demo CTA ── */}
+      <section className="border-t border-border/60 bg-card/30 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <div className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <Zap className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="mb-4 font-bold text-3xl text-foreground">
+            See Nucleo One in Action
+          </h2>
+          <p className="mb-8 text-muted-foreground text-lg max-w-2xl mx-auto">
+            Watch how a real team manages their entire business — from leads to payroll —
+            all in one unified platform.
+          </p>
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              to="/demo"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200"
+            >
+              Watch 3-Min Demo
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/roi-calculator"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-8 py-3.5 font-semibold text-foreground hover:bg-muted transition-all duration-200"
+            >
+              Calculate Your ROI
             </Link>
           </div>
         </div>
