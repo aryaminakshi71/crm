@@ -12,3 +12,4 @@ export * from "./monitoring.schema.js";
 export * from "./organization-settings.schema.js";
 export * from "./rbac.schema.js";
 export * from "./notifications.schema.js";
+export * from "./subscriptions.schema.js";

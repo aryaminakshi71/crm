@@ -10,6 +10,7 @@ import { advertisingRouter } from "./advertising";
 import { agentsRouter } from "./agents";
 import { apiKeysRouter } from "./api-keys";
 import { auditRouter } from "./audit";
+import { billingRouter } from "./billing";
 import { contactsRouter } from "./contacts";
 import { dashboardRouter } from "./dashboard";
 import { dealsRouter } from "./deals";
@@ -52,6 +53,7 @@ export const appRouter = {
   organizationSettings: organizationSettingsRouter,
   apiKeys: apiKeysRouter,
   audit: auditRouter,
+  billing: billingRouter,
 };
 
 export type AppRouter = typeof appRouter;

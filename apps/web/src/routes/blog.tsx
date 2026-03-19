@@ -10,14 +10,39 @@ export const Route = createFileRoute("/blog")({
     const baseUrl =
       import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
     const canonical = `${baseUrl.replace(/\/$/, "")}/blog`;
+    const title = "Blog | Nucleo One — Enterprise Software Insights";
+    const description =
+      "Insights on enterprise CRM, helpdesk, projects, finance, HRM, and go-to-market operations. Learn how to build a unified business OS.";
+
     return {
       meta: [
-        { title: "Blog | Nucleo One" },
-        {
-          name: "description",
-          content:
-            "Insights on enterprise CRM, helpdesk, projects, finance, HRM, and go-to-market operations.",
-        },
+        { title },
+        { name: "description", content: description },
+        { name: "robots", content: "index, follow" },
+        { name: "keywords", content: "CRM, business management, HRM, helpdesk, project management, ERP, SaaS, enterprise software" },
+        // Open Graph
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+        { property: "og:image", content: `${baseUrl}/og-image.png` },
+        // Twitter
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        // Blog listing schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          "name": "Nucleo One Blog",
+          "description": description,
+          "url": canonical,
+          "publisher": {
+            "@type": "Organization",
+            "name": "Nucleo One",
+            "logo": `${baseUrl}/logo.png`
+          }
+        })},
         // BreadcrumbList schema
         { "script:ld+json": JSON.stringify({
           "@context": "https://schema.org",
@@ -38,7 +63,10 @@ export const Route = createFileRoute("/blog")({
           ]
         })}
       ],
-      links: [{ rel: "canonical", href: canonical }],
+      links: [
+        { rel: "canonical", href: canonical },
+        { rel: "alternate", hreflang: "en", href: canonical }
+      ],
     };
   },
   component: BlogPage,
