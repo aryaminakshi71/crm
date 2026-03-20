@@ -2,6 +2,7 @@ import { nucleoApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { CookieConsentBanner, useCookieConsent } from "@/components/cookie-consent-banner";
 import {
   AlertTriangle,
   ArrowRight,
@@ -16,20 +17,29 @@ import {
   FileText,
   FolderKanban,
   FolderOpen,
+  GitBranch,
   LayoutDashboard,
   LifeBuoy,
+  ListOrdered,
   LogOut,
   Megaphone,
   Menu,
+  Mic,
+  Package,
+  Phone,
   Puzzle,
   Receipt,
   Scale,
   Search,
   Settings,
+  Share2,
   ShieldCheck,
+  ShoppingCart,
   Sparkles,
+  Truck,
   UserRoundCog,
   Users,
+  Webhook,
   X,
   Zap,
   Activity,
@@ -200,16 +210,6 @@ function useNavigationGroups(badges: {
             { name: "Analytics", href: "/app/marketing" },
           ],
         },
-        {
-          name: "Campaign Pro",
-          href: "/app/campaign-pro",
-          icon: Sparkles,
-        },
-        {
-          name: "Search Advertising",
-          href: "/app/search-advertising",
-          icon: Search,
-        },
       ],
     },
     {
@@ -236,6 +236,16 @@ function useNavigationGroups(badges: {
           ],
         },
         {
+          name: "Inventory",
+          href: "/app/inventory",
+          icon: Package,
+          children: [
+            { name: "Products", href: "/app/inventory" },
+            { name: "Warehouses", href: "/app/inventory" },
+            { name: "Stock Levels", href: "/app/inventory" },
+          ],
+        },
+        {
           name: "Procurement",
           href: "/app/procurement",
           icon: Briefcase,
@@ -243,6 +253,20 @@ function useNavigationGroups(badges: {
             { name: "Purchase Orders", href: "/app/procurement" },
             { name: "Vendors", href: "/app/procurement" },
             { name: "Requests", href: "/app/procurement" },
+          ],
+        },
+        {
+          name: "Field Service",
+          href: "/app/field-service",
+          icon: Truck,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Dashboard", href: "/app/field-service" },
+            { name: "Jobs", href: "/app/field-service/jobs" },
+            { name: "Dispatch", href: "/app/field-service/dispatch" },
+            { name: "Technicians", href: "/app/field-service/technicians" },
+            { name: "Routes", href: "/app/field-service/routes" },
           ],
         },
       ],
@@ -430,6 +454,20 @@ function useNavigationGroups(badges: {
           ],
         },
         {
+          name: "DevOps CI/CD",
+          href: "/app/devops",
+          icon: GitBranch,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Pipelines", href: "/app/devops" },
+            { name: "Runs", href: "/app/devops/runs" },
+            { name: "Deployments", href: "/app/devops/deployments" },
+            { name: "Infrastructure", href: "/app/devops/infrastructure" },
+            { name: "Environments", href: "/app/devops/environments" },
+          ],
+        },
+        {
           name: "Monitoring",
           href: "/app/monitoring",
           icon: Activity,
@@ -441,6 +479,94 @@ function useNavigationGroups(badges: {
             { name: "Performance", href: "/app/monitoring/performance" },
             { name: "Catalog", href: "/app/monitoring/catalog" },
           ],
+        },
+      ],
+    },
+    {
+      label: "Communications",
+      items: [
+        {
+          name: "SMS & Voice",
+          href: "/app/communications",
+          icon: Phone,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Dashboard", href: "/app/communications" },
+            { name: "SMS", href: "/app/communications/sms" },
+            { name: "Voice", href: "/app/communications/voice" },
+            { name: "Video", href: "/app/communications/video" },
+            { name: "Chat", href: "/app/communications/chat" },
+          ],
+        },
+        {
+          name: "Speech-to-Text",
+          href: "/app/speech",
+          icon: Mic,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Transcription", href: "/app/speech" },
+            { name: "Voice Commands", href: "/app/speech/voice-commands" },
+            { name: "Meeting Notes", href: "/app/speech/meetings" },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Marketing",
+      items: [
+        {
+          name: "Campaign Pro",
+          href: "/app/campaign-pro",
+          icon: Megaphone,
+          children: [
+            { name: "Campaigns", href: "/app/campaign-pro" },
+            { name: "Audience", href: "/app/campaign-pro" },
+            { name: "Analytics", href: "/app/campaign-pro" },
+          ],
+        },
+        {
+          name: "Social Media",
+          href: "/app/social",
+          icon: Share2,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Dashboard", href: "/app/social" },
+            { name: "Accounts", href: "/app/social/accounts" },
+            { name: "Posts", href: "/app/social/posts" },
+            { name: "Analytics", href: "/app/social/analytics" },
+            { name: "Listening", href: "/app/social/listening" },
+          ],
+        },
+        {
+          name: "Search Advertising",
+          href: "/app/search-advertising",
+          icon: Search,
+        },
+      ],
+    },
+    {
+      label: "Commerce",
+      items: [
+        {
+          name: "eCommerce",
+          href: "/app/ecommerce",
+          icon: ShoppingCart,
+          badge: "New",
+          badgeVariant: "success",
+          children: [
+            { name: "Store", href: "/app/ecommerce" },
+            { name: "Orders", href: "/app/ecommerce/orders" },
+            { name: "Products", href: "/app/ecommerce/products" },
+            { name: "Customers", href: "/app/ecommerce/customers" },
+          ],
+        },
+        {
+          name: "Queue",
+          href: "/app/queue",
+          icon: ListOrdered,
         },
       ],
     },
@@ -656,6 +782,7 @@ export function AppLayout() {
   const location = useLocation();
   const badges = useSidebarBadges();
   const navigationGroups = useNavigationGroups(badges);
+  const { showBanner } = useCookieConsent();
 
   const toggleExpanded = (key: string) => {
     setExpandedItems((prev) => {
@@ -836,6 +963,9 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* Cookie Consent Banner */}
+      {showBanner && <CookieConsentBanner />}
     </div>
   );
 }

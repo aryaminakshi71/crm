@@ -11,6 +11,7 @@ import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
 // import { captureException as sentryCaptureException } from "./lib/sentry";
+import { setSecurityHeaders } from "./lib/security";
 import { getSessionCookie } from "better-auth/cookies";
 import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -32,8 +33,10 @@ import { createAuthFromEnv } from "./lib/create-auth-from-env";
 import { getDb, schema } from "./lib/db";
 import { APIError } from "./lib/errors";
 import { loggerMiddleware } from "./middleware/logger";
+import { botDetectionMiddleware } from "./middleware/bot-detection";
+import { auditLogMiddleware } from "./middleware/audit-log";
 // Monitoring imports disabled for Cloudflare Workers compatibility
-// import { initSentry } from "./lib/sentry";
+import { initSentry } from "./lib/sentry";
 // import { initDatadog } from "./lib/datadog";
 import { rateLimitRedis } from "./middleware/rate-limit-redis";
 import { appRouter } from "./routers";
@@ -297,6 +300,7 @@ export function createApp() {
 
   // Monitoring disabled for Cloudflare Workers compatibility
   // (Sentry and Datadog require semver which fails in Workers environment)
+  initSentry();
 
   // Global middleware
   app.use(
@@ -305,6 +309,19 @@ export function createApp() {
   );
   app.use("*", requestId());
   app.use("*", loggerMiddleware);
+
+  // Security headers middleware
+  app.use("*", async (c, next) => {
+    const headers = c.res.headers;
+    setSecurityHeaders(headers);
+    await next();
+  });
+
+  // Bot detection middleware
+  app.use("*", botDetectionMiddleware);
+
+  // Audit logging middleware
+  app.use("*", auditLogMiddleware);
 
   // Populate env from process.env when running outside Workers.
   app.use("*", async (c, next) => {

@@ -19,6 +19,21 @@ function emitTelemetry(
       },
     }),
   );
+
+  // Also send to PostHog if analytics consent given
+  if (window.posthog?.capture) {
+    try {
+      const consentStr = localStorage.getItem("cookie_consent");
+      if (consentStr) {
+        const consent = JSON.parse(consentStr);
+        if (consent.analytics === true) {
+          window.posthog.capture(name, attributes);
+        }
+      }
+    } catch {
+      // Ignore consent parse errors
+    }
+  }
 }
 
 export function initPlatformObservability(
