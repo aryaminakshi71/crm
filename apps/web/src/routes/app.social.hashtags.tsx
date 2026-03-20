@@ -1,0 +1,118 @@
+import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Hash, Search, TrendingUp, Plus, Copy } from "lucide-react";
+import { useState } from "react";
+
+export const Route = createFileRoute("/app/social/hashtags")({
+  component: HashtagsPage,
+});
+
+interface Hashtag {
+  tag: string;
+  posts: number;
+  trend: string;
+  sentiment: "positive" | "neutral" | "negative";
+}
+
+const MOCK_HASHTAGS: Hashtag[] = [
+  { tag: "#NucleoOne", posts: 12500, trend: "+15%", sentiment: "positive" },
+  { tag: "#SaaS", posts: 89000, trend: "+8%", sentiment: "neutral" },
+  { tag: "#AIAgents", posts: 45000, trend: "+23%", sentiment: "positive" },
+  { tag: "#TechNews", posts: 156000, trend: "+5%", sentiment: "neutral" },
+  { tag: "#ProductLaunch", posts: 34000, trend: "+12%", sentiment: "positive" },
+  { tag: "#StartupLife", posts: 67000, trend: "+3%", sentiment: "neutral" },
+];
+
+function HashtagsPage() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredHashtags = MOCK_HASHTAGS.filter((h) =>
+    h.tag.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getSentimentColor = (sentiment: Hashtag["sentiment"]) => {
+    switch (sentiment) {
+      case "positive": return "bg-green-100 text-green-800";
+      case "negative": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/social" })}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="font-bold text-xl">Hashtag Suggestions</h2>
+            <p className="text-muted-foreground text-sm">Discover and track trending hashtags</p>
+          </div>
+        </div>
+        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+          Create Hashtag
+        </Button>
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search hashtags..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
+        />
+      </div>
+
+      <Card className="border-border/60">
+        <CardContent className="p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            {filteredHashtags.map((hashtag, idx) => (
+              <div key={idx} className="p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Hash className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{hashtag.tag}</p>
+                    <p className="text-sm text-muted-foreground">{hashtag.posts.toLocaleString()} posts</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge className={getSentimentColor(hashtag.sentiment)}>{hashtag.sentiment}</Badge>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-green-600 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" /> {hashtag.trend}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60">
+        <CardContent className="p-6">
+          <h3 className="font-semibold mb-4">Suggested Hashtags for Your Post</h3>
+          <div className="flex flex-wrap gap-2">
+            {["#NucleoOne", "#AI", "#MachineLearning", "#SaaS", "#Tech", "#Innovation", "#Startup", "#Productivity"].map((tag) => (
+              <button
+                key={tag}
+                className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20 transition-colors"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

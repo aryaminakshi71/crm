@@ -11,10 +11,13 @@ import { agentsRouter } from "./agents";
 import { apiKeysRouter } from "./api-keys";
 import { auditRouter } from "./audit";
 import { billingRouter } from "./billing";
+import { communicationsRouter } from "./communications";
 import { contactsRouter } from "./contacts";
 import { dashboardRouter } from "./dashboard";
 import { dealsRouter } from "./deals";
+import { devopsRouter } from "./devops";
 import { enterpriseRouter } from "./enterprise";
+import { fieldServiceRouter } from "./field-service";
 import { healthRouter } from "./health";
 import { hrmRouter } from "./hrm";
 import { intelligenceRouter } from "./intelligence";
@@ -26,8 +29,10 @@ import { notificationsRouter } from "./notifications";
 import { nucleoWorkspaceRouter } from "./nucleo-workspace";
 import { operationsRouter } from "./operations";
 import { organizationSettingsRouter } from "./organization-settings";
+import { presenceRouter } from "./presence";
 import { rbacRouter } from "./rbac";
 import { realtimeRouter } from "./realtime";
+import { socialRouter } from "./social";
 
 import { assetsRouter } from "./assets";
 
@@ -52,10 +57,15 @@ export const appRouter = {
   notifications: notificationsRouter,
   rbac: rbacRouter,
   organizationSettings: organizationSettingsRouter,
+  presence: presenceRouter,
   apiKeys: apiKeysRouter,
   audit: auditRouter,
   billing: billingRouter,
   realtime: realtimeRouter,
+  fieldService: fieldServiceRouter,
+  devops: devopsRouter,
+  communications: communicationsRouter,
+  social: socialRouter,
 };
 
 export type AppRouter = typeof appRouter;

@@ -1,0 +1,665 @@
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  FormField,
+  FormModal,
+  Input,
+  Textarea,
+} from "@crm/ui";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  Calendar,
+  CheckCircle2,
+  Copy,
+  FileText,
+  Flag,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+// ─── Route ──────────────────────────────────────────────────────────────────
+
+export const Route = createFileRoute("/app/projects/templates")({
+  component: TemplatesPage,
+});
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type Template = {
+  id: string;
+  name: string;
+  description: string;
+  category: "software" | "marketing" | "research" | "operations" | "custom";
+  tasks: TemplateTask[];
+  milestones: TemplateMilestone[];
+  teamRoles: { role: string; count: number }[];
+  estimatedDuration: string;
+  budget?: string;
+  usageCount: number;
+  createdAt: string;
+  isFeatured?: boolean;
+};
+
+type TemplateTask = {
+  title: string;
+  category: string;
+  priority: "low" | "medium" | "high";
+  estimatedHours: number;
+  assigneeRole?: string;
+};
+
+type TemplateMilestone = {
+  title: string;
+  dayOffset: number;
+  description?: string;
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+function TemplatesPage() {
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    description: "",
+    category: "software" as Template["category"],
+    estimatedDuration: "",
+    budget: "",
+  });
+
+  // Mock templates data
+  const templates: Template[] = [
+    {
+      id: "t1",
+      name: "Agile Software Development",
+      description: "Complete sprint-based development workflow with standard Agile ceremonies",
+      category: "software",
+      tasks: [
+        { title: "Sprint Planning", category: "Planning", priority: "high", estimatedHours: 2, assigneeRole: "Scrum Master" },
+        { title: "Backlog Grooming", category: "Planning", priority: "medium", estimatedHours: 1, assigneeRole: "Team Lead" },
+        { title: "Daily Standup", category: "Ceremony", priority: "medium", estimatedHours: 0.5, assigneeRole: "Team" },
+        { title: "Sprint Review", category: "Ceremony", priority: "high", estimatedHours: 1, assigneeRole: "Scrum Master" },
+        { title: "Sprint Retrospective", category: "Ceremony", priority: "medium", estimatedHours: 1, assigneeRole: "Scrum Master" },
+        { title: "Code Review", category: "Development", priority: "high", estimatedHours: 2, assigneeRole: "Developer" },
+        { title: "Unit Testing", category: "Development", priority: "high", estimatedHours: 4, assigneeRole: "Developer" },
+        { title: "Integration Testing", category: "QA", priority: "high", estimatedHours: 4, assigneeRole: "QA Engineer" },
+        { title: "Documentation", category: "Delivery", priority: "low", estimatedHours: 2, assigneeRole: "Technical Writer" },
+      ],
+      milestones: [
+        { title: "Project Kickoff", dayOffset: 0, description: "Initial team alignment" },
+        { title: "Sprint 1 Complete", dayOffset: 14, description: "First working increment" },
+        { title: "Sprint 2 Complete", dayOffset: 28, description: "Feature complete" },
+        { title: "Release", dayOffset: 35, description: "Production deployment" },
+      ],
+      teamRoles: [
+        { role: "Scrum Master", count: 1 },
+        { role: "Developer", count: 3 },
+        { role: "QA Engineer", count: 1 },
+      ],
+      estimatedDuration: "5 weeks",
+      budget: "$50,000",
+      usageCount: 156,
+      createdAt: "2023-06-15",
+      isFeatured: true,
+    },
+    {
+      id: "t2",
+      name: "Marketing Campaign",
+      description: "Full marketing campaign from planning to execution and analytics",
+      category: "marketing",
+      tasks: [
+        { title: "Market Research", category: "Research", priority: "high", estimatedHours: 8, assigneeRole: "Marketing Manager" },
+        { title: "Competitor Analysis", category: "Research", priority: "medium", estimatedHours: 4, assigneeRole: "Analyst" },
+        { title: "Campaign Strategy", category: "Planning", priority: "high", estimatedHours: 6, assigneeRole: "Marketing Manager" },
+        { title: "Content Creation", category: "Creation", priority: "high", estimatedHours: 20, assigneeRole: "Content Writer" },
+        { title: "Design Assets", category: "Creation", priority: "high", estimatedHours: 16, assigneeRole: "Designer" },
+        { title: "Social Media Setup", category: "Execution", priority: "medium", estimatedHours: 4, assigneeRole: "Social Media Manager" },
+        { title: "Email Campaign Setup", category: "Execution", priority: "medium", estimatedHours: 4, assigneeRole: "Marketing Manager" },
+        { title: "Launch", category: "Execution", priority: "high", estimatedHours: 8, assigneeRole: "Team" },
+        { title: "Analytics Review", category: "Analysis", priority: "medium", estimatedHours: 4, assigneeRole: "Analyst" },
+      ],
+      milestones: [
+        { title: "Strategy Approved", dayOffset: 7 },
+        { title: "Content Ready", dayOffset: 21 },
+        { title: "Campaign Launch", dayOffset: 28 },
+        { title: "Final Report", dayOffset: 45 },
+      ],
+      teamRoles: [
+        { role: "Marketing Manager", count: 1 },
+        { role: "Content Writer", count: 1 },
+        { role: "Designer", count: 1 },
+        { role: "Analyst", count: 1 },
+      ],
+      estimatedDuration: "6 weeks",
+      budget: "$25,000",
+      usageCount: 89,
+      createdAt: "2023-08-20",
+    },
+    {
+      id: "t3",
+      name: "Product Research",
+      description: "Comprehensive product research and validation workflow",
+      category: "research",
+      tasks: [
+        { title: "Problem Statement", category: "Discovery", priority: "high", estimatedHours: 4 },
+        { title: "User Interviews", category: "Research", priority: "high", estimatedHours: 16 },
+        { title: "Survey Creation", category: "Research", priority: "medium", estimatedHours: 4 },
+        { title: "Data Analysis", category: "Analysis", priority: "high", estimatedHours: 12 },
+        { title: "Competitive Analysis", category: "Analysis", priority: "medium", estimatedHours: 8 },
+        { title: "User Personas", category: "Deliverable", priority: "high", estimatedHours: 6 },
+        { title: "Requirements Doc", category: "Deliverable", priority: "high", estimatedHours: 8 },
+        { title: "Prototype", category: "Deliverable", priority: "medium", estimatedHours: 16 },
+      ],
+      milestones: [
+        { title: "Research Complete", dayOffset: 14 },
+        { title: "Analysis Complete", dayOffset: 21 },
+        { title: "Deliverables Ready", dayOffset: 28 },
+      ],
+      teamRoles: [
+        { role: "Researcher", count: 2 },
+        { role: "Designer", count: 1 },
+      ],
+      estimatedDuration: "4 weeks",
+      usageCount: 67,
+      createdAt: "2023-09-10",
+    },
+    {
+      id: "t4",
+      name: "Operations Setup",
+      description: "Setting up new business operations and processes",
+      category: "operations",
+      tasks: [
+        { title: "Process Documentation", category: "Documentation", priority: "high", estimatedHours: 12 },
+        { title: "Workflow Design", category: "Design", priority: "high", estimatedHours: 8 },
+        { title: "Tool Selection", category: "Planning", priority: "medium", estimatedHours: 4 },
+        { title: "Training Materials", category: "Training", priority: "medium", estimatedHours: 8 },
+        { title: "Team Onboarding", category: "Training", priority: "high", estimatedHours: 8 },
+        { title: "QA Pass", category: "Review", priority: "high", estimatedHours: 4 },
+      ],
+      milestones: [
+        { title: "Processes Defined", dayOffset: 10 },
+        { title: "Tools Configured", dayOffset: 15 },
+        { title: "Team Trained", dayOffset: 20 },
+      ],
+      teamRoles: [
+        { role: "Operations Manager", count: 1 },
+        { role: "Process Analyst", count: 1 },
+      ],
+      estimatedDuration: "3 weeks",
+      usageCount: 45,
+      createdAt: "2023-10-05",
+    },
+  ];
+
+  // Filter templates
+  const filteredTemplates = templates.filter((t) => {
+    if (search && !t.name.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    if (filterCategory !== "all" && t.category !== filterCategory) {
+      return false;
+    }
+    return true;
+  });
+
+  const handleUseTemplate = (template: Template) => {
+    toast.success(`Creating project from "${template.name}" template`);
+  };
+
+  const handleDuplicateTemplate = (template: Template) => {
+    toast.success(`Template "${template.name}" duplicated`);
+  };
+
+  // Category colors
+  const categoryColors: Record<string, string> = {
+    software: "bg-primary/10 text-primary",
+    marketing: "bg-warning/10 text-warning",
+    research: "bg-cyan-400/10 text-cyan-400",
+    operations: "bg-success/10 text-success",
+    custom: "bg-muted text-muted-foreground",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-xl text-foreground">Project Templates</h2>
+          <p className="text-muted-foreground text-sm">
+            Start projects faster with pre-built templates
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          Create Template
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search templates..."
+          />
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
+          <option value="all">All Categories</option>
+          <option value="software">Software</option>
+          <option value="marketing">Marketing</option>
+          <option value="research">Research</option>
+          <option value="operations">Operations</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      {/* Featured Template */}
+      {search === "" && filterCategory === "all" && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="h-14 w-14 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                  <FileText className="h-7 w-7 text-primary" />
+                </div>
+                <div>
+                  <Badge variant="primary" size="sm" className="mb-2">
+                    Featured
+                  </Badge>
+                  <h3 className="text-xl font-bold">
+                    {templates.find((t) => t.isFeatured)?.name}
+                  </h3>
+                  <p className="text-muted-foreground mt-1 max-w-xl">
+                    {templates.find((t) => t.isFeatured)?.description}
+                  </p>
+                  <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <FileText className="h-4 w-4" />
+                      {templates.find((t) => t.isFeatured)?.tasks.length} tasks
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Flag className="h-4 w-4" />
+                      {templates.find((t) => t.isFeatured)?.milestones.length} milestones
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      {templates.find((t) => t.isFeatured)?.teamRoles.length} roles
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {templates.find((t) => t.isFeatured)?.estimatedDuration}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const featured = templates.find((t) => t.isFeatured);
+                    if (featured) setSelectedTemplate(featured);
+                    setIsPreviewOpen(true);
+                  }}
+                >
+                  Preview
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    const featured = templates.find((t) => t.isFeatured);
+                    if (featured) handleUseTemplate(featured);
+                  }}
+                >
+                  Use Template
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Templates Grid */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredTemplates.map((template) => (
+          <Card
+            key={template.id}
+            hover
+            className="cursor-pointer"
+            onClick={() => {
+              setSelectedTemplate(template);
+              setIsPreviewOpen(true);
+            }}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <Badge
+                  className={categoryColors[template.category]}
+                  size="sm"
+                >
+                  {template.category}
+                </Badge>
+              </div>
+
+              <h3 className="font-semibold mt-3">{template.name}</h3>
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                {template.description}
+              </p>
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {template.tasks.length}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Flag className="h-3 w-3" />
+                  {template.milestones.length}
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {template.usageCount} uses
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                <span className="text-xs text-muted-foreground">
+                  {template.estimatedDuration}
+                </span>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDuplicateTemplate(template);
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.success("Template deleted");
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Preview Modal */}
+      {selectedTemplate && (
+        <TemplatePreviewModal
+          template={selectedTemplate}
+          isOpen={isPreviewOpen}
+          onClose={() => {
+            setIsPreviewOpen(false);
+            setSelectedTemplate(null);
+          }}
+          onUse={() => handleUseTemplate(selectedTemplate)}
+        />
+      )}
+
+      {/* Create Template Modal */}
+      <FormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create Template"
+        onSubmit={(e) => {
+          e.preventDefault();
+          toast.success("Template created");
+          setIsCreateModalOpen(false);
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Template Name" required>
+            <Input
+              value={newTemplate.name}
+              onChange={(e) =>
+                setNewTemplate((t) => ({ ...t, name: e.target.value }))
+              }
+              placeholder="Enter template name..."
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={newTemplate.description}
+              onChange={(e) =>
+                setNewTemplate((t) => ({ ...t, description: e.target.value }))
+              }
+              placeholder="Describe what this template is for..."
+              rows={3}
+            />
+          </FormField>
+          <FormField label="Category">
+            <select
+              value={newTemplate.category}
+              onChange={(e) =>
+                setNewTemplate((t) => ({
+                  ...t,
+                  category: e.target.value as Template["category"],
+                }))
+              }
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+            >
+              <option value="software">Software</option>
+              <option value="marketing">Marketing</option>
+              <option value="research">Research</option>
+              <option value="operations">Operations</option>
+              <option value="custom">Custom</option>
+            </select>
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Estimated Duration">
+              <Input
+                value={newTemplate.estimatedDuration}
+                onChange={(e) =>
+                  setNewTemplate((t) => ({
+                    ...t,
+                    estimatedDuration: e.target.value,
+                  }))
+                }
+                placeholder="e.g., 4 weeks"
+              />
+            </FormField>
+            <FormField label="Budget (optional)">
+              <Input
+                value={newTemplate.budget}
+                onChange={(e) =>
+                  setNewTemplate((t) => ({ ...t, budget: e.target.value }))
+                }
+                placeholder="$0"
+              />
+            </FormField>
+          </div>
+        </div>
+      </FormModal>
+    </div>
+  );
+}
+
+// ─── Template Preview Modal ─────────────────────────────────────────────────
+
+function TemplatePreviewModal({
+  template,
+  isOpen,
+  onClose,
+  onUse,
+}: {
+  template: Template;
+  isOpen: boolean;
+  onClose: () => void;
+  onUse: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+        <div className="relative w-full max-w-3xl rounded-xl bg-card shadow-xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-card border-b border-border p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-bold text-lg">{template.name}</h3>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {template.description}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 space-y-6">
+            {/* Overview Stats */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold">{template.tasks.length}</p>
+                <p className="text-xs text-muted-foreground">Tasks</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold">{template.milestones.length}</p>
+                <p className="text-xs text-muted-foreground">Milestones</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold">{template.teamRoles.length}</p>
+                <p className="text-xs text-muted-foreground">Team Roles</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold">{template.estimatedDuration}</p>
+                <p className="text-xs text-muted-foreground">Duration</p>
+              </div>
+            </div>
+
+            {/* Tasks */}
+            <div>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                Tasks ({template.tasks.length})
+              </h4>
+              <div className="space-y-2">
+                {template.tasks.map((task, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border"
+                  >
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">{task.category}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        task.priority === "high"
+                          ? "danger"
+                          : task.priority === "medium"
+                            ? "warning"
+                            : "default"
+                      }
+                      size="sm"
+                    >
+                      {task.priority}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {task.estimatedHours}h
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Milestones */}
+            <div>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                Milestones ({template.milestones.length})
+              </h4>
+              <div className="space-y-3">
+                {template.milestones.map((milestone, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="h-6 w-6 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                      <Flag className="h-3 w-3 text-success" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{milestone.title}</p>
+                      {milestone.description && (
+                        <p className="text-xs text-muted-foreground">
+                          {milestone.description}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" size="sm">
+                      Day {milestone.dayOffset}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Team Roles */}
+            <div>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                Team Roles
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {template.teamRoles.map((role, i) => (
+                  <Badge key={i} variant="outline">
+                    {role.role} ({role.count})
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 z-10 bg-card border-t border-border p-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={onUse}>
+              Use This Template
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -7,7 +7,7 @@
 import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { connectors, workflows, workflowRuns, workflowEvents, eventSubscriptions, quotaLimits } = schema;
@@ -19,7 +19,7 @@ const connectorSchema = z.object({
   type: z.string(),
   name: z.string(),
   status: z.string(),
-  config: z.record(z.unknown()),
+  config: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -31,7 +31,7 @@ const workflowSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   triggerType: z.string(),
-  definition: z.record(z.unknown()),
+  definition: z.record(z.string(), z.unknown()),
   status: z.string(),
   environment: z.string().nullable(),
   createdBy: z.string().uuid(),
@@ -120,8 +120,8 @@ export const integrationRouter = {
       z.object({
         type: z.string(),
         name: z.string(),
-        config: z.record(z.unknown()).optional(),
-        credentials: z.record(z.unknown()).optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
+        credentials: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(connectorSchema)
@@ -170,7 +170,7 @@ export const integrationRouter = {
           .limit(1);
 
         if (!connector) {
-          throw new APIError("Connector not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Connector not found", 404);
         }
         return connector;
       },
@@ -188,8 +188,8 @@ export const integrationRouter = {
         id: z.string().uuid(),
         name: z.string().optional(),
         status: z.string().optional(),
-        config: z.record(z.unknown()).optional(),
-        credentials: z.record(z.unknown()).optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
+        credentials: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(connectorSchema)
@@ -211,7 +211,7 @@ export const integrationRouter = {
           .returning();
 
         if (!connector) {
-          throw new APIError("Connector not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Connector not found", 404);
         }
         return connector;
       },
@@ -331,7 +331,7 @@ export const integrationRouter = {
         name: z.string(),
         description: z.string().optional(),
         triggerType: z.enum(["webhook", "schedule", "event", "manual"]),
-        definition: z.record(z.unknown()),
+        definition: z.record(z.string(), z.unknown()),
         environment: z.string().optional(),
       }),
     )
@@ -389,7 +389,7 @@ export const integrationRouter = {
           .limit(1);
 
         if (!workflow) {
-          throw new APIError("Workflow not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Workflow not found", 404);
         }
         return workflow;
       },
@@ -407,7 +407,7 @@ export const integrationRouter = {
         id: z.string().uuid(),
         name: z.string().optional(),
         description: z.string().optional(),
-        definition: z.record(z.unknown()).optional(),
+        definition: z.record(z.string(), z.unknown()).optional(),
         status: z.string().optional(),
       }),
     )
@@ -430,7 +430,7 @@ export const integrationRouter = {
           .returning();
 
         if (!workflow) {
-          throw new APIError("Workflow not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Workflow not found", 404);
         }
         return workflow;
       },
@@ -467,7 +467,7 @@ export const integrationRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
-        triggerData: z.record(z.unknown()).optional(),
+        triggerData: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.object({ runId: z.string().uuid(), status: z.string() }))
@@ -581,7 +581,7 @@ export const integrationRouter = {
           .limit(1);
 
         if (!run) {
-          throw new APIError("Workflow run not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Workflow run not found", 404);
         }
         return run;
       },
@@ -685,8 +685,8 @@ export const integrationRouter = {
       z.object({
         type: z.string(),
         source: z.string().optional(),
-        payload: z.record(z.unknown()).optional(),
-        metadata: z.record(z.unknown()).optional(),
+        payload: z.record(z.string(), z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
         idempotencyKey: z.string().optional(),
       }),
     )
@@ -751,7 +751,7 @@ export const integrationRouter = {
       z.object({
         workflowId: z.string().uuid(),
         eventType: z.string(),
-        filters: z.record(z.unknown()).optional(),
+        filters: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.object({ id: z.string().uuid(), success: z.boolean() }))

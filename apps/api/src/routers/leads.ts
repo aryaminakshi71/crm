@@ -8,7 +8,7 @@ import { getOrCache, invalidateCache } from "@crm/storage/redis";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
@@ -161,7 +161,7 @@ export const leadsRouter = {
           .limit(1);
 
         if (!lead) {
-          throw new APIError("Lead not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
         }
 
         return lead;
@@ -357,7 +357,7 @@ export const leadsRouter = {
           .returning();
 
         if (!lead) {
-          throw new APIError("Lead not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
         }
 
         return lead;
@@ -411,7 +411,7 @@ export const leadsRouter = {
           .limit(1);
 
         if (!lead) {
-          throw new APIError("Lead not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
         }
 
         // Create contact from lead

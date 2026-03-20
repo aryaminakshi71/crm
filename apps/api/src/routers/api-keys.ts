@@ -8,7 +8,7 @@ import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { webhooks } = schema;
@@ -33,7 +33,7 @@ const webhookSchema = z.object({
   url: z.string(),
   events: z.array(z.string()),
   active: z.string(),
-  headers: z.record(z.string()),
+  headers: z.record(z.string(), z.string()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -177,7 +177,7 @@ export const apiKeysRouter = {
         url: z.string().url(),
         events: z.array(z.string()),
         secret: z.string().optional(),
-        headers: z.record(z.string()).optional(),
+        headers: z.record(z.string(), z.string()).optional(),
       }),
     )
     .output(webhookSchema)
@@ -226,7 +226,7 @@ export const apiKeysRouter = {
         events: z.array(z.string()).optional(),
         active: z.boolean().optional(),
         secret: z.string().optional(),
-        headers: z.record(z.string()).optional(),
+        headers: z.record(z.string(), z.string()).optional(),
       }),
     )
     .output(webhookSchema)
@@ -250,7 +250,7 @@ export const apiKeysRouter = {
         .returning();
 
       if (!webhook) {
-        throw new APIError("Webhook not found", 404);
+        throw new APIError(ErrorCode.NOT_FOUND, "Webhook not found", 404);
       }
       return webhook;
     }),
@@ -286,7 +286,7 @@ export const apiKeysRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
-        payload: z.record(z.unknown()).optional(),
+        payload: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.object({ success: z.boolean(), message: z.string().optional() }))
@@ -302,7 +302,7 @@ export const apiKeysRouter = {
           .limit(1);
 
         if (!webhook) {
-          throw new APIError("Webhook not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Webhook not found", 404);
         }
 
         // Simulate webhook delivery

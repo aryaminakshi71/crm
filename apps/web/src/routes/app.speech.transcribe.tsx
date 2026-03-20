@@ -1,0 +1,146 @@
+import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  FileText,
+  Plus,
+  Search,
+  Play,
+  Download,
+  Trash2,
+  Clock,
+  Upload,
+  Filter,
+} from "lucide-react";
+import { useState } from "react";
+
+export const Route = createFileRoute("/app/speech/transcribe")({
+  component: TranscriptionsPage,
+});
+
+interface Transcription {
+  id: string;
+  name: string;
+  duration: string;
+  date: string;
+  status: "completed" | "processing" | "failed";
+  speakers: number;
+  accuracy: number;
+  language: string;
+}
+
+const MOCK_TRANSCRIPTIONS: Transcription[] = [
+  { id: "t1", name: "Sales Call - Q4 Review", duration: "45:23", date: "Mar 18, 2024", status: "completed", speakers: 3, accuracy: 98.2, language: "English" },
+  { id: "t2", name: "Team Standup Meeting", duration: "28:15", date: "Mar 18, 2024", status: "completed", speakers: 6, accuracy: 97.8, language: "English" },
+  { id: "t3", name: "Customer Interview #123", duration: "1:02:34", date: "Mar 17, 2024", status: "completed", speakers: 2, accuracy: 99.1, language: "English" },
+  { id: "t4", name: "Board Meeting Recording", duration: "2:15:00", date: "Mar 16, 2024", status: "processing", speakers: 8, accuracy: 0, language: "English" },
+  { id: "t5", name: "Podcast Episode 45", duration: "38:22", date: "Mar 15, 2024", status: "completed", speakers: 2, accuracy: 96.5, language: "English" },
+  { id: "t6", name: "Legal Deposition", duration: "1:45:00", date: "Mar 14, 2024", status: "failed", speakers: 4, accuracy: 0, language: "English" },
+];
+
+function TranscriptionsPage() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "completed" | "processing">("all");
+
+  const filteredTranscriptions = MOCK_TRANSCRIPTIONS.filter((t) => {
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === "all" || t.status === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const getStatusBadge = (status: Transcription["status"]) => {
+    switch (status) {
+      case "completed": return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      case "processing": return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>;
+      case "failed": return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/speech" })}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="font-bold text-xl">Transcriptions</h2>
+            <p className="text-muted-foreground text-sm">View and manage your audio transcriptions</p>
+          </div>
+        </div>
+        <Link to="/app/speech/transcribe/new">
+          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+            New Transcription
+          </Button>
+        </Link>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search transcriptions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
+          />
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as typeof filter)}
+            className="px-4 py-2 border rounded-lg bg-background text-sm"
+          >
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="processing">Processing</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Transcriptions List */}
+      <Card className="border-border/60">
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            {filteredTranscriptions.map((transcription) => (
+              <div key={transcription.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
+                <Link to={`/app/speech/transcribe/${transcription.id}` as string} className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors">
+                  <Play className="h-4 w-4 text-primary" />
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link to={`/app/speech/transcribe/${transcription.id}` as string} className="font-medium hover:text-primary">
+                    {transcription.name}
+                  </Link>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {transcription.duration}
+                    </span>
+                    <span>•</span>
+                    <span>{transcription.speakers} speakers</span>
+                    <span>•</span>
+                    <span>{transcription.language}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {getStatusBadge(transcription.status)}
+                  {transcription.status === "completed" && (
+                    <>
+                      <Badge className="bg-green-100 text-green-800">{transcription.accuracy}%</Badge>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

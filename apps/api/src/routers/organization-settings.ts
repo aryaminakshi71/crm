@@ -15,10 +15,10 @@ const { organizationSettings } = schema;
 const settingsSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
-  branding: z.record(z.unknown()),
-  theming: z.record(z.unknown()),
-  localization: z.record(z.unknown()),
-  preferences: z.record(z.unknown()),
+  branding: z.record(z.string(), z.unknown()),
+  theming: z.record(z.string(), z.unknown()),
+  localization: z.record(z.string(), z.unknown()),
+  preferences: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -71,10 +71,10 @@ export const organizationSettingsRouter = {
     })
     .input(
       z.object({
-        branding: z.record(z.unknown()).optional(),
-        theming: z.record(z.unknown()).optional(),
-        localization: z.record(z.unknown()).optional(),
-        preferences: z.record(z.unknown()).optional(),
+        branding: z.record(z.string(), z.unknown()).optional(),
+        theming: z.record(z.string(), z.unknown()).optional(),
+        localization: z.record(z.string(), z.unknown()).optional(),
+        preferences: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(settingsSchema)

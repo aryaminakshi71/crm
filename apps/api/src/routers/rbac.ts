@@ -7,7 +7,7 @@
 import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { roles, permissions, roleAssignments, departments, teams } = schema;
@@ -105,7 +105,7 @@ export const rbacRouter = {
           .limit(1);
 
         if (!role) {
-          throw new APIError("Role not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Role not found", 404);
         }
         return role;
       },
@@ -138,7 +138,7 @@ export const rbacRouter = {
         .limit(1);
 
       if (existing?.isSystem === "true") {
-        throw new APIError("Cannot modify system role", 400);
+        throw new APIError(ErrorCode.BAD_REQUEST, "Cannot modify system role", 400);
       }
 
       const [role] = await db
@@ -153,7 +153,7 @@ export const rbacRouter = {
         .returning();
 
       if (!role) {
-        throw new APIError("Role not found", 404);
+        throw new APIError(ErrorCode.NOT_FOUND, "Role not found", 404);
       }
       return role;
     }),
@@ -179,7 +179,7 @@ export const rbacRouter = {
           .limit(1);
 
         if (existing?.isSystem === "true") {
-          throw new APIError("Cannot delete system role", 400);
+          throw new APIError(ErrorCode.BAD_REQUEST, "Cannot delete system role", 400);
         }
 
         await db

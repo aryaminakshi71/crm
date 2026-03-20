@@ -20,7 +20,7 @@ const notificationSchema = z.object({
   category: z.string(),
   title: z.string(),
   message: z.string(),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
   read: z.string(),
   sentAt: z.date().nullable(),
   createdAt: z.date(),
@@ -179,10 +179,10 @@ export const notificationsRouter = {
     })
     .output(
       z.object({
-        email: z.record(z.unknown()),
-        sms: z.record(z.unknown()),
-        push: z.record(z.unknown()),
-        inApp: z.record(z.unknown()),
+        email: z.record(z.string(), z.unknown()),
+        sms: z.record(z.string(), z.unknown()),
+        push: z.record(z.string(), z.unknown()),
+        inApp: z.record(z.string(), z.unknown()),
       }),
     )
     .handler(async ({ context }: { context: OrgContext }) => {
@@ -224,10 +224,10 @@ export const notificationsRouter = {
     })
     .input(
       z.object({
-        email: z.record(z.unknown()).optional(),
-        sms: z.record(z.unknown()).optional(),
-        push: z.record(z.unknown()).optional(),
-        inApp: z.record(z.unknown()).optional(),
+        email: z.record(z.string(), z.unknown()).optional(),
+        sms: z.record(z.string(), z.unknown()).optional(),
+        push: z.record(z.string(), z.unknown()).optional(),
+        inApp: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.object({ success: z.boolean() }))
@@ -290,7 +290,7 @@ export const notificationsRouter = {
         category: z.string(),
         title: z.string(),
         message: z.string(),
-        data: z.record(z.unknown()).optional(),
+        data: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.object({ id: z.string().uuid(), success: z.boolean() }))

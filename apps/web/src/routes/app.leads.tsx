@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/leads")({
   beforeLoad: () => {
-    throw redirect({ to: "/app/crm", search: { view: "leads" } });
+    throw redirect({ to: "/app/crm/leads" });
   },
   component: () => null,
 });

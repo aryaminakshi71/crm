@@ -7,7 +7,7 @@
 import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { agents, agentTemplates, agentConversations, agentMessages, agentExecutions } = schema;
@@ -20,7 +20,7 @@ const agentSchema = z.object({
   description: z.string().nullable(),
   agentType: z.string(),
   status: z.string(),
-  config: z.record(z.unknown()),
+  config: z.record(z.string(), z.unknown()),
   createdBy: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -41,7 +41,7 @@ const messageSchema = z.object({
   conversationId: z.string().uuid(),
   role: z.string(),
   content: z.string(),
-  metadata: z.record(z.unknown()).nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
   tokens: z.string().nullable(),
   createdAt: z.date(),
 });
@@ -126,7 +126,7 @@ export const agentsRouter = {
         name: z.string(),
         description: z.string().optional(),
         agentType: z.enum(["chatbot", "autonomous", "code_execution", "data_analysis"]),
-        config: z.record(z.unknown()).optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(agentSchema)
@@ -220,7 +220,7 @@ export const agentsRouter = {
           .limit(1);
 
         if (!agent) {
-          throw new APIError("Agent not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Agent not found", 404);
         }
         return agent;
       },
@@ -239,7 +239,7 @@ export const agentsRouter = {
         name: z.string().optional(),
         description: z.string().optional(),
         status: z.string().optional(),
-        config: z.record(z.unknown()).optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(agentSchema)
@@ -261,7 +261,7 @@ export const agentsRouter = {
           .returning();
 
         if (!agent) {
-          throw new APIError("Agent not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Agent not found", 404);
         }
         return agent;
       },
@@ -571,7 +571,7 @@ export const agentsRouter = {
           .limit(1);
 
         if (!execution) {
-          throw new APIError("Execution not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Execution not found", 404);
         }
         return execution;
       },

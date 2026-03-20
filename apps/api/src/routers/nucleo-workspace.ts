@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 import { cacheKeys, getCache, invalidateOrgCache, setCache } from "../lib/cache";
 
@@ -1200,7 +1200,7 @@ export const nucleoWorkspaceRouter = {
         .limit(1);
 
       if (!doc) {
-        throw new APIError("Document not found", 404);
+        throw new APIError(ErrorCode.NOT_FOUND, "Document not found", 404);
       }
 
       const nextVersion = (doc.currentVersion || 1) + 1;

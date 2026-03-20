@@ -22,7 +22,7 @@ const auditLogSchema = z.object({
   statusCode: z.number(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),
-  metadata: z.record(z.unknown()).nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.date(),
 });
 
@@ -241,7 +241,7 @@ export const auditRouter = {
         .limit(100);
 
       // Filter for security events
-      const securityLogs = logs.filter((log) =>
+      const securityLogs = logs.filter((log: typeof logs[number]) =>
         securityActions.some((action) => log.action.includes(action))
       );
 

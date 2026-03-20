@@ -30,7 +30,7 @@ function SettingsBillingPage() {
     { key: "projects", name: "Projects", enabled: true, source: "plan", description: "Project management" },
     { key: "invoicing", name: "Invoicing", enabled: true, source: "plan", description: "Billing and payments" },
     { key: "helpdesk", name: "Helpdesk", enabled: true, source: "plan", description: "Support tickets" },
-    { key: "ai_agents", name: "AI Agents", enabled: false, source: "addon", description: "Autonomous AI agents" },
+    { key: "ai", name: "AI", enabled: false, source: "addon", description: "AI agents and business intelligence" },
     { key: "monitoring", name: "Monitoring", enabled: false, source: "addon", description: "Platform observability" },
     { key: "integrations", name: "Integrations", enabled: true, source: "plan", description: "Workflow automation" },
     { key: "campaign_pro", name: "Marketing", enabled: false, source: "addon", description: "Campaign management" },
