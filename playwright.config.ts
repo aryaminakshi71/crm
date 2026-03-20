@@ -10,11 +10,19 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001",
     trace: "on-first-retry",
+    launchOptions: {
+      args: ["--disable-dev-shm-usage"],
+    },
   },
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium-perf",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /performance\.spec\.ts/,
     },
   ],
 });
