@@ -1,5 +1,6 @@
 import { Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Share2,
   Users,
@@ -8,7 +9,6 @@ import {
   TrendingUp,
   MessageSquare,
   Heart,
-  ArrowRight,
   Instagram,
   Twitter,
   Linkedin,
@@ -19,14 +19,21 @@ export const Route = createFileRoute("/app/social/_index")({
   component: SocialDashboard,
 });
 
-const PLATFORMS = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_PLATFORMS = [
   { name: "Instagram", icon: Instagram, followers: "18.5K", color: "bg-pink-500" },
   { name: "Twitter", icon: Twitter, followers: "12.3K", color: "bg-sky-500" },
   { name: "LinkedIn", icon: Linkedin, followers: "8.9K", color: "bg-blue-600" },
   { name: "Facebook", icon: Facebook, followers: "5.5K", color: "bg-blue-500" },
 ];
 
-const RECENT_POSTS = [
+const MOCK_RECENT_POSTS = [
   { id: "p1", platform: "Instagram", content: "Behind the scenes of our new product launch!", likes: 342, comments: 28, reach: "4.2K" },
   { id: "p2", platform: "Twitter", content: "Excited to announce our partnership with @techleader", likes: 567, comments: 45, reach: "12K" },
   { id: "p3", platform: "LinkedIn", content: "We're hiring! Join our growing team.", likes: 234, comments: 56, reach: "8.9K" },
@@ -40,6 +47,48 @@ const QUICK_ACTIONS = [
 ];
 
 function SocialDashboard() {
+  const { data: postsData } = useQuery({
+    queryKey: ["social", "posts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/posts?limit=10`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const { data: accountsData } = useQuery({
+    queryKey: ["social", "accounts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/accounts`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const recentPosts = postsData?.data?.length
+    ? postsData.data.map((p: any) => ({
+        id: p.id,
+        platform: p.platform ?? "Unknown",
+        content: p.content ?? "",
+        likes: p.likes ?? 0,
+        comments: p.comments ?? 0,
+        reach: p.reach ?? "0",
+      }))
+    : MOCK_RECENT_POSTS;
+
+  const platforms = accountsData?.data?.length
+    ? accountsData.data.map((a: any) => ({
+        name: a.platform ?? a.name ?? "Unknown",
+        icon: Share2,
+        followers: a.followers ? `${(a.followers / 1000).toFixed(1)}K` : "0",
+        color: "bg-primary",
+      }))
+    : MOCK_PLATFORMS;
+
   return (
     <div className="space-y-6">
       {/* Quick Actions */}
@@ -63,7 +112,7 @@ function SocialDashboard() {
         <CardContent className="p-6">
           <h2 className="font-semibold mb-4">Connected Platforms</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PLATFORMS.map((platform) => {
+            {platforms.map((platform: any) => {
               const Icon = platform.icon;
               return (
                 <div key={platform.name} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
@@ -86,7 +135,7 @@ function SocialDashboard() {
         <CardContent className="p-6">
           <h2 className="font-semibold mb-4">Recent Posts</h2>
           <div className="space-y-4">
-            {RECENT_POSTS.map((post) => (
+            {recentPosts.map((post: any) => (
               <Link key={post.id} to="/app/social/posts" className="block">
                 <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                   <Badge variant="outline">{post.platform}</Badge>

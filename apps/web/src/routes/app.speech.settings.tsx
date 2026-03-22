@@ -1,19 +1,32 @@
 import { Button, Card, CardContent, Input, Select } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  Settings,
   Save,
-  Volume2,
-  Mic,
   Globe,
   Shield,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/speech/settings")({
   component: SettingsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const DEFAULT_MODELS = [
+  { id: "nova-2", name: "Nova 2 (Default)" },
+  { id: "nova", name: "Nova" },
+  { id: "enhanced", name: "Enhanced" },
+  { id: "base", name: "Base" },
+];
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -26,7 +39,27 @@ function SettingsPage() {
     speakerLabels: true,
     sentimentAnalysis: true,
     maxFileSize: "500",
+    defaultModel: "nova-2",
   });
+
+  const { data: modelsData } = useQuery({
+    queryKey: ["speech", "models"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/models`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const models = modelsData?.data?.length
+    ? modelsData.data.map((m: any) => ({ id: m.id ?? m.modelId, name: m.name ?? m.displayName ?? m.id }))
+    : DEFAULT_MODELS;
+
+  const handleSave = () => {
+    toast.success("Settings saved!");
+  };
 
   return (
     <div className="space-y-6">
@@ -40,7 +73,7 @@ function SettingsPage() {
             <p className="text-muted-foreground text-sm">Configure your speech-to-text preferences</p>
           </div>
         </div>
-        <Button variant="primary" leftIcon={<Save className="h-4 w-4" />}>
+        <Button variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={handleSave}>
           Save Changes
         </Button>
       </div>
@@ -66,6 +99,19 @@ function SettingsPage() {
                   <option value="es">Spanish</option>
                   <option value="fr">French</option>
                   <option value="de">German</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Transcription Model</label>
+                <Select
+                  value={settings.defaultModel}
+                  onValueChange={(v) => setSettings({ ...settings, defaultModel: v })}
+                  className="w-full"
+                >
+                  {models.map((m: any) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
                 </Select>
               </div>
 

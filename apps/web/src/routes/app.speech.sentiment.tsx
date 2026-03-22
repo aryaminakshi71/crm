@@ -2,13 +2,11 @@ import { Button, Card, CardContent } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  BarChart3,
   TrendingUp,
   TrendingDown,
   Minus,
   Calendar,
 } from "lucide-react";
-import { useState } from "react";
 
 export const Route = createFileRoute("/app/speech/sentiment")({
   component: SentimentPage,

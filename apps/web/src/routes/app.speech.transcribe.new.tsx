@@ -1,5 +1,6 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Progress } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, ProgressBar } from "@crm/ui";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Upload,
@@ -11,10 +12,18 @@ import {
   Globe,
 } from "lucide-react";
 import { useState, useRef } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/speech/transcribe/new")({
   component: NewTranscriptionPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -27,6 +36,7 @@ const LANGUAGES = [
 
 function NewTranscriptionPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -44,10 +54,8 @@ function NewTranscriptionPage() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-
     setFile(selectedFile);
     setIsUploading(true);
-
     for (let i = 0; i <= 100; i += 5) {
       await new Promise((resolve) => setTimeout(resolve, 50));
       setUploadProgress(i);
@@ -63,6 +71,31 @@ function NewTranscriptionPage() {
       setFile(droppedFile);
     }
   };
+
+  const createTranscription = useMutation({
+    mutationFn: async () => {
+      const formData = new FormData();
+      if (file) formData.append("file", file);
+      formData.append("language", language);
+      formData.append("settings", JSON.stringify(settings));
+
+      const res = await fetch(`${API_BASE}/speech/transcriptions`, {
+        method: "POST",
+        headers: getOrgHeader(),
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to start transcription");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["speech", "transcriptions"] });
+      toast.success("Transcription started!");
+      navigate({ to: `/app/speech/transcribe/${data?.id ?? ""}` as string });
+    },
+    onError: () => {
+      toast.error("Failed to start transcription. Please try again.");
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -125,7 +158,7 @@ function NewTranscriptionPage() {
                     </div>
                     {isUploading && (
                       <div className="w-32">
-                        <Progress value={uploadProgress} />
+                        <ProgressBar value={uploadProgress} max={100} />
                         <p className="text-xs text-muted-foreground text-center mt-1">{uploadProgress}%</p>
                       </div>
                     )}
@@ -229,9 +262,14 @@ function NewTranscriptionPage() {
                 variant="primary"
                 className="w-full"
                 leftIcon={<Mic className="h-4 w-4" />}
-                disabled={!file || isUploading}
+                disabled={!file || isUploading || createTranscription.isPending}
+                onClick={() => createTranscription.mutate()}
               >
-                {isUploading ? "Uploading..." : "Start Transcription"}
+                {isUploading
+                  ? "Uploading..."
+                  : createTranscription.isPending
+                  ? "Starting..."
+                  : "Start Transcription"}
               </Button>
             </CardContent>
           </Card>

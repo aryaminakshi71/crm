@@ -5,7 +5,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  MessageSquare,
   Calendar,
 } from "lucide-react";
 

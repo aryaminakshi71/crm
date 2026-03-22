@@ -1,5 +1,6 @@
 import { Button, Card, CardContent } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -10,15 +11,22 @@ import {
   Linkedin,
   Facebook,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/app/social/posts/calendar")({
   component: CalendarPage,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const POSTS_ON_CALENDAR = [
+const MOCK_POSTS_ON_CALENDAR = [
   { id: "p1", day: 15, platform: "instagram", time: "10:00 AM", title: "Product launch post" },
   { id: "p2", day: 16, platform: "twitter", time: "2:00 PM", title: "Poll about features" },
   { id: "p3", day: 18, platform: "linkedin", time: "9:00 AM", title: "Job opening announcement" },
@@ -28,13 +36,43 @@ const POSTS_ON_CALENDAR = [
 
 function CalendarPage() {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 2, 1)); // March 2024
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const { data: postsData } = useQuery({
+    queryKey: ["social", "posts", "calendar", year, month],
+    queryFn: async () => {
+      const startDate = new Date(year, month, 1).toISOString();
+      const endDate = new Date(year, month + 1, 0).toISOString();
+      const res = await fetch(
+        `${API_BASE}/social/posts?startDate=${startDate}&endDate=${endDate}&limit=100`,
+        {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        }
+      );
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const calendarPosts = useMemo(() => {
+    const data: any[] = postsData?.data ?? [];
+    if (data.length > 0) {
+      return data.map((p: any) => ({
+        id: p.id,
+        day: new Date(p.scheduledAt ?? p.createdAt).getDate(),
+        platform: (p.platform ?? "instagram").toLowerCase(),
+        time: new Date(p.scheduledAt ?? p.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        title: p.content?.substring(0, 40) ?? "Post",
+      }));
+    }
+    return MOCK_POSTS_ON_CALENDAR;
+  }, [postsData]);
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -47,12 +85,15 @@ function CalendarPage() {
   };
 
   const getPostsForDay = (day: number) => {
-    return POSTS_ON_CALENDAR.filter((post) => post.day === day);
+    return calendarPosts.filter((post) => post.day === day);
   };
 
   const navigateMonth = (direction: number) => {
     setCurrentDate(new Date(year, month + direction, 1));
   };
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
 
   return (
     <div className="space-y-6">
@@ -105,7 +146,7 @@ function CalendarPage() {
             {Array.from({ length: daysInMonth }).map((_, idx) => {
               const day = idx + 1;
               const posts = getPostsForDay(day);
-              const isToday = day === 18; // Mock today
+              const isToday = isCurrentMonth && day === today.getDate();
 
               return (
                 <div

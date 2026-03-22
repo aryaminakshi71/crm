@@ -1,5 +1,6 @@
-import { Button, Card, CardContent, Input, Select, Textarea } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, Card, CardContent, Input, Textarea } from "@crm/ui";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Image,
@@ -14,10 +15,18 @@ import {
   Clock,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/social/posts/new")({
   component: NewPostPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
 
 const PLATFORMS = [
   { id: "instagram", name: "Instagram", icon: Instagram, color: "text-pink-500" },
@@ -28,6 +37,7 @@ const PLATFORMS = [
 
 function NewPostPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [content, setContent] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["instagram"]);
   const [schedule, setSchedule] = useState<"now" | "later">("now");
@@ -39,6 +49,46 @@ function NewPostPage() {
         ? prev.filter((p) => p !== platformId)
         : [...prev, platformId]
     );
+  };
+
+  const createPost = useMutation({
+    mutationFn: async (payload: {
+      content: string;
+      platforms: string[];
+      scheduledAt?: string;
+    }) => {
+      const res = await fetch(`${API_BASE}/social/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to create post");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
+      toast.success(schedule === "now" ? "Post published!" : "Post scheduled!");
+      navigate({ to: "/app/social/posts" });
+    },
+    onError: () => {
+      toast.error("Failed to create post. Please try again.");
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!content.trim()) {
+      toast.error("Post content cannot be empty");
+      return;
+    }
+    if (selectedPlatforms.length === 0) {
+      toast.error("Please select at least one platform");
+      return;
+    }
+    createPost.mutate({
+      content,
+      platforms: selectedPlatforms,
+      scheduledAt: schedule === "later" && scheduledTime ? scheduledTime : undefined,
+    });
   };
 
   return (
@@ -162,8 +212,14 @@ function NewPostPage() {
                 variant="primary"
                 className="w-full"
                 leftIcon={schedule === "now" ? <Send className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
+                onClick={handleSubmit}
+                disabled={createPost.isPending}
               >
-                {schedule === "now" ? "Publish Now" : "Schedule Post"}
+                {createPost.isPending
+                  ? "Saving..."
+                  : schedule === "now"
+                  ? "Publish Now"
+                  : "Schedule Post"}
               </Button>
             </CardContent>
           </Card>

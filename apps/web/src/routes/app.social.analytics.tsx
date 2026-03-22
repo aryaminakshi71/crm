@@ -1,5 +1,6 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BarChart3,
@@ -21,14 +22,21 @@ export const Route = createFileRoute("/app/social/analytics")({
   component: AnalyticsPage,
 });
 
-const PLATFORM_STATS = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_PLATFORM_STATS = [
   { platform: "Instagram", icon: Instagram, followers: "18.5K", change: "+12%", color: "text-pink-500" },
   { platform: "Twitter", icon: Twitter, followers: "12.3K", change: "+8%", color: "text-sky-500" },
   { platform: "LinkedIn", icon: Linkedin, followers: "8.9K", change: "+15%", color: "text-blue-600" },
   { platform: "Facebook", icon: Facebook, followers: "5.5K", change: "+3%", color: "text-blue-500" },
 ];
 
-const TOP_POSTS = [
+const MOCK_TOP_POSTS = [
   { id: "p1", content: "Behind the scenes of our new product launch!", platform: "Instagram", likes: 342, reach: "4.2K" },
   { id: "p2", content: "We're hiring! Join our growing team.", platform: "LinkedIn", likes: 234, reach: "8.9K" },
   { id: "p3", content: "Excited to announce our partnership with @techleader", platform: "Twitter", likes: 567, reach: "12K" },
@@ -36,6 +44,43 @@ const TOP_POSTS = [
 
 function AnalyticsPage() {
   const navigate = useNavigate();
+
+  const { data: analyticsData } = useQuery({
+    queryKey: ["social", "analytics"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/analytics`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const { data: postsData } = useQuery({
+    queryKey: ["social", "posts", "top"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/posts?limit=5&sort=likes`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const topPosts = postsData?.data?.length
+    ? postsData.data.map((p: any) => ({
+        id: p.id,
+        content: p.content ?? "",
+        platform: p.platform ?? "Unknown",
+        likes: p.likes ?? 0,
+        reach: p.reach ?? "0",
+      }))
+    : MOCK_TOP_POSTS;
+
+  const totalFollowers = analyticsData?.totalFollowers ?? 45200;
+  const totalLikes = analyticsData?.totalLikes ?? 2400;
+  const totalComments = analyticsData?.totalComments ?? 456;
+  const totalShares = analyticsData?.totalShares ?? 789;
 
   return (
     <div className="space-y-6">
@@ -53,7 +98,7 @@ function AnalyticsPage() {
 
       {/* Platform Overview */}
       <div className="grid gap-4 md:grid-cols-4">
-        {PLATFORM_STATS.map((stat) => {
+        {MOCK_PLATFORM_STATS.map((stat) => {
           const Icon = stat.icon;
           return (
             <Link key={stat.platform} to={`/app/social/analytics/${stat.platform.toLowerCase()}` as string}>
@@ -82,7 +127,7 @@ function AnalyticsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Followers</p>
-                <p className="text-xl font-bold">45.2K</p>
+                <p className="text-xl font-bold">{totalFollowers >= 1000 ? `${(totalFollowers / 1000).toFixed(1)}K` : totalFollowers}</p>
               </div>
             </div>
           </CardContent>
@@ -95,7 +140,7 @@ function AnalyticsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Likes</p>
-                <p className="text-xl font-bold">2.4K</p>
+                <p className="text-xl font-bold">{totalLikes >= 1000 ? `${(totalLikes / 1000).toFixed(1)}K` : totalLikes}</p>
               </div>
             </div>
           </CardContent>
@@ -108,7 +153,7 @@ function AnalyticsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Comments</p>
-                <p className="text-xl font-bold">456</p>
+                <p className="text-xl font-bold">{totalComments}</p>
               </div>
             </div>
           </CardContent>
@@ -121,7 +166,7 @@ function AnalyticsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Shares</p>
-                <p className="text-xl font-bold">789</p>
+                <p className="text-xl font-bold">{totalShares}</p>
               </div>
             </div>
           </CardContent>
@@ -138,7 +183,7 @@ function AnalyticsPage() {
             </Button>
           </div>
           <div className="space-y-3">
-            {TOP_POSTS.map((post) => (
+            {topPosts.map((post: any) => (
               <div key={post.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
                 <Badge variant="outline">{post.platform}</Badge>
                 <div className="flex-1 min-w-0">

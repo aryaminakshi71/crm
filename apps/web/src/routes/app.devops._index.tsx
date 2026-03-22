@@ -1,17 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Badge,
   Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  LoadingSkeleton,
-  SkeletonStatGrid,
+  SkeletonCard,
   SkeletonTable,
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -39,7 +35,13 @@ export const Route = createFileRoute("/app/devops/_index")({
   component: DevOpsDashboard,
 });
 
-// TODO: Replace with real API data when a devops/pipelines list endpoint is available
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
 const MOCK_STATS = [
   { label: "Active Pipelines", value: "12", icon: GitBranch, color: "text-blue-500", trend: "+3 from last week" },
   { label: "Running Builds", value: "3", icon: Play, color: "text-emerald-500", trend: "2 queued" },
@@ -47,7 +49,6 @@ const MOCK_STATS = [
   { label: "Environments", value: "4", icon: Globe, color: "text-purple-500", trend: "Dev, Staging, Prod, QA" },
 ];
 
-// TODO: Replace with real API data when a devops/pipelines/runs list endpoint is available
 const MOCK_RECENT_PIPELINES = [
   { name: "frontend-app", status: "success", duration: "4m 23s", branch: "main", commit: "abc1234", time: "5 min ago" },
   { name: "backend-api", status: "running", duration: "-", branch: "feature/auth", commit: "def5678", time: "Running..." },
@@ -55,7 +56,6 @@ const MOCK_RECENT_PIPELINES = [
   { name: "mobile-app", status: "success", duration: "6m 45s", branch: "release/v2.1", commit: "jkl3456", time: "1 hour ago" },
 ];
 
-// TODO: Replace with real API data when a devops/environments list endpoint is available
 const MOCK_ENVIRONMENTS = [
   { name: "Production", status: "healthy", url: "app.nucleo.one", deployments: 142, lastDeploy: "2 hours ago", cpu: 62, memory: 71, requestRate: 84 },
   { name: "Staging", status: "healthy", url: "staging.nucleo.one", deployments: 389, lastDeploy: "30 min ago", cpu: 38, memory: 52, requestRate: 41 },
@@ -63,7 +63,6 @@ const MOCK_ENVIRONMENTS = [
   { name: "QA", status: "healthy", url: "qa.nucleo.one", deployments: 256, lastDeploy: "1 hour ago", cpu: 29, memory: 44, requestRate: 18 },
 ];
 
-// TODO: Replace with real API data when a devops/deployments list endpoint is available
 const MOCK_DEPLOYMENT_TIMELINE = [
   { id: "d1", env: "Production", version: "v2.4.1", deployer: "Arya M.", duration: "4m 12s", status: "success", timestamp: "2h ago" },
   { id: "d2", env: "Staging", version: "v2.4.2-rc1", deployer: "James K.", duration: "3m 48s", status: "failed", timestamp: "3h ago" },
@@ -101,31 +100,39 @@ function MiniBar({ value, color }: { value: number; color: string }) {
 function DevOpsDashboard() {
   const [rollbackTarget, setRollbackTarget] = useState<typeof MOCK_DEPLOYMENT_TIMELINE[0] | null>(null);
 
-  // Fetch recent pipeline runs from real API
   const { data: pipelinesData, isLoading: pipelinesLoading } = useQuery({
     queryKey: ["devops", "pipelines"],
     queryFn: async () => {
-      const res = await fetch("/api/devops/pipelines?limit=5", {
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${API_BASE}/devops/pipelines?limit=5`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) return { data: [] };
       return res.json();
     },
   });
 
-  // Fetch environments from real API
   const { data: environmentsData, isLoading: envsLoading } = useQuery({
     queryKey: ["devops", "environments"],
     queryFn: async () => {
-      const res = await fetch("/api/devops/environments", {
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${API_BASE}/devops/environments`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) return [];
       return res.json();
     },
   });
 
-  // Map real pipeline data, fall back to mock when DB is empty
+  const { data: deploymentsData } = useQuery({
+    queryKey: ["devops", "deployments"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/devops/deployments?limit=10`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
   const recentPipelines = useMemo(() => {
     const data: any[] = pipelinesData?.data ?? [];
     if (data.length > 0) {
@@ -141,9 +148,7 @@ function DevOpsDashboard() {
     return MOCK_RECENT_PIPELINES;
   }, [pipelinesData]);
 
-  // Map real environment data, fall back to mock when DB is empty
   const environments = useMemo(() => {
-    // listEnvironments returns a plain array (no pagination wrapper)
     const data: any[] = Array.isArray(environmentsData) ? environmentsData : (environmentsData?.data ?? []);
     if (data.length > 0) {
       return data.map((e: any) => ({
@@ -160,7 +165,6 @@ function DevOpsDashboard() {
     return MOCK_ENVIRONMENTS;
   }, [environmentsData]);
 
-  // Derive stats from real pipeline data, fall back to mock when DB is empty
   const stats = useMemo(() => {
     const data: any[] = pipelinesData?.data ?? [];
     if (!data.length) return MOCK_STATS;
@@ -176,18 +180,6 @@ function DevOpsDashboard() {
       { label: "Success Rate", value: `${data.filter((p: any) => p.status === "success").length}/${data.length}`, icon: CheckCircle2, color: "text-amber-500", trend: "Last 5 runs" },
     ];
   }, [pipelinesData, environmentsData]);
-
-  // Fetch deployments from real API
-  const { data: deploymentsData } = useQuery({
-    queryKey: ["devops", "deployments"],
-    queryFn: async () => {
-      const res = await fetch("/api/devops/deployments?limit=10", {
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
-  });
 
   const deploymentTimeline = useMemo(() => {
     const data: any[] = deploymentsData?.data ?? [];
@@ -208,7 +200,9 @@ function DevOpsDashboard() {
   if (pipelinesLoading || envsLoading) {
     return (
       <div className="space-y-4 p-6">
-        <SkeletonStatGrid count={4} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
         <SkeletonTable rows={5} columns={5} />
       </div>
     );
@@ -488,7 +482,6 @@ function DevOpsDashboard() {
               leftIcon={<RotateCcw className="h-4 w-4" />}
               className="bg-amber-500 hover:bg-amber-600 text-white"
               onClick={() => {
-                console.log("Rolling back:", rollbackTarget);
                 setRollbackTarget(null);
               }}
             >

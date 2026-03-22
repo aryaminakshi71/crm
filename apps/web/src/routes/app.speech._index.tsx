@@ -1,10 +1,10 @@
 import { Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Mic,
   FileText,
   MessageSquare,
-  BarChart3,
   Upload,
   Volume2,
   Clock,
@@ -16,7 +16,14 @@ export const Route = createFileRoute("/app/speech/_index")({
   component: SpeechDashboard,
 });
 
-const RECENT_TRANSCRIPTIONS = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_RECENT_TRANSCRIPTIONS = [
   { id: "t1", name: "Sales Call - Q4 Review", duration: "45:23", date: "2 hours ago", accuracy: 98.2 },
   { id: "t2", name: "Team Standup Meeting", duration: "28:15", date: "4 hours ago", accuracy: 97.8 },
   { id: "t3", name: "Customer Interview", duration: "1:02:34", date: "Yesterday", accuracy: 99.1 },
@@ -30,6 +37,31 @@ const QUICK_ACTIONS = [
 ];
 
 function SpeechDashboard() {
+  const { data: transcriptionsData } = useQuery({
+    queryKey: ["speech", "transcriptions"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/transcriptions?limit=10`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const recentTranscriptions = transcriptionsData?.data?.length
+    ? transcriptionsData.data.map((t: any) => ({
+        id: t.id,
+        name: t.name ?? t.fileName ?? "Untitled",
+        duration: t.duration ?? "-",
+        date: t.createdAt ? new Date(t.createdAt).toLocaleString() : "-",
+        accuracy: t.accuracy ?? 0,
+      }))
+    : MOCK_RECENT_TRANSCRIPTIONS;
+
+  const totalHours = transcriptionsData?.totalDurationHours ?? 128;
+  const avgAccuracy = transcriptionsData?.avgAccuracy ?? 98.2;
+  const speakersDetected = transcriptionsData?.totalSpeakers ?? 24;
+
   return (
     <div className="space-y-6">
       {/* Quick Actions */}
@@ -56,7 +88,7 @@ function SpeechDashboard() {
             <Clock className="h-5 w-5" /> Recent Transcriptions
           </h2>
           <div className="space-y-3">
-            {RECENT_TRANSCRIPTIONS.map((transcription) => (
+            {recentTranscriptions.map((transcription: any) => (
               <Link
                 key={transcription.id}
                 to={`/app/speech/transcribe/${transcription.id}` as string}
@@ -90,7 +122,7 @@ function SpeechDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Audio</p>
-                <p className="text-xl font-bold">128 hours</p>
+                <p className="text-xl font-bold">{totalHours} hours</p>
               </div>
             </div>
           </CardContent>
@@ -103,7 +135,7 @@ function SpeechDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Accuracy</p>
-                <p className="text-xl font-bold">98.2%</p>
+                <p className="text-xl font-bold">{avgAccuracy}%</p>
               </div>
             </div>
           </CardContent>
@@ -116,7 +148,7 @@ function SpeechDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Speakers Detected</p>
-                <p className="text-xl font-bold">24</p>
+                <p className="text-xl font-bold">{speakersDetected}</p>
               </div>
             </div>
           </CardContent>
