@@ -20,23 +20,43 @@ import {
   Download,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/purchase-orders")({
   component: PurchaseOrdersPage,
 });
 
+const MOCK_PURCHASE_ORDERS = [
+  { id: "PO-2024-001", supplier: "TechSupply Co.", status: "pending", items: 5, total: 15420.00, createdAt: "Mar 15, 2024", expectedAt: "Mar 22, 2024" },
+  { id: "PO-2024-002", supplier: "Global Electronics", status: "approved", items: 3, total: 8750.00, createdAt: "Mar 14, 2024", expectedAt: "Mar 21, 2024" },
+  { id: "PO-2024-003", supplier: "Fashion Forward Inc.", status: "shipped", items: 8, total: 12300.00, createdAt: "Mar 10, 2024", expectedAt: "Mar 17, 2024" },
+  { id: "PO-2024-004", supplier: "HomeStyle Wholesale", status: "delivered", items: 2, total: 5600.00, createdAt: "Mar 5, 2024", deliveredAt: "Mar 12, 2024" },
+  { id: "PO-2024-005", supplier: "Sports Gear Direct", status: "cancelled", items: 4, total: 7800.00, createdAt: "Mar 1, 2024", reason: "Supplier out of stock" },
+  { id: "PO-2024-006", supplier: "TechSupply Co.", status: "draft", items: 6, total: 9800.00, createdAt: "Mar 18, 2024", expectedAt: "Mar 25, 2024" },
+];
+
 function PurchaseOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const purchaseOrders = [
-    { id: "PO-2024-001", supplier: "TechSupply Co.", status: "pending", items: 5, total: 15420.00, createdAt: "Mar 15, 2024", expectedAt: "Mar 22, 2024" },
-    { id: "PO-2024-002", supplier: "Global Electronics", status: "approved", items: 3, total: 8750.00, createdAt: "Mar 14, 2024", expectedAt: "Mar 21, 2024" },
-    { id: "PO-2024-003", supplier: "Fashion Forward Inc.", status: "shipped", items: 8, total: 12300.00, createdAt: "Mar 10, 2024", expectedAt: "Mar 17, 2024" },
-    { id: "PO-2024-004", supplier: "HomeStyle Wholesale", status: "delivered", items: 2, total: 5600.00, createdAt: "Mar 5, 2024", deliveredAt: "Mar 12, 2024" },
-    { id: "PO-2024-005", supplier: "Sports Gear Direct", status: "cancelled", items: 4, total: 7800.00, createdAt: "Mar 1, 2024", reason: "Supplier out of stock" },
-    { id: "PO-2024-006", supplier: "TechSupply Co.", status: "draft", items: 6, total: 9800.00, createdAt: "Mar 18, 2024", expectedAt: "Mar 25, 2024" },
-  ];
+  const { data: purchaseOrdersData } = useQuery({
+    queryKey: ["inventory", "purchase-orders"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/inventory/purchase-orders?page=1&limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch purchase orders");
+      return res.json() as Promise<{ data: typeof MOCK_PURCHASE_ORDERS; total: number }>;
+    },
+  });
+
+  const purchaseOrders = purchaseOrdersData?.data?.length ? purchaseOrdersData.data : MOCK_PURCHASE_ORDERS;
 
   const filteredOrders = purchaseOrders.filter((po) => {
     const matchesSearch =
@@ -82,10 +102,10 @@ function PurchaseOrdersPage() {
   };
 
   const summary = {
-    total: purchaseOrders.length,
-    pending: purchaseOrders.filter((po) => po.status === "pending").length,
-    shipped: purchaseOrders.filter((po) => po.status === "shipped").length,
-    delivered: purchaseOrders.filter((po) => po.status === "delivered").length,
+    total: purchaseOrdersData?.total ?? purchaseOrders.length,
+    pending: purchaseOrders.filter((po: typeof MOCK_PURCHASE_ORDERS[0]) => po.status === "pending").length,
+    shipped: purchaseOrders.filter((po: typeof MOCK_PURCHASE_ORDERS[0]) => po.status === "shipped").length,
+    delivered: purchaseOrders.filter((po: typeof MOCK_PURCHASE_ORDERS[0]) => po.status === "delivered").length,
   };
 
   return (

@@ -16,40 +16,42 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/valuation")({
   component: InventoryValuationPage,
 });
 
+const MOCK_INVENTORY_VALUATION = [
+  { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', quantity: 124, avgCost: 295.00, totalValue: 36580.00, lastCost: 320.00 },
+  { sku: "ELEC-LAP-15", name: 'Laptop 15" Pro', quantity: 89, avgCost: 620.00, totalValue: 55180.00, lastCost: 650.00 },
+  { sku: "HOME-SOF-3S", name: "3-Seater Sofa", quantity: 45, avgCost: 520.00, totalValue: 23400.00, lastCost: 580.00 },
+  { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", quantity: 23, avgCost: 340.00, totalValue: 7820.00, lastCost: 380.00 },
+  { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 156, avgCost: 58.00, totalValue: 9048.00, lastCost: 65.00 },
+];
+
 function InventoryValuationPage() {
   const [valuationMethod, setValuationMethod] = useState("fifo");
 
-  const inventoryByMethod = {
-    fifo: [
-      { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', quantity: 124, avgCost: 295.00, totalValue: 36580.00, lastCost: 320.00 },
-      { sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", quantity: 89, avgCost: 620.00, totalValue: 55180.00, lastCost: 650.00 },
-      { sku: "HOME-SOF-3S", name: "3-Seater Sofa", quantity: 45, avgCost: 520.00, totalValue: 23400.00, lastCost: 580.00 },
-      { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", quantity: 23, avgCost: 340.00, totalValue: 7820.00, lastCost: 380.00 },
-      { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 156, avgCost: 58.00, totalValue: 9048.00, lastCost: 65.00 },
-    ],
-    lifo: [
-      { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', quantity: 124, avgCost: 310.00, totalValue: 38440.00, lastCost: 320.00 },
-      { sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", quantity: 89, avgCost: 635.00, totalValue: 56515.00, lastCost: 650.00 },
-      { sku: "HOME-SOF-3S", name: "3-Seater Sofa", quantity: 45, avgCost: 545.00, totalValue: 24525.00, lastCost: 580.00 },
-      { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", quantity: 23, avgCost: 360.00, totalValue: 8280.00, lastCost: 380.00 },
-      { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 156, avgCost: 62.00, totalValue: 9672.00, lastCost: 65.00 },
-    ],
-    average: [
-      { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', quantity: 124, avgCost: 302.50, totalValue: 37510.00, lastCost: 320.00 },
-      { sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", quantity: 89, avgCost: 627.50, totalValue: 55847.50, lastCost: 650.00 },
-      { sku: "HOME-SOF-3S", name: "3-Seater Sofa", quantity: 45, avgCost: 532.50, totalValue: 23962.50, lastCost: 580.00 },
-      { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", quantity: 23, avgCost: 350.00, totalValue: 8050.00, lastCost: 380.00 },
-      { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 156, avgCost: 60.00, totalValue: 9360.00, lastCost: 65.00 },
-    ],
-  };
+  const { data: valuationData } = useQuery({
+    queryKey: ["inventory", "valuation", valuationMethod],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/inventory/valuation?method=${valuationMethod}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch valuation");
+      return res.json() as Promise<{ data: typeof MOCK_INVENTORY_VALUATION; total: number; totalValue: number }>;
+    },
+  });
 
-  const currentInventory = inventoryByMethod[valuationMethod as keyof typeof inventoryByMethod];
-  const totalValue = currentInventory.reduce((sum, item) => sum + item.totalValue, 0);
+  const currentInventory = valuationData?.data?.length ? valuationData.data : MOCK_INVENTORY_VALUATION;
+  const totalValue = valuationData?.totalValue ?? currentInventory.reduce((sum, item) => sum + item.totalValue, 0);
 
   const methods = [
     { id: "fifo", name: "FIFO", description: "First In, First Out - oldest inventory sold first", bestFor: "Perishable goods, Electronics" },
@@ -80,7 +82,7 @@ function InventoryValuationPage() {
               <p className="text-sm text-muted-foreground">Total Inventory Value ({methods.find((m) => m.id === valuationMethod)?.name})</p>
               <p className="text-4xl font-bold text-foreground mt-1">${totalValue.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Based on {currentInventory.length} products
+                Based on {valuationData?.total ?? currentInventory.length} products
               </p>
             </div>
             <div className="rounded-xl bg-primary/20 p-4">

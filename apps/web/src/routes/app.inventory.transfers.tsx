@@ -19,23 +19,43 @@ import {
   Settings,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/transfers")({
   component: StockTransfersPage,
 });
 
+const MOCK_TRANSFERS = [
+  { id: "TRF-2024-001", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', fromWarehouse: "Warehouse A", toWarehouse: "Warehouse B", quantity: 10, status: "in_transit", createdAt: "Mar 15, 2024", expectedAt: "Mar 18, 2024" },
+  { id: "TRF-2024-002", sku: "ELEC-LAP-15", name: 'Laptop 15" Pro', fromWarehouse: "Warehouse A", toWarehouse: "Distribution Center", quantity: 5, status: "completed", createdAt: "Mar 14, 2024", completedAt: "Mar 16, 2024" },
+  { id: "TRF-2024-003", sku: "HOME-SOF-3S", name: "3-Seater Sofa", fromWarehouse: "Warehouse B", toWarehouse: "Warehouse C", quantity: 3, status: "in_transit", createdAt: "Mar 13, 2024", expectedAt: "Mar 20, 2024" },
+  { id: "TRF-2024-004", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", fromWarehouse: "Warehouse B", toWarehouse: "Warehouse A", quantity: 2, status: "pending", createdAt: "Mar 18, 2024", expectedAt: "Mar 25, 2024" },
+  { id: "TRF-2024-005", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", fromWarehouse: "Warehouse C", toWarehouse: "Distribution Center", quantity: 20, status: "completed", createdAt: "Mar 10, 2024", completedAt: "Mar 12, 2024" },
+  { id: "TRF-2024-006", sku: "ELEC-HEAD-WL", name: "Wireless Headphones", fromWarehouse: "Distribution Center", toWarehouse: "Warehouse A", quantity: 15, status: "in_transit", createdAt: "Mar 16, 2024", expectedAt: "Mar 19, 2024" },
+];
+
 function StockTransfersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const transfers = [
-    { id: "TRF-2024-001", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', fromWarehouse: "Warehouse A", toWarehouse: "Warehouse B", quantity: 10, status: "in_transit", createdAt: "Mar 15, 2024", expectedAt: "Mar 18, 2024" },
-    { id: "TRF-2024-002", sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", fromWarehouse: "Warehouse A", toWarehouse: "Distribution Center", quantity: 5, status: "completed", createdAt: "Mar 14, 2024", completedAt: "Mar 16, 2024" },
-    { id: "TRF-2024-003", sku: "HOME-SOF-3S", name: "3-Seater Sofa", fromWarehouse: "Warehouse B", toWarehouse: "Warehouse C", quantity: 3, status: "in_transit", createdAt: "Mar 13, 2024", expectedAt: "Mar 20, 2024" },
-    { id: "TRF-2024-004", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", fromWarehouse: "Warehouse B", toWarehouse: "Warehouse A", quantity: 2, status: "pending", createdAt: "Mar 18, 2024", expectedAt: "Mar 25, 2024" },
-    { id: "TRF-2024-005", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", fromWarehouse: "Warehouse C", toWarehouse: "Distribution Center", quantity: 20, status: "completed", createdAt: "Mar 10, 2024", completedAt: "Mar 12, 2024" },
-    { id: "TRF-2024-006", sku: "ELEC-HEAD-无线", name: "Wireless Headphones", fromWarehouse: "Distribution Center", toWarehouse: "Warehouse A", quantity: 15, status: "in_transit", createdAt: "Mar 16, 2024", expectedAt: "Mar 19, 2024" },
-  ];
+  const { data: transfersData } = useQuery({
+    queryKey: ["inventory", "transfers"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/inventory/transfers?page=1&limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch transfers");
+      return res.json() as Promise<{ data: typeof MOCK_TRANSFERS; total: number }>;
+    },
+  });
+
+  const transfers = transfersData?.data?.length ? transfersData.data : MOCK_TRANSFERS;
 
   const filteredTransfers = transfers.filter((trf) => {
     const matchesSearch =
@@ -75,10 +95,10 @@ function StockTransfersPage() {
   };
 
   const summary = {
-    total: transfers.length,
-    pending: transfers.filter((t) => t.status === "pending").length,
-    inTransit: transfers.filter((t) => t.status === "in_transit").length,
-    completed: transfers.filter((t) => t.status === "completed").length,
+    total: transfersData?.total ?? transfers.length,
+    pending: transfers.filter((t: typeof MOCK_TRANSFERS[0]) => t.status === "pending").length,
+    inTransit: transfers.filter((t: typeof MOCK_TRANSFERS[0]) => t.status === "in_transit").length,
+    completed: transfers.filter((t: typeof MOCK_TRANSFERS[0]) => t.status === "completed").length,
   };
 
   return (

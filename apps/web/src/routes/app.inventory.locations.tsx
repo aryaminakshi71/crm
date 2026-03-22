@@ -19,25 +19,45 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/locations")({
   component: LocationsPage,
 });
 
+const MOCK_LOCATIONS = [
+  { id: "loc1", code: "A-01-1", warehouse: "Warehouse A", zone: "A", aisle: 1, rack: 1, bin: 1, type: "shelf", capacity: 100, used: 87, status: "active" },
+  { id: "loc2", code: "A-01-2", warehouse: "Warehouse A", zone: "A", aisle: 1, rack: 1, bin: 2, type: "shelf", capacity: 100, used: 45, status: "active" },
+  { id: "loc3", code: "A-02-1", warehouse: "Warehouse A", zone: "A", aisle: 2, rack: 1, bin: 1, type: "floor", capacity: 500, used: 320, status: "active" },
+  { id: "loc4", code: "B-01-1", warehouse: "Warehouse B", zone: "B", aisle: 1, rack: 1, bin: 1, type: "pallet", capacity: 200, used: 180, status: "warning" },
+  { id: "loc5", code: "B-01-2", warehouse: "Warehouse B", zone: "B", aisle: 1, rack: 1, bin: 2, type: "pallet", capacity: 200, used: 0, status: "empty" },
+  { id: "loc6", code: "C-01-1", warehouse: "Warehouse C", zone: "C", aisle: 1, rack: 1, bin: 1, type: "cold", capacity: 50, used: 48, status: "warning" },
+  { id: "loc7", code: "DC-01-1", warehouse: "Distribution Center", zone: "DC", aisle: 1, rack: 1, bin: 1, type: "conveyor", capacity: 1000, used: 450, status: "active" },
+  { id: "loc8", code: "DC-01-2", warehouse: "Distribution Center", zone: "DC", aisle: 1, rack: 1, bin: 2, type: "conveyor", capacity: 1000, used: 780, status: "full" },
+];
+
 function LocationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterWarehouse, setFilterWarehouse] = useState("all");
 
-  const locations = [
-    { id: "loc1", code: "A-01-1", warehouse: "Warehouse A", zone: "A", aisle: 1, rack: 1, bin: 1, type: "shelf", capacity: 100, used: 87, status: "active" },
-    { id: "loc2", code: "A-01-2", warehouse: "Warehouse A", zone: "A", aisle: 1, rack: 1, bin: 2, type: "shelf", capacity: 100, used: 45, status: "active" },
-    { id: "loc3", code: "A-02-1", warehouse: "Warehouse A", zone: "A", aisle: 2, rack: 1, bin: 1, type: "floor", capacity: 500, used: 320, status: "active" },
-    { id: "loc4", code: "B-01-1", warehouse: "Warehouse B", zone: "B", aisle: 1, rack: 1, bin: 1, type: "pallet", capacity: 200, used: 180, status: "warning" },
-    { id: "loc5", code: "B-01-2", warehouse: "Warehouse B", zone: "B", aisle: 1, rack: 1, bin: 2, type: "pallet", capacity: 200, used: 0, status: "empty" },
-    { id: "loc6", code: "C-01-1", warehouse: "Warehouse C", zone: "C", aisle: 1, rack: 1, bin: 1, type: "cold", capacity: 50, used: 48, status: "warning" },
-    { id: "loc7", code: "DC-01-1", warehouse: "Distribution Center", zone: "DC", aisle: 1, rack: 1, bin: 1, type: "conveyor", capacity: 1000, used: 450, status: "active" },
-    { id: "loc8", code: "DC-01-2", warehouse: "Distribution Center", zone: "DC", aisle: 1, rack: 1, bin: 2, type: "conveyor", capacity: 1000, used: 780, status: "full" },
-  ];
+  const { data: locationsData } = useQuery({
+    queryKey: ["inventory", "locations"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/inventory/locations?page=1&limit=200`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch locations");
+      return res.json() as Promise<{ data: typeof MOCK_LOCATIONS; total: number }>;
+    },
+  });
+
+  const locations = locationsData?.data?.length ? locationsData.data : MOCK_LOCATIONS;
 
   const warehouses = ["all", "Warehouse A", "Warehouse B", "Warehouse C", "Distribution Center"];
 

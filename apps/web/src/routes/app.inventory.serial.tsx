@@ -18,25 +18,45 @@ import {
   Download,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/serial")({
   component: SerialTrackingPage,
 });
 
+const MOCK_SERIAL_NUMBERS = [
+  { serial: "SN-ELEC-4KTV-55-001", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', status: "in_stock", warehouse: "Warehouse A", location: "A-12-3", purchaseDate: "Jan 15, 2024", warrantyExpiry: "Jan 15, 2026" },
+  { serial: "SN-ELEC-4KTV-55-002", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', status: "sold", warehouse: "-", location: "-", purchaseDate: "Jan 15, 2024", warrantyExpiry: "Jan 15, 2026", soldTo: "Customer #12345", soldDate: "Feb 20, 2024" },
+  { serial: "SN-ELEC-LAP-15-001", sku: "ELEC-LAP-15", name: 'Laptop 15" Pro', status: "in_stock", warehouse: "Warehouse A", location: "A-08-1", purchaseDate: "Feb 1, 2024", warrantyExpiry: "Feb 1, 2026" },
+  { serial: "SN-ELEC-LAP-15-002", sku: "ELEC-LAP-15", name: 'Laptop 15" Pro', status: "sold", warehouse: "-", location: "-", purchaseDate: "Feb 1, 2024", warrantyExpiry: "Feb 1, 2026", soldTo: "Customer #12346", soldDate: "Mar 5, 2024" },
+  { serial: "SN-SPORT-BIKE-001", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", status: "in_stock", warehouse: "Warehouse B", location: "B-12-1", purchaseDate: "Feb 10, 2024", warrantyExpiry: "Feb 10, 2025" },
+  { serial: "SN-SPORT-BIKE-002", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", status: "returned", warehouse: "Returns Center", location: "RC-01-1", purchaseDate: "Feb 10, 2024", warrantyExpiry: "Feb 10, 2025", returnDate: "Mar 1, 2024", returnReason: "Defective" },
+  { serial: "SN-APPA-JKT-001", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", status: "sold", warehouse: "-", location: "-", purchaseDate: "Feb 15, 2024", warrantyExpiry: "N/A", soldTo: "Customer #12347", soldDate: "Feb 28, 2024" },
+  { serial: "SN-HOME-SOF-001", sku: "HOME-SOF-3S", name: "3-Seater Sofa", status: "in_stock", warehouse: "Warehouse B", location: "B-05-2", purchaseDate: "Jan 20, 2024", warrantyExpiry: "Jan 20, 2027" },
+];
+
 function SerialTrackingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const serialNumbers = [
-    { serial: "SN-ELEC-4KTV-55-001", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', status: "in_stock", warehouse: "Warehouse A", location: "A-12-3", purchaseDate: "Jan 15, 2024", warrantyExpiry: "Jan 15, 2026" },
-    { serial: "SN-ELEC-4KTV-55-002", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', status: "sold", warehouse: "-", location: "-", purchaseDate: "Jan 15, 2024", warrantyExpiry: "Jan 15, 2026", soldTo: "Customer #12345", soldDate: "Feb 20, 2024" },
-    { serial: "SN-ELEC-LAP-15-001", sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", status: "in_stock", warehouse: "Warehouse A", location: "A-08-1", purchaseDate: "Feb 1, 2024", warrantyExpiry: "Feb 1, 2026" },
-    { serial: "SN-ELEC-LAP-15-002", sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", status: "sold", warehouse: "-", location: "-", purchaseDate: "Feb 1, 2024", warrantyExpiry: "Feb 1, 2026", soldTo: "Customer #12346", soldDate: "Mar 5, 2024" },
-    { serial: "SN-SPORT-BIKE-001", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", status: "in_stock", warehouse: "Warehouse B", location: "B-12-1", purchaseDate: "Feb 10, 2024", warrantyExpiry: "Feb 10, 2025" },
-    { serial: "SN-SPORT-BIKE-002", sku: "SPORT-BIKE-MTN", name: "Mountain Bike", status: "returned", warehouse: "Returns Center", location: "RC-01-1", purchaseDate: "Feb 10, 2024", warrantyExpiry: "Feb 10, 2025", returnDate: "Mar 1, 2024", returnReason: "Defective" },
-    { serial: "SN-APPA-JKT-001", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", status: "sold", warehouse: "-", location: "-", purchaseDate: "Feb 15, 2024", warrantyExpiry: "N/A", soldTo: "Customer #12347", soldDate: "Feb 28, 2024" },
-    { serial: "SN-HOME-SOF-001", sku: "HOME-SOF-3S", name: "3-Seater Sofa", status: "in_stock", warehouse: "Warehouse B", location: "B-05-2", purchaseDate: "Jan 20, 2024", warrantyExpiry: "Jan 20, 2027" },
-  ];
+  const { data: serialData } = useQuery({
+    queryKey: ["inventory", "serial"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/inventory/serial?page=1&limit=200`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch serial numbers");
+      return res.json() as Promise<{ data: typeof MOCK_SERIAL_NUMBERS; total: number }>;
+    },
+  });
+
+  const serialNumbers = serialData?.data?.length ? serialData.data : MOCK_SERIAL_NUMBERS;
 
   const filteredSerials = serialNumbers.filter((item) => {
     const matchesSearch =
@@ -63,10 +83,10 @@ function SerialTrackingPage() {
   };
 
   const statusCounts = {
-    all: serialNumbers.length,
-    in_stock: serialNumbers.filter((s) => s.status === "in_stock").length,
-    sold: serialNumbers.filter((s) => s.status === "sold").length,
-    returned: serialNumbers.filter((s) => s.status === "returned").length,
+    all: serialData?.total ?? serialNumbers.length,
+    in_stock: serialNumbers.filter((s: typeof MOCK_SERIAL_NUMBERS[0]) => s.status === "in_stock").length,
+    sold: serialNumbers.filter((s: typeof MOCK_SERIAL_NUMBERS[0]) => s.status === "sold").length,
+    returned: serialNumbers.filter((s: typeof MOCK_SERIAL_NUMBERS[0]) => s.status === "returned").length,
   };
 
   return (
