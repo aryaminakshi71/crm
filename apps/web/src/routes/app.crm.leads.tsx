@@ -1,681 +1,444 @@
-/**
- * CRM Leads Management
- *
- * Lead list with scoring visualization and status tracking.
- */
-
-import { Badge, Button, Card, CardContent, Input, Progress } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  AlertTriangle,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
   ArrowRight,
-  ChevronDown,
-  Filter,
-  Globe,
-  Linkedin,
+  Building2,
+  CheckCircle2,
   Mail,
-  MoreHorizontal,
   Phone,
   Plus,
   Search,
   Star,
-  Target,
-  TrendingUp,
-  User,
+  Trash2,
+  UserPlus,
   X,
-  Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { leadsApi } from "@/lib/api";
+import { z } from "zod";
+import { leadsApi } from "../lib/api";
+
+// ─── Route ───────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/app/crm/leads")({
-  component: LeadsList,
+  validateSearch: z.object({
+    status: z.string().optional(),
+    search: z.string().optional(),
+  }),
+  component: CrmLeadsPage,
 });
 
-interface Lead {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  jobTitle: string;
-  source: string;
-  status: "new" | "contacted" | "qualified" | "unqualified";
-  score: number;
-  scoreBreakdown: {
-    engagement: number;
-    firmographics: number;
-    demographic: number;
-  };
-  assignedTo: string;
-  createdAt: string;
-  lastActivity: string;
-  estimatedValue: number;
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const LEAD_STATUSES = ["new", "contacted", "qualified", "converted", "lost"] as const;
+type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+const STATUS_META: Record<LeadStatus, { label: string; bg: string; textColor: string }> = {
+  new: { label: "New", bg: "bg-sky-400/15", textColor: "text-sky-400" },
+  contacted: { label: "Contacted", bg: "bg-amber-400/15", textColor: "text-amber-400" },
+  qualified: { label: "Qualified", bg: "bg-violet-400/15", textColor: "text-violet-400" },
+  converted: { label: "Converted", bg: "bg-success/15", textColor: "text-success" },
+  lost: { label: "Lost", bg: "bg-destructive/15", textColor: "text-destructive" },
+};
+
+const LEAD_SOURCES = [
+  "website",
+  "referral",
+  "cold_outreach",
+  "social_media",
+  "event",
+  "advertising",
+  "other",
+] as const;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function initials(first = "", last = "") {
+  return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "?";
 }
 
-const mockLeads: Lead[] = [
-  {
-    id: "1",
-    name: "Alex Rivera",
-    email: "alex.r@techventures.com",
-    phone: "+1 (555) 111-2222",
-    company: "Tech Ventures LLC",
-    jobTitle: "CTO",
-    source: "Website",
-    status: "qualified",
-    score: 92,
-    scoreBreakdown: { engagement: 30, firmographics: 35, demographic: 27 },
-    assignedTo: "Sarah Chen",
-    createdAt: "2024-03-10",
-    lastActivity: "2024-03-15",
-    estimatedValue: 150000,
-  },
-  {
-    id: "2",
-    name: "Michelle Chang",
-    email: "mchang@startupx.io",
-    phone: "+1 (555) 222-3333",
-    company: "StartupX",
-    jobTitle: "Founder",
-    source: "LinkedIn",
-    status: "new",
-    score: 78,
-    scoreBreakdown: { engagement: 25, firmographics: 28, demographic: 25 },
-    assignedTo: "David Park",
-    createdAt: "2024-03-12",
-    lastActivity: "2024-03-14",
-    estimatedValue: 85000,
-  },
-  {
-    id: "3",
-    name: "James Wilson",
-    email: "jwilson@enterprise.com",
-    phone: "+1 (555) 333-4444",
-    company: "Enterprise Corp",
-    jobTitle: "VP Operations",
-    source: "Referral",
-    status: "contacted",
-    score: 65,
-    scoreBreakdown: { engagement: 20, firmographics: 25, demographic: 20 },
-    assignedTo: "Emily Zhang",
-    createdAt: "2024-03-08",
-    lastActivity: "2024-03-13",
-    estimatedValue: 200000,
-  },
-  {
-    id: "4",
-    name: "Priya Patel",
-    email: "ppatel@innovate.co",
-    phone: "+1 (555) 444-5555",
-    company: "Innovate Co",
-    jobTitle: "Head of Product",
-    source: "Webinar",
-    status: "qualified",
-    score: 88,
-    scoreBreakdown: { engagement: 28, firmographics: 32, demographic: 28 },
-    assignedTo: "Sarah Chen",
-    createdAt: "2024-03-05",
-    lastActivity: "2024-03-15",
-    estimatedValue: 120000,
-  },
-  {
-    id: "5",
-    name: "Chris Anderson",
-    email: "canderson@legacy.net",
-    phone: "+1 (555) 555-6666",
-    company: "Legacy Networks",
-    jobTitle: "IT Director",
-    source: "Cold Outreach",
-    status: "unqualified",
-    score: 35,
-    scoreBreakdown: { engagement: 10, firmographics: 15, demographic: 10 },
-    assignedTo: "Unassigned",
-    createdAt: "2024-03-01",
-    lastActivity: "2024-03-10",
-    estimatedValue: 45000,
-  },
-  {
-    id: "6",
-    name: "Sarah Kim",
-    email: "skim@growthco.com",
-    phone: "+1 (555) 666-7777",
-    company: "GrowthCo",
-    jobTitle: "CEO",
-    source: "Partner",
-    status: "new",
-    score: 82,
-    scoreBreakdown: { engagement: 27, firmographics: 30, demographic: 25 },
-    assignedTo: "David Park",
-    createdAt: "2024-03-14",
-    lastActivity: "2024-03-15",
-    estimatedValue: 175000,
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Returns days since a date string */
-function daysSince(dateStr: string): number {
-  const now = new Date();
-  const then = new Date(dateStr);
-  return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
+function avatarBg(str: string) {
+  const colors = [
+    "#22d3ee", "#a78bfa", "#f472b6", "#34d399",
+    "#fbbf24", "#60a5fa", "#fb923c", "#a3e635",
+  ];
+  const h = str.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  return colors[h % colors.length];
 }
 
-/** Source icon + emoji mapping */
-function SourceBadge({ source }: { source: string }) {
-  const map: Record<string, { emoji: string; color: string }> = {
-    Website: { emoji: "🌐", color: "bg-blue-100 text-blue-700" },
-    Google: { emoji: "🔍", color: "bg-red-100 text-red-700" },
-    LinkedIn: { emoji: "💼", color: "bg-sky-100 text-sky-700" },
-    Referral: { emoji: "⭐", color: "bg-yellow-100 text-yellow-700" },
-    "Cold Outreach": { emoji: "📧", color: "bg-purple-100 text-purple-700" },
-    Event: { emoji: "🎤", color: "bg-pink-100 text-pink-700" },
-    Webinar: { emoji: "🎯", color: "bg-indigo-100 text-indigo-700" },
-    Partner: { emoji: "🤝", color: "bg-emerald-100 text-emerald-700" },
-  };
-  const entry = map[source] ?? { emoji: "📌", color: "bg-gray-100 text-gray-700" };
+function Avatar({ firstName = "", lastName = "", size = 36 }: { firstName?: string; lastName?: string; size?: number }) {
+  const bg = avatarBg(`${firstName}${lastName}`);
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${entry.color}`}
+    <div
+      className="flex items-center justify-center rounded-full font-bold text-white shrink-0"
+      style={{ width: size, height: size, background: bg, fontSize: size * 0.36 }}
     >
-      {entry.emoji} {source}
-    </span>
+      {initials(firstName, lastName)}
+    </div>
   );
 }
 
-/** Score badge: HOT / WARM / COLD */
-function ScoreTemperatureBadge({ score }: { score: number }) {
-  if (score >= 80)
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-        HOT 🔥
-      </span>
-    );
-  if (score >= 50)
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-        WARM
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
-      COLD
-    </span>
-  );
-}
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-// ─── Quick Add Lead Slide-Over ────────────────────────────────────────────────
-
-interface QuickAddLeadPanelProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (lead: Lead) => void;
-}
-
-function QuickAddLeadPanel({ open, onClose, onCreated }: QuickAddLeadPanelProps) {
-  const [form, setForm] = useState({
-    name: "",
+function CrmLeadsPage() {
+  const { status: statusParam, search: searchParam } = Route.useSearch();
+  const [search, setSearch] = useState(searchParam ?? "");
+  const [statusFilter, setStatusFilter] = useState(statusParam ?? "all");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editLead, setEditLead] = useState<any>(null);
+  const [newLead, setNewLead] = useState({
     email: "",
-    company: "",
-    source: "Website",
-    estimatedValue: "",
+    firstName: "",
+    lastName: "",
+    companyName: "",
+    phone: "",
+    source: "website" as (typeof LEAD_SOURCES)[number],
+    notes: "",
   });
-  const [submitting, setSubmitting] = useState(false);
 
-  const sources = ["Website", "Google", "LinkedIn", "Referral", "Cold Outreach", "Event"];
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.email) {
-      toast.error("Name and email are required");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await leadsApi.create({
-        name: form.name,
-        email: form.email,
-        company: form.company,
-        source: form.source,
-        estimatedValue: Number(form.estimatedValue) || 0,
+  // ─── Queries ───────────────────────────────────────────────────────────────
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["crm-leads", search, statusFilter],
+    queryFn: () =>
+      leadsApi.list({
+        page: 1,
+        limit: 200,
+        search: search.trim() || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      }),
+  });
+
+  const leads = (data?.data as any[]) ?? [];
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return leads;
+    const q = search.toLowerCase();
+    return leads.filter((l: any) =>
+      [l.email, l.firstName, l.lastName, l.companyName].some((v) =>
+        String(v || "").toLowerCase().includes(q),
+      ),
+    );
+  }, [leads, search]);
+
+  // ─── Mutations ─────────────────────────────────────────────────────────────
+
+  const createLead = useMutation({
+    mutationFn: () => {
+      if (!newLead.email.trim()) throw new Error("Email is required");
+      return leadsApi.create({
+        email: newLead.email.trim(),
+        firstName: newLead.firstName.trim() || undefined,
+        lastName: newLead.lastName.trim() || undefined,
+        companyName: newLead.companyName.trim() || undefined,
+        phone: newLead.phone.trim() || undefined,
+        source: newLead.source,
+        notes: newLead.notes.trim() || undefined,
       });
-      toast.success("Lead created successfully");
-      const newLead: Lead = {
-        id: String(Date.now()),
-        name: form.name,
-        email: form.email,
-        phone: "",
-        company: form.company,
-        jobTitle: "",
-        source: form.source,
-        status: "new",
-        score: 50,
-        scoreBreakdown: { engagement: 17, firmographics: 17, demographic: 16 },
-        assignedTo: "Unassigned",
-        createdAt: new Date().toISOString().split("T")[0],
-        lastActivity: new Date().toISOString().split("T")[0],
-        estimatedValue: Number(form.estimatedValue) || 0,
-      };
-      onCreated(newLead);
-      setForm({ name: "", email: "", company: "", source: "Website", estimatedValue: "" });
-      onClose();
-    } catch {
-      toast.error("Failed to create lead");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (!open) return null;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-background shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
-          <h2 className="font-semibold text-lg">Quick Add Lead</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              Full Name <span className="text-destructive">*</span>
-            </label>
-            <Input
-              placeholder="Jane Smith"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              Email <span className="text-destructive">*</span>
-            </label>
-            <Input
-              type="email"
-              placeholder="jane@acme.com"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Company</label>
-            <Input
-              placeholder="Acme Corp"
-              value={form.company}
-              onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Lead Source</label>
-            <select
-              value={form.source}
-              onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {sources.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Estimated Value ($)</label>
-            <Input
-              type="number"
-              min="0"
-              placeholder="50000"
-              value={form.estimatedValue}
-              onChange={(e) => setForm((f) => ({ ...f, estimatedValue: e.target.value }))}
-            />
-          </div>
-          <div className="mt-auto flex gap-3 pt-4 border-t border-border/60">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={submitting}>
-              {submitting ? "Creating..." : "Create Lead"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-function LeadsList() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [scoreFilter, setScoreFilter] = useState<string>("all");
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
-
-  const filteredLeads = leads.filter((lead) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-
-    const matchesScore =
-      scoreFilter === "all" ||
-      (scoreFilter === "hot" && lead.score >= 80) ||
-      (scoreFilter === "warm" && lead.score >= 50 && lead.score < 80) ||
-      (scoreFilter === "cold" && lead.score < 50);
-
-    return matchesSearch && matchesStatus && matchesScore;
+    },
+    onSuccess: () => {
+      toast.success("Lead created");
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      setIsCreateOpen(false);
+      setNewLead({ email: "", firstName: "", lastName: "", companyName: "", phone: "", source: "website", notes: "" });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create lead"),
   });
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600 bg-green-100";
-    if (score >= 50) return "text-yellow-600 bg-yellow-100";
-    return "text-red-600 bg-red-100";
-  };
+  const updateLeadStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      leadsApi.update(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      toast.success("Lead updated");
+    },
+    onError: () => toast.error("Failed to update lead"),
+  });
 
-  const statusColors = {
-    new: "bg-blue-100 text-blue-700 border-blue-200",
-    contacted: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    qualified: "bg-green-100 text-green-700 border-green-200",
-    unqualified: "bg-gray-100 text-gray-700 border-gray-200",
-  };
+  const updateLead = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      leadsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      toast.success("Lead updated");
+      setEditLead(null);
+    },
+    onError: () => toast.error("Failed to update lead"),
+  });
 
-  const handleConvert = async (lead: Lead) => {
-    try {
-      await leadsApi.convert(lead.id, {});
-      toast.success(`${lead.name} converted to contact`);
-    } catch {
-      toast.error("Failed to convert lead");
-    }
-  };
+  const deleteLead = useMutation({
+    mutationFn: (id: string) => leadsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      toast.success("Lead deleted");
+    },
+    onError: () => toast.error("Failed to delete lead"),
+  });
 
-  const handleLeadCreated = (lead: Lead) => {
-    setLeads((prev) => [lead, ...prev]);
-  };
+  const convertLead = useMutation({
+    mutationFn: (id: string) => leadsApi.convert(id, {}),
+    onSuccess: () => {
+      toast.success("Lead converted to contact");
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-contacts"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to convert lead"),
+  });
+
+  // ─── Stats ─────────────────────────────────────────────────────────────────
+
+  const stats = useMemo(() => ({
+    total: leads.length,
+    new: leads.filter((l: any) => l.status === "new").length,
+    qualified: leads.filter((l: any) => l.status === "qualified").length,
+    converted: leads.filter((l: any) => l.status === "converted").length,
+  }), [leads]);
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search leads..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[300px]"
-            />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <Link to="/app/crm" className="hover:text-foreground transition-colors">CRM</Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">Leads</span>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="new">New</option>
-            <option value="contacted">Contacted</option>
-            <option value="qualified">Qualified</option>
-            <option value="unqualified">Unqualified</option>
-          </select>
-          <select
-            value={scoreFilter}
-            onChange={(e) => setScoreFilter(e.target.value)}
-            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-          >
-            <option value="all">All Scores</option>
-            <option value="hot">Hot (80+)</option>
-            <option value="warm">Warm (50-79)</option>
-            <option value="cold">Cold (&lt;50)</option>
-          </select>
+          <h1 className="font-bold text-2xl text-foreground">Leads</h1>
+          <p className="text-muted-foreground text-sm">
+            Capture and qualify leads before converting them to contacts.
+          </p>
         </div>
-        <Button onClick={() => setShowQuickAdd(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Quick Add Lead
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>
+          New Lead
         </Button>
       </div>
 
-      {/* Lead Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total", value: stats.total, icon: <Mail className="h-4 w-4" /> },
+          { label: "New", value: stats.new, icon: <Star className="h-4 w-4 text-sky-400" /> },
+          { label: "Qualified", value: stats.qualified, icon: <CheckCircle2 className="h-4 w-4 text-violet-400" /> },
+          { label: "Converted", value: stats.converted, icon: <ArrowRight className="h-4 w-4 text-success" /> },
+        ].map((s) => (
+          <Card key={s.label} className="border-border/60">
+            <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-xs font-medium">Total Leads</p>
-                <p className="font-bold text-2xl">{leads.length}</p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{s.label}</p>
+                <p className="font-black text-2xl text-foreground">{s.value}</p>
               </div>
-              <Target className="h-8 w-8 text-primary/20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">Hot Leads</p>
-                <p className="font-bold text-2xl text-green-600">
-                  {leads.filter((l) => l.score >= 80).length}
-                </p>
-              </div>
-              <Zap className="h-8 w-8 text-green-600/20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">Avg Score</p>
-                <p className="font-bold text-2xl">
-                  {Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length)}
-                </p>
-              </div>
-              <Star className="h-8 w-8 text-yellow-500/20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">Pipeline Value</p>
-                <p className="font-bold text-2xl">
-                  ${(leads.reduce((sum, l) => sum + l.estimatedValue, 0) / 1000).toFixed(0)}K
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-blue-600/20" />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="rounded-xl bg-muted/30 p-2.5 text-muted-foreground">{s.icon}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Leads Table */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground w-[260px]">
-                    Lead
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Source
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Score
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Assigned To
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Est. Value
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Last Activity
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLeads.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 text-muted-foreground">
-                      <User className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p className="text-lg font-medium">No leads found</p>
-                      <p className="text-sm">Try adjusting your search or filters</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLeads.map((lead) => {
-                    const inactiveDays = daysSince(lead.lastActivity);
-                    const isDealRot = inactiveDays > 7;
-                    return (
-                      <tr
-                        key={lead.id}
-                        className="border-b hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="p-4">
-                          <Link
-                            to={`/app/crm/leads/${lead.id}` as string}
-                            className="flex items-center gap-3"
-                          >
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <span className="text-sm font-semibold text-primary">
-                                {lead.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium hover:text-primary transition-colors">
-                                {lead.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {lead.jobTitle} at {lead.company}
-                              </p>
-                            </div>
-                          </Link>
-                        </td>
-                        <td className="p-4">
-                          <SourceBadge source={lead.source} />
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="outline" className={statusColors[lead.status]}>
-                            {lead.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-28">
-                              <div className="flex items-center justify-between mb-1">
-                                <ScoreTemperatureBadge score={lead.score} />
-                                <span
-                                  className={`text-xs font-semibold ${getScoreColor(lead.score).split(" ")[0]}`}
-                                >
-                                  {lead.score}
-                                </span>
-                              </div>
-                              <Progress value={lead.score} className="h-2" />
-                            </div>
-                          </div>
-                          <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
-                            <div>Eng: {lead.scoreBreakdown.engagement}</div>
-                            <div>Firm: {lead.scoreBreakdown.firmographics}</div>
-                            <div>Demo: {lead.scoreBreakdown.demographic}</div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="text-sm">{lead.assignedTo}</span>
-                        </td>
-                        <td className="p-4">
-                          <span className="text-sm font-medium">
-                            ${(lead.estimatedValue / 1000).toFixed(0)}K
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="space-y-1">
-                            <span className="text-sm text-muted-foreground block">
-                              {lead.lastActivity}
-                            </span>
-                            {isDealRot && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
-                                <AlertTriangle className="h-3 w-3" />
-                                No activity {inactiveDays}d
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs whitespace-nowrap"
-                            onClick={() => handleConvert(lead)}
-                          >
-                            Convert to Contact
-                            <ArrowRight className="h-3 w-3 ml-1" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredLeads.length} of {leads.length} leads
-        </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm">
-            1
-          </Button>
-          <Button variant="outline" size="sm">
-            Next
-          </Button>
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search leads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          {["all", ...LEAD_STATUSES].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${
+                statusFilter === s
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s === "all" ? "All" : STATUS_META[s as LeadStatus]?.label ?? s}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Quick Add Lead Slide-Over */}
-      <QuickAddLeadPanel
-        open={showQuickAdd}
-        onClose={() => setShowQuickAdd(false)}
-        onCreated={handleLeadCreated}
-      />
+      {/* List */}
+      {isLoading ? (
+        <Loading text="Loading leads..." />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No leads found"
+          description={search || statusFilter !== "all" ? "Try adjusting your filters." : "Create your first lead to get started."}
+          action={{ label: "New Lead", onClick: () => setIsCreateOpen(true) }}
+        />
+      ) : (
+        <div className="grid gap-3">
+          {filtered.map((lead: any) => {
+            const statusMeta = STATUS_META[lead.status as LeadStatus] ?? STATUS_META.new;
+            return (
+              <Card key={lead.id} className="border-border/60 hover:border-primary/40 transition-colors">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar firstName={lead.firstName} lastName={lead.lastName} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-foreground text-sm">
+                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.email}
+                        </p>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusMeta.bg} ${statusMeta.textColor}`}>
+                          {statusMeta.label}
+                        </span>
+                        {lead.source && (
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+                            {lead.source.replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-3 mt-1">
+                        {lead.email && (
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <Mail className="h-3 w-3" />{lead.email}
+                          </span>
+                        )}
+                        {lead.phone && (
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <Phone className="h-3 w-3" />{lead.phone}
+                          </span>
+                        )}
+                        {lead.companyName && (
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <Building2 className="h-3 w-3" />{lead.companyName}
+                          </span>
+                        )}
+                      </div>
+                      {lead.notes && (
+                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{lead.notes}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Status change */}
+                      <select
+                        className="h-7 rounded border border-border bg-transparent text-xs px-1"
+                        value={lead.status}
+                        onChange={(e) => updateLeadStatus.mutate({ id: lead.id, status: e.target.value })}
+                        disabled={updateLeadStatus.isPending}
+                      >
+                        {LEAD_STATUSES.map((s) => (
+                          <option key={s} value={s}>{STATUS_META[s].label}</option>
+                        ))}
+                      </select>
+                      {lead.status !== "converted" && (
+                        <button
+                          type="button"
+                          title="Convert to contact"
+                          onClick={() => convertLead.mutate(lead.id)}
+                          disabled={convertLead.isPending}
+                          className="p-1.5 rounded text-muted-foreground hover:text-success transition-colors"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        title="Delete"
+                        onClick={() => deleteLead.mutate(lead.id)}
+                        disabled={deleteLead.isPending}
+                        className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      <FormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="New Lead"
+        onSubmit={() => createLead.mutate()}
+        isSubmitting={createLead.isPending}
+        submitLabel="Create Lead"
+      >
+        <FormField label="Email *">
+          <Input
+            type="email"
+            placeholder="lead@example.com"
+            value={newLead.email}
+            onChange={(e) => setNewLead((p) => ({ ...p, email: e.target.value }))}
+          />
+        </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="First Name">
+            <Input
+              placeholder="Jane"
+              value={newLead.firstName}
+              onChange={(e) => setNewLead((p) => ({ ...p, firstName: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="Last Name">
+            <Input
+              placeholder="Smith"
+              value={newLead.lastName}
+              onChange={(e) => setNewLead((p) => ({ ...p, lastName: e.target.value }))}
+            />
+          </FormField>
+        </div>
+        <FormField label="Company">
+          <Input
+            placeholder="Acme Corp"
+            value={newLead.companyName}
+            onChange={(e) => setNewLead((p) => ({ ...p, companyName: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Phone">
+          <Input
+            placeholder="+1 555 000 0000"
+            value={newLead.phone}
+            onChange={(e) => setNewLead((p) => ({ ...p, phone: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Source">
+          <select
+            className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={newLead.source}
+            onChange={(e) => setNewLead((p) => ({ ...p, source: e.target.value as any }))}
+          >
+            {LEAD_SOURCES.map((s) => (
+              <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Notes">
+          <Textarea
+            placeholder="Any additional context..."
+            value={newLead.notes}
+            onChange={(e) => setNewLead((p) => ({ ...p, notes: e.target.value }))}
+            rows={3}
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }

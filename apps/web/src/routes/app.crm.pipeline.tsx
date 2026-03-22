@@ -1,404 +1,326 @@
-/**
- * CRM Pipeline Board
- *
- * Kanban-style pipeline board with drag and drop functionality.
- */
-
-import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  Filter,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  DollarSign,
   GripVertical,
   Plus,
-  Search,
-  Settings,
-  MoreHorizontal,
-  Phone,
-  Mail,
-  DollarSign,
-  Clock,
-  User,
+  Target,
+  Trash2,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { dealsApi } from "../lib/api";
+
+// ─── Route ───────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/app/crm/pipeline")({
-  component: PipelineBoard,
+  component: CrmPipelinePage,
 });
 
-interface DealCard {
-  id: string;
-  title: string;
-  company: string;
-  value: number;
-  probability: number;
-  contact: string;
-  daysInStage: number;
-  nextAction: string;
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const DEAL_STAGES = [
+  "lead",
+  "qualified",
+  "proposal",
+  "negotiation",
+  "won",
+  "lost",
+] as const;
+type DealStage = (typeof DEAL_STAGES)[number];
+
+const STAGE_META: Record<DealStage, { label: string; color: string; bg: string; textColor: string }> = {
+  lead: { label: "Lead", color: "#94a3b8", bg: "border-slate-400/20 bg-slate-400/5", textColor: "text-slate-400" },
+  qualified: { label: "Qualified", color: "#38bdf8", bg: "border-sky-400/20 bg-sky-400/5", textColor: "text-sky-400" },
+  proposal: { label: "Proposal", color: "#a78bfa", bg: "border-violet-400/20 bg-violet-400/5", textColor: "text-violet-400" },
+  negotiation: { label: "Negotiation", color: "#fbbf24", bg: "border-amber-400/20 bg-amber-400/5", textColor: "text-amber-400" },
+  won: { label: "Won ✓", color: "#22c55e", bg: "border-success/20 bg-success/5", textColor: "text-success" },
+  lost: { label: "Lost", color: "#ef4444", bg: "border-destructive/20 bg-destructive/5", textColor: "text-destructive" },
+};
+
+// ─── Kanban Column ────────────────────────────────────────────────────────────
+
+function KanbanColumn({
+  stage,
+  deals,
+  onStageChange,
+  onDelete,
+  loading,
+}: {
+  stage: DealStage;
+  deals: any[];
+  onStageChange: (id: string, stage: string) => void;
+  onDelete: (id: string) => void;
+  loading: boolean;
+}) {
+  const m = STAGE_META[stage];
+  const stageValue = deals.reduce((s, d) => s + Number(d.value || 0), 0);
+
+  return (
+    <div className={`flex flex-col gap-2 rounded-xl border p-3 min-w-[200px] flex-1 ${m.bg}`}>
+      <div className="flex items-center justify-between mb-1">
+        <span className={`text-xs font-bold uppercase tracking-wide ${m.textColor}`}>
+          {m.label}
+        </span>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${m.textColor}`}
+          style={{ background: m.color + "20" }}
+        >
+          {deals.length}
+        </span>
+      </div>
+      {stageValue > 0 && (
+        <p className="text-muted-foreground text-[10px] -mt-1 mb-1">
+          ${stageValue.toLocaleString()}
+        </p>
+      )}
+      <div className="flex flex-col gap-2 flex-1 min-h-[120px]">
+        {deals.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-muted-foreground/20 py-6 text-center text-muted-foreground/40 text-xs">
+            Empty
+          </div>
+        ) : (
+          deals.map((deal) => (
+            <div
+              key={deal.id}
+              className="group rounded-lg border border-border bg-card p-3 space-y-2 hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-1">
+                <p className="font-medium text-foreground text-sm leading-tight flex-1">{deal.name}</p>
+                <button
+                  type="button"
+                  onClick={() => onDelete(deal.id)}
+                  disabled={loading}
+                  className="text-muted-foreground/40 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <p className={`font-bold text-sm ${m.textColor}`}>
+                ${Number(deal.value || 0).toLocaleString()}
+              </p>
+              {deal.notes && (
+                <p className="text-muted-foreground text-[10px] line-clamp-2">{deal.notes}</p>
+              )}
+              <select
+                className="w-full h-6 rounded border border-border bg-transparent text-[10px] px-1"
+                value={deal.stage}
+                onChange={(e) => onStageChange(deal.id, e.target.value)}
+                disabled={loading}
+              >
+                {DEAL_STAGES.map((s) => (
+                  <option key={s} value={s}>{STAGE_META[s].label}</option>
+                ))}
+              </select>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
-interface PipelineStage {
-  id: string;
-  name: string;
-  color: string;
-  deals: DealCard[];
-}
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-const initialStages: PipelineStage[] = [
-  {
-    id: "lead",
-    name: "Lead",
-    color: "#818cf8",
-    deals: [
-      {
-        id: "1",
-        title: "Enterprise SaaS License",
-        company: "Acme Corporation",
-        value: 125000,
-        probability: 10,
-        contact: "John Smith",
-        daysInStage: 3,
-        nextAction: "Initial call scheduled",
-      },
-      {
-        id: "2",
-        title: "Cloud Migration Project",
-        company: "TechStart Inc",
-        value: 89000,
-        probability: 15,
-        contact: "Sarah Johnson",
-        daysInStage: 5,
-        nextAction: "Send pricing proposal",
-      },
-      {
-        id: "3",
-        title: "Security Audit Services",
-        company: "DataFlow Ltd",
-        value: 45000,
-        probability: 20,
-        contact: "Mike Chen",
-        daysInStage: 2,
-        nextAction: "Discovery call",
-      },
-    ],
-  },
-  {
-    id: "qualified",
-    name: "Qualified",
-    color: "#a78bfa",
-    deals: [
-      {
-        id: "4",
-        title: "Platform Integration",
-        company: "Global Industries",
-        value: 156000,
-        probability: 30,
-        contact: "Emily Wong",
-        daysInStage: 7,
-        nextAction: "Technical demo tomorrow",
-      },
-      {
-        id: "5",
-        title: "Annual Support Contract",
-        company: "StartupXYZ",
-        value: 36000,
-        probability: 40,
-        contact: "David Park",
-        daysInStage: 4,
-        nextAction: "Contract review",
-      },
-    ],
-  },
-  {
-    id: "proposal",
-    name: "Proposal",
-    color: "#22d3ee",
-    deals: [
-      {
-        id: "6",
-        title: "Data Analytics Suite",
-        company: "FinanceHub",
-        value: 78000,
-        probability: 50,
-        contact: "Jennifer Lee",
-        daysInStage: 10,
-        nextAction: "Awaiting proposal approval",
-      },
-      {
-        id: "7",
-        title: "Mobile App Development",
-        company: "RetailCo",
-        value: 92000,
-        probability: 60,
-        contact: "Robert Kim",
-        daysInStage: 6,
-        nextAction: "Follow up on feedback",
-      },
-    ],
-  },
-  {
-    id: "negotiation",
-    name: "Negotiation",
-    color: "#fbbf24",
-    deals: [
-      {
-        id: "8",
-        title: "Full Platform License",
-        company: "MegaCorp",
-        value: 245000,
-        probability: 75,
-        contact: "Lisa Wang",
-        daysInStage: 12,
-        nextAction: "Legal review in progress",
-      },
-      {
-        id: "9",
-        title: "Custom Integration",
-        company: "CloudSystems",
-        value: 67000,
-        probability: 80,
-        contact: "Tom Harris",
-        daysInStage: 8,
-        nextAction: "Contract negotiation",
-      },
-    ],
-  },
-  {
-    id: "closed",
-    name: "Closed Won",
-    color: "#22c55e",
-    deals: [
-      {
-        id: "10",
-        title: "Enterprise Agreement",
-        company: "Acme Corp",
-        value: 180000,
-        probability: 100,
-        contact: "Anna Brown",
-        daysInStage: 15,
-        nextAction: "Onboarding scheduled",
-      },
-    ],
-  },
-];
+function CrmPipelinePage() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newDeal, setNewDeal] = useState({
+    name: "",
+    value: "",
+    stage: "lead" as DealStage,
+    notes: "",
+  });
 
-function PipelineBoard() {
-  const navigate = useNavigate();
-  const [stages, setStages] = useState<PipelineStage[]>(initialStages);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [draggedDeal, setDraggedDeal] = useState<{ deal: DealCard; stageId: string } | null>(null);
+  const queryClient = useQueryClient();
 
-  const totalPipelineValue = stages.reduce((sum, stage) => {
-    return sum + stage.deals.reduce((dealSum, deal) => dealSum + deal.value, 0);
-  }, 0);
+  // ─── Query ─────────────────────────────────────────────────────────────────
 
-  const handleDragStart = (deal: DealCard, stageId: string) => {
-    setDraggedDeal({ deal, stageId });
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ["crm-deals-pipeline"],
+    queryFn: () => dealsApi.list({ page: 1, limit: 200 }),
+  });
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const deals = (data?.data as any[]) ?? [];
 
-  const handleDrop = (targetStageId: string) => {
-    if (!draggedDeal) return;
-
-    setStages((prevStages) => {
-      const newStages = prevStages.map((stage) => {
-        if (stage.id === draggedDeal.stageId) {
-          return {
-            ...stage,
-            deals: stage.deals.filter((d) => d.id !== draggedDeal.deal.id),
-          };
-        }
-        if (stage.id === targetStageId) {
-          return {
-            ...stage,
-            deals: [...stage.deals, draggedDeal.deal],
-          };
-        }
-        return stage;
-      });
-      return newStages;
+  // Group by stage
+  const dealsByStage = useMemo(() => {
+    const grouped: Record<DealStage, any[]> = {
+      lead: [], qualified: [], proposal: [], negotiation: [], won: [], lost: [],
+    };
+    deals.forEach((d: any) => {
+      const stage = d.stage as DealStage;
+      if (grouped[stage]) grouped[stage].push(d);
     });
+    return grouped;
+  }, [deals]);
 
-    setDraggedDeal(null);
-  };
+  const totalPipeline = deals.reduce((s: number, d: any) => s + Number(d.value || 0), 0);
+  const wonValue = deals.filter((d: any) => d.stage === "won").reduce((s: number, d: any) => s + Number(d.value || 0), 0);
+  const winRate = deals.length > 0
+    ? Math.round((deals.filter((d: any) => d.stage === "won").length / deals.length) * 100)
+    : 0;
 
-  const filteredStages = stages.map((stage) => ({
-    ...stage,
-    deals: stage.deals.filter(
-      (deal) =>
-        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.contact.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-  }));
+  // ─── Mutations ─────────────────────────────────────────────────────────────
+
+  const createDeal = useMutation({
+    mutationFn: () => {
+      const value = Number(newDeal.value);
+      if (!newDeal.name.trim()) throw new Error("Deal name is required");
+      if (!Number.isFinite(value) || value <= 0) throw new Error("Value must be positive");
+      return dealsApi.create({
+        name: newDeal.name.trim(),
+        value,
+        stage: newDeal.stage,
+        notes: newDeal.notes.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Deal created");
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      setIsCreateOpen(false);
+      setNewDeal({ name: "", value: "", stage: "lead", notes: "" });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create deal"),
+  });
+
+  const updateStage = useMutation({
+    mutationFn: ({ id, stage }: { id: string; stage: string }) =>
+      dealsApi.updateStage(id, stage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      toast.success("Stage updated");
+    },
+    onError: () => toast.error("Failed to update stage"),
+  });
+
+  const deleteDeal = useMutation({
+    mutationFn: (id: string) => dealsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      toast.success("Deal deleted");
+    },
+    onError: () => toast.error("Failed to delete deal"),
+  });
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search deals..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[250px]"
-            />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <Link to="/app/crm" className="hover:text-foreground transition-colors">CRM</Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">Pipeline</span>
           </div>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
+          <h1 className="font-bold text-2xl text-foreground">Sales Pipeline</h1>
+          <p className="text-muted-foreground text-sm">
+            Track deals through every stage of your pipeline.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Pipeline</p>
-            <p className="font-bold text-lg text-foreground">
-              ${(totalPipelineValue / 1000).toFixed(0)}K
-            </p>
-          </div>
-          <Button onClick={() => navigate({ to: "/app/crm/deals", search: { action: "create" } })}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Deal
-          </Button>
-        </div>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>
+          New Deal
+        </Button>
       </div>
 
-      {/* Kanban Board */}
-      <div className="overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-max">
-          {filteredStages.map((stage) => (
-            <div
-              key={stage.id}
-              className="w-[300px] flex-shrink-0"
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(stage.id)}
-            >
-              <div className="bg-muted/30 rounded-lg p-3">
-                {/* Stage Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: stage.color }}
-                    />
-                    <h3 className="font-semibold text-sm">{stage.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {stage.deals.length}
-                    </Badge>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Stage Value */}
-                <div className="text-xs text-muted-foreground mb-3">
-                  ${(stage.deals.reduce((sum, d) => sum + d.value, 0) / 1000).toFixed(0)}K
-                </div>
-
-                {/* Deal Cards */}
-                <div className="space-y-2">
-                  {stage.deals.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      No deals in this stage
-                    </div>
-                  ) : (
-                    stage.deals.map((deal) => (
-                      <Card
-                        key={deal.id}
-                        className="border-border/60 hover:border-primary/50 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
-                        draggable
-                        onDragStart={() => handleDragStart(deal, stage.id)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex-1 min-w-0">
-                              <Link
-                                to={`/app/crm/deals/${deal.id}` as string}
-                                className="font-medium text-sm hover:text-primary transition-colors"
-                              >
-                                {deal.title}
-                              </Link>
-                              <p className="text-xs text-muted-foreground">{deal.company}</p>
-                            </div>
-                            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold text-sm">
-                              ${(deal.value / 1000).toFixed(0)}K
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full"
-                                  style={{
-                                    width: `${deal.probability}%`,
-                                    backgroundColor: stage.color,
-                                  }}
-                                />
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {deal.probability}%
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {deal.contact}
-                            </div>
-                          </div>
-
-                          <div className="mt-2 flex items-center gap-2">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              {deal.daysInStage} days in stage
-                            </span>
-                          </div>
-
-                          <div className="mt-2 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground truncate">
-                            {deal.nextAction}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Total Pipeline", value: `$${totalPipeline.toLocaleString()}`, icon: <Target className="h-4 w-4" /> },
+          { label: "Won Revenue", value: `$${wonValue.toLocaleString()}`, icon: <DollarSign className="h-4 w-4 text-success" /> },
+          { label: "Win Rate", value: `${winRate}%`, icon: <GripVertical className="h-4 w-4 text-primary" /> },
+        ].map((s) => (
+          <Card key={s.label} className="border-border/60">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{s.label}</p>
+                <p className="font-black text-2xl text-foreground">{s.value}</p>
               </div>
-            </div>
+              <div className="rounded-xl bg-muted/30 p-2.5 text-muted-foreground">{s.icon}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Kanban board */}
+      {isLoading ? (
+        <Loading text="Loading pipeline..." />
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {DEAL_STAGES.map((stage) => (
+            <KanbanColumn
+              key={stage}
+              stage={stage}
+              deals={dealsByStage[stage]}
+              onStageChange={(id, newStage) => updateStage.mutate({ id, stage: newStage })}
+              onDelete={(id) => deleteDeal.mutate(id)}
+              loading={updateStage.isPending || deleteDeal.isPending}
+            />
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Legend */}
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-6 flex-wrap">
-            <span className="text-sm font-medium text-muted-foreground">Legend:</span>
-            {[
-              { color: "#818cf8", label: "Lead - Initial contact" },
-              { color: "#a78bfa", label: "Qualified - Needs confirmed" },
-              { color: "#22d3ee", label: "Proposal - Sent to client" },
-              { color: "#fbbf24", label: "Negotiation - Terms discussion" },
-              { color: "#22c55e", label: "Closed Won - Deal secured" },
-            ].map((item) => (
-              <div key={item.color} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="text-xs text-muted-foreground">{item.label}</span>
-              </div>
+      {/* Create Modal */}
+      <FormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="New Deal"
+        onSubmit={() => createDeal.mutate()}
+        isSubmitting={createDeal.isPending}
+        submitLabel="Create Deal"
+      >
+        <FormField label="Deal Name *">
+          <Input
+            placeholder="Enterprise License"
+            value={newDeal.name}
+            onChange={(e) => setNewDeal((p) => ({ ...p, name: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Value ($) *">
+          <Input
+            type="number"
+            placeholder="10000"
+            value={newDeal.value}
+            onChange={(e) => setNewDeal((p) => ({ ...p, value: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Stage">
+          <select
+            className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={newDeal.stage}
+            onChange={(e) => setNewDeal((p) => ({ ...p, stage: e.target.value as DealStage }))}
+          >
+            {DEAL_STAGES.map((s) => (
+              <option key={s} value={s}>{STAGE_META[s].label}</option>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </select>
+        </FormField>
+        <FormField label="Notes">
+          <Textarea
+            placeholder="Any notes about this deal..."
+            value={newDeal.notes}
+            onChange={(e) => setNewDeal((p) => ({ ...p, notes: e.target.value }))}
+            rows={3}
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }
