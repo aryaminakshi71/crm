@@ -12,11 +12,13 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  Loading,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Bell,
@@ -33,7 +35,7 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { z } from "zod";
@@ -52,19 +54,74 @@ function SettingsPage() {
   const { tab: activeTabParam } = Route.useSearch();
   const [activeTab, setActiveTab] = useState(activeTabParam || "profile");
   const [saving, setSaving] = useState(false);
-  const [profileData, setProfileData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john@example.com",
-    phone: "+1 (555) 123-4567",
+
+  // ── Real session data ──────────────────────────────────────────────────────
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  const { data: orgResponse, isLoading: orgLoading } = useQuery({
+    queryKey: ["active-organization"],
+    queryFn: async () => {
+      const res = await authClient.organization.getFullOrganization();
+      return res.data ?? null;
+    },
+    retry: false,
   });
 
-  const [orgData, setOrgData] = useState({
-    name: "Acme Corporation",
-    industry: "Technology",
-    website: "https://acme.com",
-    address: "123 Business St, San Francisco, CA 94105",
+  const activeOrganization = orgResponse;
+
+  // ── Profile form (seeded from session) ───────────────────────────────────
+  const sessionUser = session?.user;
+  const sessionName = sessionUser?.name ?? "";
+  const spaceIdx = sessionName.indexOf(" ");
+  const defaultFirst =
+    spaceIdx >= 0 ? sessionName.slice(0, spaceIdx) : sessionName;
+  const defaultLast = spaceIdx >= 0 ? sessionName.slice(spaceIdx + 1) : "";
+
+  const [profileData, setProfileData] = useState({
+    firstName: defaultFirst || "John",
+    lastName: defaultLast || "Doe",
+    email: sessionUser?.email ?? "john@example.com",
+    phone: "",
   });
+
+  // Sync profile form when session loads
+  useEffect(() => {
+    if (sessionUser) {
+      const name = sessionUser.name ?? "";
+      const idx = name.indexOf(" ");
+      setProfileData({
+        firstName: idx >= 0 ? name.slice(0, idx) : name || "John",
+        lastName: idx >= 0 ? name.slice(idx + 1) : "",
+        email: sessionUser.email ?? "",
+        phone: "",
+      });
+    }
+  }, [sessionUser?.id]);
+
+  // ── Org form (seeded from active org) ────────────────────────────────────
+  const orgMeta = (activeOrganization?.metadata ?? {}) as Record<
+    string,
+    string
+  >;
+  const [orgData, setOrgData] = useState({
+    name: activeOrganization?.name ?? "Acme Corporation",
+    industry: orgMeta.industry ?? "Technology",
+    website: orgMeta.website ?? "https://acme.com",
+    address: orgMeta.address ?? "",
+  });
+
+  // Sync org form when org loads
+  useEffect(() => {
+    if (activeOrganization) {
+      const meta = (activeOrganization.metadata ?? {}) as Record<string, string>;
+      setOrgData({
+        name: activeOrganization.name ?? "",
+        industry: meta.industry ?? "",
+        website: meta.website ?? "",
+        address: meta.address ?? "",
+      });
+    }
+  }, [activeOrganization?.id]);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -165,6 +222,10 @@ function SettingsPage() {
       setSaving(false);
     }
   };
+
+  if (sessionLoading || orgLoading) {
+    return <Loading text="Loading settings..." />;
+  }
 
   return (
     <div className="space-y-6">
