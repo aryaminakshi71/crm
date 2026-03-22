@@ -22,7 +22,9 @@ import { healthRouter } from "./health";
 import { hrmRouter } from "./hrm";
 import { intelligenceRouter } from "./intelligence";
 import { integrationRouter } from "./integration";
+import { inventoryRouter } from "./inventory";
 import { leadsRouter } from "./leads";
+import { marketingRouter } from "./marketing";
 import { modulesRouter } from "./modules";
 import { monitoringRouter } from "./monitoring";
 import { notificationsRouter } from "./notifications";
@@ -33,8 +35,7 @@ import { presenceRouter } from "./presence";
 import { rbacRouter } from "./rbac";
 import { realtimeRouter } from "./realtime";
 import { socialRouter } from "./social";
-import { marketingRouter } from "./marketing";
-import { inventoryRouter } from "./inventory";
+import { speechRouter } from "./speech";
 
 import { assetsRouter } from "./assets";
 
@@ -70,6 +71,7 @@ export const appRouter = {
   social: socialRouter,
   marketing: marketingRouter,
   inventory: inventoryRouter,
+  speech: speechRouter,
 };
 
 export type AppRouter = typeof appRouter;

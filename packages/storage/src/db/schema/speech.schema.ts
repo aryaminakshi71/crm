@@ -70,6 +70,28 @@ export const transcriptions = pgTable("speech_transcriptions", {
   createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+// Voice Speakers (custom speaker profiles)
+export const voiceSpeakers = pgTable("speech_speakers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  language: varchar("language", { length: 10 }).default("en"),
+
+  // Voice sample metadata
+  sampleCount: integer("sample_count").notNull().default(0),
+  isEnrolled: boolean("is_enrolled").notNull().default(false),
+
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 // Voice Commands
@@ -146,6 +168,25 @@ export const meetingNotes = pgTable("speech_meeting_notes", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Custom Vocabulary
+export const customVocabulary = pgTable("speech_vocabulary", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  term: varchar("term", { length: 255 }).notNull(),
+  soundsLike: jsonb("sounds_like").$type<string[]>().default([]),
+  displayAs: varchar("display_as", { length: 255 }),
+  language: varchar("language", { length: 10 }).default("en"),
+  weight: integer("weight").default(1), // boost weight for recognition
+
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
 // Custom Language Models
 export const customLanguageModels = pgTable("speech_language_models", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -190,6 +231,13 @@ export const transcriptionsRelations = relations(transcriptions, ({ one }) => ({
   }),
 }));
 
+export const voiceSpeakersRelations = relations(voiceSpeakers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [voiceSpeakers.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
 export const voiceCommandsRelations = relations(voiceCommands, ({ one }) => ({
   organization: one(organizations, {
     fields: [voiceCommands.organizationId],
@@ -205,6 +253,13 @@ export const meetingNotesRelations = relations(meetingNotes, ({ one }) => ({
   transcription: one(transcriptions, {
     fields: [meetingNotes.transcriptionId],
     references: [transcriptions.id],
+  }),
+}));
+
+export const customVocabularyRelations = relations(customVocabulary, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customVocabulary.organizationId],
+    references: [organizations.id],
   }),
 }));
 
