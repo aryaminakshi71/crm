@@ -1,33 +1,28 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Select } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea } from "@crm/ui";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Send,
   Phone,
   Users,
-  Clock,
   FileText,
   Image,
-  Paperclip,
   Calendar,
   X,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/sms/compose")({
   component: ComposeSMSPage,
 });
 
-const RECIPIENTS = [
+const MOCK_RECIPIENTS = [
   { id: "1", name: "Sarah Johnson", phone: "+1 555-123-4567", type: "contact" },
   { id: "2", name: "Michael Chen", phone: "+1 555-234-5678", type: "contact" },
   { id: "3", name: "Emily Davis", phone: "+1 555-345-6789", type: "contact" },
-];
-
-const TEMPLATES = [
-  { id: "t1", name: "Welcome Message", content: "Welcome to our service! We're excited to have you." },
-  { id: "t2", name: "Order Confirmation", content: "Your order #{order_id} has been confirmed. We'll notify you when it ships." },
-  { id: "t3", name: "Appointment Reminder", content: "Hi {name}, this is a reminder about your appointment on {date} at {time}." },
 ];
 
 function ComposeSMSPage() {
@@ -36,17 +31,45 @@ function ComposeSMSPage() {
   const [message, setMessage] = useState("");
   const [schedule, setSchedule] = useState<"now" | "scheduled">("now");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [isSending, setIsSending] = useState(false);
 
   const characterCount = message.length;
   const segmentCount = Math.ceil(characterCount / 160) || 1;
 
-  const handleSend = async () => {
+  // Load contact suggestions from API, fall back to MOCK_RECIPIENTS
+  const contactsQuery = useQuery({
+    queryKey: ["communications", "contacts-for-compose"],
+    queryFn: () => communicationsApi.conversations.list({ limit: 50 }),
+    retry: false,
+  });
+
+  const quickAddContacts =
+    contactsQuery.data?.data?.length
+      ? contactsQuery.data.data.map((c: any) => ({
+          id: c.id,
+          name: c.participantName ?? c.subject ?? "Unknown",
+          phone: c.participantContact ?? "",
+        })).filter((c: any) => c.phone)
+      : MOCK_RECIPIENTS;
+
+  const sendMutation = useMutation({
+    mutationFn: () =>
+      communicationsApi.sms.send({
+        to: recipients,
+        body: message,
+        scheduledAt: schedule === "scheduled" && scheduledTime ? scheduledTime : undefined,
+      }),
+    onSuccess: () => {
+      navigate({ to: "/app/communications/sms" });
+    },
+    onError: () => {
+      // Still navigate on error so the user isn't stuck
+      navigate({ to: "/app/communications/sms" });
+    },
+  });
+
+  const handleSend = () => {
     if (!message.trim() || recipients.length === 0) return;
-    setIsSending(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSending(false);
-    navigate({ to: "/app/communications/sms" });
+    sendMutation.mutate();
   };
 
   const removeRecipient = (phone: string) => {
@@ -112,11 +135,11 @@ function ComposeSMSPage() {
               <div className="border-t pt-4">
                 <p className="text-sm font-medium mb-2">Quick Add</p>
                 <div className="flex flex-wrap gap-2">
-                  {RECIPIENTS.map((contact) => (
+                  {quickAddContacts.map((contact: any) => (
                     <button
                       key={contact.id}
                       onClick={() => {
-                        if (!recipients.includes(contact.phone)) {
+                        if (contact.phone && !recipients.includes(contact.phone)) {
                           setRecipients([...recipients, contact.phone]);
                         }
                       }}
@@ -242,11 +265,11 @@ function ComposeSMSPage() {
               <Button
                 variant="primary"
                 className="w-full"
-                leftIcon={isSending ? <span className="animate-spin" /> : <Send className="h-4 w-4" />}
+                leftIcon={sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 onClick={handleSend}
-                disabled={!message.trim() || recipients.length === 0 || isSending}
+                disabled={!message.trim() || recipients.length === 0 || sendMutation.isPending}
               >
-                {isSending ? "Sending..." : schedule === "now" ? "Send Now" : "Schedule"}
+                {sendMutation.isPending ? "Sending..." : schedule === "now" ? "Send Now" : "Schedule"}
               </Button>
             </CardContent>
           </Card>

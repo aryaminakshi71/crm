@@ -1,21 +1,18 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Textarea } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
   Bot,
   Send,
-  Square,
   Copy,
-  RefreshCw,
   Trash2,
   Download,
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
-  Settings,
-  Play,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { agentsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/agents/$agentId/chat")({
   component: AgentChatPage,
@@ -39,11 +36,34 @@ const QUICK_PROMPTS = [
 function AgentChatPage() {
   const { agentId } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [streamedContent, setStreamedContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch chat history from API on mount
+  const historyQuery = useQuery({
+    queryKey: ["agents", agentId, "history"],
+    queryFn: () => agentsApi.history(agentId),
+    retry: false,
+  });
+
+  // Seed local state from API history (once)
+  useEffect(() => {
+    if (historyQuery.data?.messages?.length && localMessages.length === 0) {
+      const seeded: Message[] = historyQuery.data.messages.map((m: any) => ({
+        id: m.id ?? crypto.randomUUID(),
+        role: m.role,
+        content: m.content,
+        timestamp: new Date(m.timestamp),
+      }));
+      setLocalMessages(seeded);
+    }
+  }, [historyQuery.data]);
+
+  const messages = localMessages;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +72,11 @@ function AgentChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamedContent]);
+
+  // Send message mutation
+  const chatMutation = useMutation({
+    mutationFn: (msg: string) => agentsApi.chat(agentId, msg),
+  });
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -63,32 +88,49 @@ function AgentChatPage() {
       timestamp: new Date(),
     };
 
-    setMessages([...messages, userMessage]);
+    setLocalMessages((prev) => [...prev, userMessage]);
     setMessage("");
     setIsTyping(true);
     setStreamedContent("");
 
-    // Simulate streaming response
-    const fullResponse = "Thank you for your question! I'd be happy to help you with that. Based on my analysis, here's what I found:\n\n1. The primary approach involves using our REST API endpoints\n2. You can authenticate using Bearer tokens\n3. Rate limits are 1000 requests per minute\n4. Webhooks are available for real-time updates\n\nWould you like me to show you how to implement any of these?";
-    let currentIndex = 0;
+    try {
+      const result = await chatMutation.mutateAsync(message);
+      const fullResponse: string = result?.message ?? "I received your message and I'm processing it.";
 
-    const streamInterval = setInterval(() => {
-      if (currentIndex < fullResponse.length) {
-        setStreamedContent(fullResponse.slice(0, currentIndex + 10));
-        currentIndex += 10;
-      } else {
-        clearInterval(streamInterval);
-        setStreamedContent("");
-        setIsTyping(false);
-        const assistantMessage: Message = {
+      // Simulate streaming from the API response
+      let currentIndex = 0;
+      const streamInterval = setInterval(() => {
+        if (currentIndex < fullResponse.length) {
+          setStreamedContent(fullResponse.slice(0, currentIndex + 10));
+          currentIndex += 10;
+        } else {
+          clearInterval(streamInterval);
+          setStreamedContent("");
+          setIsTyping(false);
+          const assistantMessage: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: fullResponse,
+            timestamp: result?.timestamp ? new Date(result.timestamp) : new Date(),
+          };
+          setLocalMessages((prev) => [...prev, assistantMessage]);
+        }
+      }, 50);
+    } catch {
+      // Fallback response on error
+      const fallback = "I'm having trouble connecting right now. Please try again.";
+      setStreamedContent("");
+      setIsTyping(false);
+      setLocalMessages((prev) => [
+        ...prev,
+        {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: fullResponse,
+          content: fallback,
           timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      }
-    }, 50);
+        },
+      ]);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -99,7 +141,7 @@ function AgentChatPage() {
   };
 
   const handleFeedback = (messageId: string, feedback: "up" | "down") => {
-    setMessages(messages.map((msg) =>
+    setLocalMessages(messages.map((msg) =>
       msg.id === messageId ? { ...msg, feedback } : msg
     ));
   };
@@ -109,8 +151,9 @@ function AgentChatPage() {
   };
 
   const clearChat = () => {
-    setMessages([]);
+    setLocalMessages([]);
     setStreamedContent("");
+    queryClient.invalidateQueries({ queryKey: ["agents", agentId, "history"] });
   };
 
   const exportChat = () => {
@@ -149,7 +192,11 @@ function AgentChatPage() {
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 && (
+            {historyQuery.isLoading && (
+              <div className="text-center py-4 text-muted-foreground text-sm">Loading chat history...</div>
+            )}
+
+            {messages.length === 0 && !historyQuery.isLoading && (
               <div className="text-center py-12">
                 <div className="flex justify-center gap-4 mb-6">
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">

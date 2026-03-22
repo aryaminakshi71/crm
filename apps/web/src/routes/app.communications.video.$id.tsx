@@ -1,5 +1,6 @@
-import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, Card, Input } from "@crm/ui";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Video,
@@ -10,21 +11,20 @@ import {
   Monitor,
   Users,
   MessageSquare,
-  MoreVertical,
   Settings,
   Share,
-  Maximize,
   Clock,
-  Copy,
   Send,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/video/$id")({
   component: VideoRoomPage,
 });
 
-const PARTICIPANTS = [
+const MOCK_PARTICIPANTS = [
   { id: "p1", name: "You", isMuted: false, isVideoOn: true, isSpeaking: true },
   { id: "p2", name: "Sarah Johnson", isMuted: false, isVideoOn: true, isSpeaking: false },
   { id: "p3", name: "Michael Chen", isMuted: true, isVideoOn: true, isSpeaking: false },
@@ -44,7 +44,39 @@ function VideoRoomPage() {
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
-  const [callDuration, setCallDuration] = useState(0);
+  const [callDuration] = useState(0);
+
+  // Fetch room info from API
+  const roomQuery = useQuery({
+    queryKey: ["communications", "video-room", id],
+    queryFn: () => communicationsApi.videoRooms.get(id),
+    retry: false,
+  });
+
+  // End room mutation
+  const endMutation = useMutation({
+    mutationFn: () => communicationsApi.videoRooms.end(id),
+    onSettled: () => {
+      navigate({ to: "/app/communications/video" });
+    },
+  });
+
+  const roomData = roomQuery.data;
+
+  // Use API participants if available, fall back to MOCK_PARTICIPANTS
+  const participants =
+    roomData?.participants?.length
+      ? roomData.participants.map((p: any, i: number) => ({
+          id: p.identity ?? `p${i}`,
+          name: p.name ?? p.identity ?? "Participant",
+          isMuted: false,
+          isVideoOn: true,
+          isSpeaking: i === 0,
+        }))
+      : MOCK_PARTICIPANTS;
+
+  const roomName = roomData?.name ?? "Team Standup";
+  const participantCount = participants.length;
 
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
@@ -60,14 +92,22 @@ function VideoRoomPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h2 className="font-semibold">Team Standup</h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" /> 10:00
-              </span>
-              <span>•</span>
-              <span>4 participants</span>
-            </div>
+            {roomQuery.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading room...
+              </div>
+            ) : (
+              <>
+                <h2 className="font-semibold">{roomName}</h2>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> 10:00
+                  </span>
+                  <span>•</span>
+                  <span>{participantCount} participants</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -85,7 +125,7 @@ function VideoRoomPage() {
         {/* Video Grid */}
         <div className="flex-1 p-4 bg-gray-900">
           <div className="grid grid-cols-2 gap-4 h-full">
-            {PARTICIPANTS.map((participant) => (
+            {participants.map((participant) => (
               <div key={participant.id} className="relative rounded-xl bg-gray-800 overflow-hidden">
                 {participant.isVideoOn ? (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -175,14 +215,29 @@ function VideoRoomPage() {
           <Button variant="outline" size="icon" className="h-12 w-12 rounded-full">
             <Monitor className="h-5 w-5" />
           </Button>
-          <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setShowChat(!showChat)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full"
+            onClick={() => setShowChat(!showChat)}
+          >
             <MessageSquare className="h-5 w-5" />
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12 rounded-full">
             <Users className="h-5 w-5" />
           </Button>
-          <Button variant="destructive" size="icon" className="h-12 w-12 rounded-full" onClick={() => navigate({ to: "/app/communications/video" })}>
-            <Phone className="h-5 w-5 rotate-[135deg]" />
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-12 w-12 rounded-full"
+            onClick={() => endMutation.mutate()}
+            disabled={endMutation.isPending}
+          >
+            {endMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Phone className="h-5 w-5 rotate-[135deg]" />
+            )}
           </Button>
         </div>
       </div>

@@ -1,19 +1,20 @@
 import { Button, Card, CardContent, Badge, Textarea } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Send,
   Phone,
   MoreVertical,
-  Clock,
   CheckCircle,
   Check,
   Image,
   Paperclip,
   Smile,
-  ArrowRight,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/sms/conversation/$id")({
   component: ConversationPage,
@@ -27,30 +28,95 @@ interface Message {
   status: "delivered" | "sent" | "failed";
 }
 
+const MOCK_MESSAGES: Message[] = [
+  { id: "1", role: "inbound", content: "Hi, I wanted to check on my order status. Order #12345", timestamp: "10:23 AM", status: "delivered" },
+  { id: "2", role: "outbound", content: "Hi! Thanks for reaching out. Let me check that for you right away.", timestamp: "10:24 AM", status: "delivered" },
+  { id: "3", role: "outbound", content: "Your order is currently being processed and should ship within 24 hours. You'll receive a tracking number via email once it ships.", timestamp: "10:25 AM", status: "delivered" },
+  { id: "4", role: "inbound", content: "Great, thank you! Do you offer expedited shipping?", timestamp: "10:28 AM", status: "delivered" },
+  { id: "5", role: "outbound", content: "Yes, we do offer expedited shipping. The options are:\n- Standard (3-5 days): $5.99\n- Express (1-2 days): $12.99\n- Overnight: $24.99\n\nWould you like me to upgrade your shipping?", timestamp: "10:30 AM", status: "delivered" },
+  { id: "6", role: "inbound", content: "Yes, please upgrade to Express shipping. My email is john@example.com", timestamp: "10:32 AM", status: "delivered" },
+];
+
 function ConversationPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
-  const [messages] = useState<Message[]>([
-    { id: "1", role: "inbound", content: "Hi, I wanted to check on my order status. Order #12345", timestamp: "10:23 AM", status: "delivered" },
-    { id: "2", role: "outbound", content: "Hi! Thanks for reaching out. Let me check that for you right away.", timestamp: "10:24 AM", status: "delivered" },
-    { id: "3", role: "outbound", content: "Your order is currently being processed and should ship within 24 hours. You'll receive a tracking number via email once it ships.", timestamp: "10:25 AM", status: "delivered" },
-    { id: "4", role: "inbound", content: "Great, thank you! Do you offer expedited shipping?", timestamp: "10:28 AM", status: "delivered" },
-    { id: "5", role: "outbound", content: "Yes, we do offer expedited shipping. The options are:\n- Standard (3-5 days): $5.99\n- Express (1-2 days): $12.99\n- Overnight: $24.99\n\nWould you like me to upgrade your shipping?", timestamp: "10:30 AM", status: "delivered" },
-    { id: "6", role: "inbound", content: "Yes, please upgrade to Express shipping. My email is john@example.com", timestamp: "10:32 AM", status: "delivered" },
-  ]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const contact = {
-    name: "John Smith",
-    phone: "+1 555-123-4567",
-    email: "john@example.com",
-    status: "active",
-  };
+  // Fetch conversation + messages from API
+  const conversationQuery = useQuery({
+    queryKey: ["communications", "conversation", id],
+    queryFn: () => communicationsApi.conversationMessages.get(id),
+    retry: false,
+  });
+
+  // Seed local messages from API; fall back to MOCK_MESSAGES
+  useEffect(() => {
+    if (conversationQuery.data) {
+      const apiMessages: any[] = conversationQuery.data.messages ?? [];
+      if (apiMessages.length > 0) {
+        setLocalMessages(
+          apiMessages.map((m: any) => ({
+            id: m.id ?? crypto.randomUUID(),
+            role: m.role ?? "outbound",
+            content: m.content ?? m.body ?? "",
+            timestamp: m.timestamp
+              ? new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            status: (m.status as Message["status"]) ?? "delivered",
+          }))
+        );
+      } else {
+        // Empty from API — use mock for demo
+        setLocalMessages(MOCK_MESSAGES);
+      }
+    } else if (conversationQuery.isError) {
+      setLocalMessages(MOCK_MESSAGES);
+    }
+  }, [conversationQuery.data, conversationQuery.isError]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [localMessages]);
+
+  const sendMutation = useMutation({
+    mutationFn: (body: string) => communicationsApi.conversationMessages.send(id, body),
+    onSuccess: (result) => {
+      const newMsg: Message = {
+        id: result?.id ?? crypto.randomUUID(),
+        role: "outbound",
+        content: result?.content ?? message,
+        timestamp: result?.timestamp
+          ? new Date(result.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: result?.status ?? "sent",
+      };
+      setLocalMessages((prev) => [...prev, newMsg]);
+      queryClient.invalidateQueries({ queryKey: ["communications", "conversation", id] });
+    },
+    onError: () => {
+      // Optimistic fallback already applied
+    },
+  });
 
   const handleSend = () => {
     if (!message.trim()) return;
-    // In a real app, this would send the message
+    const draft = message;
     setMessage("");
+
+    // Optimistic update
+    const optimistic: Message = {
+      id: crypto.randomUUID(),
+      role: "outbound",
+      content: draft,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "sent",
+    };
+    setLocalMessages((prev) => [...prev, optimistic]);
+
+    sendMutation.mutate(draft);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -59,6 +125,14 @@ function ConversationPage() {
       handleSend();
     }
   };
+
+  const contact = {
+    name: conversationQuery.data?.conversation?.participantName ?? "John Smith",
+    phone: conversationQuery.data?.conversation?.participantContact ?? "+1 555-123-4567",
+    status: "active",
+  };
+
+  const messages = localMessages;
 
   return (
     <div className="space-y-6">
@@ -94,6 +168,13 @@ function ConversationPage() {
         <CardContent className="flex-1 flex flex-col p-0">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {conversationQuery.isLoading && (
+              <div className="text-center py-4 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                Loading conversation...
+              </div>
+            )}
+
             <div className="text-center">
               <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">Today</span>
             </div>
@@ -137,6 +218,8 @@ function ConversationPage() {
                 )}
               </div>
             ))}
+
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input */}
@@ -159,8 +242,17 @@ function ConversationPage() {
               <Button variant="ghost" size="icon" className="shrink-0">
                 <Smile className="h-4 w-4" />
               </Button>
-              <Button variant="primary" size="icon" onClick={handleSend} disabled={!message.trim()}>
-                <Send className="h-4 w-4" />
+              <Button
+                variant="primary"
+                size="icon"
+                onClick={handleSend}
+                disabled={!message.trim() || sendMutation.isPending}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <p className="text-muted-foreground text-xs mt-2">

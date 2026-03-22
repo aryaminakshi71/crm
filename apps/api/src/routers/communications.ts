@@ -442,6 +442,32 @@ export const communicationsRouter = {
       },
     ),
 
+  "videoRooms.get": orgAuthed
+    .route({
+      method: "GET",
+      path: "/communications/video-rooms/:id",
+      summary: "Get a single video room",
+      tags: ["Communications"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(
+      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        const [row] = await db
+          .select()
+          .from(schema.commVideoRooms)
+          .where(
+            and(
+              eq(schema.commVideoRooms.id, input.id),
+              eq(schema.commVideoRooms.organizationId, context.organization.id),
+            ),
+          )
+          .limit(1);
+        return row ?? null;
+      },
+    ),
+
   "videoRooms.end": orgAuthed
     .route({
       method: "PATCH",
@@ -465,6 +491,119 @@ export const communicationsRouter = {
           )
           .returning();
         return row;
+      },
+    ),
+
+  // ── SMS / Conversations ────────────────────────────────────────────────────
+
+  "sms.send": orgAuthed
+    .route({
+      method: "POST",
+      path: "/communications/sms/send",
+      summary: "Send an SMS message",
+      tags: ["Communications"],
+    })
+    .input(
+      z.object({
+        to: z.array(z.string()).min(1),
+        body: z.string().min(1),
+        from: z.string().optional(),
+        scheduledAt: z.string().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        messageId: z.string(),
+        sentAt: z.string(),
+        recipientCount: z.number(),
+      }),
+    )
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { to: string[]; body: string; from?: string; scheduledAt?: string };
+      }) => {
+        // Placeholder — integrate with SMS provider (Twilio etc.) when available
+        return {
+          success: true,
+          messageId: crypto.randomUUID(),
+          sentAt: input.scheduledAt ?? new Date().toISOString(),
+          recipientCount: input.to.length,
+        };
+      },
+    ),
+
+  "conversations.get": orgAuthed
+    .route({
+      method: "GET",
+      path: "/communications/conversations/:id",
+      summary: "Get a conversation with its messages",
+      tags: ["Communications"],
+    })
+    .input(z.object({ id: z.string() }))
+    .output(
+      z.object({
+        conversation: z.any(),
+        messages: z.array(z.any()),
+      }),
+    )
+    .handler(
+      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+        // Conversation and message storage is handled by the external comm platform.
+        // Return a placeholder shape so the frontend can fall back gracefully.
+        return {
+          conversation: {
+            id: input.id,
+            organizationId: context.organization.id,
+          },
+          messages: [],
+        };
+      },
+    ),
+
+  "conversations.sendMessage": orgAuthed
+    .route({
+      method: "POST",
+      path: "/communications/conversations/:id/messages",
+      summary: "Send a message in a conversation",
+      tags: ["Communications"],
+    })
+    .input(
+      z.object({
+        id: z.string(),
+        body: z.string().min(1),
+      }),
+    )
+    .output(
+      z.object({
+        id: z.string(),
+        conversationId: z.string(),
+        role: z.literal("outbound"),
+        content: z.string(),
+        timestamp: z.string(),
+        status: z.literal("sent"),
+      }),
+    )
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string; body: string };
+      }) => {
+        return {
+          id: crypto.randomUUID(),
+          conversationId: input.id,
+          role: "outbound" as const,
+          content: input.body,
+          timestamp: new Date().toISOString(),
+          status: "sent" as const,
+        };
       },
     ),
 

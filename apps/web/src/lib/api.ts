@@ -3990,6 +3990,42 @@ export const marketingApi = {
   },
 };
 
+// ============ AGENTS API ============
+
+const AGENTS_BASE = `${API_BASE}/agents`;
+
+async function agentsFetch(path: string, init?: RequestInit): Promise<any> {
+  const res = await fetch(`${AGENTS_BASE}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...getOrgHeader(),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
+  });
+  if (!res.ok) throw new Error(`Agents API error: ${res.status}`);
+  return res.json();
+}
+
+export const agentsApi = {
+  /** GET /agents/:id/history */
+  history: (id: string) => agentsFetch(`/${id}/history`),
+
+  /** POST /agents/:id/chat */
+  chat: (id: string, message: string) =>
+    agentsFetch(`/${id}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ id, message }),
+    }),
+
+  /** POST /agents/:id/run */
+  run: (id: string, data: { taskType?: string; taskDescription: string }) =>
+    agentsFetch(`/${id}/run`, {
+      method: "POST",
+      body: JSON.stringify({ id, ...data }),
+    }),
+};
+
 // ============ COMMUNICATIONS API ============
 
 const COMM_BASE = `${API_BASE}/communications`;
@@ -4123,6 +4159,65 @@ export const communicationsApi = {
       data: { status?: "active" | "inactive" | "training"; name?: string; systemPrompt?: string },
     ) =>
       commFetch(`/bots/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  },
+
+  sms: {
+    /** POST /communications/sms/send */
+    send: (data: { to: string[]; body: string; from?: string; scheduledAt?: string }) =>
+      commFetch("/sms/send", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  videoRooms: {
+    /** GET /communications/video-rooms */
+    list: (params?: { page?: number; limit?: number; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.status) q.set("status", params.status);
+      return commFetch(`/video-rooms?${q}`);
+    },
+    /** GET /communications/video-rooms/:id */
+    get: (id: string) => commFetch(`/video-rooms/${id}`),
+    /** POST /communications/video-rooms */
+    create: (data: { name: string; maxParticipants?: number; scheduledAt?: string }) =>
+      commFetch("/video-rooms", { method: "POST", body: JSON.stringify(data) }),
+    /** PATCH /communications/video-rooms/:id/end */
+    end: (id: string) => commFetch(`/video-rooms/${id}/end`, { method: "PATCH" }),
+  },
+
+  calls: {
+    /** GET /communications/calls */
+    list: (params?: { page?: number; limit?: number; direction?: "inbound" | "outbound"; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.direction) q.set("direction", params.direction);
+      if (params?.status) q.set("status", params.status);
+      return commFetch(`/calls?${q}`);
+    },
+    /** POST /communications/calls — initiate a call record */
+    create: (data: { to: string; from?: string; contactName?: string }) =>
+      commFetch("/calls", {
+        method: "POST",
+        body: JSON.stringify({
+          direction: "outbound",
+          from: data.from ?? "unknown",
+          to: data.to,
+          contactName: data.contactName,
+          status: "initiated",
+        }),
+      }),
+  },
+
+  conversationMessages: {
+    /** GET /communications/conversations/:id  */
+    get: (id: string) => commFetch(`/conversations/${id}`),
+    /** POST /communications/conversations/:id/messages */
+    send: (id: string, body: string) =>
+      commFetch(`/conversations/${id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ id, body }),
+      }),
   },
 };
 

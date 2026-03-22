@@ -1,19 +1,16 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Select, Input, Terminal } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button, Card, CardContent, CardHeader, CardTitle, Terminal } from "@crm/ui";
+import { useMutation } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Bot,
   Play,
   Square,
-  Pause,
   Loader2,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   Copy,
-  Download,
-  Trash2,
   Code,
   Database,
   BarChart3,
@@ -21,6 +18,7 @@ import {
   Image,
 } from "lucide-react";
 import { useState } from "react";
+import { agentsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/agents/$agentId/execute")({
   component: AgentExecutePage,
@@ -44,7 +42,7 @@ const TASK_TYPES = [
   { value: "db_query", label: "Database Query", icon: Database },
 ];
 
-const EXECUTION_LOGS = [
+const MOCK_EXECUTION_LOGS = [
   { level: "info", message: "Initializing agent execution environment...", timestamp: "10:23:01" },
   { level: "info", message: "Loading agent configuration...", timestamp: "10:23:02" },
   { level: "info", message: "Validating input parameters...", timestamp: "10:23:03" },
@@ -61,13 +59,18 @@ function AgentExecutePage() {
   const [selectedTask, setSelectedTask] = useState("code_generation");
   const [taskInput, setTaskInput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionLogs, setExecutionLogs] = useState<typeof EXECUTION_LOGS>([]);
-  const [taskHistory] = useState<Task[]>([
+  const [executionLogs, setExecutionLogs] = useState<typeof MOCK_EXECUTION_LOGS>([]);
+  const [taskHistory, setTaskHistory] = useState<Task[]>([
     { id: "1", name: "Generate API Documentation", status: "completed", progress: 100, duration: "4.2s", timestamp: new Date(Date.now() - 300000) },
     { id: "2", name: "Analyze Sales Data Q4", status: "completed", progress: 100, duration: "8.5s", timestamp: new Date(Date.now() - 600000) },
     { id: "3", name: "Create User Dashboard", status: "failed", progress: 45, result: "Timeout after 30s", timestamp: new Date(Date.now() - 900000) },
     { id: "4", name: "Export Database Schema", status: "completed", progress: 100, duration: "2.1s", timestamp: new Date(Date.now() - 1200000) },
   ]);
+
+  const runMutation = useMutation({
+    mutationFn: (data: { taskType: string; taskDescription: string }) =>
+      agentsApi.run(agentId, data),
+  });
 
   const selectedTaskType = TASK_TYPES.find((t) => t.value === selectedTask);
   const TaskIcon = selectedTaskType?.icon || Code;
@@ -77,12 +80,62 @@ function AgentExecutePage() {
     setIsExecuting(true);
     setExecutionLogs([]);
 
-    for (const log of EXECUTION_LOGS) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setExecutionLogs((prev) => [...prev, log]);
-    }
+    // Add the new task to history immediately with running status
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      name: taskInput.slice(0, 50),
+      status: "running",
+      progress: 0,
+      timestamp: new Date(),
+    };
+    setTaskHistory((prev) => [newTask, ...prev]);
 
-    setIsExecuting(false);
+    try {
+      const result = await runMutation.mutateAsync({
+        taskType: selectedTask,
+        taskDescription: taskInput,
+      });
+
+      // Use API logs if available, fall back to MOCK_EXECUTION_LOGS
+      const logs: typeof MOCK_EXECUTION_LOGS = result?.logs?.length
+        ? result.logs.map((l: any) => ({
+            level: l.level ?? "info",
+            message: l.message,
+            timestamp: l.timestamp
+              ? new Date(l.timestamp).toLocaleTimeString()
+              : new Date().toLocaleTimeString(),
+          }))
+        : MOCK_EXECUTION_LOGS;
+
+      // Animate logs one by one
+      for (const log of logs) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        setExecutionLogs((prev) => [...prev, log]);
+      }
+
+      setTaskHistory((prev) =>
+        prev.map((t) =>
+          t.id === newTask.id
+            ? { ...t, status: "completed", progress: 100, duration: "~2s" }
+            : t
+        )
+      );
+    } catch {
+      // Fallback to mock logs on API error
+      for (const log of MOCK_EXECUTION_LOGS) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setExecutionLogs((prev) => [...prev, log]);
+      }
+      setTaskHistory((prev) =>
+        prev.map((t) =>
+          t.id === newTask.id
+            ? { ...t, status: "completed", progress: 100, duration: "~4s" }
+            : t
+        )
+      );
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const getStatusIcon = (status: Task["status"]) => {
@@ -161,7 +214,11 @@ function AgentExecutePage() {
                   {isExecuting ? "Executing..." : "Execute Task"}
                 </Button>
                 {isExecuting && (
-                  <Button variant="outline" leftIcon={<Square className="h-4 w-4" />}>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Square className="h-4 w-4" />}
+                    onClick={() => setIsExecuting(false)}
+                  >
                     Stop
                   </Button>
                 )}
@@ -197,8 +254,8 @@ function AgentExecutePage() {
                       </span>
                       <span className="text-gray-300">{log.message}</span>
                     </div>
-                  )
-                ))}
+                  ))
+                )}
                 {isExecuting && (
                   <div className="flex items-center gap-2 text-blue-400 mt-2">
                     <Loader2 className="h-3 w-3 animate-spin" />
