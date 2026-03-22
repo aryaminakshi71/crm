@@ -52,22 +52,6 @@ export {
   SkeletonText,
   SkeletonCard,
   SkeletonTable,
+  SkeletonStatGrid,
+  SkeletonListPage,
 } from "./loading-skeleton";
-
-// Table components
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-} from "./table";
-
-// Progress (alias for ProgressBar)
-export { ProgressBar as Progress } from "./progress-bar";
-
-// Terminal
-export { Terminal } from "./terminal";

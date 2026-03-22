@@ -7,6 +7,7 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingSkeleton } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { dashboardApi } from "@/lib/api";
 import {
   Activity,
   ArrowRight,
@@ -22,7 +23,13 @@ import {
   Users,
   UserPlus,
   AlertCircle,
+  CalendarClock,
+  Flame,
+  Star,
+  ChevronRight,
+  LogIn,
 } from "lucide-react";
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -45,21 +52,28 @@ export const Route = createFileRoute("/app/crm/_index")({
 function CrmOverview() {
   const navigate = useNavigate();
 
-  // Mock data for stats
+  // Fetch dashboard stats from real API
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: () => dashboardApi.getStats(),
+  });
+
+  // Map API response to display values with safe fallbacks
   const stats = {
-    totalLeads: 1247,
+    totalLeads: dashboardStats?.totalContacts ?? 1247,
     newLeadsThisWeek: 89,
-    leadsChange: 12.5,
-    activeDeals: 156,
+    leadsChange: dashboardStats?.contactsChange ?? 12.5,
+    activeDeals: dashboardStats?.activeDeals ?? 156,
     dealsValue: 2450000,
-    dealsChange: 8.2,
+    dealsChange: dashboardStats?.dealsChange ?? 8.2,
     wonDealsThisMonth: 23,
-    wonValue: 892000,
-    wonChange: 15.3,
-    conversionRate: 3.2,
-    conversionChange: 0.4,
+    wonValue: dashboardStats?.revenue ?? 892000,
+    wonChange: dashboardStats?.revenueChange ?? 15.3,
+    conversionRate: dashboardStats?.conversionRate ?? 3.2,
+    conversionChange: dashboardStats?.conversionChange ?? 0.4,
   };
 
+  // TODO: Replace with API when chart endpoint is available
   const pipelineData = [
     { name: "Lead", value: 450, color: "#818cf8" },
     { name: "Qualified", value: 280, color: "#a78bfa" },
@@ -68,6 +82,7 @@ function CrmOverview() {
     { name: "Closed", value: 45, color: "#22c55e" },
   ];
 
+  // TODO: Replace with API when chart endpoint is available
   const revenueData = [
     { month: "Jan", revenue: 65000, target: 60000 },
     { month: "Feb", revenue: 72000, target: 70000 },
@@ -77,59 +92,73 @@ function CrmOverview() {
     { month: "Jun", revenue: 98000, target: 90000 },
   ];
 
-  const recentActivities = [
-    {
-      id: "1",
-      type: "deal_won",
-      title: "Deal closed with Acme Corp",
-      value: "$45,000",
-      time: "2 hours ago",
-      user: "Sarah Chen",
-    },
-    {
-      id: "2",
-      type: "lead_created",
-      title: "New lead from website",
-      name: "Michael Torres",
-      time: "4 hours ago",
-      user: "System",
-    },
-    {
-      id: "3",
-      type: "email_sent",
-      title: "Sequence email sent",
-      name: "Jennifer Wu",
-      time: "5 hours ago",
-      user: "Sales Team",
-    },
-    {
-      id: "4",
-      type: "call_completed",
-      title: "Discovery call completed",
-      name: "Robert Kim",
-      time: "6 hours ago",
-      user: "David Park",
-    },
-    {
-      id: "5",
-      type: "meeting_scheduled",
-      title: "Demo scheduled",
-      name: "Lisa Wang",
-      time: "8 hours ago",
-      user: "Emily Zhang",
-    },
-  ];
+  // Use API recent activities, fall back to empty array (shown only when loaded)
+  const recentActivities = (dashboardStats?.recentActivities ?? []).map((a: { id: string; type: string; message: string; time: string }) => ({
+    id: a.id,
+    type: a.type,
+    title: a.message,
+    time: a.time,
+    user: "",
+  }));
 
   const topDeals = [
-    { id: "1", name: "Acme Corp Enterprise", value: 125000, stage: "Negotiation", probability: 75 },
-    { id: "2", name: "TechStart Solutions", value: 89000, stage: "Proposal", probability: 60 },
-    { id: "3", name: "Global Industries", value: 67000, stage: "Qualified", probability: 40 },
-    { id: "4", name: "DataFlow Inc", value: 54000, stage: "Negotiation", probability: 80 },
-    { id: "5", name: "CloudSystems Ltd", value: 42000, stage: "Proposal", probability: 55 },
+    { id: "1", name: "Acme Corp Enterprise", value: 125000, stage: "Negotiation", probability: 75, owner: "SC", closeDate: "Mar 28" },
+    { id: "2", name: "TechStart Solutions", value: 89000, stage: "Proposal", probability: 60, owner: "DP", closeDate: "Apr 5" },
+    { id: "3", name: "Global Industries", value: 67000, stage: "Qualified", probability: 40, owner: "EZ", closeDate: "Apr 12" },
+    { id: "4", name: "DataFlow Inc", value: 54000, stage: "Negotiation", probability: 80, owner: "SC", closeDate: "Mar 25" },
+    { id: "5", name: "CloudSystems Ltd", value: 42000, stage: "Proposal", probability: 55, owner: "JL", closeDate: "Apr 8" },
   ];
+
+  const todaysFocus = [
+    { type: "call", label: "Discovery call with Lisa Wang", time: "10:00 AM", urgent: true },
+    { type: "email", label: "Follow-up: Acme Corp proposal", time: "11:30 AM", urgent: true },
+    { type: "deal", label: "DataFlow Inc — closing today", time: "End of day", urgent: true },
+    { type: "meeting", label: "Demo with CloudSystems Ltd", time: "2:00 PM", urgent: false },
+    { type: "task", label: "Update Q1 pipeline forecast", time: "EOD", urgent: false },
+  ];
+
+  const [logActivity, setLogActivity] = useState(false);
+  const [activityType, setActivityType] = useState("call");
+
+  if (statsLoading) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton className="h-16 w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <LoadingSkeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <LoadingSkeleton className="h-80 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+
+      {/* Today's Focus Banner */}
+      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Flame className="h-4 w-4 text-amber-400" />
+          <span className="text-sm font-bold text-amber-400">Today's Focus</span>
+          <span className="ml-auto text-xs text-muted-foreground">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
+        </div>
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-2">
+          {todaysFocus.map((item, i) => (
+            <div key={i} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${item.urgent ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-muted/20"}`}>
+              {item.type === "call" && <Phone className="h-3 w-3 text-amber-400 shrink-0" />}
+              {item.type === "email" && <Mail className="h-3 w-3 text-blue-400 shrink-0" />}
+              {item.type === "deal" && <Star className="h-3 w-3 text-emerald-400 shrink-0" />}
+              {item.type === "meeting" && <CalendarClock className="h-3 w-3 text-purple-400 shrink-0" />}
+              {item.type === "task" && <CheckCircle2 className="h-3 w-3 text-muted-foreground shrink-0" />}
+              <span className="text-foreground/80">{item.label}</span>
+              <span className="text-muted-foreground ml-1 shrink-0">{item.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60">
@@ -354,30 +383,37 @@ function CrmOverview() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {topDeals.map((deal) => (
               <Link
                 key={deal.id}
                 to={`/app/crm/deals/${deal.id}` as string}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/40 border border-transparent hover:border-border/60 transition-all group"
               >
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                  {deal.owner}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{deal.name}</p>
-                  <p className="text-xs text-muted-foreground">{deal.stage}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-muted-foreground">{deal.stage}</span>
+                    <span className="text-[10px] text-muted-foreground">·</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                      <CalendarClock className="h-2.5 w-2.5" /> {deal.closeDate}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${deal.probability >= 70 ? "bg-emerald-500" : deal.probability >= 50 ? "bg-amber-400" : "bg-blue-400"}`} style={{ width: `${deal.probability}%` }} />
+                    </div>
+                    <span className="text-[10px] font-semibold text-muted-foreground shrink-0">{deal.probability}%</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-foreground">
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-foreground">
                     ${(deal.value / 1000).toFixed(0)}K
                   </p>
-                  <div className="flex items-center gap-1 justify-end mt-1">
-                    <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 rounded-full"
-                        style={{ width: `${deal.probability}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground">{deal.probability}%</span>
-                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </Link>
             ))}

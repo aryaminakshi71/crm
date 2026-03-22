@@ -145,3 +145,56 @@ export function SkeletonTable({
     </div>
   );
 }
+
+/**
+ * SkeletonStatGrid - 4-stat grid matching dashboard patterns
+ */
+export function SkeletonStatGrid({
+  count = 4,
+  className,
+  ...props
+}: {
+  count?: number;
+  className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", className)} {...props}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="space-y-3 rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <LoadingSkeleton variant="text" height={14} width="50%" />
+            <LoadingSkeleton variant="circular" height={32} width={32} />
+          </div>
+          <LoadingSkeleton variant="text" height={28} width="70%" />
+          <LoadingSkeleton variant="text" height={12} width="40%" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * SkeletonListPage - Header + table pattern for list views
+ */
+export function SkeletonListPage({
+  rows = 8,
+  className,
+  ...props
+}: {
+  rows?: number;
+  className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn("space-y-4", className)} {...props}>
+      <div className="flex items-center justify-between">
+        <LoadingSkeleton variant="text" height={28} width={200} />
+        <LoadingSkeleton variant="rectangular" height={36} width={120} />
+      </div>
+      <div className="flex gap-2">
+        <LoadingSkeleton variant="rectangular" height={36} width={240} />
+        <LoadingSkeleton variant="rectangular" height={36} width={120} />
+      </div>
+      <SkeletonTable rows={rows} columns={5} />
+    </div>
+  );
+}

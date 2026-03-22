@@ -38,7 +38,8 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
   }
 
   // Check for demo mode
-  const isDemo = context.headers.get("x-demo-mode") === "true";
+  const isDemoEnabled = context.env.DEMO_MODE_ENABLED === "true";
+  const isDemo = isDemoEnabled && context.headers.get("x-demo-mode") === "true";
   if (isDemo) {
     // Create a mock auth context for demo mode
     const db = getDb(context);
@@ -109,7 +110,8 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
  */
 export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
   // Check for demo mode
-  const isDemo = context.headers.get("x-demo-mode") === "true";
+  const isDemoEnabled = context.env.DEMO_MODE_ENABLED === "true";
+  const isDemo = isDemoEnabled && context.headers.get("x-demo-mode") === "true";
   if (isDemo) {
     // Return demo organization context
     return next({
@@ -135,22 +137,9 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
     (context.session as any)?.activeOrganizationId ||
     (context as any).activeOrganizationId;
 
-  // Default to demo mode if no organization provided
   if (!orgSlug && !orgId) {
-    return next({
-      context: {
-        ...context,
-        organization: {
-          id: "demo-org",
-          name: "Demo Organization",
-          slug: "demo",
-          plan: "pro",
-        },
-        member: {
-          id: "demo-member-001",
-          role: "owner" as const,
-        },
-      },
+    throw new ORPCError("UNAUTHORIZED", {
+      message: "Organization context required. Provide x-organization-id or x-organization-slug header.",
     });
   }
 
@@ -189,6 +178,10 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
       message: "Not a member of this organization",
     });
   }
+
+  // TODO: Add subscription status check once schema.subscriptions is available.
+  // When added, query subscriptions table for this org and throw FORBIDDEN if
+  // sub.status is not in ["active", "trialing"].
 
   // Cast role to proper type and add default plan
   const role = result[0].member.role as "owner" | "admin" | "member";

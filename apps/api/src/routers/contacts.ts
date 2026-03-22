@@ -5,10 +5,10 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError, ErrorCode } from "../lib/errors";
+import { APIError } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
@@ -68,6 +68,7 @@ export const contactsRouter = {
         const whereConditions = search
           ? and(
               eq(contacts.organizationId, context.organization.id),
+              isNull(contacts.deletedAt),
               or(
                 ilike(contacts.firstName, `%${search}%`),
                 ilike(contacts.lastName, `%${search}%`),
@@ -75,7 +76,10 @@ export const contactsRouter = {
                 ilike(contacts.companyName, `%${search}%`),
               ),
             )
-          : eq(contacts.organizationId, context.organization.id);
+          : and(
+              eq(contacts.organizationId, context.organization.id),
+              isNull(contacts.deletedAt),
+            );
 
         // Cache key for list queries
         const cacheKey = `contacts:list:${context.organization.id}:${input.page}:${input.limit}:${search || "all"}`;
@@ -91,7 +95,7 @@ export const contactsRouter = {
           cacheKey,
           async () => {
             // Get total count using SQL COUNT()
-            const countResult: { count: number }[] = await trackQuery("listContactsCount", () =>
+            const countResult = await trackQuery("listContactsCount", () =>
               db.select({ count: count() }).from(contacts).where(whereConditions),
             );
             const total = countResult[0]?.count ?? 0;
@@ -158,7 +162,7 @@ export const contactsRouter = {
                 .limit(1);
 
               if (!result) {
-                throw new APIError(ErrorCode.NOT_FOUND, "Contact not found", 404);
+                throw new APIError("Contact not found", 404);
               }
 
               return result;
@@ -237,7 +241,7 @@ export const contactsRouter = {
         )) as any[];
 
         if (!contact) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Contact not found", 404);
+          throw new APIError("Contact not found", 404);
         }
 
         await invalidateCache(`contact:${input.id}`);

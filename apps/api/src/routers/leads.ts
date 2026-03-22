@@ -5,17 +5,17 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError, ErrorCode } from "../lib/errors";
+import { APIError } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { leads, contacts, adConversions } = schema;
+const { leads, contacts } = schema;
 
 // Create a Zod schema from the leads table columns
-const leadSchema = z.object({
+const leadSchema = schema.leads ? z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
   firstName: z.string().nullable(),
@@ -29,7 +29,7 @@ const leadSchema = z.object({
   assignedTo: z.string().uuid().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
-}).passthrough();
+}).passthrough() : z.unknown();
 
 export const leadsRouter = {
   /**
@@ -48,6 +48,15 @@ export const leadsRouter = {
         limit: z.number().min(1).max(200).default(50),
         status: z.string().optional(),
         search: z.string().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        data: z.array(leadSchema),
+        total: z.number(),
+        page: z.number(),
+        limit: z.number(),
+        totalPages: z.number(),
       }),
     )
     .handler(
@@ -82,7 +91,7 @@ export const leadsRouter = {
             const db = getDb(context);
 
             // Build where conditions
-            const conditions = [eq(leads.organizationId, context.organization.id)];
+            const conditions = [eq(leads.organizationId, context.organization.id), isNull(leads.deletedAt)];
             if (input.status) {
               conditions.push(eq(leads.status, input.status));
             }
@@ -101,7 +110,7 @@ export const leadsRouter = {
               conditions.length > 1 ? and(...conditions) : conditions[0];
 
             // Get total count using SQL COUNT()
-            const countResult: { count: number }[] = await trackQuery("listLeadsCount", () =>
+            const countResult = await trackQuery("listLeadsCount", () =>
               db.select({ count: count() }).from(leads).where(whereConditions),
             );
             const total = countResult[0]?.count ?? 0;
@@ -117,10 +126,10 @@ export const leadsRouter = {
                   .orderBy(desc(leads.createdAt))
                   .limit(input.limit)
                   .offset(offset),
-            ) as typeof leads.$inferSelect[];
+            );
 
             return {
-              data: paginatedLeads as any[],
+              data: paginatedLeads,
               total,
               page: input.page,
               limit: input.limit,
@@ -143,6 +152,7 @@ export const leadsRouter = {
       tags: ["Leads"],
     })
     .input(z.object({ id: z.string().uuid() }))
+    .output(leadSchema)
     .handler(
       async ({
         context,
@@ -161,7 +171,7 @@ export const leadsRouter = {
           .limit(1);
 
         if (!lead) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
+          throw new APIError("Lead not found", 404);
         }
 
         return lead;
@@ -197,18 +207,6 @@ export const leadsRouter = {
           ])
           .default("website"),
         notes: z.string().optional(),
-        // UTM tracking data
-        utmSource: z.string().optional(),
-        utmMedium: z.string().optional(),
-        utmCampaign: z.string().optional(),
-        utmTerm: z.string().optional(),
-        utmContent: z.string().optional(),
-        gclid: z.string().optional(),
-        msclkid: z.string().optional(),
-        fbclid: z.string().optional(),
-        adNetwork: z.enum(["google_ads", "microsoft_ads", "facebook_ads"]).optional(),
-        campaignId: z.string().optional(),
-        pagePath: z.string().optional(),
       }),
     )
     .output(leadSchema)
@@ -226,17 +224,6 @@ export const leadsRouter = {
           phone?: string;
           source: string;
           notes?: string;
-          utmSource?: string;
-          utmMedium?: string;
-          utmCampaign?: string;
-          utmTerm?: string;
-          utmContent?: string;
-          gclid?: string;
-          msclkid?: string;
-          fbclid?: string;
-          adNetwork?: string;
-          campaignId?: string;
-          pagePath?: string;
         };
       }) => {
         const db = getDb(context);
@@ -253,35 +240,6 @@ export const leadsRouter = {
             createdBy: context.user.id,
           })
           .returning();
-
-        // Create ad conversion record if UTM data or ad click IDs are present
-        const hasAdData =
-          input.gclid ||
-          input.msclkid ||
-          input.fbclid ||
-          input.utmSource ||
-          input.utmMedium ||
-          input.utmCampaign;
-
-        if (hasAdData) {
-          await db.insert(adConversions).values({
-            organizationId: context.organization.id,
-            leadId: lead.id,
-            adNetwork: (input.adNetwork as "google_ads" | "microsoft_ads" | "facebook_ads") || "google_ads",
-            campaignId: input.campaignId,
-            conversionType: "form_submission",
-            utmSource: input.utmSource,
-            utmMedium: input.utmMedium,
-            utmCampaign: input.utmCampaign,
-            utmTerm: input.utmTerm,
-            utmContent: input.utmContent,
-            gclid: input.gclid,
-            msclkid: input.msclkid,
-            fbclid: input.fbclid,
-            pagePath: input.pagePath,
-            conversionTimestamp: new Date(),
-          });
-        }
 
         // Invalidate list cache
         await invalidateCache(`leads:list:${context.organization.id}`);
@@ -357,7 +315,7 @@ export const leadsRouter = {
           .returning();
 
         if (!lead) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
+          throw new APIError("Lead not found", 404);
         }
 
         return lead;
@@ -411,7 +369,7 @@ export const leadsRouter = {
           .limit(1);
 
         if (!lead) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Lead not found", 404);
+          throw new APIError("Lead not found", 404);
         }
 
         // Create contact from lead
