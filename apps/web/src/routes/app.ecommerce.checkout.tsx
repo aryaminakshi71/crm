@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import {
   CreditCard,
   Save,
@@ -15,11 +16,29 @@ import {
   Truck,
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 export const Route = createFileRoute("/app/ecommerce/checkout")({
   component: CheckoutSettingsPage,
 });
 
 function CheckoutSettingsPage() {
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderPayload: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/ecommerce/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(orderPayload),
+      });
+      if (!res.ok) throw new Error("Failed to create order");
+      return res.json();
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}

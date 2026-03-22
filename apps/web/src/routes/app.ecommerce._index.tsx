@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Store,
   ShoppingBag,
@@ -21,6 +22,12 @@ import {
   Star,
   Percent,
 } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Area,
   AreaChart,
@@ -42,19 +49,65 @@ export const Route = createFileRoute("/app/ecommerce/_index")({
   component: EcommerceDashboard,
 });
 
+const MOCK_STATS = {
+  revenue: 48750,
+  revenueChange: 12.5,
+  orders: 342,
+  ordersChange: 8.2,
+  customers: 156,
+  customersChange: 15.3,
+  conversionRate: 3.2,
+  conversionChange: 0.4,
+  averageOrder: 142.54,
+  cartAbandonment: 28.5,
+};
+
+const MOCK_RECENT_ORDERS = [
+  { id: "ORD-2024-342", customer: "Michael Torres", items: 3, total: 459.99, status: "processing", time: "5 min ago" },
+  { id: "ORD-2024-341", customer: "Sarah Chen", items: 1, total: 999.99, status: "shipped", time: "12 min ago" },
+  { id: "ORD-2024-340", customer: "Emily Zhang", items: 5, total: 234.50, status: "delivered", time: "1 hour ago" },
+  { id: "ORD-2024-339", customer: "David Park", items: 2, total: 129.98, status: "processing", time: "2 hours ago" },
+];
+
 function EcommerceDashboard() {
-  const stats = {
-    revenue: 48750,
-    revenueChange: 12.5,
-    orders: 342,
-    ordersChange: 8.2,
-    customers: 156,
-    customersChange: 15.3,
-    conversionRate: 3.2,
-    conversionChange: 0.4,
-    averageOrder: 142.54,
-    cartAbandonment: 28.5,
-  };
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ["ecommerce-stats"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/stats`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ["ecommerce-orders-recent"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/orders?limit=4`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      return res.json();
+    },
+  });
+
+  const stats = statsData
+    ? {
+        revenue: statsData.totalRevenue ?? statsData.revenue ?? 0,
+        revenueChange: statsData.revenueChange ?? 0,
+        orders: statsData.totalOrders ?? statsData.orders ?? 0,
+        ordersChange: statsData.ordersChange ?? 0,
+        customers: statsData.totalCustomers ?? statsData.customers ?? 0,
+        customersChange: statsData.customersChange ?? 0,
+        conversionRate: statsData.conversionRate ?? 0,
+        conversionChange: statsData.conversionChange ?? 0,
+        averageOrder: statsData.averageOrder ?? 0,
+        cartAbandonment: statsData.cartAbandonment ?? 0,
+      }
+    : MOCK_STATS;
+  const recentOrders =
+    ordersData?.data?.length > 0 ? ordersData.data : MOCK_RECENT_ORDERS;
 
   const revenueData = [
     { month: "Jan", revenue: 32000, orders: 245 },
@@ -79,13 +132,6 @@ function EcommerceDashboard() {
     { id: "3", name: "3-Seater Sofa", sales: 18, revenue: 17982.00, trend: "down" },
     { id: "4", name: "Mountain Bike", sales: 15, revenue: 8999.85, trend: "up" },
     { id: "5", name: "Winter Jacket", sales: 28, revenue: 4199.72, trend: "up" },
-  ];
-
-  const recentOrders = [
-    { id: "ORD-2024-342", customer: "Michael Torres", items: 3, total: 459.99, status: "processing", time: "5 min ago" },
-    { id: "ORD-2024-341", customer: "Sarah Chen", items: 1, total: 999.99, status: "shipped", time: "12 min ago" },
-    { id: "ORD-2024-340", customer: "Emily Zhang", items: 5, total: 234.50, status: "delivered", time: "1 hour ago" },
-    { id: "ORD-2024-339", customer: "David Park", items: 2, total: 129.98, status: "processing", time: "2 hours ago" },
   ];
 
   return (

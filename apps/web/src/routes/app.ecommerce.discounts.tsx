@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Percent,
   Plus,
@@ -23,19 +30,32 @@ export const Route = createFileRoute("/app/ecommerce/discounts")({
   component: DiscountsPage,
 });
 
-function DiscountsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const discounts = [
+const MOCK_DISCOUNTS = [
     { id: 1, code: "SAVE20", name: "20% Off Summer Sale", type: "percentage", value: 20, minOrder: 50, maxDiscount: 100, usage: 156, limit: 500, status: "active", expiresAt: "Mar 31, 2024" },
     { id: 2, code: "FREESHIP", name: "Free Shipping", type: "shipping", value: 0, minOrder: 75, maxDiscount: null, usage: 89, limit: null, status: "active", expiresAt: "Apr 15, 2024" },
     { id: 3, code: "10OFF", name: "$10 Off Orders Over $50", type: "fixed", value: 10, minOrder: 50, maxDiscount: null, usage: 234, limit: 1000, status: "active", expiresAt: "May 1, 2024" },
     { id: 4, code: "WELCOME15", name: "15% Off First Order", type: "percentage", value: 15, minOrder: 0, maxDiscount: 50, usage: 67, limit: null, status: "active", expiresAt: null },
-    { id: 5, code: "FLASH50", name: "$50 Off $500+", type: "fixed", value: 50, minOrder: 500, maxDiscount: null, usage: 12, limit: 100, status: "expired", expiresAt: "Feb 28, 2024" },
-  ];
+  { id: 5, code: "FLASH50", name: "$50 Off $500+", type: "fixed", value: 50, minOrder: 500, maxDiscount: null, usage: 12, limit: 100, status: "expired", expiresAt: "Feb 28, 2024" },
+];
+
+function DiscountsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-discounts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/discounts?limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch discounts");
+      return res.json();
+    },
+  });
+
+  const discounts = apiData?.data?.length > 0 ? apiData.data : MOCK_DISCOUNTS;
 
   const filteredDiscounts = discounts.filter(
-    (d) =>
+    (d: typeof MOCK_DISCOUNTS[0]) =>
       d.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.name.toLowerCase().includes(searchQuery.toLowerCase())
   );

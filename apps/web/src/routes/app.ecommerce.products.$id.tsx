@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Save,
@@ -21,30 +22,67 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 export const Route = createFileRoute("/app/ecommerce/products/$id")({
   component: ProductEditor,
 });
 
-function ProductEditor() {
-  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "inventory" | "images" | "seo">("details");
+const MOCK_PRODUCT = {
+  id: "prod1",
+  name: '55" 4K Smart TV',
+  description: "Ultra HD Smart TV with 4K resolution, HDR support, and built-in streaming apps.",
+  shortDescription: "Premium 4K Smart TV with HDR",
+  sku: "ELEC-4KTV-55",
+  price: 499.99,
+  comparePrice: 599.99,
+  cost: 320.00,
+  stock: 124,
+  trackInventory: true,
+  status: "active",
+  weight: 25.5,
+  dimensions: "49 x 28 x 2.5 inches",
+  tags: ["electronics", "tv", "4k", "smart-tv"],
+  images: [],
+};
 
-  const product = {
-    id: "prod1",
-    name: '55" 4K Smart TV',
-    description: "Ultra HD Smart TV with 4K resolution, HDR support, and built-in streaming apps.",
-    shortDescription: "Premium 4K Smart TV with HDR",
-    sku: "ELEC-4KTV-55",
-    price: 499.99,
-    comparePrice: 599.99,
-    cost: 320.00,
-    stock: 124,
-    trackInventory: true,
-    status: "active",
-    weight: 25.5,
-    dimensions: "49 x 28 x 2.5 inches",
-    tags: ["electronics", "tv", "4k", "smart-tv"],
-    images: [],
-  };
+function ProductEditor() {
+  const { id } = Route.useParams();
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "inventory" | "images" | "seo">("details");
+  const queryClient = useQueryClient();
+
+  const { data: productData, isLoading } = useQuery({
+    queryKey: ["ecommerce-product", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/products/${id}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch product");
+      return res.json();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/ecommerce/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      if (!res.ok) throw new Error("Failed to update product");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ecommerce-product", id] });
+      queryClient.invalidateQueries({ queryKey: ["ecommerce-products"] });
+    },
+  });
+
+  const product = productData ?? MOCK_PRODUCT;
 
   return (
     <div className="space-y-6">
@@ -66,8 +104,12 @@ function ProductEditor() {
           <Button variant="outline" leftIcon={<Copy className="h-4 w-4" />}>
             Duplicate
           </Button>
-          <Button leftIcon={<Save className="h-4 w-4" />}>
-            Save
+          <Button
+            leftIcon={<Save className="h-4 w-4" />}
+            onClick={() => updateMutation.mutate({ name: product.name })}
+            disabled={updateMutation.isPending}
+          >
+            {updateMutation.isPending ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>

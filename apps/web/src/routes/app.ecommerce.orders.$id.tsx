@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   ArrowLeft,
   ShoppingBag,
@@ -23,51 +30,66 @@ export const Route = createFileRoute("/app/ecommerce/orders/$id")({
   component: OrderDetailPage,
 });
 
+const MOCK_ORDER = {
+  id: "ORD-2024-342",
+  status: "processing",
+  date: "Mar 20, 2024",
+  customer: {
+    name: "Michael Torres",
+    email: "michael@example.com",
+    phone: "+1-555-0123",
+  },
+  shippingAddress: {
+    line1: "123 Main Street",
+    line2: "Apt 4B",
+    city: "Los Angeles",
+    state: "CA",
+    zip: "90001",
+    country: "United States",
+  },
+  billingAddress: {
+    line1: "123 Main Street",
+    line2: "Apt 4B",
+    city: "Los Angeles",
+    state: "CA",
+    zip: "90001",
+    country: "United States",
+  },
+  payment: {
+    method: "Credit Card",
+    last4: "4242",
+    status: "paid",
+  },
+  shippingInfo: {
+    method: "Standard Shipping",
+    tracking: "1Z999AA10123456784",
+    status: "in_transit",
+  },
+  items: [
+    { id: 1, name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, quantity: 1 },
+    { id: 2, name: "HDMI Cable 6ft", sku: "ELEC-HDMI-6", price: 14.99, quantity: 2 },
+  ],
+  subtotal: 529.97,
+  shippingCost: 9.99,
+  tax: 42.40,
+  total: 582.36,
+};
+
 function OrderDetailPage() {
-  const order = {
-    id: "ORD-2024-342",
-    status: "processing",
-    date: "Mar 20, 2024",
-    customer: {
-      name: "Michael Torres",
-      email: "michael@example.com",
-      phone: "+1-555-0123",
+  const { id } = Route.useParams();
+
+  const { data: orderData, isLoading } = useQuery({
+    queryKey: ["ecommerce-order", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/orders/${id}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch order");
+      return res.json();
     },
-    shippingAddress: {
-      line1: "123 Main Street",
-      line2: "Apt 4B",
-      city: "Los Angeles",
-      state: "CA",
-      zip: "90001",
-      country: "United States",
-    },
-    billingAddress: {
-      line1: "123 Main Street",
-      line2: "Apt 4B",
-      city: "Los Angeles",
-      state: "CA",
-      zip: "90001",
-      country: "United States",
-    },
-    payment: {
-      method: "Credit Card",
-      last4: "4242",
-      status: "paid",
-    },
-    shippingInfo: {
-      method: "Standard Shipping",
-      tracking: "1Z999AA10123456784",
-      status: "in_transit",
-    },
-    items: [
-      { id: 1, name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, quantity: 1 },
-      { id: 2, name: "HDMI Cable 6ft", sku: "ELEC-HDMI-6", price: 14.99, quantity: 2 },
-    ],
-    subtotal: 529.97,
-    shippingCost: 9.99,
-    tax: 42.40,
-    total: 582.36,
-  };
+  });
+
+  const order = orderData ?? MOCK_ORDER;
 
   return (
     <div className="space-y-6">

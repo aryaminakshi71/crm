@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Percent,
   Plus,
@@ -21,14 +28,27 @@ export const Route = createFileRoute("/app/ecommerce/upsell")({
   component: UpsellPage,
 });
 
+const MOCK_UPSELL_RULES = [
+  { id: 1, name: "TV Accessories Bundle", trigger: "55\" 4K Smart TV added to cart", products: ["HDMI Cable", "TV Stand", "Soundbar"], discount: 15, status: "active", conversions: 234 },
+  { id: 2, name: "Laptop Essentials", trigger: "Laptop added to cart", products: ["Laptop Bag", "Mouse", "Keyboard"], discount: 10, status: "active", conversions: 189 },
+  { id: 3, name: "Sofa Add-ons", trigger: "Sofa added to cart", products: ["Throw Pillows", "Blanket", "Side Table"], discount: 20, status: "active", conversions: 145 },
+  { id: 4, name: "Bike Gear", trigger: "Mountain Bike added to cart", products: ["Helmet", "Gloves", "Bike Lock"], discount: 10, status: "active", conversions: 98 },
+  { id: 5, name: "Phone Accessories", trigger: "Phone added to cart", products: ["Case", "Screen Protector", "Charger"], discount: 15, status: "draft", conversions: 0 },
+];
+
 function UpsellPage() {
-  const rules = [
-    { id: 1, name: "TV Accessories Bundle", trigger: "55\" 4K Smart TV added to cart", products: ["HDMI Cable", "TV Stand", "Soundbar"], discount: 15, status: "active", conversions: 234 },
-    { id: 2, name: "Laptop Essentials", trigger: "Laptop added to cart", products: ["Laptop Bag", "Mouse", "Keyboard"], discount: 10, status: "active", conversions: 189 },
-    { id: 3, name: "Sofa Add-ons", trigger: "Sofa added to cart", products: ["Throw Pillows", "Blanket", "Side Table"], discount: 20, status: "active", conversions: 145 },
-    { id: 4, name: "Bike Gear", trigger: "Mountain Bike added to cart", products: ["Helmet", "Gloves", "Bike Lock"], discount: 10, status: "active", conversions: 98 },
-    { id: 5, name: "Phone Accessories", trigger: "Phone added to cart", products: ["Case", "Screen Protector", "Charger"], discount: 15, status: "draft", conversions: 0 },
-  ];
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-upsell"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/upsell?limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch upsell rules");
+      return res.json();
+    },
+  });
+
+  const rules = apiData?.data?.length > 0 ? apiData.data : MOCK_UPSELL_RULES;
 
   return (
     <div className="space-y-6">

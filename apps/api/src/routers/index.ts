@@ -6,6 +6,7 @@
  */
 
 import { activitiesRouter } from "./activities";
+import { ecommerceRouter } from "./ecommerce";
 import { advertisingRouter } from "./advertising";
 import { agentsRouter } from "./agents";
 import { apiKeysRouter } from "./api-keys";
@@ -72,6 +73,7 @@ export const appRouter = {
   social: socialRouter,
   marketing: marketingRouter,
   inventory: inventoryRouter,
+  ecommerce: ecommerceRouter,
   invoicing: invoicingRouter,
   speech: speechRouter,
 };

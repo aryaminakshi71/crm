@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   DollarSign,
   Plus,
@@ -20,14 +27,27 @@ export const Route = createFileRoute("/app/ecommerce/taxes")({
   component: TaxesPage,
 });
 
+const MOCK_TAX_RATES = [
+  { id: 1, name: "US - California", rate: 7.25, region: "CA, USA", enabled: true },
+  { id: 2, name: "US - New York", rate: 8.0, region: "NY, USA", enabled: true },
+  { id: 3, name: "US - Texas", rate: 6.25, region: "TX, USA", enabled: true },
+  { id: 4, name: "Canada - Ontario", rate: 13.0, region: "ON, Canada", enabled: true },
+  { id: 5, name: "EU - VAT Standard", rate: 20.0, region: "European Union", enabled: false },
+];
+
 function TaxesPage() {
-  const taxRates = [
-    { id: 1, name: "US - California", rate: 7.25, region: "CA, USA", enabled: true },
-    { id: 2, name: "US - New York", rate: 8.0, region: "NY, USA", enabled: true },
-    { id: 3, name: "US - Texas", rate: 6.25, region: "TX, USA", enabled: true },
-    { id: 4, name: "Canada - Ontario", rate: 13.0, region: "ON, Canada", enabled: true },
-    { id: 5, name: "EU - VAT Standard", rate: 20.0, region: "European Union", enabled: false },
-  ];
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-taxes"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/taxes?limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch taxes");
+      return res.json();
+    },
+  });
+
+  const taxRates = apiData?.data?.length > 0 ? apiData.data : MOCK_TAX_RATES;
 
   return (
     <div className="space-y-6">

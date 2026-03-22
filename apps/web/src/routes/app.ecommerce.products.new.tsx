@@ -5,7 +5,8 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Plus,
@@ -16,12 +17,64 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 export const Route = createFileRoute("/app/ecommerce/products/new")({
   component: AddProductPage,
 });
 
 function AddProductPage() {
   const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    name: "",
+    shortDescription: "",
+    description: "",
+    type: "",
+    vendor: "",
+    price: "",
+    comparePrice: "",
+    chargeTax: true,
+    trackInventory: true,
+    stock: "",
+    sku: "",
+    barcode: "",
+  });
+
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const createProductMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await fetch(`${API_BASE}/ecommerce/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({
+          name: data.name,
+          shortDescription: data.shortDescription,
+          description: data.description,
+          type: data.type,
+          vendor: data.vendor,
+          price: data.price ? parseFloat(data.price) : undefined,
+          comparePrice: data.comparePrice ? parseFloat(data.comparePrice) : undefined,
+          stock: data.stock ? parseInt(data.stock) : 0,
+          sku: data.sku,
+          barcode: data.barcode,
+          trackInventory: data.trackInventory,
+          status: "draft",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create product");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ecommerce-products"] });
+      navigate({ to: "/app/ecommerce/products" });
+    },
+  });
 
   const steps = [
     { num: 1, title: "Basic Info" },
@@ -88,11 +141,19 @@ function AddProductPage() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Product Title *</label>
-                <Input placeholder="Enter product title" />
+                <Input
+                  placeholder="Enter product title"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Short Description</label>
-                <Input placeholder="Brief description for product cards" />
+                <Input
+                  placeholder="Brief description for product cards"
+                  value={formData.shortDescription}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
@@ -210,11 +271,13 @@ function AddProductPage() {
               Continue <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Link to="/app/ecommerce/products">
-              <Button leftIcon={<Save className="h-4 w-4" />}>
-                Create Product
-              </Button>
-            </Link>
+            <Button
+              leftIcon={<Save className="h-4 w-4" />}
+              onClick={() => createProductMutation.mutate(formData)}
+              disabled={createProductMutation.isPending || !formData.name}
+            >
+              {createProductMutation.isPending ? "Creating..." : "Create Product"}
+            </Button>
           )}
         </div>
       </div>

@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Store,
   Palette,
@@ -28,6 +35,17 @@ export const Route = createFileRoute("/app/ecommerce/store")({
 function StoreCustomizerPage() {
   const [activeTab, setActiveTab] = useState<"general" | "appearance" | "header" | "footer">("general");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+
+  const { data: statsData } = useQuery({
+    queryKey: ["ecommerce-stats-store"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/stats`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
 
   const storeSettings = {
     storeName: "Nucleo One Store",

@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Heart,
   Search,
@@ -22,23 +29,38 @@ export const Route = createFileRoute("/app/ecommerce/wishlists")({
   component: WishlistsPage,
 });
 
+const MOCK_POPULAR_ITEMS = [
+  { id: 1, name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, wishlisted: 234, inStock: true },
+  { id: 2, name: "Laptop 15\" Pro", sku: "ELEC-LAP-15", price: 999.99, wishlisted: 189, inStock: true },
+  { id: 3, name: "3-Seater Sofa", sku: "HOME-SOF-3S", price: 999.00, wishlisted: 156, inStock: true },
+  { id: 4, name: "Mountain Bike", sku: "SPORT-BIKE-MTN", price: 599.99, wishlisted: 145, inStock: true },
+  { id: 5, name: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", price: 249.99, wishlisted: 134, inStock: false },
+  { id: 6, name: "Winter Jacket Black", sku: "APPA-JKT-WIN-B", price: 149.99, wishlisted: 123, inStock: true },
+];
+
+const MOCK_RECENT_WISHLISTS = [
+  { id: 1, customer: "Michael Torres", email: "michael@example.com", items: 3, products: ["55\" 4K Smart TV", "Laptop 15\" Pro"], createdAt: "2 hours ago" },
+  { id: 2, customer: "Sarah Chen", email: "sarah@example.com", items: 5, products: ["3-Seater Sofa", "Mountain Bike", "Winter Jacket"], createdAt: "5 hours ago" },
+  { id: 3, customer: "Emily Zhang", email: "emily@example.com", items: 2, products: ["Wireless Headphones Pro"], createdAt: "1 day ago" },
+];
+
 function WishlistsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const popularItems = [
-    { id: 1, name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, wishlisted: 234, inStock: true },
-    { id: 2, name: "Laptop 15\" Pro", sku: "ELEC-LAP-15", price: 999.99, wishlisted: 189, inStock: true },
-    { id: 3, name: "3-Seater Sofa", sku: "HOME-SOF-3S", price: 999.00, wishlisted: 156, inStock: true },
-    { id: 4, name: "Mountain Bike", sku: "SPORT-BIKE-MTN", price: 599.99, wishlisted: 145, inStock: true },
-    { id: 5, name: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", price: 249.99, wishlisted: 134, inStock: false },
-    { id: 6, name: "Winter Jacket Black", sku: "APPA-JKT-WIN-B", price: 149.99, wishlisted: 123, inStock: true },
-  ];
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-wishlists"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/wishlists?limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch wishlists");
+      return res.json();
+    },
+  });
 
-  const recentWishlists = [
-    { id: 1, customer: "Michael Torres", email: "michael@example.com", items: 3, products: ["55\" 4K Smart TV", "Laptop 15\" Pro"], createdAt: "2 hours ago" },
-    { id: 2, customer: "Sarah Chen", email: "sarah@example.com", items: 5, products: ["3-Seater Sofa", "Mountain Bike", "Winter Jacket"], createdAt: "5 hours ago" },
-    { id: 3, customer: "Emily Zhang", email: "emily@example.com", items: 2, products: ["Wireless Headphones Pro"], createdAt: "1 day ago" },
-  ];
+  const popularItems = MOCK_POPULAR_ITEMS;
+  const recentWishlists =
+    apiData?.data?.length > 0 ? apiData.data : MOCK_RECENT_WISHLISTS;
 
   return (
     <div className="space-y-6">

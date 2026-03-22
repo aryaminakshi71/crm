@@ -6,6 +6,13 @@
 
 import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 import {
   Star,
   Search,
@@ -22,19 +29,49 @@ export const Route = createFileRoute("/app/ecommerce/reviews")({
   component: ReviewsPage,
 });
 
-function ReviewsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("pending");
-
-  const reviews = [
+const MOCK_REVIEWS = [
     { id: 1, product: '55" 4K Smart TV', sku: "ELEC-4KTV-55", author: "John D.", email: "john@example.com", rating: 5, title: "Amazing TV!", content: "Best purchase I've made. The picture quality is incredible.", status: "approved", date: "Mar 15, 2024", helpful: 45 },
     { id: 2, product: "Laptop 15\" Pro", sku: "ELEC-LAP-15", author: "Jane S.", email: "jane@example.com", rating: 4, title: "Great laptop", content: "Very fast and reliable. Battery life could be better.", status: "approved", date: "Mar 14, 2024", helpful: 32 },
     { id: 3, product: "3-Seater Sofa", sku: "HOME-SOF-3S", author: "Mike R.", email: "mike@example.com", rating: 2, title: "Not as described", content: "Color was different than shown. Fabric feels cheap.", status: "pending", date: "Mar 18, 2024", helpful: 5 },
     { id: 4, product: "Mountain Bike", sku: "SPORT-BIKE-MTN", author: "Sarah L.", email: "sarah@example.com", rating: 5, title: "Perfect for trails", content: "Great bike for the price. Shifts smoothly and handles well.", status: "approved", date: "Mar 12, 2024", helpful: 28 },
-    { id: 5, product: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", author: "Tom B.", email: "tom@example.com", rating: 1, title: "Defective", content: "Left earbud stopped working after 2 weeks. Terrible quality.", status: "pending", date: "Mar 19, 2024", helpful: 2 },
-  ];
+  { id: 5, product: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", author: "Tom B.", email: "tom@example.com", rating: 1, title: "Defective", content: "Left earbud stopped working after 2 weeks. Terrible quality.", status: "pending", date: "Mar 19, 2024", helpful: 2 },
+];
 
-  const filteredReviews = reviews.filter((review) => {
+function ReviewsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("pending");
+
+  const queryClient = useQueryClient();
+
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-reviews", filterStatus],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: "100" });
+      if (filterStatus !== "all") params.set("status", filterStatus);
+      const res = await fetch(`${API_BASE}/ecommerce/reviews?${params}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      return res.json();
+    },
+  });
+
+  const updateReviewMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const res = await fetch(`${API_BASE}/ecommerce/reviews/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ id: String(id), status }),
+      });
+      if (!res.ok) throw new Error("Failed to update review");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-reviews"] }),
+  });
+
+  const reviews = apiData?.data?.length > 0 ? apiData.data : MOCK_REVIEWS;
+
+  const filteredReviews = reviews.filter((review: typeof MOCK_REVIEWS[0]) => {
     const matchesSearch =
       review.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
       review.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -165,10 +202,22 @@ function ReviewsPage() {
                 <div className="flex flex-col gap-2">
                   {review.status === "pending" && (
                     <>
-                      <Button size="sm" variant="success" leftIcon={<CheckCircle2 className="h-3 w-3" />}>
+                      <Button
+                        size="sm"
+                        variant="success"
+                        leftIcon={<CheckCircle2 className="h-3 w-3" />}
+                        onClick={() => updateReviewMutation.mutate({ id: review.id, status: "approved" })}
+                        disabled={updateReviewMutation.isPending}
+                      >
                         Approve
                       </Button>
-                      <Button size="sm" variant="destructive" leftIcon={<XCircle className="h-3 w-3" />}>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        leftIcon={<XCircle className="h-3 w-3" />}
+                        onClick={() => updateReviewMutation.mutate({ id: review.id, status: "rejected" })}
+                        disabled={updateReviewMutation.isPending}
+                      >
                         Reject
                       </Button>
                     </>

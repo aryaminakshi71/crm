@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   Search,
@@ -19,24 +20,43 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 export const Route = createFileRoute("/app/ecommerce/customers")({
   component: CustomersPage,
 });
 
+const MOCK_CUSTOMERS = [
+  { id: 1, name: "Michael Torres", email: "michael@example.com", orders: 5, totalSpent: 1250.99, lastOrder: "Mar 20, 2024", status: "active", tags: ["VIP", "Repeat"] },
+  { id: 2, name: "Sarah Chen", email: "sarah@example.com", orders: 12, totalSpent: 4520.50, lastOrder: "Mar 18, 2024", status: "active", tags: ["VIP"] },
+  { id: 3, name: "Emily Zhang", email: "emily@example.com", orders: 2, totalSpent: 189.99, lastOrder: "Mar 15, 2024", status: "active", tags: ["New"] },
+  { id: 4, name: "David Park", email: "david@example.com", orders: 8, totalSpent: 2150.00, lastOrder: "Mar 10, 2024", status: "active", tags: ["Repeat"] },
+  { id: 5, name: "Lisa Wang", email: "lisa@example.com", orders: 1, totalSpent: 49.99, lastOrder: "Feb 28, 2024", status: "inactive", tags: ["New"] },
+  { id: 6, name: "Robert Kim", email: "robert@example.com", orders: 15, totalSpent: 8999.99, lastOrder: "Mar 5, 2024", status: "active", tags: ["VIP", "Wholesale"] },
+];
+
 function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const customers = [
-    { id: 1, name: "Michael Torres", email: "michael@example.com", orders: 5, totalSpent: 1250.99, lastOrder: "Mar 20, 2024", status: "active", tags: ["VIP", "Repeat"] },
-    { id: 2, name: "Sarah Chen", email: "sarah@example.com", orders: 12, totalSpent: 4520.50, lastOrder: "Mar 18, 2024", status: "active", tags: ["VIP"] },
-    { id: 3, name: "Emily Zhang", email: "emily@example.com", orders: 2, totalSpent: 189.99, lastOrder: "Mar 15, 2024", status: "active", tags: ["New"] },
-    { id: 4, name: "David Park", email: "david@example.com", orders: 8, totalSpent: 2150.00, lastOrder: "Mar 10, 2024", status: "active", tags: ["Repeat"] },
-    { id: 5, name: "Lisa Wang", email: "lisa@example.com", orders: 1, totalSpent: 49.99, lastOrder: "Feb 28, 2024", status: "inactive", tags: ["New"] },
-    { id: 6, name: "Robert Kim", email: "robert@example.com", orders: 15, totalSpent: 8999.99, lastOrder: "Mar 5, 2024", status: "active", tags: ["VIP", "Wholesale"] },
-  ];
+  const { data: apiData, isLoading } = useQuery({
+    queryKey: ["ecommerce-customers"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ecommerce/customers?limit=100`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      return res.json();
+    },
+  });
+
+  const customers = apiData?.data?.length > 0 ? apiData.data : MOCK_CUSTOMERS;
 
   const filteredCustomers = customers.filter(
-    (c) =>
+    (c: typeof MOCK_CUSTOMERS[0]) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
