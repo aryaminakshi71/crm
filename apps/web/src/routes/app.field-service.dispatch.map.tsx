@@ -3,6 +3,7 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
   User,
@@ -21,7 +22,13 @@ export const Route = createFileRoute("/app/field-service/dispatch/map")({
   component: MapView,
 });
 
-const technicians = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
+const MOCK_TECHNICIANS = [
   { id: 1, name: "John Smith", lat: 40.7128, lng: -74.006, status: "available", job: null },
   { id: 2, name: "Jane Doe", lat: 40.7580, lng: -73.9855, status: "on_job", job: "JOB-1042" },
   { id: 3, name: "Mike Wilson", lat: 40.7484, lng: -73.9857, status: "on_break", job: null },
@@ -30,7 +37,7 @@ const technicians = [
   { id: 6, name: "Lisa Chen", lat: 40.7527, lng: -73.9772, status: "available", job: null },
 ];
 
-const jobs = [
+const MOCK_JOBS = [
   { id: "JOB-1043", title: "HVAC System Check", lat: 40.7200, lng: -74.0100, priority: "high", status: "unassigned" },
   { id: "JOB-1044", title: "Electrical Inspection", lat: 40.7400, lng: -73.9900, priority: "medium", status: "unassigned" },
   { id: "JOB-1045", title: "Plumbing Repair", lat: 40.7300, lng: -74.0000, priority: "low", status: "unassigned" },
@@ -38,6 +45,29 @@ const jobs = [
 ];
 
 function MapView() {
+  const { data: techData } = useQuery({
+    queryKey: ["field-service-technicians"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/field-service/technicians`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch technicians");
+      return res.json();
+    },
+    refetchInterval: 30_000,
+  });
+
+  const { data: jobsData } = useQuery({
+    queryKey: ["field-service-jobs-map"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json();
+    },
+    refetchInterval: 30_000,
+  });
+
+  const technicians = techData?.data ?? MOCK_TECHNICIANS;
+  const jobs = jobsData?.data ?? MOCK_JOBS;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -194,7 +224,7 @@ function MapView() {
         <div className="absolute top-4 left-4 bg-background/95 backdrop-blur border border-border rounded-lg px-3 py-2 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-xs font-medium">Live</span>
-          <span className="text-xs text-muted-foreground">6 technicians tracked</span>
+          <span className="text-xs text-muted-foreground">{technicians.length} technicians tracked</span>
         </div>
       </div>
 

@@ -5,7 +5,8 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Bell,
@@ -28,6 +29,12 @@ export const Route = createFileRoute("/app/monitoring/alerts/new")({
   component: NewAlertPage,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
 const metricOptions = [
   { value: "cpu", label: "CPU Usage", icon: Cpu },
   { value: "memory", label: "Memory Usage", icon: HardDrive },
@@ -45,6 +52,8 @@ const channelOptions = [
 ];
 
 function NewAlertPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [alertName, setAlertName] = useState("");
   const [selectedMetric, setSelectedMetric] = useState("");
   const [condition, setCondition] = useState("<");
@@ -52,6 +61,43 @@ function NewAlertPage() {
   const [duration, setDuration] = useState("5");
   const [selectedChannels, setSelectedChannels] = useState<string[]>(["email"]);
   const [severity, setSeverity] = useState("warning");
+
+  const createAlertMutation = useMutation({
+    mutationFn: async (payload: {
+      name: string;
+      metric: string;
+      condition: string;
+      threshold: number;
+      duration: number;
+      severity: "info" | "warning" | "critical";
+      channels: string[];
+    }) => {
+      const res = await fetch(`${API_BASE}/monitoring/alerts`, {
+        method: "POST",
+        headers: getOrgHeader(),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to create alert");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-alerts"] });
+      navigate({ to: "/app/monitoring/alerts" });
+    },
+  });
+
+  const handleCreate = () => {
+    if (!alertName || !selectedMetric || !threshold) return;
+    createAlertMutation.mutate({
+      name: alertName,
+      metric: selectedMetric,
+      condition,
+      threshold: parseFloat(threshold),
+      duration: parseInt(duration, 10),
+      severity: severity as "info" | "warning" | "critical",
+      channels: selectedChannels,
+    });
+  };
 
   const toggleChannel = (channel: string) => {
     setSelectedChannels((prev) =>
@@ -299,10 +345,20 @@ function NewAlertPage() {
 
           {/* Actions */}
           <div className="flex flex-col gap-2">
-            <Button variant="primary" className="w-full" disabled={!alertName || !selectedMetric || !threshold}>
+            <Button
+              variant="primary"
+              className="w-full"
+              disabled={!alertName || !selectedMetric || !threshold || createAlertMutation.isPending}
+              onClick={handleCreate}
+            >
               <CheckCircle className="h-4 w-4 mr-2" />
-              Create Alert
+              {createAlertMutation.isPending ? "Creating…" : "Create Alert"}
             </Button>
+            {createAlertMutation.isError && (
+              <p className="text-xs text-red-500 text-center">
+                Failed to create alert. Please try again.
+              </p>
+            )}
             <Link to="/app/monitoring/alerts">
               <Button variant="outline" className="w-full">
                 Cancel

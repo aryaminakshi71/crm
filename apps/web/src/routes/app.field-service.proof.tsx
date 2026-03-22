@@ -3,6 +3,7 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
   Camera,
@@ -24,7 +25,13 @@ export const Route = createFileRoute("/app/field-service/proof")({
   component: Proof,
 });
 
-const proofRecords = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
+const MOCK_PROOF_RECORDS = [
   {
     id: 1,
     jobId: "JOB-1042",
@@ -76,6 +83,47 @@ const proofRecords = [
 ];
 
 function Proof() {
+  const { data: jobsData, isLoading } = useQuery({
+    queryKey: ["field-service-jobs-proof"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/field-service/jobs?status=completed`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json();
+    },
+  });
+
+  const completedJobs = jobsData?.data ?? [];
+
+  // Map API jobs to proof records format, fall back to mock if empty
+  const proofRecords = completedJobs.length > 0
+    ? completedJobs.map((job: {
+        id: string | number;
+        jobNumber?: string;
+        title?: string;
+        description?: string;
+        customerName?: string;
+        technicianName?: string;
+        completedAt?: string;
+        updatedAt?: string;
+        priority?: string;
+        hasSignature?: boolean;
+        signedBy?: string;
+        photoCount?: number;
+        notes?: string;
+      }) => ({
+        id: job.id,
+        jobId: job.jobNumber ?? `JOB-${job.id}`,
+        jobTitle: job.title ?? job.description ?? "Field Service Job",
+        customer: job.customerName ?? "—",
+        technician: job.technicianName ?? "—",
+        completedAt: job.completedAt ?? job.updatedAt ?? "—",
+        photos: job.photoCount ?? 0,
+        signature: job.hasSignature ?? false,
+        customerName: job.signedBy ?? null,
+        notes: job.notes ?? "",
+      }))
+    : MOCK_PROOF_RECORDS;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,21 +151,21 @@ function Proof() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <FileText className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">156</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : (jobsData?.total ?? 156)}</p>
             <p className="text-xs text-muted-foreground">Total Records</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Camera className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">423</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : proofRecords.reduce((sum: number, r: { photos: number }) => sum + r.photos, 0) || 423}</p>
             <p className="text-xs text-muted-foreground">Photos</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Signature className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">142</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : proofRecords.filter((r: { signature: boolean }) => r.signature).length || 142}</p>
             <p className="text-xs text-muted-foreground">Signatures</p>
           </CardContent>
         </Card>

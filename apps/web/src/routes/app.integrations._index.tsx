@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Puzzle,
   Workflow,
@@ -41,15 +42,72 @@ export const Route = createFileRoute("/app/integrations/_index")({
   component: IntegrationsOverview,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
+const MOCK_CONNECTORS = [
+  { name: "Salesforce", type: "CRM", events: 4521, status: "connected" },
+  { name: "Stripe", type: "Payments", events: 3892, status: "connected" },
+  { name: "Shopify", type: "E-commerce", events: 2156, status: "connected" },
+  { name: "Slack", type: "Communication", events: 1874, status: "connected" },
+  { name: "HubSpot", type: "Marketing", events: 1203, status: "connected" },
+];
+
+const MOCK_WORKFLOWS = [
+  { id: "wf_1", name: "Lead Sync", status: "active" },
+  { id: "wf_2", name: "Payment Sync", status: "active" },
+  { id: "wf_3", name: "Order Created", status: "active" },
+];
+
+const MOCK_EVENTS = [
+  { id: "evt_1", type: "workflow.completed", connector: "Salesforce", workflow: "Lead Sync", status: "success", time: "2 min ago" },
+  { id: "evt_2", type: "connector.error", connector: "Stripe", workflow: "Payment Sync", status: "error", time: "5 min ago" },
+  { id: "evt_3", type: "event.received", connector: "Shopify", workflow: "Order Created", status: "success", time: "8 min ago" },
+  { id: "evt_4", type: "webhook.triggered", connector: "Slack", workflow: "Notify Team", status: "success", time: "12 min ago" },
+  { id: "evt_5", type: "workflow.completed", connector: "HubSpot", workflow: "Contact Update", status: "success", time: "15 min ago" },
+];
+
 function IntegrationsOverview() {
+  const { data: connectorsData, isLoading: connectorsLoading } = useQuery({
+    queryKey: ["integration-connectors"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/integration/connectors`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch connectors");
+      return res.json();
+    },
+  });
+
+  const { data: workflowsData, isLoading: workflowsLoading } = useQuery({
+    queryKey: ["integration-workflows"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/integration/workflows`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch workflows");
+      return res.json();
+    },
+  });
+
+  const connectors = connectorsData?.data ?? MOCK_CONNECTORS;
+  const workflows = workflowsData?.data ?? MOCK_WORKFLOWS;
+  const recentEvents = MOCK_EVENTS;
+
   const stats = {
-    activeConnectors: 24,
-    activeWorkflows: 156,
+    activeConnectors: connectorsData?.total ?? 24,
+    activeWorkflows: workflowsData?.total ?? 156,
     eventsToday: 12847,
     successRate: 99.2,
     failedEvents: 23,
     pendingEvents: 145,
   };
+
+  const topConnectors = connectors.slice(0, 5).map((c: { name: string; type?: string; events?: number; status?: string }) => ({
+    name: c.name,
+    type: c.type ?? "Integration",
+    events: c.events ?? 0,
+    status: c.status ?? "connected",
+  }));
 
   const eventTrendData = [
     { time: "00:00", events: 1200, errors: 5 },
@@ -75,56 +133,6 @@ function IntegrationsOverview() {
     { status: "Error", count: 2, color: "#ef4444" },
   ];
 
-  const recentEvents = [
-    {
-      id: "evt_1",
-      type: "workflow.completed",
-      connector: "Salesforce",
-      workflow: "Lead Sync",
-      status: "success",
-      time: "2 min ago",
-    },
-    {
-      id: "evt_2",
-      type: "connector.error",
-      connector: "Stripe",
-      workflow: "Payment Sync",
-      status: "error",
-      time: "5 min ago",
-    },
-    {
-      id: "evt_3",
-      type: "event.received",
-      connector: "Shopify",
-      workflow: "Order Created",
-      status: "success",
-      time: "8 min ago",
-    },
-    {
-      id: "evt_4",
-      type: "webhook.triggered",
-      connector: "Slack",
-      workflow: "Notify Team",
-      status: "success",
-      time: "12 min ago",
-    },
-    {
-      id: "evt_5",
-      type: "workflow.completed",
-      connector: "HubSpot",
-      workflow: "Contact Update",
-      status: "success",
-      time: "15 min ago",
-    },
-  ];
-
-  const topConnectors = [
-    { name: "Salesforce", type: "CRM", events: 4521, status: "connected" },
-    { name: "Stripe", type: "Payments", events: 3892, status: "connected" },
-    { name: "Shopify", type: "E-commerce", events: 2156, status: "connected" },
-    { name: "Slack", type: "Communication", events: 1874, status: "connected" },
-    { name: "HubSpot", type: "Marketing", events: 1203, status: "connected" },
-  ];
 
   return (
     <div className="space-y-6">

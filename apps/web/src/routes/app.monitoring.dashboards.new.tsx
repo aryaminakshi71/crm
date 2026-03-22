@@ -5,7 +5,8 @@
  */
 
 import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Plus,
@@ -26,7 +27,15 @@ export const Route = createFileRoute("/app/monitoring/dashboards/new")({
   component: NewDashboard,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
 function NewDashboard() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [dashboardName, setDashboardName] = useState("");
   const [widgets, setWidgets] = useState([
     { id: 1, type: "metric", title: "Total Revenue", metric: "$124,500", icon: "DollarSign" },
@@ -58,6 +67,27 @@ function NewDashboard() {
     setWidgets(widgets.filter(w => w.id !== id));
   };
 
+  const saveDashboardMutation = useMutation({
+    mutationFn: async (payload: { name: string; widgets: typeof widgets }) => {
+      const res = await fetch(`${API_BASE}/monitoring/catalog`, {
+        method: "POST",
+        headers: getOrgHeader(),
+        body: JSON.stringify({
+          appId: `dashboard-${Date.now()}`,
+          name: payload.name,
+          description: `Custom dashboard with ${payload.widgets.length} widgets`,
+          category: "dashboard",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save dashboard");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-dashboards"] });
+      navigate({ to: "/app/monitoring/dashboards" });
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -72,7 +102,12 @@ function NewDashboard() {
           <Button variant="outline" asChild>
             <Link to="/app/monitoring/dashboards">Cancel</Link>
           </Button>
-          <Button>Save Dashboard</Button>
+          <Button
+            disabled={!dashboardName || saveDashboardMutation.isPending}
+            onClick={() => saveDashboardMutation.mutate({ name: dashboardName, widgets })}
+          >
+            {saveDashboardMutation.isPending ? "Saving…" : "Save Dashboard"}
+          </Button>
         </div>
       </div>
 

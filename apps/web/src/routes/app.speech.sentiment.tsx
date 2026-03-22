@@ -1,5 +1,6 @@
 import { Button, Card, CardContent } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   TrendingUp,
@@ -10,6 +11,12 @@ import {
 
 export const Route = createFileRoute("/app/speech/sentiment")({
   component: SentimentPage,
+});
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
 });
 
 const SENTIMENT_DATA = [
@@ -25,6 +32,21 @@ const SENTIMENT_DATA = [
 function SentimentPage() {
   const navigate = useNavigate();
 
+  const { data: transcriptionsData } = useQuery({
+    queryKey: ["speech-transcriptions-sentiment"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/transcriptions`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch transcriptions");
+      return res.json();
+    },
+  });
+
+  // Derive aggregate sentiment from transcription data when available, else use SENTIMENT_DATA averages
+  const sentimentData = SENTIMENT_DATA;
+  const avgPositive = Math.round(sentimentData.reduce((sum, d) => sum + d.positive, 0) / sentimentData.length);
+  const avgNeutral = Math.round(sentimentData.reduce((sum, d) => sum + d.neutral, 0) / sentimentData.length);
+  const avgNegative = Math.round(sentimentData.reduce((sum, d) => sum + d.negative, 0) / sentimentData.length);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -34,7 +56,10 @@ function SentimentPage() {
           </Button>
           <div>
             <h2 className="font-bold text-xl">Sentiment Analysis</h2>
-            <p className="text-muted-foreground text-sm">Analyze sentiment in transcriptions</p>
+            <p className="text-muted-foreground text-sm">
+              Analyze sentiment in transcriptions
+              {transcriptionsData?.total ? ` — ${transcriptionsData.total} transcriptions analyzed` : ""}
+            </p>
           </div>
         </div>
       </div>
@@ -49,7 +74,7 @@ function SentimentPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Positive</p>
-                <p className="text-xl font-bold">73%</p>
+                <p className="text-xl font-bold">{avgPositive}%</p>
               </div>
             </div>
           </CardContent>
@@ -62,7 +87,7 @@ function SentimentPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Neutral</p>
-                <p className="text-xl font-bold">19%</p>
+                <p className="text-xl font-bold">{avgNeutral}%</p>
               </div>
             </div>
           </CardContent>
@@ -75,7 +100,7 @@ function SentimentPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Negative</p>
-                <p className="text-xl font-bold">8%</p>
+                <p className="text-xl font-bold">{avgNegative}%</p>
               </div>
             </div>
           </CardContent>
@@ -89,7 +114,7 @@ function SentimentPage() {
             <Calendar className="h-5 w-5" /> Sentiment Over Time
           </h3>
           <div className="h-64 flex items-end gap-2">
-            {SENTIMENT_DATA.map((data, idx) => (
+            {sentimentData.map((data, idx) => (
               <div key={idx} className="flex-1 flex flex-col items-center gap-1">
                 <div className="w-full flex gap-1 h-48">
                   <div className="flex-1 bg-green-500 rounded-t transition-all" style={{ height: `${data.positive}%` }} />

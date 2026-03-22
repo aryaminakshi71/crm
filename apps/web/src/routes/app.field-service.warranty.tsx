@@ -3,6 +3,7 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import {
   Shield,
   Plus,
@@ -20,7 +21,13 @@ export const Route = createFileRoute("/app/field-service/warranty")({
   component: Warranty,
 });
 
-const warranties = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
+const MOCK_WARRANTIES = [
   { id: 1, equipment: "Carrier HVAC Unit", serial: "CR-2024-12345", customer: "Acme Corporation", startDate: "2024-01-15", endDate: "2027-01-14", type: "Extended", status: "active", remainingDays: 300, coverage: ["Parts", "Labor", "Refrigerant"] },
   { id: 2, equipment: "Trane Heat Pump", serial: "TR-2023-98765", customer: "TechStart Inc", startDate: "2023-03-20", endDate: "2026-03-19", type: "Manufacturer", status: "expiring", remainingDays: -1, coverage: ["Parts", "Labor"] },
   { id: 3, equipment: "Generac Generator", serial: "GN-2022-54321", customer: "Metro Hospital", startDate: "2022-11-01", endDate: "2025-11-01", type: "Extended", status: "expiring_soon", remainingDays: 45, coverage: ["Parts", "Labor"] },
@@ -29,13 +36,25 @@ const warranties = [
   { id: 6, equipment: "York Heat Pump", serial: "YK-2020-22222", customer: "Harbor View Hotel", startDate: "2020-05-15", endDate: "2027-05-14", type: "Extended", status: "active", remainingDays: 421, coverage: ["Parts", "Labor", "Refrigerant"] },
 ];
 
-const claims = [
+const MOCK_CLAIMS = [
   { id: 1, equipment: "Carrier HVAC Unit", serial: "CR-2024-12345", claimNumber: "CLM-2026-001", date: "Mar 15, 2026", status: "approved", amount: 850, description: "Compressor failure - compressor replaced under warranty" },
   { id: 2, equipment: "Generac Generator", serial: "GN-2022-54321", claimNumber: "CLM-2026-002", date: "Mar 10, 2026", status: "pending", amount: 420, description: "Control board replacement" },
   { id: 3, equipment: "Trane Heat Pump", serial: "TR-2023-98765", claimNumber: "CLM-2026-003", date: "Mar 5, 2026", status: "denied", amount: 1200, description: "Compressor replacement - denied due to improper maintenance" },
 ];
 
 function Warranty() {
+  const { data: jobsData } = useQuery({
+    queryKey: ["field-service-jobs-warranty"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json();
+    },
+  });
+
+  const warranties = MOCK_WARRANTIES;
+  const claims = MOCK_CLAIMS;
+
   return (
     <div className="space-y-6">
       {/* Header */}

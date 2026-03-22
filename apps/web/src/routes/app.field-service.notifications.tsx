@@ -3,6 +3,7 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   Send,
@@ -22,7 +23,13 @@ export const Route = createFileRoute("/app/field-service/notifications")({
   component: Notifications,
 });
 
-const notifications = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
+});
+
+const MOCK_NOTIFICATIONS = [
   {
     id: 1,
     type: "sms",
@@ -94,6 +101,24 @@ const templates = [
 ];
 
 function Notifications() {
+  const { data: jobsData, isLoading } = useQuery({
+    queryKey: ["field-service-jobs-notifications"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json();
+    },
+  });
+
+  const notifications = MOCK_NOTIFICATIONS;
+
+  const sentToday = notifications.filter((n) => !["Yesterday", "Mar 18, 2:30 PM"].includes(n.sentAt)).length;
+  const failedCount = notifications.filter((n) => n.status === "failed").length;
+  const deliveredCount = notifications.filter((n) => n.status === "delivered").length;
+  const deliveryRate = notifications.length > 0
+    ? ((deliveredCount / notifications.length) * 100).toFixed(1)
+    : "98.2";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -121,28 +146,28 @@ function Notifications() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Send className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">247</p>
+            <p className="text-2xl font-bold">{sentToday}</p>
             <p className="text-xs text-muted-foreground">Sent Today</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">98.2%</p>
+            <p className="text-2xl font-bold">{deliveryRate}%</p>
             <p className="text-xs text-muted-foreground">Delivery Rate</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Bell className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">12</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : (jobsData?.data?.filter((j: { status: string }) => j.status === "pending")?.length ?? 12)}</p>
             <p className="text-xs text-muted-foreground">Pending</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <AlertCircle className="h-5 w-5 text-red-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">2</p>
+            <p className="text-2xl font-bold">{failedCount}</p>
             <p className="text-xs text-muted-foreground">Failed</p>
           </CardContent>
         </Card>
