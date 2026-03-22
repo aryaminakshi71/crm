@@ -17,12 +17,19 @@ import {
   Terminal,
   Box,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/devops/runs/$id")({
   component: RunDetail,
 });
 
-const runDetail = {
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_RUN_DETAIL = {
   id: 1,
   pipeline: "frontend-app",
   status: "success",
@@ -61,6 +68,45 @@ const runDetail = {
 };
 
 function RunDetail() {
+  const { id } = Route.useParams();
+
+  const { data: runQuery, isLoading } = useQuery({
+    queryKey: ["devops", "runs", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/devops/runs/${id}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch run");
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const runDetail = runQuery?.data ?? runQuery ?? MOCK_RUN_DETAIL;
+
+  const pipelineName = runDetail.pipelineName ?? runDetail.pipeline ?? "Pipeline";
+  const runNumber = runDetail.runNumber ?? runDetail.id;
+  const status = runDetail.status ?? "unknown";
+  const branch = runDetail.branch ?? runDetail.commitSha?.slice(0, 7) ?? "—";
+  const commit = runDetail.commitSha?.slice(0, 7) ?? runDetail.commit ?? "—";
+  const author = runDetail.triggeredBy ?? runDetail.author ?? "—";
+  const message = runDetail.message ?? "Pipeline run";
+  const stages: Array<{ name: string; status: string; duration: string }> =
+    runDetail.stages ?? MOCK_RUN_DETAIL.stages;
+  const logs: string = runDetail.logs ?? MOCK_RUN_DETAIL.logs;
+  const artifacts: Array<{ name: string; size: string; type: string }> =
+    runDetail.artifacts ?? MOCK_RUN_DETAIL.artifacts;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 rounded-lg bg-muted/30 animate-pulse" />
+        <div className="h-32 rounded-lg bg-muted/30 animate-pulse" />
+        <div className="h-48 rounded-lg bg-muted/30 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -70,16 +116,16 @@ function RunDetail() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">{runDetail.pipeline} - Run #{runDetail.id}</h2>
+            <h2 className="text-xl font-bold text-foreground">{pipelineName} - Run #{runNumber}</h2>
             <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              runDetail.status === "success" ? "bg-green-500/10 text-green-500" :
-              runDetail.status === "failed" ? "bg-red-500/10 text-red-500" :
+              status === "success" ? "bg-green-500/10 text-green-500" :
+              status === "failed" ? "bg-red-500/10 text-red-500" :
               "bg-blue-500/10 text-blue-500"
             }`}>
-              {runDetail.status}
+              {status}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{runDetail.message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
@@ -99,24 +145,24 @@ function RunDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Duration</p>
-              <p className="text-lg font-bold">{runDetail.duration}</p>
+              <p className="text-lg font-bold">{runDetail.duration ?? "—"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Branch</p>
               <p className="text-lg font-bold flex items-center gap-1">
                 <GitBranch className="h-4 w-4" />
-                {runDetail.branch}
+                {branch}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Commit</p>
-              <p className="text-lg font-bold font-mono">{runDetail.commit}</p>
+              <p className="text-lg font-bold font-mono">{commit}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Author</p>
               <p className="text-lg font-bold flex items-center gap-1">
                 <User className="h-4 w-4" />
-                {runDetail.author}
+                {author}
               </p>
             </div>
           </div>
@@ -128,7 +174,7 @@ function RunDetail() {
         <CardContent className="p-6">
           <h3 className="font-bold text-foreground mb-4">Pipeline Stages</h3>
           <div className="flex items-center gap-4">
-            {runDetail.stages.map((stage, idx) => (
+            {stages.map((stage, idx) => (
               <div key={stage.name} className="flex items-center">
                 <div className="text-center">
                   <div className={`p-3 rounded-lg ${
@@ -147,7 +193,7 @@ function RunDetail() {
                   <p className="font-medium mt-2">{stage.name}</p>
                   <p className="text-xs text-muted-foreground">{stage.duration}</p>
                 </div>
-                {idx < runDetail.stages.length - 1 && (
+                {idx < stages.length - 1 && (
                   <div className="w-12 h-0.5 bg-border mx-2" />
                 )}
               </div>
@@ -173,7 +219,7 @@ function RunDetail() {
                 </div>
               </div>
               <div className="bg-muted rounded-lg p-4 font-mono text-xs overflow-auto h-[400px]">
-                <pre className="text-muted-foreground whitespace-pre-wrap">{runDetail.logs}</pre>
+                <pre className="text-muted-foreground whitespace-pre-wrap">{logs}</pre>
               </div>
             </CardContent>
           </Card>
@@ -184,7 +230,7 @@ function RunDetail() {
           <CardContent className="p-6">
             <h3 className="font-bold text-foreground mb-4">Artifacts</h3>
             <div className="space-y-3">
-              {runDetail.artifacts.map((artifact, idx) => (
+              {artifacts.map((artifact, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Box className="h-4 w-4 text-primary" />

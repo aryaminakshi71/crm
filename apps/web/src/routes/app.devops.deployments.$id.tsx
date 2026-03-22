@@ -16,12 +16,19 @@ import {
   Server,
   Activity,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/devops/deployments/$id")({
   component: DeploymentDetail,
 });
 
-const deployment = {
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_DEPLOYMENT = {
   id: 1,
   application: "frontend-app",
   version: "v2.1.45",
@@ -50,6 +57,63 @@ const deployment = {
 };
 
 function DeploymentDetail() {
+  const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const { data: deploymentQuery, isLoading } = useQuery({
+    queryKey: ["devops", "deployments", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/devops/deployments/${id}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch deployment");
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API_BASE}/devops/deployments/${id}/rollback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Rollback failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "deployments"] });
+    },
+  });
+
+  const deployment = deploymentQuery?.data ?? deploymentQuery ?? MOCK_DEPLOYMENT;
+
+  const application = deployment.application ?? "Application";
+  const version = deployment.version ?? "—";
+  const environment = deployment.environment ?? "—";
+  const status = deployment.status ?? "unknown";
+  const deployedBy = deployment.deployedBy ?? deployment.deployedByUserId ?? "—";
+  const message = deployment.message ?? "Deployment";
+  const commit = deployment.commitSha?.slice(0, 7) ?? deployment.commit ?? "—";
+  const stages: Array<{ name: string; status: string; duration: string }> =
+    deployment.stages ?? MOCK_DEPLOYMENT.stages;
+  const servers: Array<{ name: string; status: string; ip: string; region: string }> =
+    deployment.servers ?? MOCK_DEPLOYMENT.servers;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 rounded-lg bg-muted/30 animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-lg bg-muted/30 animate-pulse" />
+          ))}
+        </div>
+        <div className="h-48 rounded-lg bg-muted/30 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -59,25 +123,29 @@ function DeploymentDetail() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">{deployment.application}</h2>
-            <span className="text-lg font-mono text-muted-foreground">{deployment.version}</span>
+            <h2 className="text-xl font-bold text-foreground">{application}</h2>
+            <span className="text-lg font-mono text-muted-foreground">{version}</span>
             <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              deployment.environment === "production" ? "bg-red-500/10 text-red-500" :
+              environment === "production" ? "bg-red-500/10 text-red-500" :
               "bg-blue-500/10 text-blue-500"
             }`}>
-              {deployment.environment}
+              {environment}
             </span>
             <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              deployment.status === "success" ? "bg-green-500/10 text-green-500" :
+              status === "success" ? "bg-green-500/10 text-green-500" :
               "bg-red-500/10 text-red-500"
             }`}>
-              {deployment.status}
+              {status}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{deployment.message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
+          <button
+            onClick={() => rollbackMutation.mutate()}
+            disabled={rollbackMutation.isPending || !deployment.previousVersion}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <RotateCcw className="h-4 w-4" />
             Rollback
           </button>
@@ -93,28 +161,28 @@ function DeploymentDetail() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Clock className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">{deployment.duration}</p>
+            <p className="text-2xl font-bold">{deployment.duration ?? "—"}</p>
             <p className="text-xs text-muted-foreground">Duration</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <User className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-sm font-bold">{deployment.deployedBy}</p>
+            <p className="text-sm font-bold">{deployedBy}</p>
             <p className="text-xs text-muted-foreground">Deployed By</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <GitCommit className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-            <p className="text-sm font-bold font-mono">{deployment.commit}</p>
+            <p className="text-sm font-bold font-mono">{commit}</p>
             <p className="text-xs text-muted-foreground">Commit</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Server className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{deployment.servers.length}</p>
+            <p className="text-2xl font-bold">{servers.length}</p>
             <p className="text-xs text-muted-foreground">Servers</p>
           </CardContent>
         </Card>
@@ -132,7 +200,7 @@ function DeploymentDetail() {
         <CardContent className="p-6">
           <h3 className="font-bold text-foreground mb-4">Deployment Stages</h3>
           <div className="space-y-4">
-            {deployment.stages.map((stage, idx) => (
+            {stages.map((stage, idx) => (
               <div key={stage.name} className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
                   <div className={`p-2 rounded-lg ${
@@ -153,7 +221,7 @@ function DeploymentDetail() {
                 <div className="text-right min-w-[60px]">
                   <p className="text-sm text-muted-foreground">{stage.duration}</p>
                 </div>
-                {idx < deployment.stages.length - 1 && (
+                {idx < stages.length - 1 && (
                   <div className="absolute left-[52px] w-0.5 h-4 bg-border mt-8" />
                 )}
               </div>
@@ -167,7 +235,7 @@ function DeploymentDetail() {
         <CardContent className="p-6">
           <h3 className="font-bold text-foreground mb-4">Deployed Servers</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {deployment.servers.map((server) => (
+            {servers.map((server) => (
               <div key={server.name} className="p-4 rounded-lg border border-border/40">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-medium">{server.name}</p>
