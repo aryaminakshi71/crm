@@ -4125,3 +4125,60 @@ export const communicationsApi = {
       commFetch(`/bots/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   },
 };
+
+// ── Inventory API ────────────────────────────────────────────────────────────
+
+export const inventoryApi = {
+  stats: async (): Promise<any> => {
+    try {
+      return await withRpcTimeout(rpc.inventory?.stats?.({}), "inventory.stats");
+    } catch {
+      return { totalProducts: 0, lowStockCount: 0, totalValue: 0, activeAlerts: 0 };
+    }
+  },
+
+  products: {
+    list: async (params?: { page?: number; limit?: number; search?: string; category?: string; status?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listProducts?.({ page: params?.page ?? 1, limit: params?.limit ?? 50, ...params }),
+          "inventory.listProducts",
+        );
+      } catch {
+        return { data: [], total: 0, page: 1, limit: 50 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(rpc.inventory?.getProduct?.({ id }), "inventory.getProduct");
+      } catch {
+        return null;
+      }
+    },
+    create: async (data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.createProduct?.(data), "inventory.createProduct");
+    },
+    update: async (id: string, data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updateProduct?.({ id, ...data }), "inventory.updateProduct");
+    },
+    delete: async (id: string): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.deleteProduct?.({ id }), "inventory.deleteProduct");
+    },
+  },
+
+  alerts: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listAlerts?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "inventory.listAlerts",
+        );
+      } catch {
+        return { data: [], total: 0 };
+      }
+    },
+    resolve: async (id: string): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updateProduct?.({ id, status: "resolved" }), "inventory.resolveAlert");
+    },
+  },
+};
