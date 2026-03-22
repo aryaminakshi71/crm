@@ -177,7 +177,33 @@ function DevOpsDashboard() {
     ];
   }, [pipelinesData, environmentsData]);
 
-  const deploymentTimeline = useMemo(() => MOCK_DEPLOYMENT_TIMELINE, []);
+  // Fetch deployments from real API
+  const { data: deploymentsData } = useQuery({
+    queryKey: ["devops", "deployments"],
+    queryFn: async () => {
+      const res = await fetch("/api/devops/deployments?limit=10", {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const deploymentTimeline = useMemo(() => {
+    const data: any[] = deploymentsData?.data ?? [];
+    if (!data.length) return MOCK_DEPLOYMENT_TIMELINE;
+    return data.map((d: any) => ({
+      id: d.id,
+      env: d.environment ?? "Unknown",
+      version: d.version ?? "v1.0.0",
+      deployer: d.deployedBy ?? "System",
+      duration: "-",
+      status: d.status,
+      timestamp: d.deployedAt
+        ? new Date(d.deployedAt).toLocaleString()
+        : new Date(d.createdAt).toLocaleString(),
+    }));
+  }, [deploymentsData]);
 
   if (pipelinesLoading || envsLoading) {
     return (

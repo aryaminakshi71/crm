@@ -58,6 +58,18 @@ function CrmOverview() {
     queryFn: () => dashboardApi.getStats(),
   });
 
+  // Fetch chart data from real API
+  const { data: chartsData } = useQuery({
+    queryKey: ["dashboard", "charts"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/charts", {
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
   // Map API response to display values with safe fallbacks
   const stats = {
     totalLeads: dashboardStats?.totalContacts ?? 1247,
@@ -73,8 +85,8 @@ function CrmOverview() {
     conversionChange: dashboardStats?.conversionChange ?? 0.4,
   };
 
-  // TODO: Replace with API when chart endpoint is available
-  const pipelineData = [
+  // Static fallback pipeline data
+  const PIPELINE_FALLBACK = [
     { name: "Lead", value: 450, color: "#818cf8" },
     { name: "Qualified", value: 280, color: "#a78bfa" },
     { name: "Proposal", value: 150, color: "#22d3ee" },
@@ -82,8 +94,8 @@ function CrmOverview() {
     { name: "Closed", value: 45, color: "#22c55e" },
   ];
 
-  // TODO: Replace with API when chart endpoint is available
-  const revenueData = [
+  // Static fallback revenue data
+  const REVENUE_FALLBACK = [
     { month: "Jan", revenue: 65000, target: 60000 },
     { month: "Feb", revenue: 72000, target: 70000 },
     { month: "Mar", revenue: 68000, target: 75000 },
@@ -91,6 +103,10 @@ function CrmOverview() {
     { month: "May", revenue: 92000, target: 85000 },
     { month: "Jun", revenue: 98000, target: 90000 },
   ];
+
+  // Use real data with fallback to existing mock
+  const pipelineData = chartsData?.pipeline?.length ? chartsData.pipeline : PIPELINE_FALLBACK;
+  const revenueData = chartsData?.revenue?.length ? chartsData.revenue : REVENUE_FALLBACK;
 
   // Use API recent activities, fall back to empty array (shown only when loaded)
   const recentActivities = (dashboardStats?.recentActivities ?? []).map((a: { id: string; type: string; message: string; time: string }) => ({
@@ -301,7 +317,7 @@ function CrmOverview() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {pipelineData.map((entry, index) => (
+                    {pipelineData.map((entry: { color: string }, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -316,7 +332,7 @@ function CrmOverview() {
               </ResponsiveContainer>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4">
-              {pipelineData.map((item) => (
+              {pipelineData.map((item: { name: string; value: number; color: string }) => (
                 <div key={item.name} className="flex items-center gap-2 text-xs">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="text-muted-foreground">{item.name}</span>
@@ -344,7 +360,7 @@ function CrmOverview() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentActivities.map((activity) => (
+            {recentActivities.map((activity: { id: string; type: string; title: string; time: string; user: string; name?: string; value?: string }) => (
               <div key={activity.id} className="flex items-start gap-3">
                 <div className="rounded-full bg-muted p-2 mt-0.5">
                   {activity.type === "deal_won" && <CheckCircle2 className="h-4 w-4 text-green-600" />}

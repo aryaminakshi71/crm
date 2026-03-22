@@ -71,6 +71,23 @@ function AgentsIndexPage() {
     },
   });
 
+  // Fetch token usage from real API
+  const { data: tokenUsageData } = useQuery({
+    queryKey: ["agents", "token-usage"],
+    queryFn: async () => {
+      const res = await fetch("/api/agents/token-usage?days=7", {
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Use real API data with static fallback
+  const chartData = tokenUsageData?.data?.length
+    ? tokenUsageData.data
+    : TOKEN_USAGE_DATA;
+
   // Create agent mutation
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; description: string; agentType: string; config: any }) => {
@@ -212,9 +229,8 @@ function AgentsIndexPage() {
     );
   };
 
-  // TODO: Replace TOKEN_USAGE_DATA with API when a token usage endpoint is available
-  const totalTokensToday = TOKEN_USAGE_DATA[TOKEN_USAGE_DATA.length - 1].tokens;
-  const estimatedCost = ((TOKEN_USAGE_DATA.reduce((s, d) => s + d.tokens, 0) / 1000) * 0.002).toFixed(2);
+  const totalTokensToday = chartData[chartData.length - 1]?.tokens ?? 0;
+  const estimatedCost = ((chartData.reduce((s: number, d: { tokens: number }) => s + d.tokens, 0) / 1000) * 0.002).toFixed(2);
 
   if (agentsLoading) {
     return (
@@ -258,7 +274,7 @@ function AgentsIndexPage() {
         <CardContent>
           <div className="h-[100px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={TOKEN_USAGE_DATA} barSize={20}>
+              <BarChart data={chartData} barSize={20}>
                 <XAxis dataKey="day" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
                 <Tooltip
                   contentStyle={{ background: "#1e293b", border: "none", borderRadius: "6px", fontSize: "11px" }}
@@ -299,6 +315,13 @@ function AgentsIndexPage() {
             More Filters
           </Button>
         </div>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setShowCreateDialog(true)}
+        >
+          New Agent
+        </Button>
       </div>
 
       {filteredAgents.length === 0 ? (

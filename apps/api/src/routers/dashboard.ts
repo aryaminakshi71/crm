@@ -5,7 +5,7 @@
  */
 
 import { getOrCache } from "@crm/storage/redis";
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
@@ -29,6 +29,67 @@ function formatTimeAgo(date: Date | string): string {
 }
 
 export const dashboardRouter = {
+  /**
+   * Dashboard chart data — pipeline stage breakdown and monthly revenue
+   */
+  charts: orgAuthed
+    .route({ method: "GET", path: "/dashboard/charts", summary: "Dashboard chart data", tags: ["Dashboard"] })
+    .input(z.object({}))
+    .output(z.any())
+    .handler(async ({ context }: { context: OrgContext }) => {
+      const db = getDb(context);
+
+      const pipelineData = await db
+        .select({
+          stage: deals.stage,
+          count: count(),
+        })
+        .from(deals)
+        .where(eq(deals.organizationId, context.organization.id))
+        .groupBy(deals.stage);
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const revenueData = await db
+        .select({
+          month: sql<string>`to_char(${deals.expectedCloseDate}, 'Mon')`,
+          revenue: sql<number>`COALESCE(SUM(CAST(${deals.value} AS NUMERIC)), 0)`,
+        })
+        .from(deals)
+        .where(
+          and(
+            eq(deals.organizationId, context.organization.id),
+            eq(deals.stage, "won"),
+            gte(deals.expectedCloseDate, sixMonthsAgo),
+          )
+        )
+        .groupBy(sql`to_char(${deals.expectedCloseDate}, 'Mon'), DATE_TRUNC('month', ${deals.expectedCloseDate})`)
+        .orderBy(sql`DATE_TRUNC('month', ${deals.expectedCloseDate})`);
+
+      const STAGE_COLORS: Record<string, string> = {
+        lead: "#818cf8",
+        qualified: "#a78bfa",
+        proposal: "#22d3ee",
+        negotiation: "#fbbf24",
+        won: "#22c55e",
+        lost: "#f87171",
+      };
+
+      return {
+        pipeline: pipelineData.map(p => ({
+          name: p.stage ?? "Unknown",
+          value: Number(p.count),
+          color: STAGE_COLORS[p.stage ?? ""] ?? "#818cf8",
+        })),
+        revenue: revenueData.map(r => ({
+          month: r.month,
+          revenue: Number(r.revenue),
+          target: 0,
+        })),
+      };
+    }),
+
   /**
    * Get dashboard statistics
    */

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Table, TableBody, Tabl
 import { createFileRoute } from "@tanstack/react-router";
 import { DollarSign, Users, CreditCard, TrendingUp, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/admin/billing")({
   component: AdminBillingPage,
@@ -9,6 +10,30 @@ export const Route = createFileRoute("/admin/billing")({
 
 function AdminBillingPage() {
   const { data: session, isPending } = useSession();
+
+  const { data: billingStatsData } = useQuery({
+    queryKey: ["admin", "billing", "stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/billing/stats", {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user,
+  });
+
+  const { data: subscriptionsData } = useQuery({
+    queryKey: ["admin", "billing", "subscriptions"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/billing/subscriptions?limit=50", {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user,
+  });
 
   // Admin guard
   if (isPending) {
@@ -30,17 +55,17 @@ function AdminBillingPage() {
     );
   }
 
-  // Mock data - in real app, this would come from API
+  const rawStats = billingStatsData?.stats ?? null;
   const stats = {
-    totalOrganizations: 156,
-    activeSubscriptions: 142,
-    pastDueSubscriptions: 8,
-    trialingSubscriptions: 12,
-    mrr: 45680,
-    arr: 548160,
+    totalOrganizations: rawStats?.totalOrganizations ?? 156,
+    activeSubscriptions: rawStats?.activeSubscriptions ?? 142,
+    pastDueSubscriptions: rawStats?.pastDueSubscriptions ?? 8,
+    trialingSubscriptions: rawStats?.trialingSubscriptions ?? 12,
+    mrr: rawStats?.monthlyRecurringRevenue ?? 45680,
+    arr: rawStats?.annualRecurringRevenue ?? 548160,
   };
 
-  const organizations = [
+  const MOCK_ORGANIZATIONS = [
     { id: "1", name: "Acme Corp", plan: "enterprise", status: "active", users: 45, mrr: 2200, dueDate: "2026-03-25" },
     { id: "2", name: "TechStart Inc", plan: "growth", status: "active", users: 12, mrr: 348, dueDate: "2026-03-25" },
     { id: "3", name: "Global Solutions", plan: "business", status: "past_due", users: 28, mrr: 1372, dueDate: "2026-03-05" },
@@ -50,6 +75,32 @@ function AdminBillingPage() {
     { id: "7", name: "Cloud Systems", plan: "business", status: "active", users: 35, mrr: 1715, dueDate: "2026-03-25" },
     { id: "8", name: "DataTech", plan: "starter", status: "canceled", users: 2, mrr: 0, dueDate: "-" },
   ];
+
+  const apiSubscriptions = subscriptionsData?.subscriptions ?? [];
+  const organizations = apiSubscriptions.length > 0
+    ? apiSubscriptions.map((row: any) => ({
+        id: row.subscription?.id ?? row.organization?.id ?? String(Math.random()),
+        name: row.organization?.name ?? "Unknown",
+        plan: row.plan?.key ?? "starter",
+        status: row.subscription?.status ?? "active",
+        users: row.subscription?.userCount ?? 0,
+        mrr: (() => {
+          const sub = row.subscription;
+          const plan = row.plan;
+          if (!sub || !plan) return 0;
+          const basePrice = sub.billingCycle === "annual"
+            ? Number(plan.basePriceAnnual) / 12
+            : Number(plan.basePriceMonthly);
+          const perUser = sub.billingCycle === "annual"
+            ? Number(plan.pricePerUserAnnual) / 12
+            : Number(plan.pricePerUserMonthly);
+          return Math.round(basePrice + perUser * (sub.userCount ?? 0));
+        })(),
+        dueDate: row.subscription?.currentPeriodEnd
+          ? new Date(row.subscription.currentPeriodEnd).toLocaleDateString()
+          : "-",
+      }))
+    : MOCK_ORGANIZATIONS;
 
   const modules = [
     { key: "crm", name: "CRM", subscribers: 156, revenue: 46800 },

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Progress } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSession } from "@/lib/auth-client";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   Layers,
@@ -150,6 +151,18 @@ const plans = [
 function AdminModulesPage() {
   const { data: session, isPending } = useSession();
 
+  const { data: modulesApiData } = useQuery({
+    queryKey: ["admin", "modules"],
+    queryFn: async () => {
+      const res = await fetch("/api/modules", {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user,
+  });
+
   // Admin guard
   if (isPending) {
     return (
@@ -170,6 +183,21 @@ function AdminModulesPage() {
     );
   }
 
+  // Merge real enabled status from API into static moduleDetails display data
+  const apiModules: any[] = modulesApiData?.modules ?? [];
+  const mergedModuleDetails = Object.fromEntries(
+    Object.entries(moduleDetails).map(([key, detail]) => {
+      const apiModule = apiModules.find((m: any) => m.key === key);
+      return [
+        key,
+        {
+          ...detail,
+          enabled: apiModule !== undefined ? apiModule.enabled : true,
+        },
+      ];
+    })
+  );
+
   const categories = [
     { key: "core", name: "Core Modules", description: "Always available" },
     { key: "ops", name: "Operations", description: "Day-to-day business ops" },
@@ -177,9 +205,9 @@ function AdminModulesPage() {
     { key: "ai", name: "AI & Intelligence", description: "AI-powered features" },
   ];
 
-  const totalRevenue = Object.values(moduleDetails).reduce((sum, m) => sum + m.revenue, 0);
+  const totalRevenue = Object.values(mergedModuleDetails).reduce((sum, m) => sum + m.revenue, 0);
   const avgAdoption = Math.round(
-    Object.values(moduleDetails).reduce((sum, m) => sum + m.adoption, 0) / Object.values(moduleDetails).length
+    Object.values(mergedModuleDetails).reduce((sum, m) => sum + m.adoption, 0) / Object.values(mergedModuleDetails).length
   );
 
   return (
@@ -202,7 +230,7 @@ function AdminModulesPage() {
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total Modules</p>
-            <p className="text-3xl font-black text-primary">{Object.keys(moduleDetails).length}</p>
+            <p className="text-3xl font-black text-primary">{Object.keys(mergedModuleDetails).length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -227,7 +255,7 @@ function AdminModulesPage() {
 
       {/* Modules by Category */}
       {categories.map((category) => {
-        const categoryModules = Object.entries(moduleDetails).filter(
+        const categoryModules = Object.entries(mergedModuleDetails).filter(
           ([_, m]) => m.category === category.key
         );
 
@@ -320,7 +348,7 @@ function AdminModulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(moduleDetails).map(([key, mod]) => (
+                {Object.entries(mergedModuleDetails).map(([key, mod]) => (
                   <tr key={key} className="border-b hover:bg-secondary/50">
                     <td className="p-2">
                       <div className="flex items-center gap-2">
@@ -370,7 +398,7 @@ function AdminModulesPage() {
                 </p>
                 <div className="mt-4 space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Includes:</p>
-                  {Object.entries(moduleDetails)
+                  {Object.entries(mergedModuleDetails)
                     .filter(([_, m]) => m.plans.includes(plan.key))
                     .map(([key, m]) => {
                       const Icon = m.icon;

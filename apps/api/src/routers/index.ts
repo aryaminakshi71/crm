@@ -33,6 +33,8 @@ import { presenceRouter } from "./presence";
 import { rbacRouter } from "./rbac";
 import { realtimeRouter } from "./realtime";
 import { socialRouter } from "./social";
+import { marketingRouter } from "./marketing";
+import { inventoryRouter } from "./inventory";
 
 import { assetsRouter } from "./assets";
 
@@ -66,6 +68,8 @@ export const appRouter = {
   devops: devopsRouter,
   communications: communicationsRouter,
   social: socialRouter,
+  marketing: marketingRouter,
+  inventory: inventoryRouter,
 };
 
 export type AppRouter = typeof appRouter;

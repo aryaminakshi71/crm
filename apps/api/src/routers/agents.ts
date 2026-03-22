@@ -4,7 +4,7 @@
  * AI agents operations for chatbot, autonomous, code execution, and data analysis agents.
  */
 
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
@@ -167,6 +167,7 @@ export const agentsRouter = {
       summary: "List agent templates",
       tags: ["AI Agents"],
     })
+    .input(z.object({}))
     .output(z.object({ data: z.array(z.any()) }))
     .handler(async () => {
       // Return predefined templates
@@ -576,4 +577,51 @@ export const agentsRouter = {
         return execution;
       },
     ),
+
+  // ─── Token Usage ─────────────────────────────────────────────────────────────
+
+  tokenUsage: orgAuthed
+    .route({ method: "GET", path: "/agents/token-usage", summary: "Agent token usage by day", tags: ["Agents"] })
+    .input(z.object({ days: z.number().min(1).max(90).default(7) }))
+    .output(z.object({ data: z.array(z.object({ day: z.string(), tokens: z.number() })), total: z.number() }))
+    .handler(async ({ context, input }: { context: OrgContext; input: any }) => {
+      const db = getDb(context);
+      // Try to get real token data from executions table
+      // The executions table has a `tokens` text field; use COUNT * 100 as proxy when null
+      try {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - input.days);
+
+        // Group by day
+        const results = await db
+          .select({
+            day: sql<string>`to_char(${agentExecutions.startedAt}, 'Dy')`,
+            tokens: sql<number>`COALESCE(SUM(CAST(NULLIF(${agentExecutions.tokens}, '') AS INTEGER)), COUNT(*) * 100)`,
+          })
+          .from(agentExecutions)
+          .where(
+            and(
+              eq(agentExecutions.organizationId, context.organization.id),
+              gte(agentExecutions.startedAt, cutoff),
+            )
+          )
+          .groupBy(sql`to_char(${agentExecutions.startedAt}, 'Dy'), DATE(${agentExecutions.startedAt})`)
+          .orderBy(sql`DATE(${agentExecutions.startedAt})`);
+
+        const total = results.reduce((sum, r) => sum + Number(r.tokens), 0);
+
+        if (results.length > 0) {
+          return { data: results.map(r => ({ day: r.day, tokens: Number(r.tokens) })), total };
+        }
+      } catch {
+        // Fall through to defaults
+      }
+
+      // Return empty data when no executions yet
+      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      return {
+        data: days.slice(0, input.days > 7 ? 7 : input.days).map(day => ({ day, tokens: 0 })),
+        total: 0,
+      };
+    }),
 };

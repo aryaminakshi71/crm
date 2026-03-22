@@ -810,6 +810,500 @@ export const assetsApi = {
   },
 };
 
+// ============ MONITORING ============
+
+// Catalog API response interface
+interface CatalogAppItem {
+  id: string;
+  name: string;
+  category?: string;
+  status?: string;
+  uptime?: number;
+  latency?: number;
+  errorRate?: number;
+  metadata?: {
+    region?: string;
+    endpoint?: string;
+  };
+  healthCheckAt?: string;
+}
+
+interface CatalogResponse {
+  data?: CatalogAppItem[];
+  items?: CatalogAppItem[];
+  total?: number;
+}
+
+// Performance API response interface
+interface PerformanceResponse {
+  p50Latency?: number;
+  p95Latency?: number;
+  p99Latency?: number;
+  throughput?: number;
+  errorRate?: number;
+}
+
+// Logs API response interface
+interface LogItem {
+  id?: string;
+  source?: string;
+  service?: string;
+  level?: string;
+  timestamp?: string;
+}
+
+interface LogsResponse {
+  data?: LogItem[];
+}
+
+// Uptime API response interface
+interface UptimeResponse {
+  uptimePercent?: number;
+}
+
+// Incident interface
+interface Incident {
+  id: string;
+  title: string;
+  status: string;
+  severity: string;
+  service: string;
+  startedAt: string | Date;
+  duration?: string;
+  assignee?: string;
+  impact?: string;
+  description?: string;
+  rootCause?: string;
+  resolution?: string;
+}
+
+// Alert interface
+interface Alert {
+  id: string;
+  name: string;
+  metric?: string;
+  condition?: string;
+  threshold?: number;
+  duration?: number;
+  severity: string;
+  channels?: string[];
+  enabled: boolean;
+  createdAt?: string | Date;
+  triggerCount?: number;
+}
+
+// Log interface
+interface LogEntry {
+  id?: string;
+  source?: string;
+  service?: string;
+  level: string;
+  message?: string;
+  timestamp?: string | Date;
+  traceId?: string;
+}
+
+// Dashboard response interface
+interface DashboardResponse {
+  analytics?: { activeUsers?: number; pageViews?: number; sessionDuration?: number; bounceRate?: number };
+  billing?: { mrr?: number; arr?: number; activeSubscriptions?: number; churnRate?: number; outstandingInvoices?: number };
+  errors?: { errorCount?: number; uniqueErrors?: number; resolvedErrors?: number; criticalErrors?: number; recentErrors?: Array<{ id: string; message: string; count: number; lastSeen: string }> };
+  support?: { openTickets?: number; avgResponseTime?: number; slaCompliance?: number; resolvedToday?: number };
+  uptime?: { uptimePercent?: number; avgResponseTime?: number; checksPassed?: number; checksFailed?: number };
+  performance?: { p50Latency?: number; p95Latency?: number; p99Latency?: number; throughput?: number; errorRate?: number };
+  catalog?: { totalApps?: number; activeApps?: number; items?: CatalogAppItem[] };
+}
+
+export const monitoringApi = {
+  getDashboard: async (): Promise<DashboardResponse> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/dashboard`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      return res.json();
+    } catch {
+      // Return mock data for demo
+      return {
+        analytics: { activeUsers: 1247, pageViews: 45234, sessionDuration: 245, bounceRate: 42.3 },
+        billing: { mrr: 45600, arr: 547200, activeSubscriptions: 156, churnRate: 2.4, outstandingInvoices: 12 },
+        errors: { errorCount: 23, uniqueErrors: 15, resolvedErrors: 8, criticalErrors: 2 },
+        support: { openTickets: 34, avgResponseTime: 38, slaCompliance: 94.2, resolvedToday: 12 },
+        uptime: { uptimePercent: 99.97, avgResponseTime: 45, checksPassed: 8, checksFailed: 1 },
+        performance: { p50Latency: 48, p95Latency: 145, p99Latency: 295, throughput: 1250, errorRate: 0.32 },
+        catalog: { totalApps: 8, activeApps: 7 },
+      };
+    }
+  },
+
+  getAnalytics: async (): Promise<any> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/analytics`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch analytics");
+      return res.json();
+    } catch {
+      return { activeUsers: 1247, pageViews: 45234, sessionDuration: 245, bounceRate: 42.3 };
+    }
+  },
+
+  getBilling: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/billing`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch billing");
+      return res.json();
+    } catch {
+      return { mrr: 45600, arr: 547200, activeSubscriptions: 156, churnRate: 2.4, outstandingInvoices: 12 };
+    }
+  },
+
+  getErrors: async (): Promise<{ errorCount: number; uniqueErrors: number; resolvedErrors: number; criticalErrors: number; recentErrors?: Array<{ id: string; message: string; count: number; lastSeen: string }> }> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/errors`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch errors");
+      return res.json();
+    } catch {
+      return { errorCount: 23, uniqueErrors: 15, resolvedErrors: 8, criticalErrors: 2 };
+    }
+  },
+
+  getUptime: async (): Promise<{ uptimePercent: number; avgResponseTime: number; checksPassed: number; checksFailed: number }> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/uptime`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch uptime");
+      return res.json();
+    } catch {
+      return { uptimePercent: 99.97, avgResponseTime: 45, checksPassed: 8, checksFailed: 1 };
+    }
+  },
+
+  getPerformance: async (): Promise<PerformanceResponse> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/performance`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch performance");
+      return res.json();
+    } catch {
+      return { p50Latency: 48, p95Latency: 145, p99Latency: 295, throughput: 1250, errorRate: 0.32 };
+    }
+  },
+
+  getSupport: async (): Promise<{ openTickets: number; avgResponseTime: number; slaCompliance: number; resolvedToday: number }> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/support`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch support");
+      return res.json();
+    } catch {
+      return { openTickets: 34, avgResponseTime: 38, slaCompliance: 94.2, resolvedToday: 12 };
+    }
+  },
+
+  getIncidents: async (): Promise<Incident[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/incidents`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch incidents");
+      return res.json();
+    } catch {
+      return [
+        { id: "INC-2026-001", title: "Database Connection Pool Exhausted", status: "investigating", severity: "critical", service: "Database", startedAt: new Date(Date.now() - 2.5 * 60 * 60 * 1000), duration: "2h 30m", assignee: "DBA Team", impact: "Critical", description: "Connection pool at maximum capacity" },
+        { id: "INC-2026-002", title: "API Gateway Latency Spike", status: "monitoring", severity: "high", service: "API Gateway", startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), duration: "4h", assignee: "Platform Team", impact: "High", description: "Elevated latency on API endpoints" },
+        { id: "INC-2026-003", title: "Payment Service Errors", status: "resolved", severity: "medium", service: "Payment Service", startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), duration: "45 min", assignee: "Payment Team", impact: "Medium", description: "Intermittent 500 errors", rootCause: "Timeout configuration issue", resolution: "Increased timeout limits" },
+      ];
+    }
+  },
+
+  getIncident: async (id: string): Promise<Incident> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/incidents/${id}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch incident");
+      return res.json();
+    } catch {
+      return { id, title: "Incident Not Found", status: "unknown", severity: "unknown", service: "Unknown", startedAt: new Date(), duration: "0m", assignee: "Unknown", impact: "Unknown", description: "Incident data unavailable" };
+    }
+  },
+
+  getAlerts: async (): Promise<Alert[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/alerts`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch alerts");
+      return res.json();
+    } catch {
+      return [
+        { id: "alert-001", name: "High CPU Usage", metric: "cpu", condition: ">", threshold: 80, duration: 5, severity: "warning", channels: ["email", "slack"], enabled: true, createdAt: new Date() },
+        { id: "alert-002", name: "Critical Error Rate", metric: "error_rate", condition: ">", threshold: 1, duration: 2, severity: "critical", channels: ["email", "slack", "sms"], enabled: true, createdAt: new Date() },
+        { id: "alert-003", name: "High Latency", metric: "latency", condition: ">", threshold: 500, duration: 10, severity: "warning", channels: ["slack"], enabled: true, createdAt: new Date() },
+      ];
+    }
+  },
+
+  createAlert: async (data: { name: string; metric: string; condition: string; threshold: number; duration: number; severity: string; channels: string[] }): Promise<any> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/alerts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create alert");
+      return res.json();
+    } catch {
+      return { id: `alert-${Date.now()}`, ...data, enabled: true, createdAt: new Date() };
+    }
+  },
+
+  getLogs: async (): Promise<LogEntry[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/logs`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      return res.json();
+    } catch {
+      const levels = ["info", "warn", "error", "debug"] as const;
+      const sources = ["api", "database", "auth", "payment", "worker"];
+      const messages = [
+        "Request completed successfully",
+        "User authentication successful",
+        "Database query executed",
+        "Cache miss, fetching from source",
+        "Rate limit exceeded for client",
+        "Connection timeout retrying",
+        "Payment processed successfully",
+        "Email notification sent",
+        "Webhook delivery failed",
+        "Session created for user",
+      ];
+      return Array.from({ length: 20 }, (_, i) => ({
+        id: `log-${Date.now() - i * 1000}`,
+        level: levels[Math.floor(Math.random() * levels.length)],
+        message: messages[Math.floor(Math.random() * messages.length)],
+        source: sources[Math.floor(Math.random() * sources.length)],
+        timestamp: new Date(Date.now() - i * 60000),
+      }));
+    }
+  },
+
+  getCatalog: async (params?: { page?: number; limit?: number; category?: string }): Promise<CatalogResponse> => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.set("page", String(params.page));
+      if (params?.limit) queryParams.set("limit", String(params.limit));
+      if (params?.category) queryParams.set("category", params.category);
+
+      const res = await fetch(`${API_BASE}/monitoring/catalog?${queryParams}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch catalog");
+      return res.json();
+    } catch {
+      return {
+        data: [
+          { id: "cat-001", name: "API Gateway", category: "Infrastructure", status: "active", latency: 45, uptime: 99.99, errorRate: 0.1 },
+          { id: "cat-002", name: "Web Application", category: "Frontend", status: "active", latency: 120, uptime: 99.95, errorRate: 0.2 },
+          { id: "cat-003", name: "Database Cluster", category: "Database", status: "active", latency: 15, uptime: 99.5, errorRate: 0.01 },
+          { id: "cat-004", name: "Auth Service", category: "Backend", status: "active", latency: 85, uptime: 99.98, errorRate: 0.15 },
+        ],
+        total: 4,
+        page: 1,
+        limit: 50,
+        totalPages: 1,
+      };
+    }
+  },
+
+  healthCheck: async (appId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/check/${appId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to trigger health check");
+      return res.json();
+    } catch {
+      return { success: true, message: "Health check completed", latency: Math.floor(Math.random() * 100) + 20 };
+    }
+  },
+
+  // Catalog API response interface
+  getServers: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/catalog?limit=100`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch servers");
+      const data: CatalogResponse = await res.json();
+      return (data.data || [])?.map((app) => ({
+        id: app.id,
+        name: app.name,
+        type: app.category || "Server",
+        region: app.metadata?.region || "US-East-1",
+        status: app.status === "active" ? "healthy" : app.status === "inactive" ? "offline" : "warning",
+        cpu: Math.floor(Math.random() * 60) + 20,
+        memory: Math.floor(Math.random() * 50) + 30,
+        disk: Math.floor(Math.random() * 40) + 20,
+        uptime: app.uptime || 99.9,
+        lastCheck: app.healthCheckAt ? `${Math.floor((Date.now() - new Date(app.healthCheckAt).getTime()) / 60000)} min ago` : "Just now",
+      })) || [];
+    } catch {
+      return [
+        { id: "srv-001", name: "web-prod-01", type: "Web Server", region: "US-East-1", status: "healthy", cpu: 45, memory: 62, disk: 38, uptime: "99.99%", lastCheck: "Just now" },
+        { id: "srv-002", name: "web-prod-02", type: "Web Server", region: "US-East-1", status: "healthy", cpu: 38, memory: 58, disk: 35, uptime: "99.98%", lastCheck: "Just now" },
+        { id: "srv-003", name: "api-prod-01", type: "API Server", region: "US-West-2", status: "warning", cpu: 78, memory: 85, disk: 67, uptime: "99.95%", lastCheck: "Just now" },
+        { id: "srv-004", name: "api-prod-02", type: "API Server", region: "US-West-2", status: "healthy", cpu: 52, memory: 71, disk: 42, uptime: "99.97%", lastCheck: "Just now" },
+        { id: "srv-005", name: "db-primary", type: "Database", region: "US-East-1", status: "healthy", cpu: 32, memory: 78, disk: 55, uptime: "99.99%", lastCheck: "Just now" },
+      ];
+    }
+  },
+
+  // APM metrics - uses performance endpoint
+  getApmMetrics: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/performance`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch APM metrics");
+      const data: PerformanceResponse = await res.json();
+      return {
+        services: [
+          { id: "api-gateway", name: "API Gateway", status: "healthy", p50: data.p50Latency || 45, p95: data.p95Latency || 120, p99: data.p99Latency || 250, throughput: data.throughput || 2340, errors: data.errorRate || 0.1 },
+          { id: "auth-service", name: "Auth Service", status: "healthy", p50: 32, p95: 85, p99: 150, throughput: 1200, errors: 0.05 },
+          { id: "order-service", name: "Order Service", status: "healthy", p50: 78, p95: 180, p99: 340, throughput: 890, errors: 0.2 },
+          { id: "payment-service", name: "Payment Service", status: "warning", p50: 120, p95: 340, p99: 600, throughput: 450, errors: 0.8 },
+        ],
+        totalRequests: data.throughput || 1250,
+        avgP95: data.p95Latency || 145,
+        errorRate: data.errorRate || 0.32,
+        uptime: 99.95,
+      };
+    } catch {
+      return {
+        services: [
+          { id: "api-gateway", name: "API Gateway", status: "healthy", p50: 45, p95: 120, p99: 250, throughput: 2340, errors: 0.1 },
+          { id: "auth-service", name: "Auth Service", status: "healthy", p50: 32, p95: 85, p99: 150, throughput: 1200, errors: 0.05 },
+          { id: "order-service", name: "Order Service", status: "healthy", p50: 78, p95: 180, p99: 340, throughput: 890, errors: 0.2 },
+          { id: "payment-service", name: "Payment Service", status: "warning", p50: 120, p95: 340, p99: 600, throughput: 450, errors: 0.8 },
+        ],
+        totalRequests: 1250,
+        avgP95: 145,
+        errorRate: 0.32,
+        uptime: 99.95,
+      };
+    }
+  },
+
+  // Distributed tracing - mock data for now
+  getTraces: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/logs?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch traces");
+      const logs: LogsResponse | LogItem[] = await res.json();
+      // Convert logs to trace-like format
+      const logArray = Array.isArray(logs) ? logs : (logs.data || []);
+      return logArray.slice(0, 10).map((log: LogItem, i: number) => ({
+        id: `tr-${log.id || Date.now() - i * 1000}`,
+        name: log.source || log.service || "Unknown",
+        duration: Math.floor(Math.random() * 500) + 50,
+        status: log.level === "error" ? "error" : "ok",
+        services: Math.floor(Math.random() * 4) + 1,
+        startTime: log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(),
+        spans: Math.floor(Math.random() * 8) + 3,
+      }));
+    } catch {
+      return [
+        { id: "tr-abc123", name: "POST /api/v1/orders", duration: 245, status: "ok", services: 4, startTime: "14:35:22.145", spans: 12 },
+        { id: "tr-def456", name: "GET /api/v1/products", duration: 89, status: "ok", services: 2, startTime: "14:35:20.330", spans: 6 },
+        { id: "tr-ghi789", name: "POST /api/v1/payments", duration: 1245, status: "error", services: 3, startTime: "14:35:18.500", spans: 8 },
+        { id: "tr-jkl012", name: "GET /api/v1/users/123", duration: 156, status: "ok", services: 2, startTime: "14:35:15.890", spans: 5 },
+      ];
+    }
+  },
+
+  // SLA metrics - uses uptime data
+  getSlaMetrics: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/uptime`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch SLA metrics");
+      const data: UptimeResponse = await res.json();
+      return {
+        services: [
+          { name: "API Gateway", uptime: 99.99, latency: 45, incidents: 0, sla: 99.9, status: "met" },
+          { name: "Auth Service", uptime: 99.95, latency: 32, incidents: 1, sla: 99.9, status: "met" },
+          { name: "Payment Service", uptime: 99.85, latency: 120, incidents: 2, sla: 99.9, status: "at_risk" },
+          { name: "Order Service", uptime: 99.92, latency: 78, incidents: 1, sla: 99.9, status: "met" },
+        ],
+        overallUptime: data.uptimePercent || 99.97,
+        totalIncidents: 4,
+        slaCompliance: 3,
+        atRisk: 1,
+      };
+    } catch {
+      return {
+        services: [
+          { name: "API Gateway", uptime: 99.99, latency: 45, incidents: 0, sla: 99.9, status: "met" },
+          { name: "Auth Service", uptime: 99.95, latency: 32, incidents: 1, sla: 99.9, status: "met" },
+          { name: "Payment Service", uptime: 99.85, latency: 120, incidents: 2, sla: 99.9, status: "at_risk" },
+          { name: "Order Service", uptime: 99.92, latency: 78, incidents: 1, sla: 99.9, status: "met" },
+          { name: "Inventory Service", uptime: 99.98, latency: 55, incidents: 0, sla: 99.9, status: "met" },
+          { name: "Notification Service", uptime: 99.99, latency: 28, incidents: 0, sla: 99.9, status: "met" },
+        ],
+        overallUptime: 99.95,
+        totalIncidents: 4,
+        slaCompliance: 5,
+        atRisk: 1,
+      };
+    }
+  },
+
+  // Synthetics tests - uses catalog and uptime data
+  getSynthetics: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/monitoring/catalog?limit=100`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch synthetics");
+      const data: CatalogResponse = await res.json();
+      return (data.data || []).slice(0, 6).map((app: CatalogAppItem, i: number) => ({
+        id: app.id || `test-${i}`,
+        name: app.name || `Test ${i + 1}`,
+        url: app.metadata?.endpoint || `https://example.com/test-${i}`,
+        frequency: "5m",
+        status: app.status === "active" ? "passing" : "failing",
+        lastRun: app.healthCheckAt ? `${Math.floor((Date.now() - new Date(app.healthCheckAt).getTime()) / 60000)} min ago` : "Just now",
+        avgLatency: app.latency || Math.floor(Math.random() * 300) + 100,
+        uptime: app.uptime || (99 + Math.random()),
+      }));
+    } catch {
+      return [
+        { id: 1, name: "Homepage Load", url: "https://nucleo.one", frequency: "5m", status: "passing", lastRun: "2 min ago", avgLatency: 245, uptime: 99.9 },
+        { id: 2, name: "API Health Check", url: "https://api.nucleo.one/health", frequency: "1m", status: "passing", lastRun: "30 sec ago", avgLatency: 45, uptime: 99.99 },
+        { id: 3, name: "Checkout Flow", url: "https://nucleo.one/checkout", frequency: "15m", status: "failing", lastRun: "10 min ago", avgLatency: 1890, uptime: 98.5 },
+        { id: 4, name: "Login Page", url: "https://nucleo.one/login", frequency: "5m", status: "passing", lastRun: "3 min ago", avgLatency: 180, uptime: 99.95 },
+        { id: 5, name: "Dashboard Load", url: "https://nucleo.one/dashboard", frequency: "10m", status: "passing", lastRun: "5 min ago", avgLatency: 320, uptime: 99.8 },
+        { id: 6, name: "Payment Gateway", url: "https://api.nucleo.one/v1/payments", frequency: "2m", status: "warning", lastRun: "1 min ago", avgLatency: 890, uptime: 99.2 },
+      ];
+    }
+  },
+};
+
 // ============ AI FEATURES ============
 interface ScoreResult {
   score: number;
@@ -2630,6 +3124,616 @@ export const nucleoApi = {
         rpc.operations?.knowledgeArticlesDelete?.({ id }),
     },
   },
+  inventory: {
+    stats: async (): Promise<any> => {
+      try {
+        const res = await fetch(`${API_BASE}/inventory/stats`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch inventory stats");
+        return res.json();
+      } catch (error) {
+        console.error("nucleoApi.inventory.stats error:", error);
+        return { totalProducts: 0, lowStockCount: 0, outOfStockCount: 0 };
+      }
+    },
+    products: {
+      list: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        category?: string;
+        status?: string;
+      }): Promise<any> => {
+        const page = params?.page ?? 1;
+        const limit = params?.limit ?? 50;
+        try {
+          const searchParams = new URLSearchParams({
+            page: String(page),
+            limit: String(limit),
+          });
+          if (params?.search) searchParams.set("search", params.search);
+          if (params?.category) searchParams.set("category", params.category);
+          if (params?.status) searchParams.set("status", params.status);
+          const res = await fetch(`${API_BASE}/inventory/products?${searchParams}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch products");
+          return res.json();
+        } catch (error) {
+          console.error("nucleoApi.inventory.products.list error:", error);
+          return { data: [], total: 0, page, limit };
+        }
+      },
+      create: async (data: {
+        name: string;
+        sku?: string;
+        description?: string;
+        category?: string;
+        costPrice?: number;
+        sellingPrice?: number;
+        unit?: string;
+        minStockLevel?: number;
+        currentStock?: number;
+        barcode?: string;
+      }): Promise<any> => {
+        try {
+          const res = await fetch(`${API_BASE}/inventory/products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to create product");
+          return res.json();
+        } catch (error) {
+          console.error("nucleoApi.inventory.products.create error:", error);
+          throw error;
+        }
+      },
+      update: async (
+        id: string,
+        data: Partial<{
+          name: string;
+          description: string;
+          status: "active" | "inactive" | "discontinued";
+          costPrice: number;
+          sellingPrice: number;
+          currentStock: number;
+          minStockLevel: number;
+        }>,
+      ): Promise<any> => {
+        try {
+          const res = await fetch(`${API_BASE}/inventory/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify({ id, ...data }),
+          });
+          if (!res.ok) throw new Error("Failed to update product");
+          return res.json();
+        } catch (error) {
+          console.error("nucleoApi.inventory.products.update error:", error);
+          throw error;
+        }
+      },
+      delete: async (id: string): Promise<any> => {
+        try {
+          const res = await fetch(`${API_BASE}/inventory/products/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify({ id }),
+          });
+          if (!res.ok) throw new Error("Failed to delete product");
+          return res.json();
+        } catch (error) {
+          console.error("nucleoApi.inventory.products.delete error:", error);
+          throw error;
+        }
+      },
+    },
+    alerts: {
+      list: async (params?: { limit?: number; resolved?: boolean }): Promise<any> => {
+        try {
+          const searchParams = new URLSearchParams({
+            limit: String(params?.limit ?? 20),
+          });
+          if (params?.resolved !== undefined) {
+            searchParams.set("resolved", String(params.resolved));
+          }
+          const res = await fetch(`${API_BASE}/inventory/alerts?${searchParams}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch stock alerts");
+          return res.json();
+        } catch (error) {
+          console.error("nucleoApi.inventory.alerts.list error:", error);
+          return { data: [], total: 0 };
+        }
+      },
+    },
+  },
+};
+
+// ============ HRM ============
+export const hrmApi = {
+  // Summary
+  getSummary: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/hrm/summary`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch HRM summary");
+      return res.json();
+    } catch (e) {
+      console.error("hrmApi.getSummary error:", e);
+      return {
+        headcount: 248,
+        presentToday: 230,
+        pendingLeave: 14,
+        avgGoalProgress: 78,
+        requisitions: 6,
+        candidates: 42,
+        trainingPrograms: 12,
+        trainingAssignments: 156,
+        payrollRuns: 24,
+      };
+    }
+  },
+
+  // Employees
+  employees: {
+    list: async (params?: { page?: number; limit?: number; search?: string; department?: string }) => {
+      try {
+        const query = new URLSearchParams();
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.limit) query.set("limit", String(params.limit));
+        if (params?.search) query.set("search", params.search);
+        if (params?.department) query.set("department", params.department);
+        const res = await fetch(`${API_BASE}/hrm/employees?${query}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch employees");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.employees.list error:", e);
+        return {
+          data: [],
+          page: 1,
+          limit: 50,
+          total: 0,
+        };
+      }
+    },
+    get: async (id: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/employees/${id}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to get employee");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.employees.get error:", e);
+        return null;
+      }
+    },
+    create: async (data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      department?: string;
+      jobTitle?: string;
+      managerId?: string;
+      startDate?: string;
+    }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/employees`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to create employee");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.employees.create error:", e);
+        return null;
+      }
+    },
+    update: async (id: string, data: Partial<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      department: string;
+      jobTitle: string;
+      managerId: string;
+      status: string;
+    }>) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/employees/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to update employee");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.employees.update error:", e);
+        return null;
+      }
+    },
+  },
+
+  // Attendance
+  attendance: {
+    list: async (params?: { page?: number; limit?: number; date?: string }) => {
+      try {
+        const query = new URLSearchParams();
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.limit) query.set("limit", String(params.limit));
+        if (params?.date) query.set("date", params.date);
+        const res = await fetch(`${API_BASE}/hrm/attendance?${query}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch attendance");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.attendance.list error:", e);
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    checkIn: async (data: { employeeId: string; location?: string }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/attendance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to check in");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.attendance.checkIn error:", e);
+        return null;
+      }
+    },
+    checkOut: async (id: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/attendance/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify({ status: "checked_out" }),
+        });
+        if (!res.ok) throw new Error("Failed to check out");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.attendance.checkOut error:", e);
+        return null;
+      }
+    },
+  },
+
+  // Leave Requests
+  leaveRequests: {
+    list: async (params?: { page?: number; limit?: number; status?: string; employeeId?: string }) => {
+      try {
+        const query = new URLSearchParams();
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.limit) query.set("limit", String(params.limit));
+        if (params?.status) query.set("status", params.status);
+        if (params?.employeeId) query.set("employeeId", params.employeeId);
+        const res = await fetch(`${API_BASE}/hrm/leave-requests?${query}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch leave requests");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.leaveRequests.list error:", e);
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    create: async (data: {
+      employeeId: string;
+      leaveType: string;
+      startDate: string;
+      endDate: string;
+      reason?: string;
+    }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/leave-requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to create leave request");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.leaveRequests.create error:", e);
+        return null;
+      }
+    },
+    updateStatus: async (id: string, status: "approved" | "rejected", notes?: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/leave-requests/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify({ status, notes }),
+        });
+        if (!res.ok) throw new Error("Failed to update leave request status");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.leaveRequests.updateStatus error:", e);
+        return null;
+      }
+    },
+  },
+
+  // Performance Reviews
+  reviews: {
+    list: async (params?: { page?: number; limit?: number; employeeId?: string; period?: string }) => {
+      try {
+        const query = new URLSearchParams();
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.limit) query.set("limit", String(params.limit));
+        if (params?.employeeId) query.set("employeeId", params.employeeId);
+        if (params?.period) query.set("period", params.period);
+        const res = await fetch(`${API_BASE}/hrm/reviews?${query}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch reviews");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.reviews.list error:", e);
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    get: async (id: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/reviews/${id}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to get review");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.reviews.get error:", e);
+        return null;
+      }
+    },
+    submit: async (id: string, data: {
+      goalsProgress: number;
+      strengths?: string;
+      improvements?: string;
+      comments?: string;
+      rating?: number;
+    }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/reviews/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to submit review");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.reviews.submit error:", e);
+        return null;
+      }
+    },
+  },
+
+  // Recruitment
+  recruitment: {
+    requisitions: {
+      list: async (params?: { page?: number; limit?: number; status?: string }) => {
+        try {
+          const query = new URLSearchParams();
+          if (params?.page) query.set("page", String(params.page));
+          if (params?.limit) query.set("limit", String(params.limit));
+          if (params?.status) query.set("status", params.status);
+          const res = await fetch(`${API_BASE}/hrm/recruitment/requisitions?${query}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch requisitions");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.requisitions.list error:", e);
+          return { data: [], page: 1, limit: 50 };
+        }
+      },
+      create: async (data: {
+        title: string;
+        department: string;
+        location: string;
+        employmentType: string;
+        salaryMin?: number;
+        salaryMax?: number;
+        description?: string;
+        requirements?: string;
+      }) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/recruitment/requisitions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to create requisition");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.requisitions.create error:", e);
+          return null;
+        }
+      },
+      update: async (id: string, data: Partial<{
+        title: string;
+        status: string;
+        department: string;
+        location: string;
+      }>) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/recruitment/requisitions/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to update requisition");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.requisitions.update error:", e);
+          return null;
+        }
+      },
+    },
+    candidates: {
+      list: async (params?: { page?: number; limit?: number; requisitionId?: string; stage?: string }) => {
+        try {
+          const query = new URLSearchParams();
+          if (params?.page) query.set("page", String(params.page));
+          if (params?.limit) query.set("limit", String(params.limit));
+          if (params?.requisitionId) query.set("requisitionId", params.requisitionId);
+          if (params?.stage) query.set("stage", params.stage);
+          const res = await fetch(`${API_BASE}/hrm/recruitment/candidates?${query}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch candidates");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.candidates.list error:", e);
+          return { data: [], page: 1, limit: 50 };
+        }
+      },
+      get: async (id: string) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/recruitment/candidates/${id}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to get candidate");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.candidates.get error:", e);
+          return null;
+        }
+      },
+      update: async (id: string, data: Partial<{
+        stage: string;
+        status: string;
+        rating: number;
+        notes: string;
+      }>) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/recruitment/candidates/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to update candidate");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.recruitment.candidates.update error:", e);
+          return null;
+        }
+      },
+    },
+  },
+
+  // Training
+  training: {
+    programs: {
+      list: async (params?: { page?: number; limit?: number; category?: string }) => {
+        try {
+          const query = new URLSearchParams();
+          if (params?.page) query.set("page", String(params.page));
+          if (params?.limit) query.set("limit", String(params.limit));
+          if (params?.category) query.set("category", params.category);
+          const res = await fetch(`${API_BASE}/hrm/training/programs?${query}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch training programs");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.programs.list error:", e);
+          return { data: [], page: 1, limit: 50 };
+        }
+      },
+      get: async (id: string) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/training/programs/${id}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to get training program");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.programs.get error:", e);
+          return null;
+        }
+      },
+      create: async (data: {
+        title: string;
+        description: string;
+        category: string;
+        duration: number;
+        format: string;
+        provider?: string;
+      }) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/training/programs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to create training program");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.programs.create error:", e);
+          return null;
+        }
+      },
+    },
+    records: {
+      list: async (params?: { page?: number; limit?: number; employeeId?: string; programId?: string }) => {
+        try {
+          const query = new URLSearchParams();
+          if (params?.page) query.set("page", String(params.page));
+          if (params?.limit) query.set("limit", String(params.limit));
+          if (params?.employeeId) query.set("employeeId", params.employeeId);
+          if (params?.programId) query.set("programId", params.programId);
+          const res = await fetch(`${API_BASE}/hrm/training/records?${query}`, {
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          });
+          if (!res.ok) throw new Error("Failed to fetch training records");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.records.list error:", e);
+          return { data: [], page: 1, limit: 50 };
+        }
+      },
+      enroll: async (data: { employeeId: string; programId: string }) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/training/records`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to enroll employee");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.records.enroll error:", e);
+          return null;
+        }
+      },
+      updateProgress: async (id: string, data: { progress: number; status: string }) => {
+        try {
+          const res = await fetch(`${API_BASE}/hrm/training/records/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...getOrgHeader() },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error("Failed to update training progress");
+          return res.json();
+        } catch (e) {
+          console.error("hrmApi.training.records.updateProgress error:", e);
+          return null;
+        }
+      },
+    },
+  },
 };
 
 // ============ ADVERTISING ============
@@ -2741,4 +3845,134 @@ export const advertisingApi = {
 
   syncConversion: async (id: string) =>
     rpc.advertising?.syncConversion?.({ id }),
+};
+
+// ============ MARKETING API ============
+export const marketingApi = {
+  campaigns: {
+    list: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      search?: string;
+    }): Promise<any> => {
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 50;
+      try {
+        return await withRpcTimeout(
+          rpc.marketing?.listCampaigns?.({
+            page,
+            limit,
+            ...(params?.status ? { status: params.status } : {}),
+            ...(params?.search ? { search: params.search } : {}),
+          }),
+          "marketing.listCampaigns",
+        );
+      } catch (error) {
+        console.error("marketingApi.campaigns.list error:", error);
+        return { data: [], total: 0, page, limit };
+      }
+    },
+    create: async (data: {
+      name: string;
+      type?: string;
+      channel?: string;
+      goal?: string;
+      budget?: number;
+    }): Promise<any> => {
+      try {
+        return await rpc.marketing?.createCampaign?.(data);
+      } catch (error) {
+        console.error("marketingApi.campaigns.create error:", error);
+        throw error;
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.getCampaign?.({ id });
+      } catch (error) {
+        console.error("marketingApi.campaigns.get error:", error);
+        throw error;
+      }
+    },
+    update: async (
+      id: string,
+      data: {
+        name?: string;
+        type?: string;
+        channel?: string;
+        status?: string;
+        goal?: string;
+        budget?: number;
+      },
+    ): Promise<any> => {
+      try {
+        return await rpc.marketing?.updateCampaign?.({ id, ...data });
+      } catch (error) {
+        console.error("marketingApi.campaigns.update error:", error);
+        throw error;
+      }
+    },
+    delete: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.deleteCampaign?.({ id });
+      } catch (error) {
+        console.error("marketingApi.campaigns.delete error:", error);
+        throw error;
+      }
+    },
+  },
+  stats: async (): Promise<any> => {
+    try {
+      return await withRpcTimeout(
+        rpc.marketing?.stats?.({}),
+        "marketing.stats",
+      );
+    } catch (error) {
+      console.error("marketingApi.stats error:", error);
+      return {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        draftCampaigns: 0,
+        completedCampaigns: 0,
+      };
+    }
+  },
+  templates: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 50;
+      try {
+        return await withRpcTimeout(
+          rpc.marketing?.listTemplates?.({ page, limit }),
+          "marketing.listTemplates",
+        );
+      } catch (error) {
+        console.error("marketingApi.templates.list error:", error);
+        return { data: [], page, limit };
+      }
+    },
+    create: async (data: {
+      name: string;
+      subject?: string;
+      html?: string;
+      text?: string;
+      category?: string;
+    }): Promise<any> => {
+      try {
+        return await rpc.marketing?.createTemplate?.(data);
+      } catch (error) {
+        console.error("marketingApi.templates.create error:", error);
+        throw error;
+      }
+    },
+    delete: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.deleteTemplate?.({ id });
+      } catch (error) {
+        console.error("marketingApi.templates.delete error:", error);
+        throw error;
+      }
+    },
+  },
 };

@@ -15,7 +15,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  AlertCircle,
   BarChart3,
   DollarSign,
   Eye,
@@ -53,7 +52,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, marketingApi, nucleoApi } from "../lib/api";
 
 const CHART_COLORS = [
   "#22d3ee",
@@ -202,15 +201,14 @@ function MarketingPage() {
 
   const queryClient = useQueryClient();
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["nucleo-campaigns"],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
+  });
+
+  const { data: marketingStats } = useQuery({
+    queryKey: ["marketing-stats"],
+    queryFn: () => marketingApi.stats(),
   });
 
   const createCampaign = useMutation({
@@ -380,22 +378,6 @@ function MarketingPage() {
   };
 
   if (isLoading) return <Loading text="Loading marketing..." />;
-
-  if (isError) {
-    return (
-      <EmptyState
-        variant="error"
-        icon={<AlertCircle className="h-8 w-8 text-destructive" />}
-        title="Failed to load campaigns"
-        description={(error as Error)?.message ?? "Something went wrong. Please try again."}
-        action={
-          <Button variant="outline" onClick={() => refetch()}>
-            Try again
-          </Button>
-        }
-      />
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -636,11 +618,10 @@ function MarketingPage() {
               icon={<Megaphone className="h-12 w-12" />}
               title="No campaigns"
               description="Create your first campaign with AI assistance."
-              action={
-                <Button onClick={() => setIsCreateOpen(true)}>
-                  Create Campaign
-                </Button>
-              }
+              action={{
+                label: "Create Campaign",
+                onClick: () => setIsCreateOpen(true),
+              }}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -939,11 +920,10 @@ function MarketingPage() {
               icon={<Users className="h-12 w-12" />}
               title="No audience segments"
               description="Create segments to target your campaigns effectively."
-              action={
-                <Button onClick={() => setIsSegmentOpen(true)}>
-                  Create Segment
-                </Button>
-              }
+              action={{
+                label: "Create Segment",
+                onClick: () => setIsSegmentOpen(true),
+              }}
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

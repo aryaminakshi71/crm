@@ -61,3 +61,5 @@ export const dashboardClient = api.dashboard;
 export const assetsClient = api.assets;
 export const modulesClient = api.modules;
 export const nucleoClient = api.nucleo;
+export const marketingClient = api.marketing;
+export const inventoryClient = api.inventory;
