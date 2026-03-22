@@ -1,15 +1,15 @@
 /**
  * Reorder Point Alerts
  *
- * View and manage stock alerts and reorder notifications.
+ * View and manage stock alerts and reorder notifications — data from real API.
  */
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
+import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Search,
-  Filter,
   CheckCircle2,
   AlertTriangle,
   Package,
@@ -18,6 +18,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useState } from "react";
+import { inventoryApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/inventory/alerts")({
   component: AlertsPage,
@@ -27,21 +28,30 @@ function AlertsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
 
-  const alerts = [
-    { id: "1", type: "out_of_stock", product: "Wireless Earbuds", sku: "AUDIO-WE-2024-WHT", currentStock: 0, reorderPoint: 100, warehouse: "Warehouse B", suggestedOrder: 200, priority: "critical", createdAt: "5 hours ago" },
-    { id: "2", type: "low_stock", product: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", currentStock: 8, reorderPoint: 25, warehouse: "Warehouse A", suggestedOrder: 100, priority: "high", createdAt: "2 hours ago" },
-    { id: "3", type: "low_stock", product: "iPhone 15 Pro Case", sku: "IPH-15-PRO-CASE-BLK", currentStock: 12, reorderPoint: 50, warehouse: "Warehouse A", suggestedOrder: 100, priority: "high", createdAt: "2 hours ago" },
-    { id: "4", type: "expiring", product: "Organic Face Cream", sku: "BEAU-OFC-50ML", currentStock: 45, reorderPoint: 20, warehouse: "Warehouse C", suggestedOrder: 100, priority: "medium", createdAt: "1 day ago", expiresIn: "15 days" },
-    { id: "5", type: "reorder", product: "Running Shoes Size 10", sku: "SPORT-RS-10-BLU", currentStock: 8, reorderPoint: 25, warehouse: "Warehouse A", suggestedOrder: 50, priority: "high", createdAt: "1 day ago" },
-    { id: "6", type: "overstock", product: "USB-C Cables", sku: "ELEC-USB-C-1M", currentStock: 500, reorderPoint: 50, warehouse: "Warehouse B", suggestedOrder: 0, priority: "low", createdAt: "2 days ago" },
-    { id: "7", type: "low_stock", product: "LED Desk Lamp", sku: "HOME-LAMP-LED", currentStock: 15, reorderPoint: 20, warehouse: "Distribution Center", suggestedOrder: 50, priority: "medium", createdAt: "3 days ago" },
-  ];
+  const queryClient = useQueryClient();
 
-  const filteredAlerts = alerts.filter((alert) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["inventory", "alerts", { resolved: false }],
+    queryFn: () => inventoryApi.alerts.list({ limit: 100, resolved: false }),
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: (id: string) => inventoryApi.alerts.resolve(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory", "alerts"] });
+    },
+  });
+
+  const alerts = data?.data ?? [];
+
+  const filteredAlerts = alerts.filter((alert: any) => {
+    const productName = (alert.productName ?? alert.product ?? "").toLowerCase();
+    const sku = (alert.sku ?? "").toLowerCase();
     const matchesSearch =
-      alert.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === "all" || alert.type === filterType;
+      productName.includes(searchQuery.toLowerCase()) ||
+      sku.includes(searchQuery.toLowerCase());
+    const alertType = alert.alertType ?? alert.type ?? "";
+    const matchesType = filterType === "all" || alertType === filterType;
     return matchesSearch && matchesType;
   });
 
@@ -75,23 +85,10 @@ function AlertsPage() {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return <Badge variant="danger" size="sm">Critical</Badge>;
-      case "high":
-        return <Badge variant="warning" size="sm">High</Badge>;
-      case "medium":
-        return <Badge variant="default" size="sm">Medium</Badge>;
-      case "low":
-        return <Badge variant="default" size="sm">Low</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{priority}</Badge>;
-    }
-  };
-
-  const criticalCount = alerts.filter((a) => a.priority === "critical").length;
-  const highCount = alerts.filter((a) => a.priority === "high").length;
+  const outOfStockCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "out_of_stock").length;
+  const lowStockCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "low_stock").length;
+  const expiringCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "expiring").length;
+  const overstockCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "overstock").length;
 
   return (
     <div className="space-y-6">
@@ -100,7 +97,7 @@ function AlertsPage() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Reorder Alerts</h2>
           <p className="text-sm text-muted-foreground">
-            {alerts.length} alerts / {criticalCount} critical / {highCount} high priority
+            {isLoading ? "Loading..." : `${alerts.length} alerts`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -122,7 +119,7 @@ function AlertsPage() {
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-8 w-8 text-red-600" />
               <div>
-                <p className="text-2xl font-bold text-red-600">{alerts.filter((a) => a.type === "out_of_stock").length}</p>
+                <p className="text-2xl font-bold text-red-600">{isLoading ? "…" : outOfStockCount}</p>
                 <p className="text-xs text-red-600/80">Out of Stock</p>
               </div>
             </div>
@@ -133,7 +130,7 @@ function AlertsPage() {
             <div className="flex items-center gap-3">
               <Bell className="h-8 w-8 text-yellow-600" />
               <div>
-                <p className="text-2xl font-bold text-yellow-600">{alerts.filter((a) => a.type === "low_stock").length}</p>
+                <p className="text-2xl font-bold text-yellow-600">{isLoading ? "…" : lowStockCount}</p>
                 <p className="text-xs text-yellow-600/80">Low Stock</p>
               </div>
             </div>
@@ -144,7 +141,7 @@ function AlertsPage() {
             <div className="flex items-center gap-3">
               <Clock className="h-8 w-8 text-orange-600" />
               <div>
-                <p className="text-2xl font-bold text-orange-600">{alerts.filter((a) => a.type === "expiring").length}</p>
+                <p className="text-2xl font-bold text-orange-600">{isLoading ? "…" : expiringCount}</p>
                 <p className="text-xs text-orange-600/80">Expiring Soon</p>
               </div>
             </div>
@@ -155,7 +152,7 @@ function AlertsPage() {
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold text-green-600">{alerts.filter((a) => a.type === "overstock").length}</p>
+                <p className="text-2xl font-bold text-green-600">{isLoading ? "…" : overstockCount}</p>
                 <p className="text-xs text-muted-foreground">Overstock</p>
               </div>
             </div>
@@ -188,46 +185,65 @@ function AlertsPage() {
       </div>
 
       {/* Alerts List */}
-      <div className="space-y-3">
-        {filteredAlerts.map((alert) => (
-          <Card key={alert.id} className={`border-border/60 ${
-            alert.priority === "critical" ? "border-red-200" :
-            alert.priority === "high" ? "border-yellow-200" : ""
-          }`}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="mt-1">{getTypeIcon(alert.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-semibold text-foreground">{alert.product}</h3>
-                    {getTypeBadge(alert.type)}
-                    {getPriorityBadge(alert.priority)}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">SKU: {alert.sku} / {alert.warehouse}</p>
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span>Current: <strong className={alert.currentStock === 0 ? "text-red-600" : "text-yellow-600"}>{alert.currentStock}</strong></span>
-                    <span>Reorder Point: <strong>{alert.reorderPoint}</strong></span>
-                    {alert.expiresIn && <span>Expires in: <strong className="text-orange-600">{alert.expiresIn}</strong></span>}
-                    <span>Suggested Order: <strong>{alert.suggestedOrder > 0 ? alert.suggestedOrder : "None"}</strong></span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {alert.suggestedOrder > 0 && (
-                    <Link to="/app/inventory/purchase-orders">
-                      <Button size="sm" leftIcon={<ShoppingCart className="h-3 w-3" />}>
-                        Create PO
-                      </Button>
-                    </Link>
-                  )}
-                  <Button variant="outline" size="sm">
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Loading alerts...</div>
+      ) : (
+        <div className="space-y-3">
+          {filteredAlerts.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No alerts found</h3>
+              <p className="text-sm text-muted-foreground">All stock levels are healthy.</p>
+            </div>
+          ) : (
+            filteredAlerts.map((alert: any) => {
+              const alertType = alert.alertType ?? alert.type ?? "unknown";
+              const productName = alert.productName ?? alert.product ?? "Unknown product";
+              return (
+                <Card key={alert.id} className="border-border/60">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="mt-1">{getTypeIcon(alertType)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-foreground">{productName}</h3>
+                          {getTypeBadge(alertType)}
+                        </div>
+                        {alert.sku && (
+                          <p className="text-sm text-muted-foreground mb-2">SKU: {alert.sku}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          {alert.currentStock !== undefined && (
+                            <span>Current: <strong className={alert.currentStock === 0 ? "text-red-600" : "text-yellow-600"}>{alert.currentStock}</strong></span>
+                          )}
+                          {alert.threshold !== undefined && (
+                            <span>Reorder Point: <strong>{alert.threshold}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Link to="/app/inventory/purchase-orders">
+                          <Button size="sm" leftIcon={<ShoppingCart className="h-3 w-3" />}>
+                            Create PO
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => resolveMutation.mutate(alert.id)}
+                          disabled={resolveMutation.isPending}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,20 +1,18 @@
 /**
  * Product Catalog
  *
- * Browse and manage product catalog.
+ * Browse and manage product catalog with real API integration.
  */
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
+import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Package,
   Search,
   Plus,
   MoreHorizontal,
   Edit,
-  Trash2,
-  Copy,
-  Filter,
   Grid,
   List,
   Image,
@@ -22,6 +20,13 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
+import { inventoryApi } from "../lib/api";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/products")({
   component: ProductsPage,
@@ -30,124 +35,25 @@ export const Route = createFileRoute("/app/inventory/products")({
 function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
-  const products = [
-    {
-      id: "prod1",
-      sku: "ELEC-4KTV-55",
-      name: '55" 4K Smart TV',
-      category: "Electronics",
-      price: 499.99,
-      cost: 320.00,
-      stock: 124,
-      reorderPoint: 20,
-      status: "active",
-      image: null,
-      variants: 3,
-    },
-    {
-      id: "prod2",
-      sku: "ELEC-LAP-15",
-      name: "Laptop 15\" Pro",
-      category: "Electronics",
-      price: 999.99,
-      cost: 650.00,
-      stock: 89,
-      reorderPoint: 15,
-      status: "active",
-      image: null,
-      variants: 2,
-    },
-    {
-      id: "prod3",
-      sku: "HOME-SOF-3S",
-      name: "3-Seater Sofa",
-      category: "Home & Garden",
-      price: 999.00,
-      cost: 580.00,
-      stock: 45,
-      reorderPoint: 10,
-      status: "active",
-      image: null,
-      variants: 5,
-    },
-    {
-      id: "prod4",
-      sku: "SPORT-BIKE-MTN",
-      name: "Mountain Bike",
-      category: "Sports",
-      price: 599.99,
-      cost: 380.00,
-      stock: 23,
-      reorderPoint: 5,
-      status: "low_stock",
-      image: null,
-      variants: 4,
-    },
-    {
-      id: "prod5",
-      sku: "APPA-JKT-WIN-B",
-      name: "Winter Jacket Black",
-      category: "Apparel",
-      price: 149.99,
-      cost: 65.00,
-      stock: 156,
-      reorderPoint: 30,
-      status: "active",
-      image: null,
-      variants: 6,
-    },
-    {
-      id: "prod6",
-      sku: "ELEC-HEAD-无线",
-      name: "Wireless Headphones Pro",
-      category: "Electronics",
-      price: 249.99,
-      cost: 120.00,
-      stock: 8,
-      reorderPoint: 25,
-      status: "low_stock",
-      image: null,
-      variants: 3,
-    },
-    {
-      id: "prod7",
-      sku: "HOME-LAMP-LED",
-      name: "LED Desk Lamp",
-      category: "Home & Garden",
-      price: 79.99,
-      cost: 35.00,
-      stock: 0,
-      reorderPoint: 20,
-      status: "out_of_stock",
-      image: null,
-      variants: 2,
-    },
-    {
-      id: "prod8",
-      sku: "BEAU-SKR-SPF50",
-      name: "SPF 50 Sunscreen",
-      category: "Beauty",
-      price: 24.99,
-      cost: 8.50,
-      stock: 234,
-      reorderPoint: 50,
-      status: "active",
-      image: null,
-      variants: 1,
-    },
-  ];
+  const queryClient = useQueryClient();
 
-  const categories = ["all", "Electronics", "Home & Garden", "Sports", "Apparel", "Beauty"];
-
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === "all" || product.category === filterCategory;
-    return matchesSearch && matchesCategory;
+  const { data, isLoading } = useQuery({
+    queryKey: ["inventory", "products", { search: searchQuery, category: filterCategory, status: filterStatus }],
+    queryFn: () =>
+      inventoryApi.products.list({
+        search: searchQuery || undefined,
+        category: filterCategory || undefined,
+        status: filterStatus || undefined,
+        limit: 100,
+      }),
+    placeholderData: (prev) => prev,
   });
+
+  const products = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -156,10 +62,19 @@ function ProductsPage() {
       case "low_stock":
         return <Badge variant="warning" size="sm">Low Stock</Badge>;
       case "out_of_stock":
-        return <Badge variant="danger" size="sm">Out of Stock</Badge>;
+      case "inactive":
+        return <Badge variant="danger" size="sm">{status === "out_of_stock" ? "Out of Stock" : "Inactive"}</Badge>;
+      case "discontinued":
+        return <Badge variant="default" size="sm">Discontinued</Badge>;
       default:
         return <Badge variant="default" size="sm">{status}</Badge>;
     }
+  };
+
+  const getProductStatus = (product: any) => {
+    if (product.currentStock === 0) return "out_of_stock";
+    if (product.currentStock <= product.minStockLevel) return "low_stock";
+    return product.status ?? "active";
   };
 
   return (
@@ -169,7 +84,7 @@ function ProductsPage() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Product Catalog</h2>
           <p className="text-sm text-muted-foreground">
-            {filteredProducts.length} products
+            {isLoading ? "Loading..." : `${total} products`}
           </p>
         </div>
         <Link to="/app/inventory/products/new">
@@ -196,11 +111,22 @@ function ProductsPage() {
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === "all" ? "All Categories" : cat}
-              </option>
-            ))}
+            <option value="">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Home & Garden">Home & Garden</option>
+            <option value="Sports">Sports</option>
+            <option value="Apparel">Apparel</option>
+            <option value="Beauty">Beauty</option>
+          </select>
+          <select
+            className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="discontinued">Discontinued</option>
           </select>
           <div className="flex border rounded-lg overflow-hidden">
             <button
@@ -219,88 +145,48 @@ function ProductsPage() {
         </div>
       </div>
 
-      {/* Products Grid/List */}
-      {viewMode === "grid" ? (
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Loading products...</div>
+      ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="border-border/60 hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center">
-                  {product.image ? (
-                    <Image className="h-12 w-12 text-muted-foreground" />
-                  ) : (
+          {products.map((product: any) => {
+            const statusKey = getProductStatus(product);
+            return (
+              <Card key={product.id} className="border-border/60 hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center">
                     <Package className="h-12 w-12 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  {getStatusBadge(product.status)}
-                  <span className="text-xs text-muted-foreground">{product.category}</span>
-                </div>
-                <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{product.name}</h3>
-                <p className="text-xs text-muted-foreground mb-3">SKU: {product.sku}</p>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-lg font-bold text-foreground">${product.price.toFixed(2)}</span>
-                  <span className="text-sm text-muted-foreground">Cost: ${product.cost.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm mb-4">
-                  <span className={product.stock <= product.reorderPoint ? "text-yellow-600" : "text-muted-foreground"}>
-                    Stock: {product.stock}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {product.variants} variants
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Link to="/app/inventory/products/$id" params={{ id: product.id }} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full" leftIcon={<Edit className="h-3 w-3" />}>
-                      Edit
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="border-border/60">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                    {product.image ? (
-                      <Image className="h-8 w-8 text-muted-foreground" />
-                    ) : (
-                      <Package className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    {getStatusBadge(statusKey)}
+                    {product.category && (
+                      <span className="text-xs text-muted-foreground">{product.category}</span>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-foreground">{product.name}</h3>
-                      {getStatusBadge(product.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground">SKU: {product.sku} / {product.category}</p>
+                  <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{product.name}</h3>
+                  {product.sku && (
+                    <p className="text-xs text-muted-foreground mb-3">SKU: {product.sku}</p>
+                  )}
+                  <div className="flex items-center justify-between mb-3">
+                    {product.sellingPrice && (
+                      <span className="text-lg font-bold text-foreground">
+                        ${Number(product.sellingPrice).toFixed(2)}
+                      </span>
+                    )}
+                    {product.costPrice && (
+                      <span className="text-sm text-muted-foreground">
+                        Cost: ${Number(product.costPrice).toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">${product.price.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground">Cost: ${product.cost.toFixed(2)}</p>
-                  </div>
-                  <div className="text-right min-w-[80px]">
-                    <p className={`font-medium ${product.stock <= product.reorderPoint ? "text-yellow-600" : "text-foreground"}`}>
-                      {product.stock} in stock
-                    </p>
-                    <p className="text-xs text-muted-foreground">Reorder: {product.reorderPoint}</p>
-                  </div>
-                  <div className="text-right min-w-[60px]">
-                    <p className="text-sm text-muted-foreground">{product.variants}</p>
-                    <p className="text-xs text-muted-foreground">variants</p>
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <span className={product.currentStock <= product.minStockLevel ? "text-yellow-600" : "text-muted-foreground"}>
+                      Stock: {product.currentStock ?? 0}
+                    </span>
                   </div>
                   <div className="flex gap-2">
-                    <Link to="/app/inventory/products/$id" params={{ id: product.id }}>
-                      <Button variant="outline" size="sm" leftIcon={<Edit className="h-3 w-3" />}>
+                    <Link to="/app/inventory/products/$id" params={{ id: product.id }} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full" leftIcon={<Edit className="h-3 w-3" />}>
                         Edit
                       </Button>
                     </Link>
@@ -308,19 +194,72 @@ function ProductsPage() {
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {products.map((product: any) => {
+            const statusKey = getProductStatus(product);
+            return (
+              <Card key={product.id} className="border-border/60">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Package className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-foreground">{product.name}</h3>
+                        {getStatusBadge(statusKey)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {product.sku && `SKU: ${product.sku}`}
+                        {product.category && ` / ${product.category}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {product.sellingPrice && (
+                        <p className="font-bold text-foreground">${Number(product.sellingPrice).toFixed(2)}</p>
+                      )}
+                      {product.costPrice && (
+                        <p className="text-xs text-muted-foreground">Cost: ${Number(product.costPrice).toFixed(2)}</p>
+                      )}
+                    </div>
+                    <div className="text-right min-w-[80px]">
+                      <p className={`font-medium ${product.currentStock <= product.minStockLevel ? "text-yellow-600" : "text-foreground"}`}>
+                        {product.currentStock ?? 0} in stock
+                      </p>
+                      {product.minStockLevel > 0 && (
+                        <p className="text-xs text-muted-foreground">Reorder: {product.minStockLevel}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Link to="/app/inventory/products/$id" params={{ id: product.id }}>
+                        <Button variant="outline" size="sm" leftIcon={<Edit className="h-3 w-3" />}>
+                          Edit
+                        </Button>
+                      </Link>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {filteredProducts.length === 0 && (
+      {!isLoading && products.length === 0 && (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Try adjusting your search or filter criteria.
+            Try adjusting your search or filter criteria, or add a new product.
           </p>
           <Link to="/app/inventory/products/new">
             <Button leftIcon={<Plus className="h-4 w-4" />}>Add Product</Button>

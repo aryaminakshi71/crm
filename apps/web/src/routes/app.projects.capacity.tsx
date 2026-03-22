@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Calendar,
@@ -15,7 +16,8 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { nucleoApi } from "../lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -47,14 +49,32 @@ function CapacityPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
-  // Mock team data
-  const teamMembers: TeamMember[] = [
-    { id: "1", name: "Sarah Chen", role: "Lead Developer", capacity: 8, allocation: 95 },
-    { id: "2", name: "Mike Johnson", role: "Senior Developer", capacity: 8, allocation: 85 },
-    { id: "3", name: "Emily Davis", role: "Designer", capacity: 8, allocation: 70 },
-    { id: "4", name: "Alex Kim", role: "Developer", capacity: 6, allocation: 100, avatar: undefined }, // Part-time
-    { id: "5", name: "Jordan Lee", role: "QA Engineer", capacity: 8, allocation: 60 },
-  ];
+  // Fetch all projects, then resources for first project
+  const { data: projectsData } = useQuery({
+    queryKey: ["nucleo-projects-capacity"],
+    queryFn: () => nucleoApi.projects.list({ page: 1, limit: 50 }),
+  });
+
+  const firstProjectId = projectsData?.data?.[0]?.id;
+
+  const { data: resourcesData } = useQuery({
+    queryKey: ["nucleo-project-resources-capacity", firstProjectId],
+    queryFn: () => nucleoApi.projects.resources.list(firstProjectId!),
+    enabled: !!firstProjectId,
+  });
+
+  // Map API resources to TeamMember shape; fall back to empty array
+  const teamMembers: TeamMember[] = useMemo(() => {
+    const resources = resourcesData?.data ?? [];
+    if (resources.length === 0) return [];
+    return resources.map((r: any) => ({
+      id: r.id,
+      name: r.name ?? r.userName ?? "Team Member",
+      role: r.role ?? r.jobTitle ?? "Member",
+      capacity: 8,
+      allocation: typeof r.allocation === "number" ? r.allocation : 80,
+    }));
+  }, [resourcesData]);
 
   // Generate week days
   const getWeekDays = (date: Date) => {
@@ -100,7 +120,9 @@ function CapacityPage() {
     (sum, m) => sum + (m.capacity * m.allocation) / 100,
     0
   );
-  const avgUtilization = teamMembers.reduce((sum, m) => sum + m.allocation, 0) / teamMembers.length;
+  const avgUtilization = teamMembers.length > 0
+    ? teamMembers.reduce((sum, m) => sum + m.allocation, 0) / teamMembers.length
+    : 0;
 
   // Get utilization color
   const getUtilizationColor = (utilization: number) => {

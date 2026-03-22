@@ -1,104 +1,120 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ArrowLeft,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Building2,
-  FileText,
-  Heart,
-  TrendingUp,
-  Target,
-  Clock,
-  Edit,
-  Download,
-  MoreVertical,
-  User,
-  Users,
-  Star,
-  Award,
-  GraduationCap,
-  Briefcase,
-  Home,
   AlertCircle,
+  ArrowLeft,
+  Building2,
+  Calendar,
   CheckCircle2,
+  Download,
+  Edit,
+  FileText,
+  GraduationCap,
+  Heart,
+  Mail,
+  MapPin,
+  MoreVertical,
+  Phone,
+  Star,
+  Target,
+  TrendingUp,
+  User,
   XCircle,
 } from "lucide-react";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm/employees/$id")({
   component: EmployeeProfile,
 });
 
-const employeeData: Record<string, any> = {
-  "1": {
-    id: "1",
-    name: "Sarah Chen",
-    role: "Senior Software Engineer",
-    dept: "Engineering",
-    email: "sarah.chen@nucleo.one",
-    phone: "+1 (555) 123-4567",
-    location: "San Francisco, CA",
-    status: "Active",
-    avatar: "SC",
-    startDate: "Jan 15, 2023",
-    manager: "David Park",
-    managerId: "999",
-    employeeId: "EMP-001",
-    salary: "$145,000",
-    employmentType: "Full-time",
-    bio: "Experienced software engineer with 8+ years building scalable web applications. Passionate about clean code, mentoring junior developers, and adopting new technologies.",
-    skills: ["TypeScript", "React", "Node.js", "PostgreSQL", "AWS", "Docker"],
-    education: [
-      { degree: "M.S. Computer Science", school: "Stanford University", year: "2018" },
-      { degree: "B.S. Computer Science", school: "UC Berkeley", year: "2016" },
-    ],
-    documents: [
-      { name: "Resume", type: "PDF", uploadedAt: "Jan 10, 2026" },
-      { name: "Offer Letter", type: "PDF", uploadedAt: "Jan 12, 2023" },
-      { name: "NDA", type: "PDF", uploadedAt: "Jan 12, 2023" },
-      { name: "W-4 Form", type: "PDF", uploadedAt: "Jan 14, 2023" },
-    ],
-    benefits: [
-      { name: "Health Insurance", status: "Enrolled", provider: "Blue Shield" },
-      { name: "Dental Insurance", status: "Enrolled", provider: "Delta Dental" },
-      { name: "401(k)", status: "Enrolled", contribution: "6%" },
-      { name: "Life Insurance", status: "Enrolled", coverage: "$200,000" },
-    ],
-    leave: {
-      pto: { total: 20, used: 8, remaining: 12 },
-      sick: { total: 10, used: 3, remaining: 7 },
-      personal: { total: 3, used: 1, remaining: 2 },
-    },
-    performance: {
-      overall: 4.5,
-      reviews: [
-        { period: "2025 H2", rating: 4.5, status: "Completed", date: "Dec 15, 2025" },
-        { period: "2025 H1", rating: 4.2, status: "Completed", date: "Jun 20, 2025" },
-        { period: "2024 H2", rating: 4.0, status: "Completed", date: "Dec 18, 2024" },
-      ],
-    },
-    okrs: [
-      { objective: "Improve System Performance", keyResults: ["Reduce API latency by 30%", "Achieve 99.9% uptime", "Complete migration to GraphQL"], progress: 75, status: "On Track" },
-      { objective: "Mentor Junior Developers", keyResults: ["Conduct 4 code reviews weekly", "Lead 2 technical sessions", "Onboard 2 new team members"], progress: 60, status: "On Track" },
-    ],
-  },
-};
+function formatDate(value: unknown): string {
+  if (!value) return "-";
+  const dt = new Date(String(value));
+  if (Number.isNaN(dt.getTime())) return "-";
+  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 function EmployeeProfile() {
   const params = Route.useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [showActions, setShowActions] = useState(false);
 
-  const employee = employeeData[params.id] || employeeData["1"];
+  // Fetch all employees then find the one matching :id
+  const { data: employeesData, isLoading } = useQuery({
+    queryKey: ["hrm-employees-all"],
+    queryFn: () => nucleoApi.hrm.employees.list({ page: 1, limit: 200 }),
+  });
+
+  const { data: leaveData } = useQuery({
+    queryKey: ["hrm-leave-requests"],
+    queryFn: () => nucleoApi.hrm.leaveRequests.list({ page: 1, limit: 100 }),
+  });
+
+  const { data: reviewsData } = useQuery({
+    queryKey: ["hrm-reviews"],
+    queryFn: () => nucleoApi.hrm.reviews.list({ page: 1, limit: 100 }),
+  });
+
+  const employees: any[] = employeesData?.data ?? [];
+  const rawEmployee = employees.find((e) => e.id === params.id) ?? employees[0];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!rawEmployee) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground">Employee not found</p>
+        <a href="/app/hrm/directory" className="text-primary hover:underline text-sm">
+          Back to Directory
+        </a>
+      </div>
+    );
+  }
+
+  // Map API fields to display shape
+  const allLeave: any[] = leaveData?.data ?? [];
+  const empLeave = allLeave.filter((l) => l.employeeId === rawEmployee.id);
+
+  const allReviews: any[] = reviewsData?.data ?? [];
+  const empReviews = allReviews.filter((r) => r.employeeId === rawEmployee.id);
+
+  const employee = {
+    id: rawEmployee.id,
+    name: rawEmployee.fullName ?? rawEmployee.name ?? "Unknown",
+    role: rawEmployee.jobTitle ?? "Employee",
+    dept: rawEmployee.department ?? "General",
+    email: rawEmployee.workEmail ?? rawEmployee.email ?? "",
+    phone: rawEmployee.phone ?? "",
+    location: rawEmployee.location ?? "",
+    status: rawEmployee.status ?? "active",
+    avatar: getInitials(rawEmployee.fullName ?? rawEmployee.name ?? "?"),
+    startDate: formatDate(rawEmployee.joinDate),
+    manager: rawEmployee.managerName ?? "",
+    employmentType: rawEmployee.employmentType ?? "full_time",
+    leaveRequests: empLeave,
+    reviews: empReviews,
+  };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: User },
-    { id: "documents", label: "Documents", icon: FileText },
-    { id: "benefits", label: "Benefits", icon: Heart },
     { id: "performance", label: "Performance", icon: TrendingUp },
-    { id: "okrs", label: "OKRs", icon: Target },
     { id: "leave", label: "Leave", icon: Calendar },
   ];
 
@@ -176,17 +192,6 @@ function EmployeeProfile() {
             </div>
           </div>
 
-          {/* Bio */}
-          <p className="mt-4 text-sm text-muted-foreground">{employee.bio}</p>
-
-          {/* Skills */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {employee.skills.map((skill: string) => (
-              <span key={skill} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
-                {skill}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* Tabs */}
@@ -213,10 +218,7 @@ function EmployeeProfile() {
       {/* Tab Content */}
       <div className="min-h-[400px]">
         {activeTab === "overview" && <OverviewTab employee={employee} />}
-        {activeTab === "documents" && <DocumentsTab employee={employee} />}
-        {activeTab === "benefits" && <BenefitsTab employee={employee} />}
         {activeTab === "performance" && <PerformanceTab employee={employee} />}
-        {activeTab === "okrs" && <OKRsTab employee={employee} />}
         {activeTab === "leave" && <LeaveTab employee={employee} />}
       </div>
     </div>
@@ -230,22 +232,28 @@ function OverviewTab({ employee }: { employee: any }) {
       <div className="rounded-lg border border-border/60 bg-card p-6">
         <h3 className="font-semibold text-foreground mb-4">Contact Information</h3>
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <a href={`mailto:${employee.email}`} className="text-sm text-primary hover:underline">
-              {employee.email}
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <a href={`tel:${employee.phone}`} className="text-sm text-foreground">
-              {employee.phone}
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">{employee.location}</span>
-          </div>
+          {employee.email && (
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <a href={`mailto:${employee.email}`} className="text-sm text-primary hover:underline">
+                {employee.email}
+              </a>
+            </div>
+          )}
+          {employee.phone && (
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <a href={`tel:${employee.phone}`} className="text-sm text-foreground">
+                {employee.phone}
+              </a>
+            </div>
+          )}
+          {employee.location && (
+            <div className="flex items-center gap-3">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">{employee.location}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -254,153 +262,45 @@ function OverviewTab({ employee }: { employee: any }) {
         <h3 className="font-semibold text-foreground mb-4">Employment Details</h3>
         <div className="space-y-3">
           <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Employee ID</span>
-            <span className="text-sm font-medium text-foreground">{employee.employeeId}</span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Department</span>
             <span className="text-sm font-medium text-foreground">{employee.dept}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Manager</span>
-            <a href={`/app/hrm/employees/${employee.managerId}`} className="text-sm text-primary hover:underline">
-              {employee.manager}
-            </a>
-          </div>
+          {employee.manager && (
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Manager</span>
+              <span className="text-sm font-medium text-foreground">{employee.manager}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Employment Type</span>
-            <span className="text-sm font-medium text-foreground">{employee.employmentType}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Salary</span>
-            <span className="text-sm font-medium text-foreground">{employee.salary}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Education */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Education</h3>
-        <div className="space-y-4">
-          {employee.education.map((edu: any, idx: number) => (
-            <div key={idx} className="flex items-start gap-3">
-              <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{edu.degree}</p>
-                <p className="text-xs text-muted-foreground">{edu.school} · {edu.year}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Direct Reports */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Direct Reports</h3>
-        <div className="space-y-3">
-          {["Jessica Lee", "Rachel Green", "Kevin Zhang"].map((name) => (
-            <a key={name} href="/app/hrm/employees/1" className="flex items-center gap-3 hover:bg-muted/30 rounded-lg p-2 -mx-2 transition-colors">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                {name.split(" ").map((n) => n[0]).join("")}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{name}</p>
-                <p className="text-xs text-muted-foreground">Software Engineer</p>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DocumentsTab({ employee }: { employee: any }) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-card">
-      <div className="border-b border-border/60 px-6 py-4 flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">Documents</h3>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          <FileText className="h-4 w-4" />
-          Upload
-        </button>
-      </div>
-      <div className="p-6">
-        <div className="space-y-3">
-          {employee.documents.map((doc: any, idx: number) => (
-            <div key={idx} className="flex items-center justify-between rounded-lg border border-border/60 p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 text-red-500">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{doc.name}</p>
-                  <p className="text-xs text-muted-foreground">{doc.type} · Uploaded {doc.uploadedAt}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                  <Download className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BenefitsTab({ employee }: { employee: any }) {
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {employee.benefits.map((benefit: any, idx: number) => (
-        <div key={idx} className="rounded-lg border border-border/60 bg-card p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <Heart className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground">{benefit.name}</p>
-                <p className="text-xs text-muted-foreground">{benefit.provider || benefit.contribution || benefit.coverage}</p>
-              </div>
-            </div>
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              {benefit.status}
+            <span className="text-sm font-medium text-foreground capitalize">
+              {employee.employmentType.replace(/_/g, " ")}
             </span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Join Date</span>
+            <span className="text-sm font-medium text-foreground">{employee.startDate}</span>
+          </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
 function PerformanceTab({ employee }: { employee: any }) {
+  const reviews: any[] = employee.reviews ?? [];
+
+  if (reviews.length === 0) {
+    return (
+      <div className="rounded-lg border border-border/60 bg-card p-12 text-center">
+        <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No performance reviews yet</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Overall Rating */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Overall Performance Rating</h3>
-        <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-            <span className="text-3xl font-bold text-primary">{employee.performance.overall}</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`h-5 w-5 ${star <= Math.round(employee.performance.overall) ? "fill-amber-400 text-amber-400" : "text-muted"}`}
-                />
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">Based on {employee.performance.reviews.length} reviews</p>
-          </div>
-        </div>
-      </div>
-
       {/* Review History */}
       <div className="rounded-lg border border-border/60 bg-card">
         <div className="border-b border-border/60 px-6 py-4">
@@ -408,18 +308,24 @@ function PerformanceTab({ employee }: { employee: any }) {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {employee.performance.reviews.map((review: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between rounded-lg border border-border/40 p-4">
+            {reviews.map((review: any) => (
+              <div key={review.id} className="flex items-center justify-between rounded-lg border border-border/40 p-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 font-semibold">
-                    {review.rating}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 font-semibold text-sm">
+                    {review.goalsProgress ?? 0}%
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{review.period}</p>
-                    <p className="text-xs text-muted-foreground">Completed on {review.date}</p>
+                    <p className="font-medium text-foreground">{review.reviewCycle ?? "Review"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Rating: {review.rating ?? "not_rated"} · Goals: {review.goalsProgress ?? 0}%
+                    </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  review.status === "completed"
+                    ? "bg-emerald-500/10 text-emerald-500"
+                    : "bg-amber-500/10 text-amber-500"
+                }`}>
                   {review.status}
                 </span>
               </div>
@@ -431,95 +337,49 @@ function PerformanceTab({ employee }: { employee: any }) {
   );
 }
 
-function OKRsTab({ employee }: { employee: any }) {
-  return (
-    <div className="space-y-6">
-      {employee.okrs.map((okr: any, idx: number) => (
-        <div key={idx} className="rounded-lg border border-border/60 bg-card p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-foreground">{okr.objective}</h3>
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${
-                okr.status === "On Track" ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-              }`}>
-                {okr.status}
-              </span>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-primary">{okr.progress}%</p>
-              <p className="text-xs text-muted-foreground">Complete</p>
-            </div>
-          </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden mb-4">
-            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${okr.progress}%` }} />
-          </div>
-          <div className="space-y-2">
-            {okr.keyResults.map((kr: string, krIdx: number) => (
-              <div key={krIdx} className="flex items-center gap-2">
-                <div className={`h-1.5 w-1.5 rounded-full ${okr.progress > 50 ? "bg-emerald-500" : "bg-muted-foreground"}`} />
-                <span className="text-sm text-muted-foreground">{kr}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function LeaveTab({ employee }: { employee: any }) {
-  const leaveTypes = [
-    { name: "PTO", ...employee.leave.pto, color: "bg-blue-500" },
-    { name: "Sick Leave", ...employee.leave.sick, color: "bg-amber-500" },
-    { name: "Personal", ...employee.leave.personal, color: "bg-purple-500" },
-  ];
+  const leaveRequests: any[] = employee.leaveRequests ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Leave Balances */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {leaveTypes.map((leave) => (
-          <div key={leave.name} className="rounded-lg border border-border/60 bg-card p-6">
-            <h3 className="font-medium text-foreground mb-4">{leave.name}</h3>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-foreground">{leave.remaining}</span>
-              <span className="text-sm text-muted-foreground mb-1">/ {leave.total} days</span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden mt-3">
-              <div
-                className={`h-full ${leave.color} rounded-full`}
-                style={{ width: `${(leave.remaining / leave.total) * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">{leave.used} days used</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Leave */}
+      {/* Leave Requests */}
       <div className="rounded-lg border border-border/60 bg-card">
         <div className="border-b border-border/60 px-6 py-4">
-          <h3 className="font-semibold text-foreground">Recent Leave Requests</h3>
+          <h3 className="font-semibold text-foreground">Leave Requests</h3>
         </div>
         <div className="p-6">
-          <div className="space-y-3">
-            {[
-              { type: "PTO", dates: "Mar 15-19, 2026", days: 5, status: "Approved" },
-              { type: "Sick Leave", dates: "Feb 28, 2026", days: 1, status: "Approved" },
-              { type: "Personal", dates: "Feb 14, 2026", days: 1, status: "Approved" },
-            ].map((leave, idx) => (
-              <div key={idx} className="flex items-center justify-between rounded-lg border border-border/40 p-4">
-                <div>
-                  <p className="font-medium text-foreground">{leave.type}</p>
-                  <p className="text-xs text-muted-foreground">{leave.dates} · {leave.days} day(s)</p>
+          {leaveRequests.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">No leave requests found</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {leaveRequests.map((leave: any) => (
+                <div key={leave.id} className="flex items-center justify-between rounded-lg border border-border/40 p-4">
+                  <div>
+                    <p className="font-medium text-foreground capitalize">{leave.leaveType?.replace(/_/g, " ")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(leave.startDate)} – {formatDate(leave.endDate)}
+                    </p>
+                    {leave.reason && (
+                      <p className="text-xs text-muted-foreground mt-1">{leave.reason}</p>
+                    )}
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    leave.status === "approved"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : leave.status === "rejected"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-amber-500/10 text-amber-500"
+                  }`}>
+                    {leave.status === "approved" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                    {leave.status}
+                  </span>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {leave.status}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

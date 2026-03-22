@@ -6,15 +6,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   Calendar,
   CheckCircle2,
   Clock,
+  FolderKanban,
   Plus,
   Target,
-  Users,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -53,66 +54,36 @@ type Task = {
 
 function SprintsPage() {
   const navigate = useNavigate();
-  const [selectedSprint, setSelectedSprint] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  // Mock sprints data
-  const sprints: Sprint[] = [
-    {
-      id: "s1",
-      name: "Sprint 1",
-      goal: "Complete user authentication",
-      startDate: "2024-01-01",
-      endDate: "2024-01-14",
-      status: "completed",
-      tasksTotal: 12,
-      tasksCompleted: 12,
-      velocity: 34,
-    },
-    {
-      id: "s2",
-      name: "Sprint 2",
-      goal: "Build dashboard UI",
-      startDate: "2024-01-15",
-      endDate: "2024-01-28",
-      status: "completed",
-      tasksTotal: 15,
-      tasksCompleted: 14,
-      velocity: 38,
-    },
-    {
-      id: "s3",
-      name: "Sprint 3",
-      goal: "API integration",
-      startDate: "2024-01-29",
-      endDate: "2024-02-11",
-      status: "active",
-      tasksTotal: 18,
-      tasksCompleted: 8,
-      velocity: 24,
-    },
-    {
-      id: "s4",
-      name: "Sprint 4",
-      goal: "Performance optimization",
-      startDate: "2024-02-12",
-      endDate: "2024-02-25",
-      status: "planning",
-      tasksTotal: 0,
-      tasksCompleted: 0,
-    },
-  ];
+  // Use projects as sprint containers (no dedicated sprint API endpoint)
+  const { data: projectsData, isLoading } = useQuery({
+    queryKey: ["nucleo-projects"],
+    queryFn: () => nucleoApi.projects.list({ page: 1, limit: 100 }),
+  });
 
-  // Mock tasks for selected sprint
-  const sprintTasks: Task[] = selectedSprint === "s3" ? [
-    { id: "t1", title: "Set up API client", status: "done", priority: "high", assignee: "Sarah", storyPoints: 3 },
-    { id: "t2", title: "Create user endpoints", status: "done", priority: "high", assignee: "Sarah", storyPoints: 5 },
-    { id: "t3", title: "Implement auth middleware", status: "done", priority: "high", assignee: "Mike", storyPoints: 8 },
-    { id: "t4", title: "Build REST adapter", status: "in_progress", priority: "medium", assignee: "Emily", storyPoints: 5 },
-    { id: "t5", title: "Add error handling", status: "todo", priority: "medium", assignee: "Emily", storyPoints: 3 },
-    { id: "t6", title: "Write API tests", status: "todo", priority: "high", assignee: "Sarah", storyPoints: 5 },
-    { id: "t7", title: "Document endpoints", status: "todo", priority: "low", assignee: "Mike", storyPoints: 2 },
-    { id: "t8", title: "Performance benchmarks", status: "todo", priority: "medium", assignee: "Emily", storyPoints: 3 },
-  ] : [];
+  const projects: any[] = projectsData?.data ?? [];
+
+  // Fetch tasks for the selected project
+  const { data: tasksData } = useQuery({
+    queryKey: ["nucleo-project-tasks", selectedProjectId],
+    queryFn: () => nucleoApi.projects.tasks.list(selectedProjectId!),
+    enabled: !!selectedProjectId,
+  });
+
+  const sprintTasks: Task[] = (tasksData?.data ?? []) as Task[];
+
+  // Map projects to sprint shape
+  const sprints: Sprint[] = projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    goal: p.description ?? "",
+    startDate: p.createdAt ?? new Date().toISOString(),
+    endDate: p.dueDate ?? new Date(Date.now() + 14 * 86400 * 1000).toISOString(),
+    status: p.status === "completed" ? "completed" : p.status === "planning" ? "planning" : "active",
+    tasksTotal: 0,
+    tasksCompleted: 0,
+  }));
 
   const activeSprint = sprints.find((s) => s.status === "active");
   const planningSprints = sprints.filter((s) => s.status === "planning");
@@ -214,13 +185,13 @@ function SprintsPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold">Sprint Board</CardTitle>
-            <div className="flex gap-2">
-              {sprints.map((sprint) => (
+            <div className="flex gap-2 flex-wrap">
+              {sprints.slice(0, 6).map((sprint) => (
                 <button
                   key={sprint.id}
-                  onClick={() => setSelectedSprint(sprint.id)}
+                  onClick={() => setSelectedProjectId(sprint.id)}
                   className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                    selectedSprint === sprint.id
+                    selectedProjectId === sprint.id
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-muted/80"
                   }`}
@@ -231,7 +202,11 @@ function SprintsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {selectedSprint === "s3" || !selectedSprint ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : selectedProjectId ? (
               <div className="grid grid-cols-3 gap-4">
                 {/* To Do */}
                 <div className="space-y-3">
@@ -274,19 +249,24 @@ function SprintsPage() {
                       Done
                     </h4>
                     <Badge variant="success" size="sm">
-                      {sprintTasks.filter((t) => t.status === "done").length}
+                      {sprintTasks.filter((t) => (t.status === "done" || t.status === "completed")).length}
                     </Badge>
                   </div>
                   {sprintTasks
-                    .filter((t) => t.status === "done")
+                    .filter((t) => t.status === "done" || t.status === "completed")
                     .map((task) => (
                       <SprintTaskCard key={task.id} task={task} />
                     ))}
                 </div>
               </div>
+            ) : sprints.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+                <FolderKanban className="h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">No projects found. Create a project to plan sprints.</p>
+              </div>
             ) : (
               <div className="py-12 text-center text-muted-foreground">
-                Select a sprint to view board
+                Select a project to view its tasks
               </div>
             )}
           </CardContent>

@@ -9,6 +9,7 @@ import {
   FormModal,
   Input,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Calendar,
@@ -29,6 +30,7 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { nucleoApi } from "../lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -81,37 +83,23 @@ function ClientPortalPage() {
     accessLevel: "view" as ClientAccess["accessLevel"],
   });
 
-  // Mock client projects
-  const clientProjects: ClientProject[] = [
-    {
-      id: "p1",
-      name: "Website Redesign",
-      clientName: "Acme Corp",
-      status: "active",
-      progress: 65,
-      lastUpdated: "2024-01-15",
-      nextMilestone: "Design Review",
-      nextMilestoneDate: "2024-01-20",
-    },
-    {
-      id: "p2",
-      name: "Mobile App Development",
-      clientName: "TechStart Inc",
-      status: "active",
-      progress: 42,
-      lastUpdated: "2024-01-14",
-      nextMilestone: "Beta Release",
-      nextMilestoneDate: "2024-01-25",
-    },
-    {
-      id: "p3",
-      name: "E-commerce Platform",
-      clientName: "RetailCo",
-      status: "completed",
-      progress: 100,
-      lastUpdated: "2024-01-10",
-    },
-  ];
+  // Fetch real projects from API
+  const { data: projectsData } = useQuery({
+    queryKey: ["nucleo-projects-client-portal"],
+    queryFn: () => nucleoApi.projects.list({ page: 1, limit: 100 }),
+  });
+
+  const rawProjects = projectsData?.data ?? [];
+
+  // Map API projects to ClientProject shape
+  const clientProjects: ClientProject[] = rawProjects.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    clientName: p.clientName ?? p.description?.split(" ")[0] ?? "External Client",
+    status: (p.status === "completed" ? "completed" : p.status === "on_hold" ? "on_hold" : "active") as ClientProject["status"],
+    progress: p.progress ?? 0,
+    lastUpdated: p.updatedAt ?? p.createdAt ?? new Date().toISOString(),
+  }));
 
   // Mock client accesses
   const clientAccesses: ClientAccess[] = [

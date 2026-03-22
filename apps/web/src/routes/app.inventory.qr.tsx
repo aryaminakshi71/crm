@@ -1,7 +1,7 @@
 /**
  * QR Code Generator
  *
- * Generate QR codes for products and locations.
+ * Generate QR codes for products and locations — products from real API.
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
@@ -17,33 +17,46 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { inventoryApi } from "../lib/api";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/qr")({
   component: QRGeneratorPage,
 });
+
+// Hardcoded locations (no locations API endpoint)
+const LOCATIONS = [
+  { code: "A-01-1", name: "Warehouse A - Zone A - Aisle 1 - Rack 1" },
+  { code: "A-02-1", name: "Warehouse A - Zone A - Aisle 2 - Rack 1" },
+  { code: "B-01-1", name: "Warehouse B - Zone B - Aisle 1 - Rack 1" },
+  { code: "C-01-1", name: "Warehouse C - Zone C - Aisle 1 - Rack 1" },
+  { code: "DC-01-1", name: "Distribution Center - Zone DC - Aisle 1" },
+];
 
 function QRGeneratorPage() {
   const [selectedType, setSelectedType] = useState<"product" | "location">("product");
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
 
-  const products = [
-    { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', barcode: "012345678901" },
-    { sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", barcode: "012345678902" },
-    { sku: "HOME-SOF-3S", name: "3-Seater Sofa", barcode: "012345678903" },
-    { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", barcode: "012345678904" },
-    { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", barcode: "012345678905" },
-  ];
+  const { data: productsData, isLoading: productsLoading } = useQuery({
+    queryKey: ["inventory", "products", "qr"],
+    queryFn: () => inventoryApi.products.list({ limit: 100 }),
+    enabled: selectedType === "product",
+  });
 
-  const locations = [
-    { code: "A-01-1", name: "Warehouse A - Zone A - Aisle 1 - Rack 1" },
-    { code: "A-02-1", name: "Warehouse A - Zone A - Aisle 2 - Rack 1" },
-    { code: "B-01-1", name: "Warehouse B - Zone B - Aisle 1 - Rack 1" },
-    { code: "C-01-1", name: "Warehouse C - Zone C - Aisle 1 - Rack 1" },
-    { code: "DC-01-1", name: "Distribution Center - Zone DC - Aisle 1" },
-  ];
+  const products = (productsData?.data ?? []).map((p: any) => ({
+    sku: p.sku ?? p.id,
+    name: p.name,
+    barcode: p.barcode,
+  }));
 
-  const items = selectedType === "product" ? products : locations;
+  const items = selectedType === "product" ? products : LOCATIONS;
 
   const generateQR = () => {
     if (selectedItem) {
@@ -78,7 +91,7 @@ function QRGeneratorPage() {
             {/* Type Selection */}
             <div className="flex gap-4">
               <button
-                onClick={() => setSelectedType("product")}
+                onClick={() => { setSelectedType("product"); setSelectedItem(null); }}
                 className={`flex-1 p-4 rounded-lg border transition-colors ${
                   selectedType === "product"
                     ? "border-primary bg-primary/5"
@@ -90,7 +103,7 @@ function QRGeneratorPage() {
                 <p className="text-xs text-muted-foreground">For individual items</p>
               </button>
               <button
-                onClick={() => setSelectedType("location")}
+                onClick={() => { setSelectedType("location"); setSelectedItem(null); }}
                 className={`flex-1 p-4 rounded-lg border transition-colors ${
                   selectedType === "location"
                     ? "border-primary bg-primary/5"
@@ -108,29 +121,36 @@ function QRGeneratorPage() {
               <label className="text-sm font-medium text-foreground mb-2 block">
                 Select {selectedType === "product" ? "Products" : "Locations"}
               </label>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {items.map((item) => (
-                  <button
-                    key={"sku" in item ? item.sku : item.code}
-                    onClick={() => setSelectedItem("sku" in item ? item.sku : item.code)}
-                    className={`w-full p-3 text-left rounded-lg border transition-colors ${
-                      selectedItem === ("sku" in item ? item.sku : item.code)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <QrCode className={`h-5 w-5 ${selectedItem === ("sku" in item ? item.sku : item.code) ? "text-primary" : "text-muted-foreground"}`} />
-                      <div>
-                        <p className="font-medium text-foreground">{"sku" in item ? item.name : item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {"sku" in item ? `SKU: ${item.sku}` : `Code: ${item.code}`}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {selectedType === "product" && productsLoading ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">Loading products...</div>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {items.map((item) => {
+                    const key = "sku" in item ? item.sku : item.code;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedItem(key)}
+                        className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                          selectedItem === key
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <QrCode className={`h-5 w-5 ${selectedItem === key ? "text-primary" : "text-muted-foreground"}`} />
+                          <div>
+                            <p className="font-medium text-foreground">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {"sku" in item ? `SKU: ${item.sku}` : `Code: ${item.code}`}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -213,14 +233,14 @@ function QRGeneratorPage() {
               <label className="text-sm font-medium text-foreground mb-1 block">Size</label>
               <select className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
                 <option>Small (100x100)</option>
-                <option selected>Medium (200x200)</option>
+                <option>Medium (200x200)</option>
                 <option>Large (300x300)</option>
               </select>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Format</label>
               <select className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                <option selected>PNG</option>
+                <option>PNG</option>
                 <option>SVG</option>
                 <option>PDF</option>
               </select>
@@ -228,7 +248,7 @@ function QRGeneratorPage() {
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Include Logo</label>
               <select className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                <option selected>None</option>
+                <option>None</option>
                 <option>Company Logo</option>
               </select>
             </div>
@@ -236,7 +256,7 @@ function QRGeneratorPage() {
               <label className="text-sm font-medium text-foreground mb-1 block">Error Correction</label>
               <select className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
                 <option>Low (7%)</option>
-                <option selected>Medium (15%)</option>
+                <option>Medium (15%)</option>
                 <option>Quartile (25%)</option>
                 <option>High (30%)</option>
               </select>

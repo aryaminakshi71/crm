@@ -1,31 +1,30 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
+  Award,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
   GraduationCap,
+  MoreVertical,
   Plus,
   Search,
-  Filter,
-  Download,
-  MoreVertical,
-  Play,
-  Clock,
   Users,
-  BookOpen,
-  Award,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
-  Video,
-  FileText,
-  BarChart3,
-  Star,
 } from "lucide-react";
+import { toast } from "sonner";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm/training")({
   component: TrainingPrograms,
 });
 
-const programs = [
+// Mock data removed – training programs now fetched from API via nucleoApi.hrm.training.programs.list()
+
+function _unused() {
+  return [
   {
     id: "1",
     title: "React Fundamentals",
@@ -130,38 +129,50 @@ const programs = [
     status: "Active",
     nextSession: "Self-paced",
     instructor: "Chris Martinez",
-    icon: Cloud,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
+    status: "active",
   },
-];
-
-const trainingRecords = [
-  { id: "1", employee: "Sarah Chen", program: "React Fundamentals", status: "Completed", score: 95, completedAt: "Mar 15, 2026", duration: "8 hours" },
-  { id: "2", employee: "Marcus Johnson", program: "Leadership Essentials", status: "In Progress", score: null, completedAt: null, duration: "2/4 hours" },
-  { id: "3", employee: "Jessica Lee", program: "Data Privacy & Compliance", status: "Completed", score: 88, completedAt: "Mar 10, 2026", duration: "2 hours" },
-  { id: "4", employee: "David Kim", program: "Sales Techniques Mastery", status: "Completed", score: 92, completedAt: "Mar 8, 2026", duration: "10 hours" },
-  { id: "5", employee: "Emily Rodriguez", program: "Product Design Thinking", status: "In Progress", score: null, completedAt: null, duration: "4/6 hours" },
-];
+  ]; // end _unused
+}
 
 function TrainingPrograms() {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"programs" | "records">("programs");
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All Types");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newProgram, setNewProgram] = useState({ title: "", category: "General", durationHours: "4" });
 
-  const filteredPrograms = programs.filter((program) => {
-    const matchesSearch = program.title.toLowerCase().includes(search.toLowerCase()) || program.description.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "All Types" || program.type === typeFilter;
-    const matchesStatus = statusFilter === "All Status" || program.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
+  const { data: programsData, isLoading: loadingPrograms } = useQuery({
+    queryKey: ["hrm-training-programs"],
+    queryFn: () => nucleoApi.hrm.training.programs.list({ page: 1, limit: 100 }),
   });
 
-  const types = ["All Types", "Technical", "Leadership", "Compliance", "Design", "Sales"];
-  const statuses = ["All Status", "Active", "Mandatory", "Completed"];
-  const totalEnrolled = programs.reduce((acc, p) => acc + p.enrolled, 0);
-  const totalCompleted = programs.reduce((acc, p) => acc + p.completed, 0);
-  const completionRate = Math.round((totalCompleted / totalEnrolled) * 100);
+  const { data: recordsData, isLoading: loadingRecords } = useQuery({
+    queryKey: ["hrm-training-records"],
+    queryFn: () => nucleoApi.hrm.training.records.list({ page: 1, limit: 100 }),
+  });
+
+  const createProgram = useMutation({
+    mutationFn: (data: any) => nucleoApi.hrm.training.programs.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hrm-training-programs"] });
+      toast.success("Training program created");
+      setIsCreateOpen(false);
+      setNewProgram({ title: "", category: "General", durationHours: "4" });
+    },
+    onError: () => toast.error("Failed to create program"),
+  });
+
+  const programs: any[] = programsData?.data ?? [];
+  const records: any[] = recordsData?.data ?? [];
+
+  const filteredPrograms = programs.filter((p) => {
+    if (!search.trim()) return true;
+    return (
+      p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      p.description?.toLowerCase().includes(search.toLowerCase()) ||
+      p.category?.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -178,7 +189,10 @@ function TrainingPrograms() {
             <Download className="h-4 w-4" />
             Export Records
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
             <Plus className="h-4 w-4" />
             Create Program
           </button>
@@ -186,14 +200,14 @@ function TrainingPrograms() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border/60 bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
               <BookOpen className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active Programs</p>
+              <p className="text-sm text-muted-foreground">Programs</p>
               <p className="text-xl font-bold text-foreground">{programs.length}</p>
             </div>
           </div>
@@ -204,8 +218,8 @@ function TrainingPrograms() {
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Enrolled</p>
-              <p className="text-xl font-bold text-foreground">{totalEnrolled}</p>
+              <p className="text-sm text-muted-foreground">Assignments</p>
+              <p className="text-xl font-bold text-foreground">{records.length}</p>
             </div>
           </div>
         </div>
@@ -216,18 +230,9 @@ function TrainingPrograms() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Completions</p>
-              <p className="text-xl font-bold text-foreground">{totalCompleted}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-lg border border-border/60 bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Completion Rate</p>
-              <p className="text-xl font-bold text-foreground">{completionRate}%</p>
+              <p className="text-xl font-bold text-foreground">
+                {records.filter((r) => r.status === "completed" || r.completedAt).length}
+              </p>
             </div>
           </div>
         </div>
@@ -292,178 +297,193 @@ function TrainingPrograms() {
           </div>
 
           {/* Programs Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredPrograms.map((program) => (
-              <div key={program.id} className="rounded-lg border border-border/60 bg-card p-6 hover:bg-muted/30 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${program.bgColor}`}>
-                    <program.icon className={`h-6 w-6 ${program.color}`} />
-                  </div>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    program.status === "Active"
-                      ? "bg-emerald-500/10 text-emerald-500"
-                      : program.status === "Mandatory"
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-gray-500/10 text-gray-500"
-                  }`}>
-                    {program.status}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">{program.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{program.description}</p>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {program.type}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {program.format}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {program.duration}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-foreground">{program.enrolled}</p>
-                      <p className="text-[10px] text-muted-foreground">Enrolled</p>
+          {loadingPrograms ? (
+            <div className="flex items-center justify-center min-h-[200px]">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : filteredPrograms.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card py-12">
+              <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="font-semibold text-foreground mb-1">No programs found</h3>
+              <p className="text-sm text-muted-foreground">
+                {search ? "Try adjusting your search" : "Create your first training program"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredPrograms.map((program: any) => (
+                <div key={program.id} className="rounded-lg border border-border/60 bg-card p-6 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <GraduationCap className="h-6 w-6" />
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-foreground">{program.completed}</p>
-                      <p className="text-[10px] text-muted-foreground">Completed</p>
-                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      program.status === "active"
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : program.status === "mandatory"
+                          ? "bg-red-500/10 text-red-500"
+                          : "bg-gray-500/10 text-gray-500"
+                    }`}>
+                      {program.status}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <span className="text-sm font-semibold text-foreground">{program.rating}</span>
-                  </div>
-                </div>
+                  <h3 className="font-semibold text-foreground mb-2">{program.title}</h3>
+                  {program.description && (
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{program.description}</p>
+                  )}
 
-                <div className="mt-4 flex gap-2">
-                  <button className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50">
-                    View Details
-                  </button>
-                  <button className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-                    Enroll
-                  </button>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {program.category && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {program.category}
+                      </span>
+                    )}
+                    {program.provider && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {program.provider}
+                      </span>
+                    )}
+                    {program.durationHours && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {program.durationHours}h
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </>
+      )}
+
+      {/* Create Program Modal */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Create Training Program</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground">Title</label>
+                <input
+                  type="text"
+                  value={newProgram.title}
+                  onChange={(e) => setNewProgram((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Program title"
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Category</label>
+                <input
+                  type="text"
+                  value={newProgram.category}
+                  onChange={(e) => setNewProgram((p) => ({ ...p, category: e.target.value }))}
+                  placeholder="e.g. Technical, Leadership"
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Duration (hours)</label>
+                <input
+                  type="number"
+                  value={newProgram.durationHours}
+                  onChange={(e) => setNewProgram((p) => ({ ...p, durationHours: e.target.value }))}
+                  min="1"
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setIsCreateOpen(false)}
+                className="flex-1 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!newProgram.title.trim()) return;
+                  createProgram.mutate({
+                    title: newProgram.title,
+                    category: newProgram.category,
+                    durationHours: parseInt(newProgram.durationHours) || 4,
+                  });
+                }}
+                disabled={createProgram.isPending}
+                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {createProgram.isPending ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Training Records View */}
       {viewMode === "records" && (
         <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60 bg-muted/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Program</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Score</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Duration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Completed</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trainingRecords.map((record) => (
-                <tr key={record.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-foreground text-sm">{record.employee}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{record.program}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      record.status === "Completed"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : "bg-amber-500/10 text-amber-500"
-                    }`}>
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {record.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {record.score ? (
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold text-foreground">{record.score}%</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{record.duration}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{record.completedAt || "—"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </td>
+          {loadingRecords ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : records.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-sm">No training records found</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Program</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Progress</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Completed</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {filteredPrograms.length === 0 && viewMode === "programs" && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card py-12">
-          <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="font-semibold text-foreground mb-1">No programs found</h3>
-          <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+              </thead>
+              <tbody>
+                {records.map((record: any) => (
+                  <tr key={record.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground text-sm">{record.employeeId ?? "—"}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{record.programId ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        record.status === "completed"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-amber-500/10 text-amber-500"
+                      }`}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {record.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {record.progress !== undefined ? (
+                        <span className="font-semibold text-foreground">{record.progress}%</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {record.completedAt ? new Date(record.completedAt).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// Missing icon components
-function Code({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  );
-}
-
-function Shield({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
-
-function Lightbulb({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18h6" />
-      <path d="M10 22h4" />
-      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-    </svg>
-  );
-}
-
-function Cloud({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-    </svg>
-  );
-}
-
-function TrendingUp({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
-  );
-}

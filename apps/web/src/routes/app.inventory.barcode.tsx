@@ -1,7 +1,7 @@
 /**
  * Barcode Scanner Interface
  *
- * Scan barcodes to look up products and update stock.
+ * Scan barcodes to look up products and update stock — connected to real inventory API.
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
@@ -20,6 +20,14 @@ import {
   Settings,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { inventoryApi } from "../lib/api";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/inventory/barcode")({
   component: BarcodeScannerPage,
@@ -27,34 +35,63 @@ export const Route = createFileRoute("/app/inventory/barcode")({
 
 function BarcodeScannerPage() {
   const [manualInput, setManualInput] = useState("");
-  const [lastScanned, setLastScanned] = useState<{
-    sku: string;
-    name: string;
-    barcode: string;
-    stock: number;
-    location: string;
-    warehouse: string;
-  } | null>(null);
+  const [lastScanned, setLastScanned] = useState<any | null>(null);
+  const [scanNotFound, setScanNotFound] = useState(false);
   const [adjustmentQty, setAdjustmentQty] = useState(0);
-  const [recentScans] = useState([
-    { id: "1", sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', scannedAt: "2 min ago", action: "Viewed" },
-    { id: "2", sku: "ELEC-LAP-15", name: "Laptop 15\" Pro", scannedAt: "5 min ago", action: "Stock +5" },
-    { id: "3", sku: "HOME-SOF-3S", name: "3-Seater Sofa", scannedAt: "8 min ago", action: "Viewed" },
-    { id: "4", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", scannedAt: "12 min ago", action: "Stock -2" },
-  ]);
+  const [recentScans, setRecentScans] = useState<Array<{ id: string; sku: string; name: string; scannedAt: string; action: string }>>([]);
 
-  const handleScan = () => {
-    if (manualInput) {
-      setLastScanned({
-        sku: "ELEC-4KTV-55",
-        name: '55" 4K Smart TV',
-        barcode: manualInput,
-        stock: 50,
-        location: "A-12-3",
-        warehouse: "Warehouse A",
-      });
-      setManualInput("");
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: ({ productId, newStock }: { productId: string; newStock: number }) =>
+      inventoryApi.products.update(productId, { currentStock: newStock }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory", "products"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory", "stats"] });
+    },
+  });
+
+  const handleScan = async () => {
+    if (!manualInput.trim()) return;
+    setScanNotFound(false);
+    try {
+      // Search by barcode or SKU
+      const result = await inventoryApi.products.list({ search: manualInput.trim(), limit: 1 });
+      const product = result?.data?.[0];
+      if (product) {
+        setLastScanned(product);
+        setAdjustmentQty(0);
+        setRecentScans((prev) => [
+          { id: String(Date.now()), sku: product.sku ?? product.id, name: product.name, scannedAt: "Just now", action: "Viewed" },
+          ...prev.slice(0, 9),
+        ]);
+      } else {
+        setLastScanned(null);
+        setScanNotFound(true);
+      }
+    } catch {
+      setLastScanned(null);
+      setScanNotFound(true);
     }
+    setManualInput("");
+  };
+
+  const handleApplyAdjustment = () => {
+    if (!lastScanned || adjustmentQty === 0) return;
+    const newStock = Math.max(0, (lastScanned.currentStock ?? 0) + adjustmentQty);
+    updateMutation.mutate({ productId: lastScanned.id, newStock });
+    setRecentScans((prev) => [
+      {
+        id: String(Date.now()),
+        sku: lastScanned.sku ?? lastScanned.id,
+        name: lastScanned.name,
+        scannedAt: "Just now",
+        action: adjustmentQty > 0 ? `Stock +${adjustmentQty}` : `Stock ${adjustmentQty}`,
+      },
+      ...prev.slice(0, 9),
+    ]);
+    setLastScanned({ ...lastScanned, currentStock: newStock });
+    setAdjustmentQty(0);
   };
 
   return (
@@ -120,12 +157,19 @@ function BarcodeScannerPage() {
                   placeholder="Enter barcode or SKU..."
                   value={manualInput}
                   onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleScan()}
                   className="flex-1"
                 />
                 <Button onClick={handleScan} leftIcon={<Search className="h-4 w-4" />}>
                   Look Up
                 </Button>
               </div>
+              {scanNotFound && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-red-600">
+                  <AlertTriangle className="h-4 w-4" />
+                  No product found for that barcode or SKU.
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -148,23 +192,25 @@ function BarcodeScannerPage() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg text-foreground">{lastScanned.name}</h3>
-                    <p className="text-sm text-muted-foreground">SKU: {lastScanned.sku}</p>
-                    <p className="text-sm text-muted-foreground">Barcode: {lastScanned.barcode}</p>
+                    <p className="text-sm text-muted-foreground">SKU: {lastScanned.sku ?? "—"}</p>
+                    {lastScanned.barcode && (
+                      <p className="text-sm text-muted-foreground">Barcode: {lastScanned.barcode}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <p className="text-xs text-muted-foreground">Current Stock</p>
-                    <p className="text-2xl font-bold text-foreground">{lastScanned.stock}</p>
+                    <p className="text-2xl font-bold text-foreground">{lastScanned.currentStock ?? 0}</p>
                   </div>
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="text-lg font-semibold text-foreground">{lastScanned.location}</p>
+                    <p className="text-xs text-muted-foreground">Category</p>
+                    <p className="text-lg font-semibold text-foreground">{lastScanned.category ?? "—"}</p>
                   </div>
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Warehouse</p>
-                    <p className="text-lg font-semibold text-foreground">{lastScanned.warehouse}</p>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="text-lg font-semibold text-foreground capitalize">{lastScanned.status ?? "active"}</p>
                   </div>
                 </div>
 
@@ -195,7 +241,11 @@ function BarcodeScannerPage() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button variant="success" className="flex-1">
+                    <Button
+                      className="flex-1"
+                      onClick={handleApplyAdjustment}
+                      disabled={adjustmentQty === 0 || updateMutation.isPending}
+                    >
                       Apply Adjustment
                     </Button>
                   </div>
@@ -211,26 +261,33 @@ function BarcodeScannerPage() {
             <CardTitle className="text-base font-semibold">Recent Scans</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentScans.map((scan) => (
-                <div
-                  key={scan.id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                >
-                  <div className="rounded-lg bg-primary/10 p-2">
-                    <ScanBarcode className="h-4 w-4 text-primary" />
+            {recentScans.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ScanBarcode className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">No scans yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentScans.map((scan) => (
+                  <div
+                    key={scan.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
+                    <div className="rounded-lg bg-primary/10 p-2">
+                      <ScanBarcode className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{scan.name}</p>
+                      <p className="text-xs text-muted-foreground">SKU: {scan.sku}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-medium text-foreground">{scan.action}</p>
+                      <p className="text-xs text-muted-foreground">{scan.scannedAt}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{scan.name}</p>
-                    <p className="text-xs text-muted-foreground">SKU: {scan.sku}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-medium text-foreground">{scan.action}</p>
-                    <p className="text-xs text-muted-foreground">{scan.scannedAt}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

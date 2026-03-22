@@ -1,19 +1,20 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  GitBranch,
-  Search,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Download,
+  Building2,
   ChevronDown,
   ChevronRight,
-  Users,
+  Download,
   Mail,
+  Maximize2,
   Phone,
-  Building2,
+  Search,
+  Users,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm/org-chart")({
   component: OrgChart,
@@ -30,15 +31,72 @@ interface OrgNode {
   children?: OrgNode[];
 }
 
-const orgData: OrgNode = {
-  id: "ceo",
-  name: "Jennifer Walsh",
-  role: "Chief Executive Officer",
-  dept: "Executive",
-  avatar: "JW",
-  email: "jennifer.walsh@nucleo.one",
-  phone: "+1 (555) 100-0001",
-  children: [
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/** Build an OrgNode tree from a flat list of employees */
+function buildOrgTree(employees: any[]): OrgNode | null {
+  if (employees.length === 0) return null;
+
+  // Map by fullName for manager lookup
+  const byName = new Map<string, any>();
+  for (const emp of employees) {
+    byName.set((emp.fullName ?? "").toLowerCase(), emp);
+  }
+
+  const nodes: Map<string, OrgNode> = new Map();
+  for (const emp of employees) {
+    nodes.set(emp.id, {
+      id: emp.id,
+      name: emp.fullName ?? emp.name ?? "Unknown",
+      role: emp.jobTitle ?? "Employee",
+      dept: emp.department ?? "General",
+      avatar: getInitials(emp.fullName ?? emp.name ?? "?"),
+      email: emp.workEmail ?? emp.email ?? "",
+      phone: emp.phone ?? "",
+      children: [],
+    });
+  }
+
+  const roots: OrgNode[] = [];
+  for (const emp of employees) {
+    const node = nodes.get(emp.id)!;
+    const managerName = (emp.managerName ?? "").toLowerCase().trim();
+    if (!managerName) {
+      roots.push(node);
+      continue;
+    }
+    const manager = byName.get(managerName);
+    if (manager && nodes.has(manager.id)) {
+      nodes.get(manager.id)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  // If multiple roots, wrap in a virtual node
+  if (roots.length === 1) return roots[0];
+  if (roots.length === 0) return null;
+
+  return {
+    id: "__org_root__",
+    name: "Organization",
+    role: "",
+    dept: "",
+    avatar: "ORG",
+    email: "",
+    phone: "",
+    children: roots,
+  };
+}
+
+function OrgChart() {
     {
       id: "cto",
       name: "David Park",
@@ -224,7 +282,24 @@ function OrgChart() {
   const [zoom, setZoom] = useState(100);
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState<OrgNode | null>(null);
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(["ceo", "cto", "cmo", "cso", "coo"]));
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  const { data: employeesData, isLoading } = useQuery({
+    queryKey: ["hrm-employees-org"],
+    queryFn: () => nucleoApi.hrm.employees.list({ page: 1, limit: 200 }),
+  });
+
+  const orgData = useMemo(() => {
+    const employees: any[] = employeesData?.data ?? [];
+    return buildOrgTree(employees);
+  }, [employeesData]);
+
+  // Auto-expand root on first load
+  useMemo(() => {
+    if (orgData) {
+      setExpandedNodes(new Set([orgData.id]));
+    }
+  }, [orgData?.id]);
 
   const toggleNode = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
@@ -237,6 +312,7 @@ function OrgChart() {
   };
 
   const expandAll = () => {
+    if (!orgData) return;
     const allIds = new Set<string>();
     const collectIds = (node: OrgNode) => {
       allIds.add(node.id);
@@ -262,7 +338,7 @@ function OrgChart() {
     return [];
   };
 
-  const highlightedPath = search ? highlightPath(orgData) : [];
+  const highlightedPath = search && orgData ? highlightPath(orgData) : [];
 
   const renderNode = (node: OrgNode, level: number = 0, parentPath: OrgNode[] = []) => {
     const isExpanded = expandedNodes.has(node.id);
@@ -413,12 +489,23 @@ function OrgChart() {
       <div className="flex gap-6">
         {/* Chart */}
         <div className="flex-1 rounded-lg border border-border/60 bg-card p-6 overflow-auto">
-          <div
-            className="min-w-max transition-transform origin-top-left"
-            style={{ transform: `scale(${zoom / 100})` }}
-          >
-            {renderNode(orgData)}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[300px]">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : !orgData ? (
+            <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
+              <Users className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground">No employees found. Add employees to build the org chart.</p>
+            </div>
+          ) : (
+            <div
+              className="min-w-max transition-transform origin-top-left"
+              style={{ transform: `scale(${zoom / 100})` }}
+            >
+              {renderNode(orgData)}
+            </div>
+          )}
         </div>
 
         {/* Selected Node Details */}

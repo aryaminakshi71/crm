@@ -1,13 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Download,
-  Users,
+  Filter,
 } from "lucide-react";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm/leave/calendar")({
   component: LeaveCalendar,
@@ -15,23 +16,31 @@ export const Route = createFileRoute("/app/hrm/leave/calendar")({
 
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-const leaveEvents = [
-  { id: "1", name: "Alex Thompson", type: "Annual Leave", startDay: 25, endDay: 29, color: "bg-blue-500", dept: "Engineering" },
-  { id: "2", name: "Jessica Lee", type: "Sick Leave", startDay: 22, endDay: 23, color: "bg-amber-500", dept: "Engineering" },
-  { id: "3", name: "Michael Brown", type: "Annual Leave", startDay: 1, endDay: 10, color: "bg-blue-500", dept: "Marketing", monthOffset: 1 },
-  { id: "4", name: "Amanda White", type: "Personal Day", startDay: 24, endDay: 24, color: "bg-purple-500", dept: "Operations" },
-  { id: "5", name: "David Kim", type: "Annual Leave", startDay: 18, endDay: 20, color: "bg-blue-500", dept: "Sales" },
-  { id: "6", name: "Emily Rodriguez", type: "Sick Leave", startDay: 15, endDay: 15, color: "bg-amber-500", dept: "Design" },
-  { id: "7", name: "Chris Martinez", type: "Annual Leave", startDay: 10, endDay: 16, color: "bg-blue-500", dept: "Engineering", monthOffset: -1 },
-  { id: "8", name: "Lisa Wang", type: "Personal Day", startDay: 12, endDay: 13, color: "bg-purple-500", dept: "Marketing" },
-  { id: "9", name: "Sarah Chen", type: "Annual Leave", startDay: 5, endDay: 9, color: "bg-blue-500", dept: "Engineering" },
-  { id: "10", name: "James Wilson", type: "Sick Leave", startDay: 28, endDay: 28, color: "bg-amber-500", dept: "Sales" },
-];
+const LEAVE_COLOR_MAP: Record<string, string> = {
+  annual: "bg-blue-500",
+  sick: "bg-amber-500",
+  personal: "bg-purple-500",
+  maternity: "bg-pink-500",
+  paternity: "bg-indigo-500",
+  unpaid: "bg-gray-500",
+};
+
+function getLeaveColor(leaveType: string): string {
+  return LEAVE_COLOR_MAP[leaveType?.toLowerCase()] ?? "bg-gray-500";
+}
 
 function LeaveCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDept, setSelectedDept] = useState("All Departments");
   const [showLegend, setShowLegend] = useState(false);
+
+  const { data: leaveData } = useQuery({
+    queryKey: ["hrm-leave-requests-calendar"],
+    queryFn: () => nucleoApi.hrm.leaveRequests.list({ page: 1, limit: 200 }),
+  });
+
+  const allLeave: any[] = leaveData?.data ?? [];
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -49,30 +58,52 @@ function LeaveCalendar() {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date(2026, 2, 1));
+    setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
   };
 
-  const filteredEvents = leaveEvents.filter((event) => {
-    const monthMatch = event.monthOffset === undefined || event.monthOffset === 0;
-    return monthMatch && (selectedDept === "All Departments" || event.dept === selectedDept);
-  });
+  // Convert API leave requests to calendar events for the current month
+  const leaveEvents = useMemo(() => {
+    return allLeave
+      .filter((l) => l.status !== "rejected")
+      .map((l) => {
+        const start = new Date(l.startDate);
+        const end = new Date(l.endDate);
+        return {
+          id: l.id,
+          name: l.employee ?? "Employee",
+          type: l.leaveType ?? "annual",
+          color: getLeaveColor(l.leaveType),
+          startDate: start,
+          endDate: end,
+        };
+      });
+  }, [allLeave]);
 
-  const departments = ["All Departments", "Engineering", "Design", "Product", "Sales", "Marketing", "Operations"];
+  // Filter events to those that overlap with the current month
+  const filteredEvents = useMemo(() => {
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+    return leaveEvents.filter((e) => e.startDate <= monthEnd && e.endDate >= monthStart);
+  }, [leaveEvents, year, month]);
+
+  // Get all unique departments from employee names (not available from API, use empty list)
+  const departments = ["All Departments"];
 
   const days = [];
   for (let i = 0; i < startingDay; i++) {
-    days.push({ day: null, events: [] });
+    days.push({ day: null, events: [] as typeof filteredEvents });
   }
   for (let day = 1; day <= daysInMonth; day++) {
+    const dayDate = new Date(year, month, day);
     const dayEvents = filteredEvents.filter(
-      (event) => day >= event.startDay && day <= event.endDay
+      (event) => event.startDate <= dayDate && event.endDate >= dayDate,
     );
     days.push({ day, events: dayEvents });
   }
 
   // Fill remaining cells
   while (days.length % 7 !== 0) {
-    days.push({ day: null, events: [] });
+    days.push({ day: null, events: [] as typeof filteredEvents });
   }
 
   const weeks: typeof days[] = [];
@@ -80,7 +111,7 @@ function LeaveCalendar() {
     weeks.push(days.slice(i, i + 7));
   }
 
-  const today = { day: 20, month: 2, year: 2026 };
+  const todayDate = { day: today.getDate(), month: today.getMonth(), year: today.getFullYear() };
 
   return (
     <div className="space-y-6">
@@ -184,7 +215,7 @@ function LeaveCalendar() {
         <div className="grid grid-cols-7">
           {weeks.map((week, weekIdx) =>
             week.map((dayData, dayIdx) => {
-              const isToday = dayData.day === today.day && month === today.month && year === today.year;
+              const isToday = dayData.day === todayDate.day && month === todayDate.month && year === todayDate.year;
               return (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
@@ -236,23 +267,33 @@ function LeaveCalendar() {
           <h3 className="font-semibold text-foreground">Upcoming Time Off</h3>
         </div>
         <div className="p-6">
-          <div className="space-y-3">
-            {filteredEvents.slice(0, 5).map((event) => (
-              <div key={event.id} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-                <div className="flex items-center gap-3">
-                  <div className={`h-3 w-3 rounded-full ${event.color}`} />
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{event.name}</p>
-                    <p className="text-xs text-muted-foreground">{event.dept}</p>
+          {filteredEvents.length === 0 ? (
+            <div className="text-center py-6">
+              <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No leave scheduled this month</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredEvents.slice(0, 5).map((event) => (
+                <div key={event.id} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-3 w-3 rounded-full ${event.color}`} />
+                    <div>
+                      <p className="font-medium text-foreground text-sm">{event.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{event.type.replace(/_/g, " ")}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium text-foreground">
+                      {event.startDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      {" – "}
+                      {event.endDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-foreground">{event.startDay} - {event.endDay} {monthNames[month]}</p>
-                  <p className="text-xs text-muted-foreground">{event.type}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

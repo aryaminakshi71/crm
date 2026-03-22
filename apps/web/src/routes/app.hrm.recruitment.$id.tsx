@@ -1,33 +1,38 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
-  Mail,
-  Phone,
-  MapPin,
   Calendar,
-  FileText,
-  Star,
-  Clock,
   CheckCircle2,
-  XCircle,
-  Send,
-  Download,
-  MoreVertical,
-  User,
-  Briefcase,
+  FileText,
+  Mail,
   MessageSquare,
-  FileCheck,
-  ChevronRight,
-  Globe,
-  Link,
+  MoreVertical,
+  Phone,
+  Star,
+  User,
+  XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/hrm/recruitment/$id")({
   component: CandidateDetail,
 });
 
-const candidateData: Record<string, any> = {
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+// Unused legacy mock data kept here to avoid large diff
+const _legacyCandidateData: Record<string, any> = {
   "1": {
     id: "1",
     name: "Alex Rivera",
@@ -114,16 +119,70 @@ const candidateData: Record<string, any> = {
 
 function CandidateDetail() {
   const params = Route.useParams();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
   const [showActions, setShowActions] = useState(false);
 
-  const candidate = candidateData[params.id] || candidateData["1"];
+  // Fetch all candidates and find this one
+  const { data: candidatesData, isLoading } = useQuery({
+    queryKey: ["hrm-candidates"],
+    queryFn: () => nucleoApi.hrm.recruitment.candidates.list({ page: 1, limit: 200 }),
+  });
+
+  const allCandidates: any[] = candidatesData?.data ?? [];
+  const rawCandidate = allCandidates.find((c) => c.id === params.id) ?? allCandidates[0];
+
+  const updateStage = useMutation({
+    mutationFn: ({ id, stage }: { id: string; stage: string }) =>
+      nucleoApi.hrm.recruitment.candidates.update(id, { stage }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hrm-candidates"] });
+      toast.success("Stage updated");
+    },
+    onError: () => toast.error("Failed to update stage"),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!rawCandidate) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground">Candidate not found</p>
+        <a href="/app/hrm/recruitment" className="text-primary hover:underline text-sm">
+          Back to Recruitment
+        </a>
+      </div>
+    );
+  }
+
+  const candidate = {
+    id: rawCandidate.id,
+    name: rawCandidate.fullName ?? rawCandidate.name ?? "Unknown",
+    role: rawCandidate.requisitionTitle ?? "Position",
+    dept: "",
+    email: rawCandidate.email ?? "",
+    phone: rawCandidate.phone ?? "",
+    location: "",
+    stage: rawCandidate.stage ?? "applied",
+    status: "Active",
+    rating: rawCandidate.score ?? null,
+    appliedDate: rawCandidate.createdAt ? new Date(rawCandidate.createdAt).toLocaleDateString() : "",
+    source: rawCandidate.source ?? "Direct",
+    avatar: getInitials(rawCandidate.fullName ?? rawCandidate.name ?? "?"),
+    notes: rawCandidate.notes ? [{ author: "System", date: "", content: rawCandidate.notes }] : [],
+    resumeUrl: rawCandidate.resumeUrl ?? null,
+  };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: User },
-    { id: "timeline", label: "Timeline", icon: Clock },
-    { id: "interviews", label: "Interviews", icon: MessageSquare },
-    { id: "documents", label: "Documents", icon: FileText },
+    { id: "notes", label: "Notes", icon: MessageSquare },
   ];
 
   const getActionColor = (type: string) => {
@@ -157,14 +216,12 @@ function CandidateDetail() {
                 <h1 className="text-2xl font-bold text-foreground">{candidate.name}</h1>
                 <p className="text-muted-foreground">{candidate.role}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {candidate.location}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Briefcase className="h-3 w-3" />
-                    {candidate.experience}
-                  </span>
+                  {candidate.email && (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Mail className="h-3 w-3" />
+                      {candidate.email}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     Applied {candidate.appliedDate}
@@ -208,25 +265,23 @@ function CandidateDetail() {
           </div>
 
           {/* Quick Stats */}
-          <div className="mt-6 grid gap-4 sm:grid-cols-4">
-            <div className="rounded-lg bg-muted/30 p-3">
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span className="text-sm font-semibold text-foreground">{candidate.rating}/5.0</span>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {candidate.rating !== null && (
+              <div className="rounded-lg bg-muted/30 p-3">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <span className="text-sm font-semibold text-foreground">{candidate.rating}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Score</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Candidate Rating</p>
-            </div>
-            <div className="rounded-lg bg-muted/30 p-3">
-              <p className="text-sm font-semibold text-foreground">{candidate.salary}</p>
-              <p className="text-xs text-muted-foreground mt-1">Expected Salary</p>
-            </div>
+            )}
             <div className="rounded-lg bg-muted/30 p-3">
               <p className="text-sm font-semibold text-foreground">{candidate.source}</p>
               <p className="text-xs text-muted-foreground mt-1">Source</p>
             </div>
             <div className="rounded-lg bg-muted/30 p-3">
-              <p className="text-sm font-semibold text-foreground">{candidate.interviews.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">Interviews</p>
+              <p className="text-sm font-semibold text-foreground">{candidate.appliedDate}</p>
+              <p className="text-xs text-muted-foreground mt-1">Applied</p>
             </div>
           </div>
         </div>
@@ -255,9 +310,7 @@ function CandidateDetail() {
       {/* Tab Content */}
       <div className="min-h-[400px]">
         {activeTab === "overview" && <OverviewTab candidate={candidate} />}
-        {activeTab === "timeline" && <TimelineTab candidate={candidate} getActionColor={getActionColor} />}
-        {activeTab === "interviews" && <InterviewsTab candidate={candidate} />}
-        {activeTab === "documents" && <DocumentsTab candidate={candidate} />}
+        {activeTab === "notes" && <NotesTab candidate={candidate} />}
       </div>
     </div>
   );
@@ -266,235 +319,90 @@ function CandidateDetail() {
 function OverviewTab({ candidate }: { candidate: any }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {/* Skills */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Skills</h3>
-        <div className="flex flex-wrap gap-2">
-          {candidate.skills.map((skill: string) => (
-            <span key={skill} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
-              {skill}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Experience */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Experience</h3>
-        <div className="space-y-4">
-          {candidate.previousCompanies.map((company: any, idx: number) => (
-            <div key={idx} className="flex items-start gap-3">
-              <Briefcase className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{company.role}</p>
-                <p className="text-xs text-muted-foreground">{company.name} · {company.duration}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Education */}
-      <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Education</h3>
-        <div className="space-y-4">
-          {candidate.education.map((edu: any, idx: number) => (
-            <div key={idx} className="flex items-start gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{edu.degree}</p>
-                <p className="text-xs text-muted-foreground">{edu.school} · {edu.year}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Contact */}
       <div className="rounded-lg border border-border/60 bg-card p-6">
-        <h3 className="font-semibold text-foreground mb-4">Contact</h3>
+        <h3 className="font-semibold text-foreground mb-4">Contact Information</h3>
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <a href={`mailto:${candidate.email}`} className="text-sm text-primary hover:underline">
-              {candidate.email}
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <a href={`tel:${candidate.phone}`} className="text-sm text-foreground">
-              {candidate.phone}
-            </a>
-          </div>
-          {candidate.portfolio?.url && (
+          {candidate.email && (
             <div className="flex items-center gap-3">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <a href={`https://${candidate.portfolio.url}`} target="_blank" className="text-sm text-primary hover:underline">
-                {candidate.portfolio.url}
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <a href={`mailto:${candidate.email}`} className="text-sm text-primary hover:underline">
+                {candidate.email}
+              </a>
+            </div>
+          )}
+          {candidate.phone && (
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <a href={`tel:${candidate.phone}`} className="text-sm text-foreground">
+                {candidate.phone}
+              </a>
+            </div>
+          )}
+          {candidate.resumeUrl && (
+            <div className="flex items-center gap-3">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <a href={candidate.resumeUrl} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
+                View Resume
               </a>
             </div>
           )}
         </div>
       </div>
+
+      {/* Application Details */}
+      <div className="rounded-lg border border-border/60 bg-card p-6">
+        <h3 className="font-semibold text-foreground mb-4">Application Details</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Position</span>
+            <span className="text-sm font-medium text-foreground">{candidate.role || "—"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Stage</span>
+            <span className="text-sm font-medium text-foreground capitalize">{candidate.stage?.replace(/_/g, " ") || "—"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Source</span>
+            <span className="text-sm font-medium text-foreground capitalize">{candidate.source?.replace(/_/g, " ") || "—"}</span>
+          </div>
+          {candidate.rating != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Score</span>
+              <div className="flex items-center gap-1">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <span className="text-sm font-semibold text-foreground">{candidate.rating}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function TimelineTab({ candidate, getActionColor }: { candidate: any; getActionColor: (type: string) => string }) {
+function NotesTab({ candidate }: { candidate: any }) {
+  const notes: string[] = Array.isArray(candidate.notes)
+    ? candidate.notes
+    : candidate.notes
+      ? [candidate.notes]
+      : [];
+
   return (
-    <div className="rounded-lg border border-border/60 bg-card">
-      <div className="border-b border-border/60 px-6 py-4">
-        <h3 className="font-semibold text-foreground">Application Timeline</h3>
-      </div>
-      <div className="p-6">
-        <div className="space-y-0">
-          {candidate.timeline.map((event: any, idx: number) => (
-            <div key={idx} className="relative pl-6 pb-6">
-              {/* Connector line */}
-              {idx < candidate.timeline.length - 1 && (
-                <div className="absolute left-[9px] top-6 bottom-0 w-px bg-border" />
-              )}
-              {/* Dot */}
-              <div className={`absolute left-0 top-1.5 h-[18px] w-[18px] rounded-full ${getActionColor(event.type)} flex items-center justify-center`}>
-                {event.type === "interview" && <MessageSquare className="h-3 w-3 text-white" />}
-                {event.type === "review" && <FileCheck className="h-3 w-3 text-white" />}
-                {event.type === "progress" && <ChevronRight className="h-3 w-3 text-white" />}
-                {event.type === "application" && <FileText className="h-3 w-3 text-white" />}
-                {event.type === "referral" && <Link className="h-3 w-3 text-white" />}
-              </div>
-              {/* Content */}
-              <div>
-                <p className="font-medium text-foreground text-sm">{event.action}</p>
-                <p className="text-xs text-muted-foreground">{event.date}</p>
-                {event.note && (
-                  <p className="mt-2 text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-                    {event.note}
-                  </p>
-                )}
-              </div>
+    <div className="rounded-lg border border-border/60 bg-card p-6">
+      <h3 className="font-semibold text-foreground mb-4">Notes</h3>
+      {notes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+          <FileText className="h-10 w-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No notes recorded for this candidate.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notes.map((note, idx) => (
+            <div key={idx} className="rounded-lg bg-muted/30 p-4 text-sm text-foreground whitespace-pre-wrap">
+              {note}
             </div>
           ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InterviewsTab({ candidate }: { candidate: any }) {
-  return (
-    <div className="space-y-6">
-      {candidate.interviews.map((interview: any, idx: number) => (
-        <div key={idx} className="rounded-lg border border-border/60 bg-card p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-foreground">{interview.round}</h3>
-              <p className="text-sm text-muted-foreground">with {interview.interviewer}</p>
-            </div>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              interview.status === "Completed"
-                ? "bg-emerald-500/10 text-emerald-500"
-                : interview.status === "Scheduled"
-                  ? "bg-blue-500/10 text-blue-500"
-                  : "bg-amber-500/10 text-amber-500"
-            }`}>
-              {interview.status}
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <div>
-              <p className="text-xs text-muted-foreground">Date</p>
-              <p className="text-sm font-medium text-foreground">{interview.date}</p>
-            </div>
-            {interview.rating && (
-              <div className="flex items-center gap-1">
-                <p className="text-xs text-muted-foreground">Rating</p>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="text-sm font-semibold text-foreground">{interview.rating}</span>
-                </div>
-              </div>
-            )}
-          </div>
-          {interview.notes && (
-            <div className="mt-4">
-              <p className="text-xs text-muted-foreground mb-1">Notes</p>
-              <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">{interview.notes}</p>
-            </div>
-          )}
-          {interview.status === "Scheduled" && (
-            <div className="flex gap-2 mt-4">
-              <button className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                Reschedule
-              </button>
-              <button className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-                Join Meeting
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Schedule New Interview */}
-      <div className="rounded-lg border border-dashed border-border/60 bg-card p-6 text-center">
-        <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">Schedule the next interview</p>
-        <button className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Schedule Interview
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function DocumentsTab({ candidate }: { candidate: any }) {
-  return (
-    <div className="space-y-4">
-      {candidate.resume && (
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 text-red-500">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{candidate.resume.name}</p>
-              <p className="text-xs text-muted-foreground">Uploaded {candidate.resume.uploadedAt}</p>
-            </div>
-          </div>
-          <button className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-            <Download className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      {candidate.coverLetter && (
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{candidate.coverLetter.name}</p>
-              <p className="text-xs text-muted-foreground">Uploaded {candidate.coverLetter.uploadedAt}</p>
-            </div>
-          </div>
-          <button className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-            <Download className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      {candidate.portfolio && (
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-500">
-              <Globe className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{candidate.portfolio.name}</p>
-              <p className="text-xs text-muted-foreground">Portfolio Website</p>
-            </div>
-          </div>
-          <a href={`https://${candidate.portfolio.url}`} target="_blank" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-            <Link className="h-4 w-4" />
-          </a>
         </div>
       )}
     </div>
