@@ -2470,43 +2470,56 @@ export const nucleoApi = {
           const limit = params?.limit ?? 50;
           try {
             return await withRpcTimeout(
-              rpc.operations?.payrollRunsList?.({ page, limit }),
-              "operations.payrollRunsList",
+              rpc.hrm?.payrollList?.({ page, limit }),
+              "hrm.payrollList",
             );
           } catch (error) {
             console.error("nucleoApi.hrm.payroll.runs.list error:", error);
             return { data: [], page, limit };
           }
         },
-        create: async (data: any) => rpc.operations?.payrollRunsCreate?.(data),
+        create: async (data: any) => rpc.hrm?.payrollCreate?.(data),
         update: async (id: string, data: any) =>
-          rpc.operations?.payrollRunsUpdate?.({ id, ...data }),
-        delete: async (id: string) =>
-          rpc.operations?.payrollRunsDelete?.({ id }),
+          rpc.hrm?.payrollProcess?.({ id, ...data }),
+        delete: async (id: string) => rpc.hrm?.payrollProcess?.({ id }),
       },
       entries: {
         list: async (params?: {
           page?: number;
           limit?: number;
+          payrollRunId?: string;
         }): Promise<any> => {
           const page = params?.page ?? 1;
           const limit = params?.limit ?? 50;
           try {
             return await withRpcTimeout(
-              rpc.operations?.payrollEntriesList?.({ page, limit }),
-              "operations.payrollEntriesList",
+              rpc.hrm?.payrollEntries?.({
+                page,
+                limit,
+                id: params?.payrollRunId ?? "00000000-0000-0000-0000-000000000000",
+              }),
+              "hrm.payrollEntries",
             );
           } catch (error) {
             console.error("nucleoApi.hrm.payroll.entries.list error:", error);
             return { data: [], page, limit };
           }
         },
-        create: async (data: any) =>
-          rpc.operations?.payrollEntriesCreate?.(data),
+        create: async (data: any) => rpc.hrm?.payrollCreate?.(data),
         update: async (id: string, data: any) =>
-          rpc.operations?.payrollEntriesUpdate?.({ id, ...data }),
-        delete: async (id: string) =>
-          rpc.operations?.payrollEntriesDelete?.({ id }),
+          rpc.hrm?.payrollProcess?.({ id, ...data }),
+        delete: async (id: string) => rpc.hrm?.payrollProcess?.({ id }),
+      },
+      stats: async (): Promise<any> => {
+        try {
+          return await withRpcTimeout(
+            rpc.hrm?.payrollStats?.({}),
+            "hrm.payrollStats",
+          );
+        } catch (error) {
+          console.error("nucleoApi.hrm.payroll.stats error:", error);
+          return { totalPaid: 0, avgSalary: 0, nextRunDate: null };
+        }
       },
     },
   },
