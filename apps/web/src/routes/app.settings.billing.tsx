@@ -1,27 +1,96 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Progress } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle, AlertCircle, Clock, CreditCard, Zap, Users, HardDrive, BarChart3 } from "lucide-react";
 
 export const Route = createFileRoute("/app/settings/billing")({
   component: SettingsBillingPage,
 });
 
-function SettingsBillingPage() {
-  // Mock data - would come from API in real app
-  const subscription = {
-    plan: "growth",
-    status: "active",
-    billingCycle: "monthly",
-    currentPeriodEnd: "2026-04-19",
-    trialEnd: null,
-    userCount: 8,
-  };
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
-  const usage = {
-    apiCalls: { used: 8450, limit: 50000, percent: 17 },
-    storage: { used: 3.2, limit: 100, percent: 3 },
-    users: { used: 8, limit: 25, percent: 32 },
-  };
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_SUBSCRIPTION = {
+  plan: "growth",
+  status: "active",
+  billingCycle: "monthly",
+  currentPeriodEnd: "2026-04-19",
+  trialEnd: null,
+  userCount: 8,
+};
+
+const MOCK_USAGE = {
+  apiCalls: { used: 8450, limit: 50000, percent: 17 },
+  storage: { used: 3.2, limit: 100, percent: 3 },
+  users: { used: 8, limit: 25, percent: 32 },
+};
+
+function SettingsBillingPage() {
+  const subscriptionQuery = useQuery({
+    queryKey: ["billing", "subscription"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/billing/subscription`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch subscription");
+      return res.json();
+    },
+  });
+
+  const usageQuery = useQuery({
+    queryKey: ["billing", "usage"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/billing/usage`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch usage");
+      return res.json();
+    },
+  });
+
+  const apiSub = subscriptionQuery.data?.subscription;
+  const subscription = apiSub
+    ? {
+        plan: apiSub.plan?.key ?? "growth",
+        status: apiSub.status ?? "active",
+        billingCycle: apiSub.billingCycle ?? "monthly",
+        currentPeriodEnd: apiSub.currentPeriodEnd
+          ? new Date(apiSub.currentPeriodEnd).toISOString().slice(0, 10)
+          : "—",
+        trialEnd: apiSub.trialEnd ?? null,
+        userCount: apiSub.userCount ?? 0,
+      }
+    : MOCK_SUBSCRIPTION;
+
+  const apiUsage = usageQuery.data;
+  const usage = apiUsage
+    ? {
+        apiCalls: {
+          used: apiUsage.usage?.apiCalls ?? 0,
+          limit: apiUsage.limits?.maxApiCalls ?? 50000,
+          percent: apiUsage.percentages?.apiCalls ?? 0,
+        },
+        storage: {
+          used: Math.round(((apiUsage.usage?.storageMb ?? 0) / 1024) * 10) / 10,
+          limit: Math.round((apiUsage.limits?.maxStorage ?? 102400) / 1024),
+          percent: apiUsage.percentages?.storage ?? 0,
+        },
+        users: {
+          used: apiUsage.usage?.users ?? 0,
+          limit: apiUsage.limits?.maxUsers ?? 25,
+          percent: apiUsage.percentages?.users ?? 0,
+        },
+      }
+    : MOCK_USAGE;
+
+  const isLoading = subscriptionQuery.isLoading || usageQuery.isLoading;
 
   const modules = [
     { key: "crm", name: "CRM", enabled: true, source: "base", description: "Contacts, deals, activities" },
@@ -42,6 +111,16 @@ function SettingsBillingPage() {
     { key: "business", name: "Business", price: 49, features: ["100 users", "500GB storage", "200K API calls"] },
     { key: "enterprise", name: "Enterprise", price: null, features: ["Unlimited users", "Unlimited storage", "Unlimited API calls"] },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-64 bg-muted rounded" />
+        <div className="h-48 bg-muted rounded-lg" />
+        <div className="h-48 bg-muted rounded-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

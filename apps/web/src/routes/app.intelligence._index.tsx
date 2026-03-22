@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -32,7 +33,15 @@ export const Route = createFileRoute("/app/intelligence/_index")({
   component: IntelligenceDashboard,
 });
 
-const kpiData = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
+
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_KPI_DATA = [
   { label: "Total Revenue", value: "$1.24M", change: "+12.5%", trend: "up" },
   { label: "Customers", value: "8,432", change: "+5.2%", trend: "up" },
   { label: "Avg Order Value", value: "$147", change: "-2.1%", trend: "down" },
@@ -71,6 +80,43 @@ const quickInsights = [
 ];
 
 function IntelligenceDashboard() {
+  const summaryQuery = useQuery({
+    queryKey: ["intelligence", "summary"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/intelligence/summary`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch intelligence summary");
+      return res.json();
+    },
+  });
+
+  const summary = summaryQuery.data;
+
+  const kpiData = summary
+    ? [
+        { label: "Total Revenue", value: "$1.24M", change: "+12.5%", trend: "up" },
+        { label: "Customers", value: "8,432", change: "+5.2%", trend: "up" },
+        { label: "Agent Runs", value: String(summary.agentRuns ?? 0), change: "", trend: "up" },
+        { label: "Forecasts", value: String(summary.forecasts ?? 0), change: "", trend: "up" },
+      ]
+    : MOCK_KPI_DATA;
+
+  if (summaryQuery.isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-64 bg-muted rounded" />
+        <div className="h-20 bg-muted rounded-lg" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-28 bg-muted rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

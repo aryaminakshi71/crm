@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -21,15 +22,23 @@ export const Route = createFileRoute("/app/intelligence/reports")({
   component: Reports,
 });
 
-const reports = [
-  { id: 1, name: "Monthly Revenue Summary", type: "financial", schedule: "Monthly", lastRun: "Mar 1, 2026", status: "active", views: 245 },
-  { id: 2, name: "Customer Acquisition Funnel", type: "marketing", schedule: "Weekly", lastRun: "Mar 15, 2026", status: "active", views: 189 },
-  { id: 3, name: "Product Performance", type: "sales", schedule: "Daily", lastRun: "Mar 20, 2026", status: "active", views: 432 },
-  { id: 4, name: "Churn Analysis", type: "retention", schedule: "Weekly", lastRun: "Mar 18, 2026", status: "active", views: 156 },
-  { id: 5, name: "Sales Pipeline Report", type: "sales", schedule: "Daily", lastRun: "Mar 19, 2026", status: "draft", views: 0 },
-  { id: 6, name: "Marketing ROI", type: "marketing", schedule: "Monthly", lastRun: "Feb 28, 2026", status: "active", views: 98 },
-  { id: 7, name: "Customer Satisfaction", type: "retention", schedule: "Quarterly", lastRun: "Jan 15, 2026", status: "active", views: 67 },
-  { id: 8, name: "Inventory Turnover", type: "operations", schedule: "Weekly", lastRun: "Mar 16, 2026", status: "active", views: 124 },
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
+
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_REPORTS = [
+  { id: "1", name: "Monthly Revenue Summary", type: "financial", schedule: "Monthly", lastRun: "Mar 1, 2026", status: "active", views: 245 },
+  { id: "2", name: "Customer Acquisition Funnel", type: "marketing", schedule: "Weekly", lastRun: "Mar 15, 2026", status: "active", views: 189 },
+  { id: "3", name: "Product Performance", type: "sales", schedule: "Daily", lastRun: "Mar 20, 2026", status: "active", views: 432 },
+  { id: "4", name: "Churn Analysis", type: "retention", schedule: "Weekly", lastRun: "Mar 18, 2026", status: "active", views: 156 },
+  { id: "5", name: "Sales Pipeline Report", type: "sales", schedule: "Daily", lastRun: "Mar 19, 2026", status: "draft", views: 0 },
+  { id: "6", name: "Marketing ROI", type: "marketing", schedule: "Monthly", lastRun: "Feb 28, 2026", status: "active", views: 98 },
+  { id: "7", name: "Customer Satisfaction", type: "retention", schedule: "Quarterly", lastRun: "Jan 15, 2026", status: "active", views: 67 },
+  { id: "8", name: "Inventory Turnover", type: "operations", schedule: "Weekly", lastRun: "Mar 16, 2026", status: "active", views: 124 },
 ];
 
 const chartTypes = [
@@ -39,6 +48,44 @@ const chartTypes = [
 ];
 
 function Reports() {
+  const agentRunsQuery = useQuery({
+    queryKey: ["intelligence", "agent-runs"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/intelligence/agent-runs?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch agent runs");
+      return res.json();
+    },
+  });
+
+  const apiRuns = agentRunsQuery.data?.data;
+  const reports: typeof MOCK_REPORTS = apiRuns?.length
+    ? apiRuns.map((run: any) => ({
+        id: run.id,
+        name: run.agentName ?? "Agent Run",
+        type: "ai",
+        schedule: "On demand",
+        lastRun: run.completedAt
+          ? new Date(run.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "Pending",
+        status: run.status === "completed" ? "active" : run.status === "failed" ? "draft" : "draft",
+        views: 0,
+      }))
+    : MOCK_REPORTS;
+
+  if (agentRunsQuery.isLoading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-8 w-48 bg-muted rounded" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-16 bg-muted rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

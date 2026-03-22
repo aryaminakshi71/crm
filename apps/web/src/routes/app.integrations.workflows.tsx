@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Workflow,
   Search,
@@ -27,11 +28,15 @@ export const Route = createFileRoute("/app/integrations/workflows")({
   component: WorkflowsPage,
 });
 
-function WorkflowsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
-  const workflows = [
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_WORKFLOWS = [
     {
       id: "wf1",
       name: "Lead Sync to Salesforce",
@@ -120,7 +125,38 @@ function WorkflowsPage() {
       runs: 892,
       successRate: 99.1,
     },
-  ];
+];
+
+function WorkflowsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const workflowsQuery = useQuery({
+    queryKey: ["integration", "workflows"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/integration/workflows?limit=100`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch workflows");
+      return res.json();
+    },
+  });
+
+  const apiWorkflows = workflowsQuery.data?.data;
+  const workflows: typeof MOCK_WORKFLOWS = apiWorkflows?.length
+    ? apiWorkflows.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        description: w.description ?? "",
+        trigger: w.triggerType ?? "manual",
+        connector: (w.definition as any)?.connector ?? "—",
+        status: w.status === "active" ? "active" : w.status === "error" ? "error" : w.status === "paused" ? "paused" : "draft",
+        lastRun: w.lastRunAt ? new Date(w.lastRunAt).toLocaleString() : "Never",
+        runs: Number(w.runCount ?? 0),
+        successRate: 100,
+      }))
+    : MOCK_WORKFLOWS;
 
   const filteredWorkflows = workflows.filter((wf) => {
     const matchesSearch =
@@ -149,6 +185,17 @@ function WorkflowsPage() {
     paused: workflows.filter((w) => w.status === "paused").length,
     error: workflows.filter((w) => w.status === "error").length,
   };
+
+  if (workflowsQuery.isLoading) {
+    return (
+      <div className="space-y-3 animate-pulse">
+        <div className="h-8 w-48 bg-muted rounded" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-24 bg-muted rounded-lg" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

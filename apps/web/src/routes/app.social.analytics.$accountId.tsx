@@ -1,5 +1,6 @@
 import { Button, Card, CardContent } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Users,
@@ -19,12 +20,58 @@ export const Route = createFileRoute("/app/social/analytics/$accountId")({
   component: AccountAnalyticsPage,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
+
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_ANALYTICS = {
+  followers: "18.5K",
+  followersChange: "+12% this month",
+  engagement: "4.8%",
+  engagementChange: "+0.5% this week",
+  reach: "125K",
+  reachChange: "+18% this month",
+  posts: "28",
+  postsLabel: "This week",
+};
+
 function AccountAnalyticsPage() {
   const { accountId } = Route.useParams();
   const navigate = useNavigate();
 
+  const analyticsQuery = useQuery({
+    queryKey: ["social", "analytics", accountId],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/accounts/${accountId}/analytics`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch social analytics");
+      return res.json();
+    },
+  });
+
+  const analytics = analyticsQuery.data ?? MOCK_ANALYTICS;
+
   const platform = accountId === "instagram" ? "Instagram" : accountId === "twitter" ? "Twitter" : accountId === "linkedin" ? "LinkedIn" : "Facebook";
   const Icon = accountId === "instagram" ? Instagram : accountId === "twitter" ? Twitter : accountId === "linkedin" ? Linkedin : Facebook;
+
+  if (analyticsQuery.isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-56 bg-muted rounded" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-28 bg-muted rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -50,9 +97,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Followers</p>
-                <p className="text-2xl font-bold">18.5K</p>
+                <p className="text-2xl font-bold">{analytics.followers ?? MOCK_ANALYTICS.followers}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> +12% this month
+                  <TrendingUp className="h-3 w-3" /> {analytics.followersChange ?? MOCK_ANALYTICS.followersChange}
                 </p>
               </div>
               <Users className="h-8 w-8 text-blue-500" />
@@ -64,9 +111,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Engagement</p>
-                <p className="text-2xl font-bold">4.8%</p>
+                <p className="text-2xl font-bold">{analytics.engagement ?? MOCK_ANALYTICS.engagement}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> +0.5% this week
+                  <TrendingUp className="h-3 w-3" /> {analytics.engagementChange ?? MOCK_ANALYTICS.engagementChange}
                 </p>
               </div>
               <Heart className="h-8 w-8 text-pink-500" />
@@ -78,9 +125,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Reach</p>
-                <p className="text-2xl font-bold">125K</p>
+                <p className="text-2xl font-bold">{analytics.reach ?? MOCK_ANALYTICS.reach}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> +18% this month
+                  <TrendingUp className="h-3 w-3" /> {analytics.reachChange ?? MOCK_ANALYTICS.reachChange}
                 </p>
               </div>
               <Eye className="h-8 w-8 text-purple-500" />
@@ -92,8 +139,8 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Posts</p>
-                <p className="text-2xl font-bold">28</p>
-                <p className="text-xs text-muted-foreground">This week</p>
+                <p className="text-2xl font-bold">{analytics.posts ?? MOCK_ANALYTICS.posts}</p>
+                <p className="text-xs text-muted-foreground">{analytics.postsLabel ?? MOCK_ANALYTICS.postsLabel}</p>
               </div>
               <Share2 className="h-8 w-8 text-emerald-500" />
             </div>

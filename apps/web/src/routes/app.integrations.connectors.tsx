@@ -6,6 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Puzzle,
   Search,
@@ -27,12 +28,15 @@ export const Route = createFileRoute("/app/integrations/connectors")({
   component: ConnectorsPage,
 });
 
-function ConnectorsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterCategory, setFilterCategory] = useState("all");
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
-  const connectors = [
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_CONNECTORS = [
     {
       id: "salesforce",
       name: "Salesforce",
@@ -165,7 +169,39 @@ function ConnectorsPage() {
       icon: "PG",
       color: "#336791",
     },
-  ];
+];
+
+function ConnectorsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filterCategory, setFilterCategory] = useState("all");
+
+  const connectorsQuery = useQuery({
+    queryKey: ["integration", "connectors"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/integration/connectors?limit=100`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch connectors");
+      return res.json();
+    },
+  });
+
+  const apiConnectors = connectorsQuery.data?.data;
+  const connectors: typeof MOCK_CONNECTORS = apiConnectors?.length
+    ? apiConnectors.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        category: c.type ?? "Other",
+        description: (c.config as any)?.description ?? `${c.name} connector`,
+        status: c.status === "active" ? "connected" : c.status === "error" ? "error" : "disconnected",
+        lastSync: c.updatedAt ? new Date(c.updatedAt).toLocaleString() : "Never",
+        events: 0,
+        icon: c.name.slice(0, 2).toUpperCase(),
+        color: "#6366f1",
+      }))
+    : MOCK_CONNECTORS;
 
   const categories = ["all", "CRM", "Payments", "E-commerce", "Communication", "Marketing", "Finance", "Support", "Development", "Database", "Project Management"];
 
@@ -188,6 +224,19 @@ function ConnectorsPage() {
         return <Badge variant="default" size="sm">{status}</Badge>;
     }
   };
+
+  if (connectorsQuery.isLoading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-8 w-48 bg-muted rounded" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-48 bg-muted rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
