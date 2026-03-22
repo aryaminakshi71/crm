@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   UserPlus,
   Plus,
@@ -25,13 +26,6 @@ import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/recruitment")({
   component: RecruitmentPipeline,
-  loader: async (): Promise<{ requisitions: { data: any[] }; candidates: { data: any[] } }> => {
-    const [requisitions, candidates] = await Promise.all([
-      hrmApi.recruitment.requisitions.list({ limit: 50 }),
-      hrmApi.recruitment.candidates.list({ limit: 100 }),
-    ]);
-    return { requisitions: requisitions as any, candidates: candidates as any };
-  },
 });
 
 const defaultCandidates = [
@@ -56,24 +50,49 @@ const defaultJobs = [
 const stages = ["Applied", "Phone Screen", "Technical Interview", "Design Challenge", "Final Round", "Offer"];
 
 function RecruitmentPipeline() {
-  const loaderData = Route.useLoaderData();
   const [viewMode, setViewMode] = useState<"pipeline" | "jobs" | "candidates">("pipeline");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [requisitions, setRequisitions] = useState<any[]>([]);
-  const [candidatesList, setCandidatesList] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (loaderData?.requisitions?.data || loaderData?.candidates?.data) {
-      setRequisitions(loaderData.requisitions?.data || []);
-      setCandidatesList(loaderData.candidates?.data || []);
-      setLoading(false);
-    } else {
-      setRequisitions(defaultJobs);
-      setCandidatesList(defaultCandidates);
-      setLoading(false);
-    }
-  }, [loaderData]);
+  const { data: requisitionsData, isLoading: isRequisitionsLoading } = useQuery({
+    queryKey: ["hrm-recruitment-requisitions"],
+    queryFn: () => hrmApi.recruitment.requisitions.list({ limit: 50 }),
+    retry: false,
+  });
+
+  const { data: candidatesData, isLoading: isCandidatesLoading } = useQuery({
+    queryKey: ["hrm-recruitment-candidates"],
+    queryFn: () => hrmApi.recruitment.candidates.list({ limit: 100 }),
+    retry: false,
+  });
+
+  const isLoading = isRequisitionsLoading || isCandidatesLoading;
+
+  const requisitions = (requisitionsData as any)?.data ?? defaultJobs;
+  const candidatesList = (candidatesData as any)?.data ?? defaultCandidates;
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-56 rounded bg-muted" />
+          <div className="flex gap-2">
+            <div className="h-9 w-24 rounded bg-muted" />
+            <div className="h-9 w-28 rounded bg-muted" />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card h-20" />
+          ))}
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-72 rounded-lg border border-border/60 bg-card h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const jobs = requisitions.map((j: any) => ({
     id: j.id,

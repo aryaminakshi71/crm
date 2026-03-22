@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   UserPlus,
@@ -19,31 +20,6 @@ import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/_index")({
   component: HrmDashboard,
-  loader: async (): Promise<{
-    summary: {
-      headcount: number;
-      pendingLeave: number;
-      requisitions: number;
-      candidates: number;
-      avgGoalProgress: number;
-    };
-    employees: { data: any[] };
-    leaveRequests: { data: any[] };
-    reviews: { data: any[] };
-  }> => {
-    const [summary, employees, leaveRequests, reviews] = await Promise.all([
-      hrmApi.getSummary(),
-      hrmApi.employees.list({ limit: 5 }),
-      hrmApi.leaveRequests.list({ status: "pending", limit: 5 }),
-      hrmApi.reviews.list({ limit: 5 }),
-    ]);
-    return {
-      summary: summary as any,
-      employees: employees as any,
-      leaveRequests: leaveRequests as any,
-      reviews: reviews as any,
-    };
-  },
 });
 
 // ─── Leave Balance Data ───────────────────────────────────────────────────────
@@ -101,26 +77,55 @@ const newHires = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-function HrmDashboard() {
-  const data = Route.useLoaderData();
-  const [loading, setLoading] = useState(true);
+const MOCK_SUMMARY = {
+  headcount: 0,
+  pendingLeave: 0,
+  requisitions: 0,
+  candidates: 0,
+  avgGoalProgress: 0,
+};
 
+const MOCK_EMPLOYEES: any[] = [];
+const MOCK_LEAVE_REQUESTS: any[] = [];
+const MOCK_REVIEWS: any[] = [];
+
+function HrmDashboard() {
   // Onboarding checklist state: { [hireId]: Set<string> }
   const [checkedItems, setCheckedItems] = useState<Record<string, Set<string>>>(
     () => Object.fromEntries(newHires.map((h) => [h.id, new Set<string>()]))
   );
 
-  useEffect(() => {
-    if (data?.summary) setLoading(false);
-  }, [data]);
+  const summaryQuery = useQuery({
+    queryKey: ["hrm-summary"],
+    queryFn: () => hrmApi.getSummary(),
+    retry: false,
+  });
 
-  const summary = data?.summary || {
-    headcount: 0,
-    pendingLeave: 0,
-    requisitions: 0,
-    candidates: 0,
-    avgGoalProgress: 0,
-  };
+  const employeesQuery = useQuery({
+    queryKey: ["hrm-employees-dashboard"],
+    queryFn: () => hrmApi.employees.list({ limit: 5 }),
+    retry: false,
+  });
+
+  const leaveQuery = useQuery({
+    queryKey: ["hrm-leave-dashboard"],
+    queryFn: () => hrmApi.leaveRequests.list({ status: "pending", limit: 5 }),
+    retry: false,
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ["hrm-reviews-dashboard"],
+    queryFn: () => hrmApi.reviews.list({ limit: 5 }),
+    retry: false,
+  });
+
+  const isLoading =
+    summaryQuery.isLoading ||
+    employeesQuery.isLoading ||
+    leaveQuery.isLoading ||
+    reviewsQuery.isLoading;
+
+  const summary = (summaryQuery.data as any) ?? MOCK_SUMMARY;
 
   const stats = [
     {
@@ -173,7 +178,7 @@ function HrmDashboard() {
     },
   ];
 
-  const recentHires = data?.employees?.data?.slice(0, 4).map((emp: any) => ({
+  const recentHires = ((employeesQuery.data as any)?.data ?? MOCK_EMPLOYEES).slice(0, 4).map((emp: any) => ({
     id: emp.id,
     name: emp.fullName || `${emp.firstName} ${emp.lastName}`,
     role: emp.jobTitle || "Employee",
@@ -187,7 +192,7 @@ function HrmDashboard() {
     { id: "4", name: "David Kim", role: "Sales Executive", dept: "Sales", startDate: "Mar 1, 2026", avatar: "DK" },
   ];
 
-  const pendingLeaveData = data?.leaveRequests?.data || [];
+  const pendingLeaveData = (leaveQuery.data as any)?.data ?? MOCK_LEAVE_REQUESTS;
   const pendingLeave = pendingLeaveData.length > 0 ? pendingLeaveData.map((lr: any) => ({
     id: lr.id,
     name: lr.employeeName || "Employee",
@@ -202,7 +207,7 @@ function HrmDashboard() {
     { id: "4", name: "Amanda White", type: "Personal Day", days: 1, startDate: "Mar 24, 2026", status: "Pending" },
   ];
 
-  const reviewsData = data?.reviews?.data || [];
+  const reviewsData = (reviewsQuery.data as any)?.data ?? MOCK_REVIEWS;
   const upcomingReviews = reviewsData.length > 0 ? reviewsData.map((r: any) => ({
     id: r.id,
     name: r.employeeName || "Employee",
@@ -223,6 +228,22 @@ function HrmDashboard() {
       return { ...prev, [hireId]: next };
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card p-4 h-24" />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-lg border border-border/60 bg-card h-48" />
+          <div className="rounded-lg border border-border/60 bg-card h-48" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

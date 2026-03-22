@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
   Plus,
@@ -20,10 +21,6 @@ import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/leave")({
   component: LeaveManagement,
-  loader: async (): Promise<{ data: any[] }> => {
-    const result = await hrmApi.leaveRequests.list({ limit: 100 });
-    return result as any;
-  },
 });
 
 const defaultLeaveRequests = [
@@ -46,33 +43,28 @@ const leaveTypes = [
 ];
 
 function LeaveManagement() {
-  const loaderData = Route.useLoaderData();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [showActions, setShowActions] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [leaveData, setLeaveData] = useState<any[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (loaderData?.data) {
-      setLeaveData(loaderData.data);
-      setLoading(false);
-    } else {
-      setLeaveData(defaultLeaveRequests);
-      setLoading(false);
-    }
-  }, [loaderData]);
+  const { data: queryData, isLoading } = useQuery({
+    queryKey: ["hrm-leave-requests"],
+    queryFn: () => hrmApi.leaveRequests.list({ limit: 100 }),
+    retry: false,
+  });
+
+  const rawData = (queryData as any)?.data ?? defaultLeaveRequests;
 
   const handleApprove = async (id: string) => {
     setProcessing(id);
     try {
       await hrmApi.leaveRequests.updateStatus(id, "approved");
-      setLeaveData((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: "Approved" } : r))
-      );
+      queryClient.invalidateQueries({ queryKey: ["hrm-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["hrm-summary"] });
     } catch (e) {
       console.error("Failed to approve leave:", e);
     }
@@ -84,9 +76,8 @@ function LeaveManagement() {
     setProcessing(id);
     try {
       await hrmApi.leaveRequests.updateStatus(id, "rejected");
-      setLeaveData((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: "Rejected" } : r))
-      );
+      queryClient.invalidateQueries({ queryKey: ["hrm-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["hrm-summary"] });
     } catch (e) {
       console.error("Failed to reject leave:", e);
     }
@@ -94,7 +85,22 @@ function LeaveManagement() {
     setShowActions(null);
   };
 
-  const leaveRequestsList = leaveData.map((lr: any) => ({
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-48 rounded bg-muted" />
+          <div className="flex gap-2">
+            <div className="h-9 w-28 rounded bg-muted" />
+            <div className="h-9 w-32 rounded bg-muted" />
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-card h-64" />
+      </div>
+    );
+  }
+
+  const leaveRequestsList = rawData.map((lr: any) => ({
     id: lr.id,
     name: lr.employeeName || "Employee",
     type: lr.leaveType || "Leave",

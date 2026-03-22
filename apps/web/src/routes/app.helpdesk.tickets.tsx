@@ -14,6 +14,7 @@ import {
   EmptyState,
   Input,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowUpDown,
@@ -24,12 +25,13 @@ import {
   Ticket,
 } from "lucide-react";
 import { useState } from "react";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/tickets")({
   component: TicketList,
 });
 
-type Ticket = {
+type TicketRow = {
   id: string;
   subject: string;
   status: "open" | "pending" | "resolved" | "closed";
@@ -41,7 +43,7 @@ type Ticket = {
   updatedAt: string;
 };
 
-const mockTickets: Ticket[] = [
+const MOCK_TICKETS: TicketRow[] = [
   { id: "TKT-001", subject: "Cannot login to dashboard after password reset", status: "open", priority: "high", channel: "email", requester: "Sarah Chen", assignedTo: "John Doe", createdAt: "2 hours ago", updatedAt: "1 hour ago" },
   { id: "TKT-002", subject: "Billing inquiry - overcharged for subscription", status: "pending", priority: "medium", channel: "chat", requester: "Michael Roberts", assignedTo: "Jane Smith", createdAt: "4 hours ago", updatedAt: "2 hours ago" },
   { id: "TKT-003", subject: "Feature request: Dark mode support", status: "resolved", priority: "low", channel: "portal", requester: "Emily Watson", assignedTo: "John Doe", createdAt: "1 day ago", updatedAt: "5 hours ago" },
@@ -58,7 +60,50 @@ function TicketList() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [channelFilter, setChannelFilter] = useState<string>("all");
 
-  const filteredTickets = mockTickets.filter((ticket) => {
+  const { data: ticketsData, isLoading } = useQuery({
+    queryKey: ["helpdesk-tickets-list", statusFilter],
+    queryFn: () =>
+      nucleoApi.tickets.list({
+        page: 1,
+        limit: 100,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      }),
+    retry: false,
+  });
+
+  const rawTickets: any[] = ticketsData?.data ?? MOCK_TICKETS;
+
+  // Normalise API tickets to the TicketRow shape expected by this UI
+  const allTickets: TicketRow[] = rawTickets.map((t: any) => ({
+    id: t.id ?? t.ticketNumber ?? "—",
+    subject: t.subject ?? t.title ?? "No subject",
+    status: (t.status as TicketRow["status"]) ?? "open",
+    priority: (t.priority as TicketRow["priority"]) ?? "medium",
+    channel: (t.channel ?? t.source ?? "email") as TicketRow["channel"],
+    requester: t.requester ?? t.customerName ?? t.contactName ?? "Customer",
+    assignedTo: t.assignedTo ?? t.assigneeName ?? "Unassigned",
+    createdAt: t.createdAt ? new Date(t.createdAt).toLocaleString() : (t.createdAt ?? "—"),
+    updatedAt: t.updatedAt ? new Date(t.updatedAt).toLocaleString() : (t.updatedAt ?? "—"),
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-32 rounded bg-muted" />
+          <div className="h-9 w-28 rounded bg-muted" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card h-20" />
+          ))}
+        </div>
+        <div className="rounded-lg border border-border/60 bg-card h-64" />
+      </div>
+    );
+  }
+
+  const filteredTickets = allTickets.filter((ticket) => {
     if (statusFilter !== "all" && ticket.status !== statusFilter) return false;
     if (priorityFilter !== "all" && ticket.priority !== priorityFilter) return false;
     if (channelFilter !== "all" && ticket.channel !== channelFilter) return false;
@@ -66,8 +111,12 @@ function TicketList() {
     return ticket.subject.toLowerCase().includes(search.toLowerCase()) || ticket.id.toLowerCase().includes(search.toLowerCase());
   });
 
-  const getStatusBadge = (status: Ticket["status"]) => {
-    const variants: Record<Ticket["status"], "danger" | "warning" | "success" | "outline"> = {
+  const openCount = allTickets.filter((t) => t.status === "open").length;
+  const pendingCount = allTickets.filter((t) => t.status === "pending").length;
+  const resolvedCount = allTickets.filter((t) => t.status === "resolved").length;
+
+  const getStatusBadge = (status: TicketRow["status"]) => {
+    const variants: Record<TicketRow["status"], "danger" | "warning" | "success" | "outline"> = {
       open: "danger",
       pending: "warning",
       resolved: "success",
@@ -76,8 +125,8 @@ function TicketList() {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const getPriorityBadge = (priority: Ticket["priority"]) => {
-    const variants: Record<Ticket["priority"], "outline" | "warning" | "danger"> = {
+  const getPriorityBadge = (priority: TicketRow["priority"]) => {
+    const variants: Record<TicketRow["priority"], "outline" | "warning" | "danger"> = {
       low: "outline",
       medium: "warning",
       high: "danger",
@@ -101,9 +150,9 @@ function TicketList() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Open" value="24" icon="danger" />
-        <StatCard title="Pending" value="12" icon="warning" />
-        <StatCard title="Resolved" value="156" icon="success" />
+        <StatCard title="Open" value={String(openCount)} icon="danger" />
+        <StatCard title="Pending" value={String(pendingCount)} icon="warning" />
+        <StatCard title="Resolved" value={String(resolvedCount)} icon="success" />
         <StatCard title="Avg First Response" value="2.4 hrs" icon="primary" />
       </div>
 

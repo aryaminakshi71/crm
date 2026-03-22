@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   Filter,
@@ -20,10 +21,6 @@ import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/directory")({
   component: EmployeeDirectory,
-  loader: async (): Promise<{ data: any[] }> => {
-    const result = await hrmApi.employees.list({ limit: 100 });
-    return result as any;
-  },
 });
 
 const defaultEmployees = [
@@ -189,19 +186,38 @@ const departments = ["All Departments", "Engineering", "Design", "Product", "Sal
 const statuses = ["All Status", "Active", "On Leave", "Remote"];
 
 function EmployeeDirectory() {
-  const loaderData = Route.useLoaderData();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [showFilters, setShowFilters] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (loaderData?.data) setLoading(false);
-  }, [loaderData]);
+  const { data: queryData, isLoading } = useQuery({
+    queryKey: ["hrm-employees-directory"],
+    queryFn: () => hrmApi.employees.list({ limit: 100 }),
+    retry: false,
+  });
 
-  const apiEmployees = loaderData?.data || [];
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-48 rounded bg-muted" />
+          <div className="flex gap-2">
+            <div className="h-9 w-24 rounded bg-muted" />
+            <div className="h-9 w-32 rounded bg-muted" />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card p-4 h-40" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const apiEmployees = (queryData as any)?.data ?? [];
   const employeesList = apiEmployees.length > 0 ? apiEmployees.map((emp: any) => ({
     id: emp.id,
     name: emp.fullName || `${emp.firstName} ${emp.lastName}`,
