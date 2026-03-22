@@ -21,28 +21,49 @@ import {
   Activity,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { monitoringApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/monitoring/dashboards")({
   component: DashboardsPage,
 });
 
+const MOCK_DASHBOARDS = [
+  { id: 1, name: "Production Overview", description: "Key production metrics and KPIs", widgets: 8, lastViewed: "2 hours ago", createdBy: "Admin", isDefault: true },
+  { id: 2, name: "API Performance", description: "API latency and error rates", widgets: 5, lastViewed: "1 day ago", createdBy: "DevOps", isDefault: false },
+  { id: 3, name: "User Activity", description: "User engagement and behavior", widgets: 6, lastViewed: "3 hours ago", createdBy: "Analytics", isDefault: false },
+  { id: 4, name: "Infrastructure", description: "Server and infrastructure health", widgets: 7, lastViewed: "30 min ago", createdBy: "DevOps", isDefault: false },
+  { id: 5, name: "Revenue Dashboard", description: "Revenue metrics and trends", widgets: 4, lastViewed: "5 hours ago", createdBy: "Finance", isDefault: false },
+  { id: 6, name: "Customer Support", description: "Support ticket metrics", widgets: 5, lastViewed: "1 day ago", createdBy: "Support", isDefault: false },
+];
+
 function DashboardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const dashboards = [
-    { id: 1, name: "Production Overview", description: "Key production metrics and KPIs", widgets: 8, lastViewed: "2 hours ago", createdBy: "Admin", isDefault: true },
-    { id: 2, name: "API Performance", description: "API latency and error rates", widgets: 5, lastViewed: "1 day ago", createdBy: "DevOps", isDefault: false },
-    { id: 3, name: "User Activity", description: "User engagement and behavior", widgets: 6, lastViewed: "3 hours ago", createdBy: "Analytics", isDefault: false },
-    { id: 4, name: "Infrastructure", description: "Server and infrastructure health", widgets: 7, lastViewed: "30 min ago", createdBy: "DevOps", isDefault: false },
-    { id: 5, name: "Revenue Dashboard", description: "Revenue metrics and trends", widgets: 4, lastViewed: "5 hours ago", createdBy: "Finance", isDefault: false },
-    { id: 6, name: "Customer Support", description: "Support ticket metrics", widgets: 5, lastViewed: "1 day ago", createdBy: "Support", isDefault: false },
-  ];
+  const dashboardQuery = useQuery({
+    queryKey: ["monitoring", "dashboard"],
+    queryFn: () => monitoringApi.getDashboard(),
+    retry: false,
+  });
+
+  const dashboards = MOCK_DASHBOARDS;
 
   const filteredDashboards = dashboards.filter(
     (d) =>
       d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (dashboardQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => <div key={i} className="h-48 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

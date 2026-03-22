@@ -16,12 +16,19 @@ import {
   Settings,
   Truck,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/equipment")({
   component: Equipment,
 });
 
-const equipment = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_EQUIPMENT = [
   { id: 1, name: "Carrier 24ACC636A003", type: "HVAC Unit", serial: "CR-2024-12345", location: "123 Main St, Acme Corp", installed: "2019-06-15", warranty: "2026-06-14", status: "operational", lastService: "Mar 15, 2026", nextService: "Jun 15, 2026", customer: "Acme Corporation" },
   { id: 2, name: "Trane XR15 Heat Pump", type: "Heat Pump", serial: "TR-2023-98765", location: "456 Oak Ave, TechStart", installed: "2020-03-20", warranty: "2027-03-19", status: "operational", lastService: "Feb 10, 2026", nextService: "May 10, 2026", customer: "TechStart Inc" },
   { id: 3, name: "Generac 22kW Generator", type: "Generator", serial: "GN-2022-54321", location: "789 Pine Rd, Metro Hospital", installed: "2018-11-01", warranty: "2025-11-01", status: "warning", lastService: "Jan 5, 2026", nextService: "Apr 5, 2026", customer: "Metro Hospital" },
@@ -30,17 +37,44 @@ const equipment = [
   { id: 6, name: "Lennox XC21 AC Unit", type: "Air Conditioner", serial: "LN-2019-33333", location: "987 Cedar Ln, Riverside", installed: "2019-07-22", warranty: "2024-07-21", status: "warning", lastService: "Dec 15, 2025", nextService: "Overdue", customer: "Riverside Apartments" },
 ];
 
-const expiringWarranties = equipment.filter(e => {
-  const warrantyDate = new Date(e.warranty);
-  const daysUntilExpiry = (warrantyDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-  return daysUntilExpiry > 0 && daysUntilExpiry < 90;
-});
-
 function Equipment() {
+  const equipmentQuery = useQuery({
+    queryKey: ["field-service", "equipment"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/technicians?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch equipment");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const equipment = equipmentQuery.data?.data ?? MOCK_EQUIPMENT;
+
+  const expiringWarranties = MOCK_EQUIPMENT.filter(e => {
+    const warrantyDate = new Date(e.warranty);
+    const daysUntilExpiry = (warrantyDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    return daysUntilExpiry > 0 && daysUntilExpiry < 90;
+  });
+
   const getDaysUntil = (date: string) => {
     const d = new Date(date);
     return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   };
+
+  if (equipmentQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-64 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

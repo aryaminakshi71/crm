@@ -16,12 +16,19 @@ import {
   Play,
   RotateCcw,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/routes")({
   component: Routes,
 });
 
-const routes = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_ROUTES = [
   {
     id: "RT-001",
     name: "Manhattan Morning Route",
@@ -85,6 +92,32 @@ const routes = [
 ];
 
 function Routes() {
+  const routesQuery = useQuery({
+    queryKey: ["field-service", "routes"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/routes?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch routes");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const routes = routesQuery.data?.data ?? MOCK_ROUTES;
+
+  if (routesQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-48 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

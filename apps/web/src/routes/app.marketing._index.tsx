@@ -49,6 +49,8 @@ import {
 } from "recharts";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { marketingApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/marketing/_index")({
   component: MarketingDashboard,
@@ -122,7 +124,7 @@ interface Campaign {
   status: "active" | "draft";
 }
 
-const defaultCampaigns: Campaign[] = [
+const MOCK_CAMPAIGNS: Campaign[] = [
   { id: "1", name: "Spring Sale 2026", channel: "Email", audienceSize: 25000, budget: 5000, startDate: "2026-03-01", endDate: "2026-03-31", status: "active" },
   { id: "2", name: "Product Launch - Series X", channel: "Social", audienceSize: 18000, budget: 8000, startDate: "2026-03-15", endDate: "2026-04-15", status: "active" },
   { id: "3", name: "Customer Retention Q1", channel: "Email", audienceSize: 32000, budget: 3000, startDate: "2026-01-01", endDate: "2026-03-31", status: "draft" },
@@ -456,11 +458,21 @@ function EmailOpenHeatmap() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 function MarketingDashboard() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(defaultCampaigns);
+  const campaignsQuery = useQuery({
+    queryKey: ["marketing", "campaigns"],
+    queryFn: () => marketingApi.campaigns.list({ limit: 50 }),
+    retry: false,
+  });
+
+  const [localCampaigns, setLocalCampaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
+  const campaigns: Campaign[] = campaignsQuery.data?.data?.length > 0
+    ? campaignsQuery.data.data
+    : localCampaigns;
+
   const [showNewCampaign, setShowNewCampaign] = useState(false);
 
   const handleCampaignCreated = (c: Campaign) => {
-    setCampaigns((prev) => [c, ...prev]);
+    setLocalCampaigns((prev) => [c, ...prev]);
   };
 
   return (

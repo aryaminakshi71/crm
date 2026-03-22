@@ -47,6 +47,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { marketingApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/marketing/campaigns/$id")({
   component: CampaignDetail,
@@ -81,23 +83,45 @@ const locationData = [
   { country: "France", opens: 1200, conversions: 24 },
 ];
 
+const MOCK_CAMPAIGN = {
+  id: "1",
+  name: "Spring Sale 2026",
+  status: "active" as const,
+  type: "email",
+  sent: 25000,
+  delivered: 24850,
+  openRate: 34.2,
+  clickRate: 5.8,
+  bounceRate: 0.6,
+  unsubscribeRate: 0.1,
+  conversions: 342,
+  revenue: 68400,
+  startDate: "2026-03-01",
+  endDate: "2026-03-31",
+};
+
 function CampaignDetail() {
-  const campaign = {
-    id: "1",
-    name: "Spring Sale 2026",
-    status: "active" as const,
-    type: "email",
-    sent: 25000,
-    delivered: 24850,
-    openRate: 34.2,
-    clickRate: 5.8,
-    bounceRate: 0.6,
-    unsubscribeRate: 0.1,
-    conversions: 342,
-    revenue: 68400,
-    startDate: "2026-03-01",
-    endDate: "2026-03-31",
-  };
+  const { id } = Route.useParams();
+
+  const campaignQuery = useQuery({
+    queryKey: ["marketing", "campaigns", id],
+    queryFn: () => marketingApi.campaigns.get(id),
+    retry: false,
+  });
+
+  const campaign = campaignQuery.data ?? MOCK_CAMPAIGN;
+
+  if (campaignQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+          {[...Array(6)].map((_, i) => <div key={i} className="h-20 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+        <div className="h-72 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

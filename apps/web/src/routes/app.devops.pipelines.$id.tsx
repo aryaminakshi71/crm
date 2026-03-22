@@ -18,12 +18,19 @@ import {
   History,
   GitCommit,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/devops/pipelines/$id")({
   component: PipelineDetail,
 });
 
-const pipeline = {
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_PIPELINE = {
   id: "1",
   name: "frontend-app",
   description: "React frontend application",
@@ -42,6 +49,34 @@ const pipeline = {
 };
 
 function PipelineDetail() {
+  const { id } = Route.useParams();
+
+  const pipelineQuery = useQuery({
+    queryKey: ["devops", "pipelines", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/devops/pipelines/${id}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch pipeline");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const pipeline = pipelineQuery.data ?? MOCK_PIPELINE;
+
+  if (pipelineQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+        <div className="h-64 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

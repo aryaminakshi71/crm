@@ -13,14 +13,19 @@ import {
   User,
   Filter,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/schedule")({
   component: Schedule,
 });
 
-const currentDate = new Date("2026-03-20");
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
-const jobs = [
+const MOCK_JOBS = [
   { id: "JOB-1042", title: "HVAC Repair", time: "10:30 AM", duration: "2h", technician: "Jane Doe", status: "in_progress", date: "2026-03-20", type: "repair" },
   { id: "JOB-1043", title: "Electrical Inspection", time: "2:00 PM", duration: "1h", technician: "John Smith", status: "scheduled", date: "2026-03-20", type: "inspection" },
   { id: "JOB-1044", title: "Plumbing Maintenance", time: "4:00 PM", duration: "1.5h", technician: "Sarah Johnson", status: "scheduled", date: "2026-03-20", type: "maintenance" },
@@ -31,18 +36,42 @@ const jobs = [
   { id: "JOB-1049", title: "Water Heater Install", time: "3:00 PM", duration: "2h", technician: "Jane Doe", status: "scheduled", date: "2026-03-22", type: "installation" },
 ];
 
-const technicians = ["John Smith", "Jane Doe", "Mike Wilson", "Sarah Johnson", "Tom Brown", "Lisa Chen"];
+const MOCK_TECHNICIANS = ["John Smith", "Jane Doe", "Mike Wilson", "Sarah Johnson", "Tom Brown", "Lisa Chen"];
 
 const hours = Array.from({ length: 12 }, (_, i) => i + 7); // 7 AM to 6 PM
 
 function Schedule() {
+  const scheduleQuery = useQuery({
+    queryKey: ["field-service", "schedule"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/dispatch`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch schedule");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const jobs = scheduleQuery.data?.jobs ?? MOCK_JOBS;
+  const technicians = scheduleQuery.data?.technicians?.map((t: any) => t.name).filter(Boolean) ?? MOCK_TECHNICIANS;
+
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const dates = ["2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22"];
 
-  const getJobsForDate = (date: string) => jobs.filter(job => job.date === date);
+  const getJobsForDate = (date: string) => jobs.filter((job: any) => job.date === date);
 
   const getJobsForTechnicianAndDate = (tech: string, date: string) =>
-    jobs.filter(job => job.technician === tech && job.date === date);
+    jobs.filter((job: any) => job.technician === tech && job.date === date);
+
+  if (scheduleQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="h-96 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

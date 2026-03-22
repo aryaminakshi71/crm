@@ -19,12 +19,19 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/alerts")({
   component: Alerts,
 });
 
-const alerts = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_ALERTS = [
   { id: 1, type: "sla_breach", severity: "critical", jobId: "JOB-1035", customer: "Downtown Office", issue: "Response time SLA breached", technician: "John Smith", breachedAt: "10:15 AM", currentStatus: "Technician on site", responseTime: "1h 15m", resolutionTime: null, slaType: "response" },
   { id: 2, type: "sla_breach", severity: "warning", jobId: "JOB-1032", customer: "Harbor View Hotel", issue: "Resolution time approaching deadline", technician: "Jane Doe", breachedAt: "9:45 AM", currentStatus: "Parts ordered", deadline: "2:00 PM", timeRemaining: "2h 15m", slaType: "resolution" },
   { id: 3, type: "sla_breach", severity: "warning", jobId: "JOB-1043", customer: "TechStart Inc", issue: "Response SLA at risk", technician: "Mike Wilson", breachedAt: null, currentStatus: "Technician dispatched", deadline: "11:00 AM", timeRemaining: "45m", slaType: "response" },
@@ -40,6 +47,30 @@ const slaStats = [
 ];
 
 function Alerts() {
+  const alertsQuery = useQuery({
+    queryKey: ["field-service", "alerts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/jobs?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch alerts");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const alerts = alertsQuery.data?.data ?? MOCK_ALERTS;
+
+  if (alertsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+        <div className="h-64 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

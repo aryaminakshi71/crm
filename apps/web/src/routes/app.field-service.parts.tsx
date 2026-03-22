@@ -16,12 +16,19 @@ import {
   Calendar,
   DollarSign,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/parts")({
   component: Parts,
 });
 
-const parts = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_PARTS = [
   { id: 1, sku: "COMP-001", name: "Compressor Scroll", category: "HVAC", qty: 12, minStock: 5, price: 450, location: "Warehouse A", lastRestocked: "Mar 15, 2026" },
   { id: 2, sku: "REF-410A", name: "Refrigerant R-410A", category: "HVAC", qty: 24, minStock: 10, price: 120, location: "Warehouse A", lastRestocked: "Mar 18, 2026" },
   { id: 3, sku: "FILT-2025", name: "HVAC Filter 20x25x1", category: "HVAC", qty: 45, minStock: 20, price: 25, location: "Warehouse A", lastRestocked: "Mar 10, 2026" },
@@ -32,12 +39,38 @@ const parts = [
   { id: 8, sku: "THERM-001", name: "Smart Thermostat", category: "HVAC", qty: 2, minStock: 5, price: 185, location: "Warehouse A", lastRestocked: "Mar 1, 2026" },
 ];
 
-const lowStockParts = parts.filter(p => p.qty <= p.minStock);
-
 const categories = ["All", "HVAC", "Electrical", "Plumbing", "Generators"];
 const locations = ["All", "Warehouse A", "Warehouse B", "Technician Vans"];
 
 function Parts() {
+  const partsQuery = useQuery({
+    queryKey: ["field-service", "parts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/jobs?limit=200`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch parts");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const parts = partsQuery.isSuccess && partsQuery.data?.data?.length > 0
+    ? partsQuery.data.data
+    : MOCK_PARTS;
+
+  const lowStockParts = parts.filter((p: any) => p.qty <= p.minStock);
+
+  if (partsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+        <div className="h-64 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}

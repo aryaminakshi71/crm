@@ -18,12 +18,19 @@ import {
   User,
   MapPin,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/field-service/invoicing")({
   component: Invoicing,
 });
 
-const invoices = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const MOCK_INVOICES = [
   { id: "INV-2026-001", jobId: "JOB-1042", customer: "Acme Corporation", amount: 870, status: "draft", date: "Mar 20, 2026", dueDate: "Mar 27, 2026", items: [{ name: "Compressor Scroll", qty: 1, price: 450 }, { name: "Labor", qty: 2, price: 180 }] },
   { id: "INV-2026-002", jobId: "JOB-1040", customer: "Green Valley Clinic", amount: 245, status: "sent", date: "Mar 20, 2026", dueDate: "Mar 27, 2026", items: [{ name: "Parts & Labor", qty: 1, price: 245 }] },
   { id: "INV-2026-003", jobId: "JOB-1035", customer: "Harbor View Hotel", amount: 1250, status: "paid", date: "Mar 19, 2026", dueDate: "Mar 26, 2026", items: [{ name: "Generator Maintenance", qty: 1, price: 1250 }] },
@@ -32,6 +39,32 @@ const invoices = [
 ];
 
 function Invoicing() {
+  const invoicesQuery = useQuery({
+    queryKey: ["field-service", "invoices"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/field-service/invoices?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch invoices");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const invoices = invoicesQuery.data?.data ?? MOCK_INVOICES;
+
+  if (invoicesQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+        <div className="h-64 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
