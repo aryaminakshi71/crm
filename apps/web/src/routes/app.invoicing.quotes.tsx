@@ -17,6 +17,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Clock,
@@ -33,6 +34,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/quotes")({
   component: QuoteBuilder,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type Quote = {
   id: string;
@@ -58,7 +65,17 @@ function QuoteBuilder() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const filteredQuotes = mockQuotes.filter((quote) => {
+  const quotesQuery = useQuery({
+    queryKey: ["invoicing/quotes"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/quotes`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const quotes: Quote[] = quotesQuery.data?.data?.length ? quotesQuery.data.data : mockQuotes;
+
+  const filteredQuotes = quotes.filter((quote) => {
     if (statusFilter !== "all" && quote.status !== statusFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -78,8 +95,8 @@ function QuoteBuilder() {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const totalValue = mockQuotes.filter(q => q.status === "sent" || q.status === "accepted").reduce((sum, q) => sum + q.amount, 0);
-  const acceptedValue = mockQuotes.filter(q => q.status === "accepted").reduce((sum, q) => sum + q.amount, 0);
+  const totalValue = quotes.filter(q => q.status === "sent" || q.status === "accepted").reduce((sum, q) => sum + q.amount, 0);
+  const acceptedValue = quotes.filter(q => q.status === "accepted").reduce((sum, q) => sum + q.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -96,7 +113,7 @@ function QuoteBuilder() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Open Quotes" value={mockQuotes.filter(q => q.status === "sent").length + ""} />
+        <StatCard title="Open Quotes" value={quotes.filter(q => q.status === "sent").length + ""} />
         <StatCard title="Total Value" value={`$${(totalValue / 1000).toFixed(1)}K`} />
         <StatCard title="Accepted" value={`$${(acceptedValue / 1000).toFixed(1)}K`} highlight />
         <StatCard title="Win Rate" value="68%" />

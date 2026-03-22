@@ -14,6 +14,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Calendar,
@@ -41,6 +42,12 @@ import {
 export const Route = createFileRoute("/app/invoicing/expenses")({
   component: ExpenseManagement,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
@@ -78,7 +85,17 @@ function ExpenseManagement() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredExpenses = mockExpenses.filter((expense) => {
+  const expensesQuery = useQuery({
+    queryKey: ["invoicing/expenses"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/expenses`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const expenses: Expense[] = expensesQuery.data?.data?.length ? expensesQuery.data.data : mockExpenses;
+
+  const filteredExpenses = expenses.filter((expense) => {
     if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
     if (statusFilter !== "all" && expense.status !== statusFilter) return false;
     if (!search.trim()) return true;
@@ -88,8 +105,8 @@ function ExpenseManagement() {
     );
   });
 
-  const totalExpenses = mockExpenses.filter(e => e.status === "approved").reduce((sum, e) => sum + e.amount, 0);
-  const pendingExpenses = mockExpenses.filter(e => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = expenses.filter(e => e.status === "approved").reduce((sum, e) => sum + e.amount, 0);
+  const pendingExpenses = expenses.filter(e => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="space-y-6">

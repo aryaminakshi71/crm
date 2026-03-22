@@ -16,6 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Building2,
@@ -33,6 +34,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/vendors")({
   component: VendorManagement,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type Vendor = {
   id: string;
@@ -59,7 +66,17 @@ function VendorManagement() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const filteredVendors = mockVendors.filter((vendor) => {
+  const vendorsQuery = useQuery({
+    queryKey: ["invoicing/vendors"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/vendors`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const vendors: Vendor[] = vendorsQuery.data?.data?.length ? vendorsQuery.data.data : mockVendors;
+
+  const filteredVendors = vendors.filter((vendor) => {
     if (categoryFilter !== "all" && vendor.category !== categoryFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -68,8 +85,8 @@ function VendorManagement() {
     );
   });
 
-  const categories = [...new Set(mockVendors.map(v => v.category))];
-  const totalSpend = mockVendors.reduce((sum, v) => sum + v.totalPaid, 0);
+  const categories = [...new Set(vendors.map(v => v.category))];
+  const totalSpend = vendors.reduce((sum, v) => sum + v.totalPaid, 0);
 
   return (
     <div className="space-y-6">
@@ -86,7 +103,7 @@ function VendorManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Total Vendors" value={mockVendors.filter(v => v.status === "active").length + ""} />
+        <StatCard title="Total Vendors" value={vendors.filter(v => v.status === "active").length + ""} />
         <StatCard title="Total Spend (YTD)" value={`$${(totalSpend / 1000).toFixed(1)}K`} />
         <StatCard title="Pending Payments" value="$7.15K" />
         <StatCard title="Categories" value={categories.length + ""} />

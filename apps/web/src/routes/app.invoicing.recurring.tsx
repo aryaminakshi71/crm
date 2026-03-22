@@ -14,6 +14,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Calendar,
@@ -31,6 +32,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/recurring")({
   component: RecurringInvoices,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type RecurringInvoice = {
   id: string;
@@ -56,7 +63,17 @@ function RecurringInvoices() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredRecurring = mockRecurring.filter((item) => {
+  const recurringQuery = useQuery({
+    queryKey: ["invoicing/recurring"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/recurring`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const recurring: RecurringInvoice[] = recurringQuery.data?.data?.length ? recurringQuery.data.data : mockRecurring;
+
+  const filteredRecurring = recurring.filter((item) => {
     if (statusFilter !== "all" && item.status !== statusFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -65,7 +82,7 @@ function RecurringInvoices() {
     );
   });
 
-  const totalMonthlyValue = mockRecurring.filter(r => r.status === "active").reduce((sum, r) => {
+  const totalMonthlyValue = recurring.filter(r => r.status === "active").reduce((sum, r) => {
     switch (r.frequency) {
       case "weekly": return sum + (r.amount * 4);
       case "monthly": return sum + r.amount;
@@ -103,10 +120,10 @@ function RecurringInvoices() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Active Recurring" value={mockRecurring.filter(r => r.status === "active").length + ""} color="text-emerald-400" />
+        <StatCard title="Active Recurring" value={recurring.filter(r => r.status === "active").length + ""} color="text-emerald-400" />
         <StatCard title="Monthly Value" value={`$${(totalMonthlyValue / 1000).toFixed(1)}K`} color="text-primary" />
-        <StatCard title="Paused" value={mockRecurring.filter(r => r.status === "paused").length + ""} color="text-amber-400" />
-        <StatCard title="Invoices Created" value={mockRecurring.reduce((sum, r) => sum + r.totalCreated, 0) + ""} color="text-violet-400" />
+        <StatCard title="Paused" value={recurring.filter(r => r.status === "paused").length + ""} color="text-amber-400" />
+        <StatCard title="Invoices Created" value={recurring.reduce((sum, r) => sum + r.totalCreated, 0) + ""} color="text-violet-400" />
       </div>
 
       {/* Filters */}

@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -45,6 +46,12 @@ export const Route = createFileRoute("/app/invoicing/reports/pl")({
   component: PLReports,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
 const revenueBreakdown = [
@@ -75,10 +82,19 @@ const expenseBreakdown = [
 function PLReports() {
   const [dateRange, setDateRange] = useState("ytd");
 
-  const totalRevenue = 327500;
-  const totalExpenses = 238000;
-  const netProfit = 89500;
-  const profitMargin = (netProfit / totalRevenue) * 100;
+  const plQuery = useQuery({
+    queryKey: ["invoicing/reports/pl", dateRange],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/reports/pl?dateRange=${dateRange}`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const totalRevenue = plQuery.data?.totalRevenue ?? 327500;
+  const totalExpenses = plQuery.data?.totalExpenses ?? 238000;
+  const netProfit = plQuery.data?.netProfit ?? 89500;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : (plQuery.data?.profitMargin ?? 27.3);
 
   return (
     <div className="space-y-6">

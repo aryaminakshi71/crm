@@ -23,6 +23,7 @@ import { hrmRouter } from "./hrm";
 import { intelligenceRouter } from "./intelligence";
 import { integrationRouter } from "./integration";
 import { inventoryRouter } from "./inventory";
+import { invoicingRouter } from "./invoicing";
 import { leadsRouter } from "./leads";
 import { marketingRouter } from "./marketing";
 import { modulesRouter } from "./modules";
@@ -71,6 +72,7 @@ export const appRouter = {
   social: socialRouter,
   marketing: marketingRouter,
   inventory: inventoryRouter,
+  invoicing: invoicingRouter,
   speech: speechRouter,
 };
 

@@ -16,6 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Calculator,
@@ -30,6 +31,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/accounts")({
   component: ChartOfAccounts,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type Account = {
   id: string;
@@ -80,7 +87,17 @@ function ChartOfAccounts() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const filteredAccounts = mockAccounts.filter((account) => {
+  const accountsQuery = useQuery({
+    queryKey: ["invoicing/accounts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/accounts`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const accounts: Account[] = accountsQuery.data?.data?.length ? accountsQuery.data.data : mockAccounts;
+
+  const filteredAccounts = accounts.filter((account) => {
     if (typeFilter !== "all" && account.type !== typeFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -94,11 +111,11 @@ function ChartOfAccounts() {
   };
 
   const totals = {
-    asset: mockAccounts.filter(a => a.type === "asset").reduce((sum, a) => sum + a.balance, 0),
-    liability: mockAccounts.filter(a => a.type === "liability").reduce((sum, a) => sum + a.balance, 0),
-    equity: mockAccounts.filter(a => a.type === "equity").reduce((sum, a) => sum + a.balance, 0),
-    revenue: mockAccounts.filter(a => a.type === "revenue").reduce((sum, a) => sum + a.balance, 0),
-    expense: mockAccounts.filter(a => a.type === "expense").reduce((sum, a) => sum + a.balance, 0),
+    asset: accounts.filter(a => a.type === "asset").reduce((sum, a) => sum + a.balance, 0),
+    liability: accounts.filter(a => a.type === "liability").reduce((sum, a) => sum + a.balance, 0),
+    equity: accounts.filter(a => a.type === "equity").reduce((sum, a) => sum + a.balance, 0),
+    revenue: accounts.filter(a => a.type === "revenue").reduce((sum, a) => sum + a.balance, 0),
+    expense: accounts.filter(a => a.type === "expense").reduce((sum, a) => sum + a.balance, 0),
   };
 
   return (

@@ -16,6 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle,
@@ -33,6 +34,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/purchase-orders")({
   component: PurchaseOrders,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type PurchaseOrder = {
   id: string;
@@ -59,7 +66,17 @@ function PurchaseOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const filteredOrders = mockPurchaseOrders.filter((po) => {
+  const purchaseOrdersQuery = useQuery({
+    queryKey: ["invoicing/purchase-orders"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/purchase-orders`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const purchaseOrders: PurchaseOrder[] = purchaseOrdersQuery.data?.data?.length ? purchaseOrdersQuery.data.data : mockPurchaseOrders;
+
+  const filteredOrders = purchaseOrders.filter((po) => {
     if (statusFilter !== "all" && po.status !== statusFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -89,7 +106,7 @@ function PurchaseOrders() {
     }
   };
 
-  const totalValue = mockPurchaseOrders.filter(po => po.status !== "cancelled").reduce((sum, po) => sum + po.total, 0);
+  const totalValue = purchaseOrders.filter(po => po.status !== "cancelled").reduce((sum, po) => sum + po.total, 0);
 
   return (
     <div className="space-y-6">
@@ -106,8 +123,8 @@ function PurchaseOrders() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Open POs" value={mockPurchaseOrders.filter(po => po.status === "sent" || po.status === "acknowledged").length + ""} />
-        <StatCard title="Draft POs" value={mockPurchaseOrders.filter(po => po.status === "draft").length + ""} />
+        <StatCard title="Open POs" value={purchaseOrders.filter(po => po.status === "sent" || po.status === "acknowledged").length + ""} />
+        <StatCard title="Draft POs" value={purchaseOrders.filter(po => po.status === "draft").length + ""} />
         <StatCard title="Received This Month" value="$15K" />
         <StatCard title="Total PO Value" value={`$${(totalValue / 1000).toFixed(1)}K`} />
       </div>

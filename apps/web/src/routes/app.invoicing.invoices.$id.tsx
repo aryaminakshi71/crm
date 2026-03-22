@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -28,10 +29,26 @@ export const Route = createFileRoute("/app/invoicing/invoices/$id")({
   component: InvoiceDetail,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 function InvoiceDetail() {
+  const { id } = Route.useParams();
   const [status, setStatus] = useState("sent");
 
-  const invoice = {
+  const invoiceQuery = useQuery({
+    queryKey: ["invoicing/invoices", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/invoices/${id}`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const MOCK_INVOICE = {
     id: "1",
     invoiceNumber: "INV-2026-002",
     client: "TechStart Inc",
@@ -49,6 +66,8 @@ function InvoiceDetail() {
     ],
     notes: "Thank you for your business! Payment is due within 30 days.",
   };
+
+  const invoice = invoiceQuery.data ?? MOCK_INVOICE;
 
   return (
     <div className="space-y-6">

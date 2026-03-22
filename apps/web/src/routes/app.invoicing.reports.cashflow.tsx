@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDownLeft,
   ArrowDownRight,
@@ -40,6 +41,12 @@ export const Route = createFileRoute("/app/invoicing/reports/cashflow")({
   component: CashFlowStatement,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 const monthlyCashFlow = [
   { month: "Jan", operating: 15000, investing: -5000, financing: -3000, net: 7000 },
   { month: "Feb", operating: 18000, investing: -8000, financing: -2000, net: 8000 },
@@ -52,12 +59,21 @@ const monthlyCashFlow = [
 function CashFlowStatement() {
   const [dateRange, setDateRange] = useState("ytd");
 
-  const operatingCashFlow = 124000;
-  const investingCashFlow = -39000;
-  const financingCashFlow = -20000;
-  const netCashFlow = 65000;
-  const beginningCash = 60000;
-  const endingCash = 125000;
+  const cashflowQuery = useQuery({
+    queryKey: ["invoicing/reports/cashflow", dateRange],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/reports/cashflow?dateRange=${dateRange}`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const operatingCashFlow = cashflowQuery.data?.operatingCashFlow ?? 124000;
+  const investingCashFlow = cashflowQuery.data?.investingCashFlow ?? -39000;
+  const financingCashFlow = cashflowQuery.data?.financingCashFlow ?? -20000;
+  const netCashFlow = cashflowQuery.data?.netCashFlow ?? 65000;
+  const beginningCash = cashflowQuery.data?.beginningCash ?? 60000;
+  const endingCash = cashflowQuery.data?.endingCash ?? 125000;
 
   return (
     <div className="space-y-6">

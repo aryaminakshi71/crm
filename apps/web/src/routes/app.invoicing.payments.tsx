@@ -14,6 +14,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Banknote,
@@ -31,6 +32,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/payments")({
   component: PaymentTracking,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type Payment = {
   id: string;
@@ -56,7 +63,17 @@ function PaymentTracking() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
 
-  const filteredPayments = mockPayments.filter((payment) => {
+  const paymentsQuery = useQuery({
+    queryKey: ["invoicing/payments"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/payments`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const payments: Payment[] = paymentsQuery.data?.data?.length ? paymentsQuery.data.data : mockPayments;
+
+  const filteredPayments = payments.filter((payment) => {
     if (statusFilter !== "all" && payment.status !== statusFilter) return false;
     if (methodFilter !== "all" && payment.method !== methodFilter) return false;
     if (!search.trim()) return true;
@@ -67,8 +84,8 @@ function PaymentTracking() {
     );
   });
 
-  const totalReceived = mockPayments.filter(p => p.status === "completed").reduce((sum, p) => sum + p.amount, 0);
-  const pendingPayments = mockPayments.filter(p => p.status === "pending").reduce((sum, p) => sum + p.amount, 0);
+  const totalReceived = payments.filter(p => p.status === "completed").reduce((sum, p) => sum + p.amount, 0);
+  const pendingPayments = payments.filter(p => p.status === "pending").reduce((sum, p) => sum + p.amount, 0);
 
   const getMethodIcon = (method: Payment["method"]) => {
     switch (method) {
@@ -106,7 +123,7 @@ function PaymentTracking() {
         <StatCard title="Total Received" value={`$${(totalReceived / 1000).toFixed(1)}K`} color="text-emerald-400" />
         <StatCard title="Pending" value={`$${(pendingPayments / 1000).toFixed(1)}K`} color="text-amber-400" />
         <StatCard title="This Month" value="$23.85K" color="text-primary" />
-        <StatCard title="Transactions" value={mockPayments.length + ""} color="text-violet-400" />
+        <StatCard title="Transactions" value={payments.length + ""} color="text-violet-400" />
       </div>
 
       {/* Filters */}

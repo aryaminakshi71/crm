@@ -16,6 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Edit,
@@ -30,6 +31,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/taxes")({
   component: TaxConfiguration,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type TaxRate = {
   id: string;
@@ -55,7 +62,17 @@ function TaxConfiguration() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTax, setNewTax] = useState({ name: "", rate: "", type: "sales", region: "" });
 
-  const filteredTaxRates = mockTaxRates.filter((tax) => {
+  const taxesQuery = useQuery({
+    queryKey: ["invoicing/taxes"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/taxes`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const taxRates: TaxRate[] = taxesQuery.data?.data?.length ? taxesQuery.data.data : mockTaxRates;
+
+  const filteredTaxRates = taxRates.filter((tax) => {
     if (!search.trim()) return true;
     return (
       tax.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -63,7 +80,7 @@ function TaxConfiguration() {
     );
   });
 
-  const activeTaxes = mockTaxRates.filter(t => t.status === "active");
+  const activeTaxes = taxRates.filter(t => t.status === "active");
   const totalTaxCollected = 45678; // Example value
 
   return (

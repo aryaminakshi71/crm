@@ -18,6 +18,7 @@ import {
   Select,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   DollarSign,
   Download,
@@ -34,6 +35,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/invoices")({
   component: InvoiceList,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 type Invoice = {
   id: string;
@@ -64,7 +71,17 @@ function InvoiceList() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newInvoice, setNewInvoice] = useState({ client: "", email: "", amount: "", tax: "10" });
 
-  const filteredInvoices = mockInvoices.filter((invoice) => {
+  const invoicesQuery = useQuery({
+    queryKey: ["invoicing/invoices"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/invoices`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+  const invoices: Invoice[] = invoicesQuery.data?.data?.length ? invoicesQuery.data.data : mockInvoices;
+
+  const filteredInvoices = invoices.filter((invoice) => {
     if (statusFilter !== "all" && invoice.status !== statusFilter) return false;
     if (!search.trim()) return true;
     return (
@@ -84,8 +101,8 @@ function InvoiceList() {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const totalOutstanding = mockInvoices.filter(i => i.status === "sent" || i.status === "overdue").reduce((sum, i) => sum + i.total, 0);
-  const totalOverdue = mockInvoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.total, 0);
+  const totalOutstanding = invoices.filter(i => i.status === "sent" || i.status === "overdue").reduce((sum, i) => sum + i.total, 0);
+  const totalOverdue = invoices.filter(i => i.status === "overdue").reduce((sum, i) => sum + i.total, 0);
 
   return (
     <div className="space-y-6">

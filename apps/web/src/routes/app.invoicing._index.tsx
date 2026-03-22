@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -50,6 +51,12 @@ export const Route = createFileRoute("/app/invoicing/_index")({
   component: FinanceOverview,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
 const revenueData = [
@@ -83,6 +90,17 @@ const recentExpenses = [
 ];
 
 function FinanceOverview() {
+  const statsQuery = useQuery({
+    queryKey: ["invoicing/stats"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/stats`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const stats = statsQuery.data;
+
   return (
     <div className="space-y-6">
       {/* Metrics Grid */}

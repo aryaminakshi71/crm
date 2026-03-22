@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -25,6 +26,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/invoicing/reports/balance")({
   component: BalanceSheet,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 const assets = [
   { category: "Current Assets", items: [
@@ -56,15 +63,24 @@ const liabilities = [
 function BalanceSheet() {
   const [dateRange, setDateRange] = useState("q1");
 
-  const totalCurrentAssets = 271400;
-  const totalFixedAssets = 160000;
-  const totalAssets = 431400;
+  const balanceQuery = useQuery({
+    queryKey: ["invoicing/reports/balance", dateRange],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/invoicing/reports/balance`, { headers: { ...getOrgHeader() } });
+      return res.json();
+    },
+    retry: false,
+  });
 
-  const totalCurrentLiabilities = 120000;
-  const totalLongTermLiabilities = 135000;
-  const totalLiabilities = 255000;
+  const totalCurrentAssets = balanceQuery.data?.totalCurrentAssets ?? 271400;
+  const totalFixedAssets = balanceQuery.data?.totalFixedAssets ?? 160000;
+  const totalAssets = balanceQuery.data?.totalAssets ?? 431400;
 
-  const totalEquity = 176400;
+  const totalCurrentLiabilities = balanceQuery.data?.totalCurrentLiabilities ?? 120000;
+  const totalLongTermLiabilities = balanceQuery.data?.totalLongTermLiabilities ?? 135000;
+  const totalLiabilities = balanceQuery.data?.totalLiabilities ?? 255000;
+
+  const totalEquity = balanceQuery.data?.totalEquity ?? 176400;
 
   return (
     <div className="space-y-6">
