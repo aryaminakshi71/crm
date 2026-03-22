@@ -1,4 +1,17 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Input,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -10,13 +23,10 @@ import {
   Calculator,
   Database,
   Code,
-  FileText,
   Mail,
   ExternalLink,
   Settings,
   Trash2,
-  CheckCircle,
-  XCircle,
   RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +34,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/agents/tools")({
   component: ToolsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Tool {
   id: string;
@@ -36,7 +53,7 @@ interface Tool {
   usageCount: number;
 }
 
-const TOOLS: Tool[] = [
+const STATIC_TOOLS: Tool[] = [
   { id: "web-search", name: "Web Search", description: "Search the web for information", icon: "🌐", category: "Search", status: "connected", lastUsed: "2 min ago", usageCount: 1247 },
   { id: "calculator", name: "Calculator", description: "Perform mathematical calculations", icon: "🔢", category: "Utility", status: "connected", lastUsed: "5 min ago", usageCount: 8923 },
   { id: "code-interpreter", name: "Code Interpreter", description: "Execute Python and JavaScript code", icon: "💻", category: "Development", status: "connected", lastUsed: "12 min ago", usageCount: 456 },
@@ -66,8 +83,39 @@ function ToolsPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const filteredTools = TOOLS.filter((tool) => {
-    const matchesSearch = tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  // GET /api/agents/tools — real tool definitions from the agent task API
+  const { data: apiToolsData } = useQuery({
+    queryKey: ["agents", "tools"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/agents/tools`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch tools");
+      return res.json() as Promise<{ tools: Array<{ id: string; name: string; description: string }> }>;
+    },
+  });
+
+  // Merge API tools with static catalog. API tools get "connected" status.
+  const apiTools: Tool[] = (apiToolsData?.tools ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    icon: "🔧",
+    category: "Development",
+    status: "connected" as const,
+    lastUsed: "Available",
+    usageCount: 0,
+  }));
+
+  // Combine: static catalog + API-specific tools (deduplicated by id)
+  const allTools = [
+    ...STATIC_TOOLS,
+    ...apiTools.filter((at) => !STATIC_TOOLS.some((st) => st.id === at.id)),
+  ];
+
+  const filteredTools = allTools.filter((tool) => {
+    const matchesSearch =
+      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || tool.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -75,9 +123,12 @@ function ToolsPage() {
 
   const getStatusBadge = (status: Tool["status"]) => {
     switch (status) {
-      case "connected": return <Badge className="bg-green-100 text-green-800">Connected</Badge>;
-      case "disconnected": return <Badge variant="outline">Disconnected</Badge>;
-      case "error": return <Badge className="bg-red-100 text-red-800">Error</Badge>;
+      case "connected":
+        return <Badge className="bg-green-100 text-green-800">Connected</Badge>;
+      case "disconnected":
+        return <Badge variant="outline">Disconnected</Badge>;
+      case "error":
+        return <Badge className="bg-red-100 text-red-800">Error</Badge>;
     }
   };
 
@@ -104,7 +155,11 @@ function ToolsPage() {
             <p className="text-muted-foreground text-sm">Connect external tools and APIs to your agents</p>
           </div>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setShowAddDialog(true)}>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setShowAddDialog(true)}
+        >
           Add Tool
         </Button>
       </div>
@@ -241,7 +296,9 @@ function ToolsPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
             <Button variant="primary">Add Tool</Button>
           </div>
         </DialogContent>

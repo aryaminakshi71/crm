@@ -1,4 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -6,13 +7,11 @@ import {
   Plus,
   Users,
   Play,
-  Pause,
   Settings,
   Trash2,
   ArrowRight,
   GitBranch,
   Zap,
-  Clock,
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
@@ -21,6 +20,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/agents/orchestration")({
   component: OrchestrationDashboard,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Workflow {
   id: string;
@@ -76,28 +82,45 @@ const MOCK_WORKFLOWS: Workflow[] = [
   },
 ];
 
-const AVAILABLE_AGENTS = [
-  { id: "ag-1", name: "Support Assistant", type: "chatbot", status: "active" },
-  { id: "ag-2", name: "Data Analyst", type: "data_analysis", status: "active" },
-  { id: "ag-3", name: "Code Assistant", type: "code_execution", status: "idle" },
-  { id: "ag-4", name: "Research Agent", type: "autonomous", status: "active" },
-  { id: "ag-5", name: "Sales Qualifier", type: "chatbot", status: "active" },
-  { id: "ag-6", name: "SEO Analyzer", type: "data_analysis", status: "active" },
-];
-
 function OrchestrationDashboard() {
   const navigate = useNavigate();
-  const [workflows] = useState(MOCK_WORKFLOWS);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
+
+  // GET /api/agents — use real agents for the available agents panel
+  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: ["agents", "list"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/agents?limit=50`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch agents");
+      return res.json() as Promise<{
+        data: Array<{ id: string; name: string; agentType: string; status: string }>;
+      }>;
+    },
+  });
+
+  // No workflows endpoint exists yet — use mock data with real agent list for the panel
+  const workflows = MOCK_WORKFLOWS;
+  const availableAgents = agentsData?.data ?? [];
 
   const getStatusColor = (status: Workflow["status"]) => {
     switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "paused": return "bg-amber-100 text-amber-800";
-      case "draft": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "paused":
+        return "bg-amber-100 text-amber-800";
+      case "draft":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
+
+  const totalExecutions = workflows.reduce((s, w) => s + w.executions, 0);
+  const avgSuccessRate =
+    workflows.filter((w) => w.executions > 0).reduce((s, w) => s + w.successRate, 0) /
+    Math.max(workflows.filter((w) => w.executions > 0).length, 1);
 
   return (
     <div className="space-y-6">
@@ -152,7 +175,7 @@ function OrchestrationDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Executions</p>
-                <p className="text-2xl font-bold">2,595</p>
+                <p className="text-2xl font-bold">{totalExecutions.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -165,7 +188,7 @@ function OrchestrationDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Success Rate</p>
-                <p className="text-2xl font-bold">93.9%</p>
+                <p className="text-2xl font-bold">{avgSuccessRate.toFixed(1)}%</p>
               </div>
             </div>
           </CardContent>
@@ -217,7 +240,7 @@ function OrchestrationDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex gap-4 text-xs text-muted-foreground">
                       <span>{workflow.executions.toLocaleString()} executions</span>
-                      <span>{(workflow.successRate > 0 ? `${workflow.successRate}%` : "N/A")} success</span>
+                      <span>{workflow.successRate > 0 ? `${workflow.successRate}%` : "N/A"} success</span>
                       <span>Last: {workflow.lastRun}</span>
                     </div>
                     <div className="flex gap-1">
@@ -247,18 +270,28 @@ function OrchestrationDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {AVAILABLE_AGENTS.map((agent) => (
-                <div key={agent.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Bot className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">{agent.name}</span>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {agent.status}
-                  </Badge>
+              {agentsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-10 animate-pulse bg-muted rounded-lg" />
+                  ))}
                 </div>
-              ))}
-              <Button variant="outline" className="w-full mt-2">
+              ) : availableAgents.length > 0 ? (
+                availableAgents.map((agent) => (
+                  <div key={agent.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">{agent.name}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {agent.status}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm text-center py-4">No agents found</p>
+              )}
+              <Button variant="outline" className="w-full mt-2" onClick={() => navigate({ to: "/app/agents/new" })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Agent
               </Button>
             </CardContent>

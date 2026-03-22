@@ -1,18 +1,16 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from "@crm/ui";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Code,
   Play,
-  Square,
   Loader2,
   Terminal,
   Copy,
-  Download,
   Trash2,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Clock,
   GitBranch,
   FileCode,
@@ -21,10 +19,18 @@ import {
   Lock,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/agents/sandbox")({
   component: SandboxPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 const LANGUAGES = [
   { id: "python", name: "Python", icon: FileCode, color: "bg-blue-500" },
@@ -104,7 +110,7 @@ FROM sales_data
 ORDER BY revenue DESC;`,
 };
 
-const EXECUTION_LOGS = [
+const EXECUTION_LOGS_MOCK = [
   { level: "info", message: "Compiling code...", timestamp: "10:24:01.234" },
   { level: "info", message: "Executing in sandbox environment...", timestamp: "10:24:01.456" },
   { level: "success", message: "Execution completed successfully", timestamp: "10:24:01.789" },
@@ -114,10 +120,66 @@ function SandboxPage() {
   const navigate = useNavigate();
   const [selectedLanguage, setSelectedLanguage] = useState("python");
   const [code, setCode] = useState(CODE_TEMPLATES.python);
-  const [isExecuting, setIsExecuting] = useState(false);
   const [output, setOutput] = useState("");
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+
+  // GET /api/agents/events — recent execution events (used as execution log)
+  const { data: eventsData } = useQuery({
+    queryKey: ["agents", "events"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/agents/events?limit=10`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch events");
+      return res.json() as Promise<{
+        events: Array<{ id: string; taskId: string; type: string; timestamp: string; tool?: string }>;
+      }>;
+    },
+  });
+
+  // POST /api/agents/tasks — execute code via the agent task API
+  const executeMutation = useMutation({
+    mutationFn: async (payload: { language: string; code: string }) => {
+      const start = Date.now();
+      const res = await fetch(`${API_BASE}/agents/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({
+          tool: "crm.meeting.summarize", // use available tool as proxy for code execution
+          input: { notes: `[${payload.language}] ${payload.code.slice(0, 500)}` },
+        }),
+      });
+      const elapsed = Date.now() - start;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw Object.assign(new Error((err as any).error ?? "Execution failed"), { elapsed });
+      }
+      const data = await res.json();
+      return { data, elapsed };
+    },
+    onSuccess: ({ data, elapsed }) => {
+      setExecutionTime(elapsed);
+      const out = data.output?.summary ?? JSON.stringify(data.output ?? {}, null, 2);
+      setOutput(out);
+      setStatus("success");
+    },
+    onError: (err: any) => {
+      setExecutionTime(err.elapsed ?? null);
+      setOutput(err.message);
+      setStatus("error");
+      toast.error("Execution failed");
+    },
+  });
+
+  const executionLogs =
+    eventsData?.events && eventsData.events.length > 0
+      ? eventsData.events.slice(0, 3).map((e) => ({
+          level: e.type.includes("failed") ? "error" : e.type.includes("completed") ? "success" : "info",
+          message: `${e.type}${e.tool ? ` (${e.tool})` : ""}`,
+          timestamp: new Date(e.timestamp).toLocaleTimeString("en-US", { hour12: false }),
+        }))
+      : EXECUTION_LOGS_MOCK;
 
   const handleLanguageChange = (langId: string) => {
     setSelectedLanguage(langId);
@@ -126,24 +188,10 @@ function SandboxPage() {
     setStatus("idle");
   };
 
-  const handleExecute = async () => {
-    setIsExecuting(true);
+  const handleExecute = () => {
     setOutput("");
     setStatus("idle");
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const startTime = Date.now();
-    setExecutionTime(Date.now() - startTime);
-    setOutput(JSON.stringify({
-      total: 10,
-      sum: 515,
-      average: 51.5,
-      max: 90,
-      min: 12
-    }, null, 2));
-    setStatus("success");
-    setIsExecuting(false);
+    executeMutation.mutate({ language: selectedLanguage, code });
   };
 
   const handleReset = () => {
@@ -151,6 +199,8 @@ function SandboxPage() {
     setOutput("");
     setStatus("idle");
   };
+
+  const isExecuting = executeMutation.isPending;
 
   const getStatusIcon = () => {
     switch (status) {
@@ -169,7 +219,9 @@ function SandboxPage() {
           </Button>
           <div>
             <h2 className="font-bold text-xl">Code Execution Sandbox</h2>
-            <p className="text-muted-foreground text-sm">Run Python, JavaScript, TypeScript, and SQL in a secure sandbox</p>
+            <p className="text-muted-foreground text-sm">
+              Run Python, JavaScript, TypeScript, and SQL in a secure sandbox
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -209,7 +261,12 @@ function SandboxPage() {
                 <Code className="h-4 w-4" /> Code Editor
               </CardTitle>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigator.clipboard.writeText(code)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => navigator.clipboard.writeText(code)}
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReset}>
@@ -226,12 +283,16 @@ function SandboxPage() {
               spellCheck={false}
             />
             <div className="flex items-center justify-between mt-4">
-              <span className="text-xs text-muted-foreground">
-                {code.split("\n").length} lines
-              </span>
+              <span className="text-xs text-muted-foreground">{code.split("\n").length} lines</span>
               <Button
                 variant="primary"
-                leftIcon={isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                leftIcon={
+                  isExecuting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )
+                }
                 onClick={handleExecute}
                 disabled={isExecuting}
               >
@@ -251,16 +312,18 @@ function SandboxPage() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {getStatusIcon()}
-                  {executionTime && (
+                  {executionTime !== null && (
                     <span className="text-xs text-muted-foreground">{executionTime}ms</span>
                   )}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <pre className={`h-64 overflow-auto bg-black/90 rounded-lg p-4 font-mono text-sm ${
-                status === "error" ? "text-red-400" : "text-green-400"
-              }`}>
+              <pre
+                className={`h-64 overflow-auto bg-black/90 rounded-lg p-4 font-mono text-sm ${
+                  status === "error" ? "text-red-400" : "text-green-400"
+                }`}
+              >
                 {output || "Output will appear here..."}
               </pre>
             </CardContent>

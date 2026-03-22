@@ -1,12 +1,11 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input, Select } from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Settings,
   Key,
   Shield,
-  Bell,
-  Users,
   Globe,
   Clock,
   Database,
@@ -18,22 +17,33 @@ import {
   Trash2,
   Plus,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/agents/settings")({
   component: SettingsPage,
 });
 
-const API_KEYS = [
-  { id: "key-1", name: "Production API Key", prefix: "sk-agent-prod-xxxx", created: "Jan 15, 2024", lastUsed: "2 min ago" },
-  { id: "key-2", name: "Development API Key", prefix: "sk-agent-dev-xxxx", created: "Feb 20, 2024", lastUsed: "1 hour ago" },
-  { id: "key-3", name: "Testing API Key", prefix: "sk-agent-test-xxxx", created: "Mar 1, 2024", lastUsed: "3 days ago" },
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+const API_KEYS_MOCK = [
+  { id: "key-1", name: "Production API Key", keyPrefix: "sk-agent-prod-xxxx", createdAt: "Jan 15, 2024", lastUsedAt: "2 min ago" },
+  { id: "key-2", name: "Development API Key", keyPrefix: "sk-agent-dev-xxxx", createdAt: "Feb 20, 2024", lastUsedAt: "1 hour ago" },
+  { id: "key-3", name: "Testing API Key", keyPrefix: "sk-agent-test-xxxx", createdAt: "Mar 1, 2024", lastUsedAt: "3 days ago" },
 ];
 
 function SettingsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [newKeyName, setNewKeyName] = useState("");
   const [settings, setSettings] = useState({
     defaultModel: "gpt-4-turbo",
     maxConcurrentAgents: "10",
@@ -46,10 +56,85 @@ function SettingsPage() {
     rateLimitWindow: "60",
   });
 
+  // GET /api/api-keys
+  const { data: apiKeysData, isLoading: apiKeysLoading } = useQuery({
+    queryKey: ["api-keys"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api-keys`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch API keys");
+      return res.json() as Promise<{
+        data: Array<{
+          id: string;
+          name: string;
+          keyPrefix: string;
+          createdAt: string;
+          lastUsedAt: string | null;
+          expiresAt: string | null;
+          isActive: boolean;
+        }>;
+      }>;
+    },
+  });
+
+  // POST /api/api-keys — create new API key
+  const createKeyMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch(`${API_BASE}/api-keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message ?? "Failed to create API key");
+      }
+      return res.json() as Promise<{ id: string; name: string; key: string; keyPrefix: string }>;
+    },
+    onSuccess: (data) => {
+      toast.success(`API key created. Copy it now — it won't be shown again.`, {
+        description: data.key,
+        duration: 15000,
+      });
+      setNewKeyName("");
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  // DELETE /api/api-keys/:id
+  const deleteKeyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/api-keys/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to delete API key");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("API key deleted");
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  const apiKeys = apiKeysData?.data ?? API_KEYS_MOCK;
+
   const handleCopy = (keyId: string, prefix: string) => {
     navigator.clipboard.writeText(prefix);
     setCopiedKey(keyId);
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleCreateKey = () => {
+    if (!newKeyName.trim()) return;
+    createKeyMutation.mutate(newKeyName.trim());
   };
 
   return (
@@ -146,14 +231,21 @@ function SettingsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setSettings({ ...settings, [feature.key]: !settings[feature.key as keyof typeof settings] })}
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        [feature.key]: !settings[feature.key as keyof typeof settings],
+                      })
+                    }
                     className={`w-12 h-6 rounded-full transition-colors ${
                       settings[feature.key as keyof typeof settings] ? "bg-primary" : "bg-muted"
                     }`}
                   >
-                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      settings[feature.key as keyof typeof settings] ? "translate-x-6" : "translate-x-0.5"
-                    }`} />
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        settings[feature.key as keyof typeof settings] ? "translate-x-6" : "translate-x-0.5"
+                      }`}
+                    />
                   </button>
                 </div>
               ))}
@@ -200,39 +292,78 @@ function SettingsPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Key className="h-5 w-5" /> API Keys
                 </CardTitle>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {API_KEYS.map((key) => (
-                <div key={key.id} className="p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{key.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => handleCopy(key.id, key.prefix)}
-                    >
-                      {copiedKey === key.id ? (
-                        <CheckCircle className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-                  <code className="text-xs text-muted-foreground">{key.prefix}</code>
-                  <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
-                    <span>Created: {key.created}</span>
-                    <span>{key.lastUsed}</span>
-                  </div>
+              {apiKeysLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-16 animate-pulse bg-muted rounded-lg" />
+                  ))}
                 </div>
-              ))}
-              <Button variant="outline" className="w-full" leftIcon={<Plus className="h-4 w-4" />}>
-                Create New Key
-              </Button>
+              ) : (
+                apiKeys.map((key) => (
+                  <div key={key.id} className="p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{key.name}</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleCopy(key.id, key.keyPrefix)}
+                        >
+                          {copiedKey === key.id ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive"
+                          onClick={() => deleteKeyMutation.mutate(key.id)}
+                          disabled={deleteKeyMutation.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <code className="text-xs text-muted-foreground">{key.keyPrefix}</code>
+                    <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                      <span>
+                        Created:{" "}
+                        {typeof key.createdAt === "string" && key.createdAt.length > 10
+                          ? new Date(key.createdAt).toLocaleDateString()
+                          : key.createdAt}
+                      </span>
+                      <span>{key.lastUsedAt ? String(key.lastUsedAt) : "Never used"}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <div className="flex gap-2 mt-2">
+                <Input
+                  placeholder="Key name"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateKey()}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleCreateKey}
+                  disabled={!newKeyName.trim() || createKeyMutation.isPending}
+                >
+                  {createKeyMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

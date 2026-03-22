@@ -1,5 +1,6 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Select } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Bot,
@@ -17,11 +18,20 @@ import {
   Eye,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/agents/new")({
   component: NewAgentPage,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+// Static config — agent types and models don't come from the DB
 const AGENT_TYPES = [
   {
     value: "chatbot",
@@ -51,7 +61,7 @@ const AGENT_TYPES = [
     icon: BarChart3,
     color: "bg-orange-500",
   },
-];
+] as const;
 
 const MODELS = [
   { value: "gpt-4", label: "GPT-4", provider: "OpenAI", description: "Most capable, slower" },
@@ -73,12 +83,12 @@ const TOOLS = [
 
 function NewAgentPage() {
   const navigate = useNavigate();
-  const [isCreating, setIsCreating] = useState(false);
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [agent, setAgent] = useState({
     name: "",
     description: "",
-    agentType: "chatbot",
+    agentType: "chatbot" as (typeof AGENT_TYPES)[number]["value"],
     model: "gpt-4-turbo",
     temperature: "0.7",
     maxTokens: "4096",
@@ -88,15 +98,52 @@ function NewAgentPage() {
     streamingEnabled: true,
   });
 
-  const selectedType = AGENT_TYPES.find((t) => t.value === agent.agentType);
-  const TypeIcon = selectedType?.icon || Bot;
+  // POST /api/agents — create agent via real API
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API_BASE}/agents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({
+          name: agent.name,
+          description: agent.description || undefined,
+          agentType: agent.agentType,
+          config: {
+            model: agent.model,
+            temperature: parseFloat(agent.temperature),
+            maxTokens: parseInt(agent.maxTokens, 10),
+            systemPrompt: agent.systemPrompt || undefined,
+            tools: agent.tools,
+            memoryEnabled: agent.memoryEnabled,
+            streamingEnabled: agent.streamingEnabled,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message ?? "Failed to create agent");
+      }
+      return res.json() as Promise<{ id: string; name: string }>;
+    },
+    onSuccess: (data) => {
+      toast.success(`Agent "${data.name}" created successfully`);
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
+      navigate({ to: "/app/agents/$agentId", params: { agentId: data.id } });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
 
-  const handleCreate = async () => {
-    if (!agent.name.trim()) return;
-    setIsCreating(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsCreating(false);
-    navigate({ to: "/app/agents" });
+  const selectedType = AGENT_TYPES.find((t) => t.value === agent.agentType);
+  const TypeIcon = selectedType?.icon ?? Bot;
+
+  const handleCreate = () => {
+    if (!agent.name.trim()) {
+      toast.error("Agent name is required");
+      return;
+    }
+    createMutation.mutate();
   };
 
   const toggleTool = (toolId: string) => {
@@ -116,9 +163,7 @@ function NewAgentPage() {
         </Button>
         <div>
           <h2 className="font-bold text-xl text-foreground">Create New Agent</h2>
-          <p className="text-muted-foreground text-sm">
-            Configure your AI agent settings and capabilities.
-          </p>
+          <p className="text-muted-foreground text-sm">Configure your AI agent settings and capabilities.</p>
         </div>
       </div>
 
@@ -142,7 +187,8 @@ function NewAgentPage() {
           </div>
         ))}
         <span className="ml-2 text-sm text-muted-foreground">
-          Step {currentStep}: {currentStep === 1 ? "Basic Info" : currentStep === 2 ? "AI Config" : "Tools & Memory"}
+          Step {currentStep}:{" "}
+          {currentStep === 1 ? "Basic Info" : currentStep === 2 ? "AI Config" : "Tools & Memory"}
         </span>
       </div>
 
@@ -198,7 +244,9 @@ function NewAgentPage() {
                           }`}
                         >
                           <div className="flex items-center gap-3 mb-2">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${type.color}`}>
+                            <div
+                              className={`flex h-10 w-10 items-center justify-center rounded-lg ${type.color}`}
+                            >
                               <Icon className="h-5 w-5 text-white" />
                             </div>
                             <div>
@@ -260,7 +308,9 @@ function NewAgentPage() {
                         value={agent.temperature}
                         onChange={(e) => setAgent({ ...agent, temperature: e.target.value })}
                       />
-                      <p className="text-muted-foreground text-xs">Higher = more creative, lower = more deterministic</p>
+                      <p className="text-muted-foreground text-xs">
+                        Higher = more creative, lower = more deterministic
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Max Tokens</label>
@@ -290,7 +340,13 @@ function NewAgentPage() {
                     className="font-mono text-sm"
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setAgent({ ...agent, systemPrompt: "You are a helpful AI assistant." })}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setAgent({ ...agent, systemPrompt: "You are a helpful AI assistant." })
+                      }
+                    >
                       <Sparkles className="h-4 w-4 mr-1" /> Use Template
                     </Button>
                     <Button variant="outline" size="sm">
@@ -358,9 +414,11 @@ function NewAgentPage() {
                         agent.memoryEnabled ? "bg-primary" : "bg-muted"
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                        agent.memoryEnabled ? "translate-x-6" : "translate-x-0.5"
-                      }`} />
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                          agent.memoryEnabled ? "translate-x-6" : "translate-x-0.5"
+                        }`}
+                      />
                     </button>
                   </div>
 
@@ -373,14 +431,18 @@ function NewAgentPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setAgent({ ...agent, streamingEnabled: !agent.streamingEnabled })}
+                      onClick={() =>
+                        setAgent({ ...agent, streamingEnabled: !agent.streamingEnabled })
+                      }
                       className={`w-12 h-6 rounded-full transition-colors ${
                         agent.streamingEnabled ? "bg-primary" : "bg-muted"
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                        agent.streamingEnabled ? "translate-x-6" : "translate-x-0.5"
-                      }`} />
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                          agent.streamingEnabled ? "translate-x-6" : "translate-x-0.5"
+                        }`}
+                      />
                     </button>
                   </div>
                 </CardContent>
@@ -404,11 +466,17 @@ function NewAgentPage() {
             ) : (
               <Button
                 variant="primary"
-                leftIcon={isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                leftIcon={
+                  createMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )
+                }
                 onClick={handleCreate}
-                disabled={!agent.name.trim() || isCreating}
+                disabled={!agent.name.trim() || createMutation.isPending}
               >
-                {isCreating ? "Creating..." : "Create Agent"}
+                {createMutation.isPending ? "Creating..." : "Create Agent"}
               </Button>
             )}
           </div>
@@ -422,19 +490,27 @@ function NewAgentPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3 mb-4 p-4 bg-muted/50 rounded-xl">
-                <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${selectedType?.color || "bg-primary"}`}>
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-xl ${
+                    selectedType?.color ?? "bg-primary"
+                  }`}
+                >
                   <TypeIcon className="h-7 w-7 text-white" />
                 </div>
                 <div>
                   <p className="font-bold text-lg">{agent.name || "Agent Name"}</p>
-                  <p className="text-muted-foreground text-sm capitalize">{agent.agentType.replace("_", " ")}</p>
+                  <p className="text-muted-foreground text-sm capitalize">
+                    {agent.agentType.replace("_", " ")}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Model</p>
-                  <p className="text-sm">{MODELS.find((m) => m.value === agent.model)?.label || "Not selected"}</p>
+                  <p className="text-sm">
+                    {MODELS.find((m) => m.value === agent.model)?.label ?? "Not selected"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Temperature</p>
@@ -461,7 +537,9 @@ function NewAgentPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-green-600" />
-                  <span className="text-muted-foreground">Your agent will be secured with enterprise-grade encryption.</span>
+                  <span className="text-muted-foreground">
+                    Your agent will be secured with enterprise-grade encryption.
+                  </span>
                 </div>
               </CardContent>
             </Card>
