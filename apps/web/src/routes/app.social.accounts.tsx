@@ -15,10 +15,17 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/accounts")({
   component: AccountsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Account {
   id: string;
@@ -39,6 +46,34 @@ const MOCK_ACCOUNTS: Account[] = [
 
 function AccountsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "accounts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/accounts`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch accounts");
+      return res.json();
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const res = await fetch(`${API_BASE}/social/accounts/${accountId}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to disconnect account");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social", "accounts"] });
+    },
+  });
+
+  const accounts: Account[] = data?.data ?? MOCK_ACCOUNTS;
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -58,6 +93,14 @@ function AccountsPage() {
       case "error": return <Badge className="bg-red-100 text-red-800">Error</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -79,7 +122,7 @@ function AccountsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {MOCK_ACCOUNTS.map((account) => (
+        {accounts.map((account) => (
           <Card key={account.id} className="border-border/60">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">
@@ -88,16 +131,16 @@ function AccountsPage() {
                     {getPlatformIcon(account.platform)}
                   </div>
                   <div>
-                    <h3 className="font-semibold">{account.name}</h3>
+                    <h3 className="font-semibold">{account.name ?? account.displayName ?? account.platform}</h3>
                     <p className="text-sm text-muted-foreground">{account.username}</p>
                   </div>
                 </div>
-                {getStatusBadge(account.status)}
+                {getStatusBadge(account.status ?? "connected")}
               </div>
 
               <div className="flex items-center justify-between text-sm mb-4">
-                <span className="text-muted-foreground">{account.followers.toLocaleString()} followers</span>
-                <span className="text-muted-foreground">Synced {account.lastSync}</span>
+                <span className="text-muted-foreground">{(account.followers ?? account.profileData?.followers ?? 0).toLocaleString()} followers</span>
+                <span className="text-muted-foreground">Synced {account.lastSync ?? "recently"}</span>
               </div>
 
               <div className="flex gap-2">
@@ -107,7 +150,13 @@ function AccountsPage() {
                 <Button variant="outline" size="sm" className="flex-1" leftIcon={<Settings className="h-4 w-4" />}>
                   Settings
                 </Button>
-                <Button variant="ghost" size="icon" className="text-destructive">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  onClick={() => disconnectMutation.mutate(account.id)}
+                  disabled={disconnectMutation.isPending}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

@@ -2,10 +2,17 @@ import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Search, Heart, MessageSquare, Share2, Mail, Instagram, Twitter, Linkedin } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/inbox")({
   component: InboxPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Message {
   id: string;
@@ -30,6 +37,19 @@ function InboxPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "mentions"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/listening/mentions`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch mentions");
+      return res.json();
+    },
+  });
+
+  const messages: Message[] = data?.data ?? MOCK_MESSAGES;
+
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case "instagram": return <Instagram className="h-4 w-4 text-pink-500" />;
@@ -47,6 +67,19 @@ function InboxPage() {
       default: return <Mail className="h-4 w-4" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  const filteredMessages = messages.filter((m) =>
+    m.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.author?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -74,7 +107,7 @@ function InboxPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {MOCK_MESSAGES.map((message) => (
+        {filteredMessages.map((message) => (
           <Card
             key={message.id}
             className={`border-border/60 cursor-pointer transition-colors ${

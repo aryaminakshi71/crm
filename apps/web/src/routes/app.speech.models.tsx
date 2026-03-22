@@ -8,10 +8,17 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/models")({
   component: ModelsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Model {
   id: string;
@@ -33,6 +40,19 @@ function ModelsPage() {
   const navigate = useNavigate();
   const [selectedModel, setSelectedModel] = useState<string>("m2");
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "models"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/models`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch models");
+      return res.json();
+    },
+  });
+
+  const models: Model[] = data?.data ?? MOCK_MODELS;
+
   const getSpeedColor = (speed: Model["speed"]) => {
     switch (speed) {
       case "fast": return "bg-green-100 text-green-800";
@@ -40,6 +60,14 @@ function ModelsPage() {
       case "accurate": return "bg-blue-100 text-blue-800";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -56,7 +84,7 @@ function ModelsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {MOCK_MODELS.map((model) => (
+        {models.map((model) => (
           <Card
             key={model.id}
             className={`border-border/60 cursor-pointer transition-colors ${

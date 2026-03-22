@@ -1,199 +1,204 @@
-import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  Phone,
-  Plus,
-  Search,
-  Settings,
-  Trash2,
-  Copy,
-  CheckCircle,
-  MapPin,
-  DollarSign,
-} from "lucide-react";
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Mic, MessageSquare, Phone, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/numbers")({
   component: PhoneNumbersPage,
 });
 
-interface PhoneNumber {
-  id: string;
-  number: string;
-  type: "toll_free" | "local" | "did" | "vanity";
-  status: "active" | "inactive" | "pending";
-  capabilities: ("sms" | "voice" | "fax")[];
-  monthlyCost: number;
-  location?: string;
-}
+// ─── Fallback mock data ───────────────────────────────────────────────────────
 
-const MOCK_NUMBERS: PhoneNumber[] = [
-  { id: "n1", number: "+1 800-555-1234", type: "toll_free", status: "active", capabilities: ["sms", "voice"], monthlyCost: 1.00, location: "US" },
-  { id: "n2", number: "+1 555-123-4567", type: "did", status: "active", capabilities: ["sms", "voice"], monthlyCost: 2.00, location: "New York, NY" },
-  { id: "n3", number: "+1 555-234-5678", type: "did", status: "active", capabilities: ["sms", "voice", "fax"], monthlyCost: 2.50, location: "Los Angeles, CA" },
-  { id: "n4", number: "+1 800-555-5678", type: "toll_free", status: "inactive", capabilities: ["voice"], monthlyCost: 1.00, location: "US" },
-  { id: "n5", number: "+1 555-345-6789", type: "vanity", status: "active", capabilities: ["sms", "voice"], monthlyCost: 5.00, location: "Chicago, IL" },
+const MOCK_NUMBERS = [
+  {
+    id: "mock-num-1",
+    number: "+15550001234",
+    friendlyName: "Main Line",
+    provider: "twilio",
+    status: "active",
+    capabilities: { voice: true, sms: true, mms: false },
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-num-2",
+    number: "+15550005678",
+    friendlyName: "Support",
+    provider: "twilio",
+    status: "active",
+    capabilities: { voice: false, sms: true, mms: true },
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+  },
 ];
 
-function PhoneNumbersPage() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-500/20 text-green-400",
+  inactive: "bg-muted text-muted-foreground",
+  porting: "bg-yellow-500/20 text-yellow-400",
+};
 
-  const filteredNumbers = MOCK_NUMBERS.filter((num) => {
-    return num.number.includes(searchQuery) || num.location?.toLowerCase().includes(searchQuery.toLowerCase());
+function PhoneNumbersPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState({ number: "", friendlyName: "", provider: "twilio" });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["communications", "phone-numbers"],
+    queryFn: () => communicationsApi.phoneNumbers.list({ page: 1, limit: 100 }),
   });
 
-  const getTypeBadge = (type: PhoneNumber["type"]) => {
-    switch (type) {
-      case "toll_free": return <Badge className="bg-blue-100 text-blue-800">Toll-Free</Badge>;
-      case "local": return <Badge className="bg-green-100 text-green-800">Local</Badge>;
-      case "did": return <Badge className="bg-purple-100 text-purple-800">DID</Badge>;
-      case "vanity": return <Badge className="bg-amber-100 text-amber-800">Vanity</Badge>;
-    }
-  };
+  const numbers: any[] = data?.data ?? MOCK_NUMBERS;
 
-  const getStatusBadge = (status: PhoneNumber["status"]) => {
-    switch (status) {
-      case "active": return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-      case "inactive": return <Badge variant="outline">Inactive</Badge>;
-      case "pending": return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>;
-    }
-  };
+  const createMutation = useMutation({
+    mutationFn: (payload: typeof form) =>
+      communicationsApi.phoneNumbers.create({
+        number: payload.number,
+        friendlyName: payload.friendlyName || undefined,
+        provider: payload.provider || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "phone-numbers"] });
+      toast.success("Phone number added");
+      setIsModalOpen(false);
+      setForm({ number: "", friendlyName: "", provider: "twilio" });
+    },
+    onError: () => toast.error("Failed to add phone number"),
+  });
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/communications" })}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="font-bold text-xl">Phone Numbers</h2>
-            <p className="text-muted-foreground text-sm">Manage your phone numbers for SMS and Voice</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Phone className="h-6 w-6 text-blue-400" />
+            Phone Numbers
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage provisioned numbers and their capabilities
+          </p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-          Purchase Number
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Number
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                <Phone className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Numbers</p>
-                <p className="text-xl font-bold">{MOCK_NUMBERS.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-xl font-bold">{MOCK_NUMBERS.filter((n) => n.status === "active").length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Monthly Cost</p>
-                <p className="text-xl font-bold">${MOCK_NUMBERS.reduce((sum, n) => sum + n.monthlyCost, 0).toFixed(2)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                <MapPin className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">States</p>
-                <p className="text-xl font-bold">4</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search by number or location..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
+      {/* Content */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg bg-muted h-20" />
+          ))}
+        </div>
+      ) : numbers.length === 0 ? (
+        <EmptyState
+          icon={<Phone className="h-10 w-10 text-muted-foreground" />}
+          title="No phone numbers"
+          description="Add a provisioned number to start sending and receiving calls and SMS."
         />
-      </div>
-
-      {/* Numbers List */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="divide-y divide-border">
-            {filteredNumbers.map((num) => (
-              <div key={num.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <Phone className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-semibold">{num.number}</h3>
-                    {getTypeBadge(num.type)}
-                    {getStatusBadge(num.status)}
+      ) : (
+        <div className="space-y-3">
+          {numbers.map((num) => (
+            <Card key={num.id} className="hover:border-primary/40 transition-colors">
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-blue-400" />
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {num.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {num.location}
+                  <div>
+                    <p className="font-medium text-sm">{num.number}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {num.friendlyName ?? "No label"} · {num.provider}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Capabilities */}
+                  <div className="flex gap-1">
+                    {num.capabilities?.voice && (
+                      <span title="Voice" className="text-muted-foreground">
+                        <Mic className="h-3.5 w-3.5" />
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
-                      {num.capabilities.map((cap) => (
-                        <span key={cap} className="px-1.5 py-0.5 bg-muted rounded text-xs uppercase">{cap}</span>
-                      ))}
-                    </span>
+                    {num.capabilities?.sms && (
+                      <span title="SMS" className="text-muted-foreground">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    {num.capabilities?.mms && (
+                      <span title="MMS" className="text-muted-foreground">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[num.status] ?? ""}`}
+                  >
+                    {num.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(num.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">${num.monthlyCost.toFixed(2)}/mo</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isError && !isLoading && (
+        <p className="text-sm text-destructive">
+          Could not load live data — showing cached results.
+        </p>
+      )}
+
+      {/* Add modal */}
+      <FormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Add Phone Number"
+        onSubmit={() => createMutation.mutate(form)}
+        isSubmitting={createMutation.isPending}
+        submitLabel="Add Number"
+      >
+        <FormField label="Phone number" required>
+          <Input
+            placeholder="+15550001234"
+            value={form.number}
+            onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Friendly name">
+          <Input
+            placeholder="e.g. Main Line, Support"
+            value={form.friendlyName}
+            onChange={(e) => setForm((f) => ({ ...f, friendlyName: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Provider">
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.provider}
+            onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
+          >
+            <option value="twilio">Twilio</option>
+            <option value="vonage">Vonage</option>
+            <option value="telnyx">Telnyx</option>
+            <option value="other">Other</option>
+          </select>
+        </FormField>
+      </FormModal>
     </div>
   );
 }

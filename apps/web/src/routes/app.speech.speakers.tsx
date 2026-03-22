@@ -11,10 +11,17 @@ import {
   Clock,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/speakers")({
   component: SpeakersPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Speaker {
   id: string;
@@ -31,13 +38,39 @@ const MOCK_SPEAKERS: Speaker[] = [
   { id: "s4", name: "Robert Wilson", color: "bg-amber-500", transcriptions: 6, totalSpeakingTime: "1h 02m" },
 ];
 
+const SPEAKER_COLORS = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-amber-500", "bg-red-500", "bg-pink-500"];
+
 function SpeakersPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredSpeakers = MOCK_SPEAKERS.filter((speaker) =>
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "speakers"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/speakers`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch speakers");
+      return res.json();
+    },
+  });
+
+  const speakers: Speaker[] = data?.data ?? MOCK_SPEAKERS;
+
+  const filteredSpeakers = speakers.map((s, i) => ({
+    ...s,
+    color: s.color ?? SPEAKER_COLORS[i % SPEAKER_COLORS.length],
+  })).filter((speaker) =>
     speaker.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

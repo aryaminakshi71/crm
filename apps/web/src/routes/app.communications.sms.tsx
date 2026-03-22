@@ -1,201 +1,208 @@
-import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  MessageSquare,
-  Plus,
-  Search,
-  Filter,
-  Phone,
-  Clock,
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  MoreHorizontal,
-} from "lucide-react";
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { MessageSquare, Plus, Search, Send } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/sms")({
-  component: SMSMessagesPage,
+  component: SmsPage,
 });
 
-interface Conversation {
-  id: string;
-  contact: string;
-  phone: string;
-  lastMessage: string;
-  timestamp: string;
-  unread: number;
-  status: "active" | "closed";
-}
+// ─── Fallback mock data ───────────────────────────────────────────────────────
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-  { id: "conv-1", contact: "Sarah Johnson", phone: "+1 555-123-4567", lastMessage: "Thanks for your help with the order!", timestamp: "2 min ago", unread: 2, status: "active" },
-  { id: "conv-2", contact: "Michael Chen", phone: "+1 555-234-5678", lastMessage: "When will my package arrive?", timestamp: "15 min ago", unread: 0, status: "active" },
-  { id: "conv-3", contact: "Emily Davis", phone: "+1 555-345-6789", lastMessage: "I'd like to schedule a demo please", timestamp: "1 hour ago", unread: 1, status: "active" },
-  { id: "conv-4", contact: "Robert Wilson", phone: "+1 555-456-7890", lastMessage: "Can you send me the invoice?", timestamp: "2 hours ago", unread: 0, status: "closed" },
-  { id: "conv-5", contact: "Jennifer Martinez", phone: "+1 555-567-8901", lastMessage: "The product looks great, thanks!", timestamp: "3 hours ago", unread: 0, status: "closed" },
-  { id: "conv-6", contact: "David Brown", phone: "+1 555-678-9012", lastMessage: "I'm having trouble with my account", timestamp: "5 hours ago", unread: 0, status: "closed" },
+const MOCK_CAMPAIGNS = [
+  {
+    id: "mock-sms-1",
+    name: "Welcome Series",
+    status: "completed",
+    body: "Welcome to Nucleo! Reply STOP to opt out.",
+    recipientCount: "1240",
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+  },
+  {
+    id: "mock-sms-2",
+    name: "Promo Blast Q1",
+    status: "draft",
+    body: "Get 20% off this week only. Use code Q1SAVE.",
+    recipientCount: "0",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
 ];
 
-function SMSMessagesPage() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "active" | "closed">("all");
+const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  scheduled: "bg-blue-500/20 text-blue-400",
+  running: "bg-yellow-500/20 text-yellow-400",
+  completed: "bg-green-500/20 text-green-400",
+  paused: "bg-orange-500/20 text-orange-400",
+};
 
-  const filteredConversations = MOCK_CONVERSATIONS.filter((conv) => {
-    const matchesSearch = conv.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.phone.includes(searchQuery) ||
-      conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "all" || conv.status === filter;
-    return matchesSearch && matchesFilter;
+function SmsPage() {
+  const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", body: "", fromNumber: "" });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["communications", "campaigns"],
+    queryFn: () => communicationsApi.campaigns.list({ page: 1, limit: 100 }),
   });
+
+  const campaigns: any[] = data?.data ?? MOCK_CAMPAIGNS;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: typeof form) =>
+      communicationsApi.campaigns.create({
+        name: payload.name,
+        body: payload.body,
+        fromNumber: payload.fromNumber || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "campaigns"] });
+      toast.success("Campaign created");
+      setIsModalOpen(false);
+      setForm({ name: "", body: "", fromNumber: "" });
+    },
+    onError: () => toast.error("Failed to create campaign"),
+  });
+
+  const filtered = campaigns.filter((c) =>
+    !search || c.name?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/communications" })}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="font-bold text-xl">SMS Messages</h2>
-            <p className="text-muted-foreground text-sm">View and manage SMS conversations</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-green-400" />
+            SMS Campaigns
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Create and manage outbound SMS messaging campaigns
+          </p>
         </div>
-        <Link to="/app/communications/sms/compose">
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-            Compose SMS
-          </Button>
-        </Link>
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Campaign
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Messages</p>
-                <p className="text-xl font-bold">1,247</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Delivered</p>
-                <p className="text-xl font-bold">1,189</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold">45</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                <XCircle className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Failed</p>
-                <p className="text-xl font-bold">13</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Search campaigns..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
+      {/* Content */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg bg-muted h-24" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<MessageSquare className="h-10 w-10 text-muted-foreground" />}
+          title="No SMS campaigns"
+          description="Create your first SMS campaign to reach your audience."
+        />
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((campaign) => (
+            <Card
+              key={campaign.id}
+              className="hover:border-primary/40 transition-colors"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Send className="h-4 w-4 text-green-400 shrink-0" />
+                      <p className="font-medium text-sm truncate">{campaign.name}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {campaign.body}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Recipients: {campaign.recipientCount ?? "0"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[campaign.status] ?? ""}`}
+                    >
+                      {campaign.status}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(campaign.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isError && !isLoading && (
+        <p className="text-sm text-destructive">
+          Could not load live data — showing cached results.
+        </p>
+      )}
+
+      {/* Create modal */}
+      <FormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="New SMS Campaign"
+        onSubmit={() => createMutation.mutate(form)}
+        isSubmitting={createMutation.isPending}
+        submitLabel="Create Campaign"
+      >
+        <FormField label="Campaign name" required>
+          <Input
+            placeholder="e.g. Welcome Series"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as typeof filter)}
-            className="px-4 py-2 border rounded-lg bg-background text-sm"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="closed">Closed</option>
-          </select>
-          <Link to="/app/communications/sms/bulk">
-            <Button variant="outline" leftIcon={<MessageSquare className="h-4 w-4" />}>
-              Bulk SMS
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Conversations List */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="divide-y divide-border">
-            {filteredConversations.map((conv) => (
-              <Link
-                key={conv.id}
-                to={`/app/communications/sms/conversation/${conv.id}` as string}
-                className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className="relative">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <span className="text-lg font-semibold text-primary">{conv.contact[0]}</span>
-                  </div>
-                  {conv.unread > 0 && (
-                    <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                      {conv.unread}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`font-semibold ${conv.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                        {conv.contact}
-                      </h3>
-                      <Badge variant="outline" className="text-xs">{conv.phone}</Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{conv.timestamp}</span>
-                  </div>
-                  <p className={`text-sm truncate ${conv.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                    {conv.lastMessage}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        </FormField>
+        <FormField label="Message body" required>
+          <Textarea
+            placeholder="Your SMS message (max 160 chars per segment)"
+            value={form.body}
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+            rows={3}
+          />
+        </FormField>
+        <FormField label="From number (optional)">
+          <Input
+            placeholder="+15551234567"
+            value={form.fromNumber}
+            onChange={(e) => setForm((f) => ({ ...f, fromNumber: e.target.value }))}
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }

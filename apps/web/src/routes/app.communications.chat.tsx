@@ -1,191 +1,233 @@
-import { Button, Card, CardContent, Badge } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  MessageCircle,
-  Plus,
-  Search,
-  Phone,
-  Video,
-  MoreVertical,
-  Send,
-  Paperclip,
-  Smile,
-  Clock,
-} from "lucide-react";
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { MessageCircle, Plus, Search, User } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/chat")({
-  component: ChatInterfacePage,
+  component: ChatPage,
 });
 
-interface Chat {
-  id: string;
-  contact: string;
-  avatar?: string;
-  lastMessage: string;
-  timestamp: string;
-  unread: number;
-  status: "online" | "offline" | "away";
-}
+// ─── Fallback mock data ───────────────────────────────────────────────────────
 
-interface Message {
-  id: string;
-  role: "user" | "agent";
-  content: string;
-  timestamp: string;
-}
-
-const MOCK_CHATS: Chat[] = [
-  { id: "c1", contact: "Sarah Johnson", lastMessage: "Thanks for your help!", timestamp: "2 min ago", unread: 2, status: "online" },
-  { id: "c2", contact: "Michael Chen", lastMessage: "I'll check and get back to you", timestamp: "15 min ago", unread: 0, status: "online" },
-  { id: "c3", contact: "Emily Davis", lastMessage: "Is this product available in blue?", timestamp: "1 hour ago", unread: 1, status: "offline" },
+const MOCK_CHATS = [
+  {
+    id: "mock-1",
+    channel: "chat",
+    status: "open",
+    subject: "Product inquiry",
+    participantName: "Alice Johnson",
+    participantContact: "alice@example.com",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-2",
+    channel: "chat",
+    status: "closed",
+    subject: "Billing question",
+    participantName: "Bob Smith",
+    participantContact: "bob@example.com",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+  },
 ];
 
-function ChatInterfacePage() {
-  const navigate = useNavigate();
-  const [selectedChat, setSelectedChat] = useState<string | null>("c1");
-  const [message, setMessage] = useState("");
-  const [messages] = useState<Message[]>([
-    { id: "1", role: "user", content: "Hi, I need help with my order", timestamp: "10:23 AM" },
-    { id: "2", role: "agent", content: "Hello! I'd be happy to help. Could you please provide your order number?", timestamp: "10:24 AM" },
-    { id: "3", role: "user", content: "It's order #12345", timestamp: "10:25 AM" },
-    { id: "4", role: "agent", content: "Thank you! I can see your order. It's currently being processed and will ship within 24 hours.", timestamp: "10:26 AM" },
-  ]);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setMessage("");
-  };
+const STATUS_COLORS: Record<string, string> = {
+  open: "bg-green-500/20 text-green-400",
+  closed: "bg-muted text-muted-foreground",
+  pending: "bg-yellow-500/20 text-yellow-400",
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+function ChatPage() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isCreating, setIsCreating] = useState(false);
+  const [newSubject, setNewSubject] = useState("");
+  const [newParticipant, setNewParticipant] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["communications", "conversations", statusFilter],
+    queryFn: () =>
+      communicationsApi.conversations.list({
+        page: 1,
+        limit: 100,
+        channel: "chat",
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      }),
+  });
+
+  const conversations: any[] = data?.data ?? MOCK_CHATS;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: { subject: string; participantName: string }) =>
+      communicationsApi.conversations.create({
+        channel: "chat",
+        subject: payload.subject,
+        participantName: payload.participantName,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "conversations"] });
+      toast.success("Conversation started");
+      setIsCreating(false);
+      setNewSubject("");
+      setNewParticipant("");
+    },
+    onError: () => toast.error("Failed to create conversation"),
+  });
+
+  const filtered = conversations.filter((c) => {
+    const q = search.toLowerCase();
+    return (
+      !q ||
+      c.subject?.toLowerCase().includes(q) ||
+      c.participantName?.toLowerCase().includes(q)
+    );
+  });
 
   return (
-    <div className="h-[calc(100vh-200px)] flex gap-6">
-      {/* Chat List */}
-      <div className="w-80 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">Chats</h2>
-          <Button variant="ghost" size="icon">
-            <Plus className="h-4 w-4" />
-          </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <MessageCircle className="h-6 w-6 text-cyan-400" />
+            Live Chat
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Real-time conversations with customers
+          </p>
         </div>
-
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
-          />
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-2">
-          {MOCK_CHATS.map((chat) => (
-            <div
-              key={chat.id}
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedChat === chat.id ? "bg-primary/10" : "hover:bg-muted/50"
-              }`}
-              onClick={() => setSelectedChat(chat.id)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <span className="text-sm font-semibold text-primary">{chat.contact[0]}</span>
-                  </div>
-                  <div className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                    chat.status === "online" ? "bg-green-500" : chat.status === "away" ? "bg-amber-500" : "bg-gray-400"
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm">{chat.contact}</h3>
-                    <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
-                </div>
-                {chat.unread > 0 && (
-                  <div className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                    {chat.unread}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <Button onClick={() => setIsCreating(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Conversation
+        </Button>
       </div>
 
-      {/* Chat Window */}
-      <Card className="flex-1 border-border/60 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <span className="text-sm font-semibold text-primary">S</span>
-            </div>
-            <div>
-              <h3 className="font-semibold">Sarah Johnson</h3>
-              <p className="text-xs text-green-600 flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-green-500" /> Online
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon">
-              <Phone className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Video className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-              {msg.role === "agent" && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm">
-                  A
-                </div>
-              )}
-              <div className={`max-w-[70%] rounded-xl px-4 py-2 ${
-                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-              }`}>
-                <p className="text-sm">{msg.content}</p>
-                <p className={`text-xs mt-1 ${msg.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                  {msg.timestamp}
-                </p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-
-        {/* Input */}
-        <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon">
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="flex-1 px-4 py-2 border rounded-lg bg-background"
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+      {/* New conversation form */}
+      {isCreating && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Start New Conversation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              placeholder="Subject"
+              value={newSubject}
+              onChange={(e) => setNewSubject(e.target.value)}
             />
-            <Button variant="ghost" size="icon">
-              <Smile className="h-4 w-4" />
-            </Button>
-            <Button variant="primary" size="icon" onClick={handleSend}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+            <Input
+              placeholder="Participant name"
+              value={newParticipant}
+              onChange={(e) => setNewParticipant(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={() =>
+                  createMutation.mutate({
+                    subject: newSubject,
+                    participantName: newParticipant,
+                  })
+                }
+                disabled={!newSubject || createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Start"}
+              </Button>
+              <Button variant="outline" onClick={() => setIsCreating(false)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Search conversations..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-      </Card>
+        {(["all", "open", "pending", "closed"] as const).map((s) => (
+          <Button
+            key={s}
+            variant={statusFilter === s ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(s)}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </Button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg bg-muted h-20" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<MessageCircle className="h-10 w-10 text-muted-foreground" />}
+          title="No conversations"
+          description="Start a new conversation to begin chatting."
+        />
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((conv) => (
+            <Card key={conv.id} className="hover:border-primary/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{conv.participantName ?? "Unknown"}</p>
+                    <p className="text-xs text-muted-foreground">{conv.subject ?? "No subject"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[conv.status] ?? ""}`}
+                  >
+                    {conv.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(conv.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isError && !isLoading && (
+        <p className="text-sm text-destructive">
+          Could not load live data — showing cached results.
+        </p>
+      )}
     </div>
   );
 }

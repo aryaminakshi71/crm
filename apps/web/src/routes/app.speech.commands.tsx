@@ -10,10 +10,17 @@ import {
   Power,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/commands")({
   component: CommandsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Command {
   id: string;
@@ -35,10 +42,31 @@ function CommandsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredCommands = MOCK_COMMANDS.filter((cmd) =>
-    cmd.phrase.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cmd.action.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "commands"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/commands`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch commands");
+      return res.json();
+    },
+  });
+
+  const commands: Command[] = data?.data ?? MOCK_COMMANDS;
+
+  const filteredCommands = commands.filter((cmd) =>
+    (cmd.phrase ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (cmd.action ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

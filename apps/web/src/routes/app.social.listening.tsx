@@ -13,10 +13,17 @@ import {
   Twitter,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/listening")({
   component: ListeningPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 const MOCK_ALERTS = [
   { id: "a1", type: "mention", content: "@nucleoone Your product is amazing! Just bought the Pro plan.", author: "@techfan42", platform: "twitter", sentiment: "positive", time: "5 min ago" },
@@ -36,6 +43,19 @@ function ListeningPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "listening", "alerts"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/listening/alerts`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch listening alerts");
+      return res.json();
+    },
+  });
+
+  const alerts = data?.data ?? MOCK_ALERTS;
+
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case "twitter": return <Twitter className="h-4 w-4 text-sky-500" />;
@@ -51,6 +71,14 @@ function ListeningPage() {
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -75,7 +103,7 @@ function ListeningPage() {
                 <Bell className="h-5 w-5" /> Recent Alerts
               </h3>
               <div className="space-y-4">
-                {MOCK_ALERTS.map((alert) => (
+                {alerts.map((alert: typeof MOCK_ALERTS[number]) => (
                   <div key={alert.id} className="p-4 bg-muted/50 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">

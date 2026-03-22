@@ -17,10 +17,17 @@ import {
   Clock,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/posts")({
   component: PostsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Post {
   id: string;
@@ -44,13 +51,42 @@ const MOCK_POSTS: Post[] = [
 
 function PostsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "published" | "scheduled" | "draft">("all");
 
-  const filteredPosts = MOCK_POSTS.filter((post) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "posts", filter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filter !== "all") params.set("status", filter);
+      const res = await fetch(`${API_BASE}/social/posts?${params}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch posts");
+      return res.json();
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await fetch(`${API_BASE}/social/posts/${postId}/publish`, {
+        method: "POST",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to publish post");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
+    },
+  });
+
+  const posts: Post[] = data?.data ?? MOCK_POSTS;
+
+  const filteredPosts = posts.filter((post) => {
     const matchesSearch = post.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "all" || post.status === filter;
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
   const getPlatformIcon = (platform: string) => {
@@ -70,6 +106,14 @@ function PostsPage() {
       case "draft": return <Badge variant="outline">Draft</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -161,7 +205,14 @@ function PostsPage() {
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">Edit</Button>
                         {post.status === "scheduled" && (
-                          <Button variant="ghost" size="sm">Publish Now</Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => publishMutation.mutate(post.id)}
+                            disabled={publishMutation.isPending}
+                          >
+                            Publish Now
+                          </Button>
                         )}
                       </div>
                     )}

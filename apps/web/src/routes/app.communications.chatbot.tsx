@@ -1,200 +1,284 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input, Select } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  Bot,
-  Plus,
-  Play,
-  Pause,
-  Settings,
-  Trash2,
-  MessageSquare,
-  GitBranch,
-  Database,
-  Mail,
-  ArrowRight,
-  Copy,
-  Download,
-} from "lucide-react";
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Bot, Plus, Power, PowerOff, Zap } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/chatbot")({
-  component: ChatbotBuilderPage,
+  component: ChatbotPage,
 });
 
-interface FlowNode {
-  id: string;
-  type: "trigger" | "message" | "condition" | "action" | "end";
-  label: string;
-  position: { x: number; y: number };
-}
+// ─── Fallback mock data ───────────────────────────────────────────────────────
 
 const MOCK_BOTS = [
-  { id: "b1", name: "Customer Support Bot", status: "active", conversations: 1247, satisfaction: 94.2 },
-  { id: "b2", name: "Sales Bot", status: "active", conversations: 892, satisfaction: 91.5 },
-  { id: "b3", name: "FAQ Bot", status: "draft", conversations: 0, satisfaction: 0 },
+  {
+    id: "mock-bot-1",
+    name: "Support Bot",
+    description: "Handles first-line customer support inquiries",
+    channel: "chat",
+    status: "active",
+    model: "gpt-4o-mini",
+    handoffThreshold: "0.7",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-bot-2",
+    name: "SMS Assistant",
+    description: "Answers FAQ via SMS",
+    channel: "sms",
+    status: "inactive",
+    model: "gpt-4o-mini",
+    handoffThreshold: "0.8",
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+  },
 ];
 
-function ChatbotBuilderPage() {
-  const navigate = useNavigate();
-  const [selectedBot, setSelectedBot] = useState<string | null>("b1");
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-500/20 text-green-400",
+  inactive: "bg-muted text-muted-foreground",
+  training: "bg-blue-500/20 text-blue-400",
+};
 
-  const selectedBotData = MOCK_BOTS.find((b) => b.id === selectedBot);
+function ChatbotPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    channel: "chat" as "chat" | "sms" | "voice",
+    systemPrompt: "",
+    model: "gpt-4o-mini",
+    handoffThreshold: "0.7",
+  });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["communications", "bots"],
+    queryFn: () => communicationsApi.bots.list({ page: 1, limit: 100 }),
+  });
+
+  const bots: any[] = data?.data ?? MOCK_BOTS;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: typeof form) =>
+      communicationsApi.bots.create({
+        name: payload.name,
+        description: payload.description || undefined,
+        channel: payload.channel,
+        systemPrompt: payload.systemPrompt || undefined,
+        model: payload.model,
+        handoffThreshold: payload.handoffThreshold,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "bots"] });
+      toast.success("Bot created");
+      setIsModalOpen(false);
+      setForm({
+        name: "",
+        description: "",
+        channel: "chat",
+        systemPrompt: "",
+        model: "gpt-4o-mini",
+        handoffThreshold: "0.7",
+      });
+    },
+    onError: () => toast.error("Failed to create bot"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (bot: any) =>
+      communicationsApi.bots.update(bot.id, {
+        status: bot.status === "active" ? "inactive" : "active",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "bots"] });
+      toast.success("Bot status updated");
+    },
+    onError: () => toast.error("Failed to update bot"),
+  });
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/communications" })}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="font-bold text-xl">Chatbot Builder</h2>
-            <p className="text-muted-foreground text-sm">Create AI-powered chatbots for your website</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bot className="h-6 w-6 text-pink-400" />
+            Chatbots
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Configure AI-powered bots for automated conversations
+          </p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-          Create Bot
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Bot
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Bot List */}
-        <div>
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle className="text-base">Your Chatbots</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {MOCK_BOTS.map((bot) => (
-                <div
-                  key={bot.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedBot === bot.id ? "bg-primary/10 border border-primary" : "hover:bg-muted/50"
-                  }`}
-                  onClick={() => setSelectedBot(bot.id)}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{bot.name}</span>
-                    <Badge className={bot.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                      {bot.status}
-                    </Badge>
-                  </div>
-                  {bot.status === "active" && (
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{bot.conversations.toLocaleString()} conv.</span>
-                      <span>{bot.satisfaction}% satisfaction</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+      {/* Content */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg bg-muted h-40" />
+          ))}
         </div>
-
-        {/* Flow Builder */}
-        <div className="lg:col-span-2">
-          <Card className="border-border/60">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" /> Flow Builder
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-1" /> Import
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Copy className="h-4 w-4 mr-1" /> Duplicate
-                  </Button>
-                  <Button variant="primary" size="sm">
-                    <Play className="h-4 w-4 mr-1" /> Test
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted/50 rounded-lg min-h-[400px] p-8 relative">
-                {/* Trigger Node */}
-                <div className="flex flex-col items-center">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm font-medium">When user sends message</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-center my-4">
-                  <ArrowRight className="h-6 w-6 text-muted-foreground" />
-                </div>
-
-                {/* Condition Node */}
-                <div className="flex justify-center">
-                  <div className="p-4 rounded-xl border-2 border-purple-500 bg-purple-50 min-w-[200px]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <GitBranch className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium text-sm">Check Intent</span>
+      ) : bots.length === 0 ? (
+        <EmptyState
+          icon={<Bot className="h-10 w-10 text-muted-foreground" />}
+          title="No chatbots configured"
+          description="Create an AI bot to automate conversations on chat, SMS or voice."
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {bots.map((bot) => (
+            <Card key={bot.id} className="hover:border-primary/40 transition-colors">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 rounded-full bg-pink-500/20 flex items-center justify-center shrink-0">
+                      <Bot className="h-4 w-4 text-pink-400" />
                     </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <p>+ Greeting detected</p>
-                      <p>+ Order inquiry</p>
-                      <p>+ Support request</p>
+                    <div>
+                      <p className="font-medium text-sm">{bot.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {bot.channel} · {bot.model}
+                      </p>
                     </div>
                   </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLORS[bot.status] ?? ""}`}
+                  >
+                    {bot.status}
+                  </span>
                 </div>
 
-                <div className="flex justify-center gap-8 my-4">
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 border-l border-muted-foreground/30" />
-                    <div className="px-3 py-1 bg-green-50 border border-green-500 rounded text-sm">Greeting</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 border-l border-muted-foreground/30" />
-                    <div className="px-3 py-1 bg-blue-50 border border-blue-500 rounded text-sm">Order Info</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 border-l border-muted-foreground/30" />
-                    <div className="px-3 py-1 bg-amber-50 border border-amber-500 rounded text-sm">Support</div>
-                  </div>
+                {bot.description && (
+                  <p className="text-xs text-muted-foreground">{bot.description}</p>
+                )}
+
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Zap className="h-3 w-3" />
+                  <span>Handoff at {Math.round(Number(bot.handoffThreshold) * 100)}% confidence</span>
                 </div>
 
-                {/* Add Node Button */}
-                <div className="flex justify-center mt-8">
-                  <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                    Add Node
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(bot.createdAt).toLocaleDateString()}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => toggleMutation.mutate(bot)}
+                    disabled={toggleMutation.isPending}
+                  >
+                    {bot.status === "active" ? (
+                      <>
+                        <PowerOff className="h-3 w-3" />
+                        Deactivate
+                      </>
+                    ) : (
+                      <>
+                        <Power className="h-3 w-3" />
+                        Activate
+                      </>
+                    )}
                   </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bot Stats */}
-          {selectedBotData?.status === "active" && (
-            <Card className="border-border/60 mt-6">
-              <CardHeader>
-                <CardTitle className="text-base">Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{selectedBotData.conversations.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Conversations</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{selectedBotData.satisfaction}%</p>
-                  <p className="text-sm text-muted-foreground">Satisfaction</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">1.2</p>
-                  <p className="text-sm text-muted-foreground">Avg. Response Time</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">78%</p>
-                  <p className="text-sm text-muted-foreground">Resolution Rate</p>
                 </div>
               </CardContent>
             </Card>
-          )}
+          ))}
         </div>
-      </div>
+      )}
+
+      {isError && !isLoading && (
+        <p className="text-sm text-destructive">
+          Could not load live data — showing cached results.
+        </p>
+      )}
+
+      {/* Create modal */}
+      <FormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create Chatbot"
+        onSubmit={() => createMutation.mutate(form)}
+        isSubmitting={createMutation.isPending}
+        submitLabel="Create Bot"
+      >
+        <FormField label="Bot name" required>
+          <Input
+            placeholder="e.g. Support Bot"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Description">
+          <Input
+            placeholder="What does this bot do?"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Channel" required>
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.channel}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                channel: e.target.value as "chat" | "sms" | "voice",
+              }))
+            }
+          >
+            <option value="chat">Chat</option>
+            <option value="sms">SMS</option>
+            <option value="voice">Voice</option>
+          </select>
+        </FormField>
+        <FormField label="AI Model">
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.model}
+            onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
+          >
+            <option value="gpt-4o-mini">GPT-4o mini</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="claude-3-haiku">Claude 3 Haiku</option>
+            <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+          </select>
+        </FormField>
+        <FormField label="System prompt">
+          <Textarea
+            placeholder="Instructions for the bot's behavior and persona..."
+            value={form.systemPrompt}
+            onChange={(e) => setForm((f) => ({ ...f, systemPrompt: e.target.value }))}
+            rows={4}
+          />
+        </FormField>
+        <FormField label="Handoff threshold (0–1)">
+          <Input
+            type="number"
+            min="0"
+            max="1"
+            step="0.05"
+            placeholder="0.7"
+            value={form.handoffThreshold}
+            onChange={(e) => setForm((f) => ({ ...f, handoffThreshold: e.target.value }))}
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }

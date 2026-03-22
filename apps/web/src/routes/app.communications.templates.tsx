@@ -1,195 +1,268 @@
-import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  MessageSquare,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Copy,
-  Clock,
-  FileText,
-} from "lucide-react";
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { FileText, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { communicationsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/communications/templates")({
   component: TemplatesPage,
 });
 
-interface Template {
-  id: string;
-  name: string;
-  content: string;
-  category: string;
-  variables: string[];
-  usageCount: number;
-  lastUsed: string;
-}
+// ─── Fallback mock data ───────────────────────────────────────────────────────
 
-const MOCK_TEMPLATES: Template[] = [
-  { id: "t1", name: "Welcome Message", content: "Welcome to {company_name}! We're excited to have you.", category: "Greeting", variables: ["company_name"], usageCount: 1247, lastUsed: "2 hours ago" },
-  { id: "t2", name: "Order Confirmation", content: "Your order #{order_id} has been confirmed. We'll notify you when it ships.", category: "Order", variables: ["order_id"], usageCount: 892, lastUsed: "1 hour ago" },
-  { id: "t3", name: "Appointment Reminder", content: "Hi {name}, this is a reminder about your appointment on {date} at {time}.", category: "Reminder", variables: ["name", "date", "time"], usageCount: 456, lastUsed: "30 min ago" },
-  { id: "t4", name: "Support Response", content: "Thank you for contacting support. A member of our team will respond within {response_time}.", category: "Support", variables: ["response_time"], usageCount: 789, lastUsed: "15 min ago" },
-  { id: "t5", name: "Promotional Offer", content: "Hi {name}! Use code {code} to get {discount}% off your next purchase.", category: "Marketing", variables: ["name", "code", "discount"], usageCount: 234, lastUsed: "3 days ago" },
-  { id: "t6", name: "Shipping Update", content: "Your order #{order_id} has been shipped! Track at: {tracking_url}", category: "Order", variables: ["order_id", "tracking_url"], usageCount: 567, lastUsed: "45 min ago" },
+const MOCK_TEMPLATES = [
+  {
+    id: "mock-tpl-1",
+    name: "Welcome Message",
+    channel: "sms",
+    category: "onboarding",
+    body: "Hi {{name}}, welcome to {{company}}! We're excited to have you.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-tpl-2",
+    name: "Appointment Reminder",
+    channel: "sms",
+    category: "reminders",
+    body: "Reminder: Your appointment is on {{date}} at {{time}}. Reply CONFIRM or CANCEL.",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: "mock-tpl-3",
+    name: "Support Greeting",
+    channel: "chat",
+    category: "support",
+    body: "Hello! How can I help you today?",
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
 ];
 
-const CATEGORIES = ["All", "Greeting", "Order", "Reminder", "Support", "Marketing"];
+const CHANNEL_COLORS: Record<string, string> = {
+  sms: "bg-green-500/20 text-green-400",
+  email: "bg-blue-500/20 text-blue-400",
+  chat: "bg-cyan-500/20 text-cyan-400",
+};
 
 function TemplatesPage() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [search, setSearch] = useState("");
+  const [channelFilter, setChannelFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    channel: "sms" as "sms" | "email" | "chat",
+    category: "",
+    body: "",
+  });
+  const queryClient = useQueryClient();
 
-  const filteredTemplates = MOCK_TEMPLATES.filter((template) => {
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || template.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["communications", "templates", channelFilter],
+    queryFn: () =>
+      communicationsApi.templates.list({
+        page: 1,
+        limit: 100,
+        channel: channelFilter !== "all" ? channelFilter : undefined,
+      }),
+  });
+
+  const templates: any[] = data?.data ?? MOCK_TEMPLATES;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: typeof form) =>
+      communicationsApi.templates.create({
+        name: payload.name,
+        channel: payload.channel,
+        category: payload.category || undefined,
+        body: payload.body,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "templates"] });
+      toast.success("Template created");
+      setIsModalOpen(false);
+      setForm({ name: "", channel: "sms", category: "", body: "" });
+    },
+    onError: () => toast.error("Failed to create template"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => communicationsApi.templates.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "templates"] });
+      toast.success("Template deleted");
+    },
+    onError: () => toast.error("Failed to delete template"),
+  });
+
+  const filtered = templates.filter((t) => {
+    const matchSearch =
+      !search || t.name?.toLowerCase().includes(search.toLowerCase());
+    const matchChannel = channelFilter === "all" || t.channel === channelFilter;
+    return matchSearch && matchChannel;
   });
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/app/communications" })}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="font-bold text-xl">Message Templates</h2>
-            <p className="text-muted-foreground text-sm">Create and manage reusable message templates</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="h-6 w-6 text-purple-400" />
+            Message Templates
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Reusable templates for SMS, email and chat channels
+          </p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-          Create Template
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Template
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Templates</p>
-                <p className="text-xl font-bold">{MOCK_TEMPLATES.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                <MessageSquare className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Usage</p>
-                <p className="text-xl font-bold">{MOCK_TEMPLATES.reduce((sum, t) => sum + t.usageCount, 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                <Clock className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Most Used</p>
-                <p className="text-xl font-bold">Welcome</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                <MessageSquare className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Categories</p>
-                <p className="text-xl font-bold">{CATEGORIES.length - 1}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
+          <Input
+            className="pl-9"
             placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {CATEGORIES.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "primary" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Templates Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="border-border/60 hover:border-primary/50 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold">{template.name}</h3>
-                  <Badge variant="outline" className="mt-1">{template.category}</Badge>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{template.content}</p>
-
-              <div className="flex flex-wrap gap-1 mb-4">
-                {template.variables.map((v) => (
-                  <span key={v} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-mono">
-                    {`{${v}}`}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Used {template.usageCount.toLocaleString()} times</span>
-                <span>Last: {template.lastUsed}</span>
-              </div>
-            </CardContent>
-          </Card>
+        {(["all", "sms", "email", "chat"] as const).map((ch) => (
+          <Button
+            key={ch}
+            variant={channelFilter === ch ? "default" : "outline"}
+            size="sm"
+            onClick={() => setChannelFilter(ch)}
+          >
+            {ch === "all" ? "All" : ch.toUpperCase()}
+          </Button>
         ))}
       </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg bg-muted h-36" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<FileText className="h-10 w-10 text-muted-foreground" />}
+          title="No templates"
+          description="Create reusable templates to speed up messaging."
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((tpl) => (
+            <Card key={tpl.id} className="hover:border-primary/40 transition-colors">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{tpl.name}</p>
+                    {tpl.category && (
+                      <p className="text-xs text-muted-foreground">{tpl.category}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${CHANNEL_COLORS[tpl.channel] ?? ""}`}
+                    >
+                      {tpl.channel?.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-3 bg-muted/50 rounded p-2 font-mono">
+                  {tpl.body}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(tpl.createdAt).toLocaleDateString()}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(tpl.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isError && !isLoading && (
+        <p className="text-sm text-destructive">
+          Could not load live data — showing cached results.
+        </p>
+      )}
+
+      {/* Create modal */}
+      <FormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="New Message Template"
+        onSubmit={() => createMutation.mutate(form)}
+        isSubmitting={createMutation.isPending}
+        submitLabel="Create Template"
+      >
+        <FormField label="Template name" required>
+          <Input
+            placeholder="e.g. Welcome Message"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Channel" required>
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.channel}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                channel: e.target.value as "sms" | "email" | "chat",
+              }))
+            }
+          >
+            <option value="sms">SMS</option>
+            <option value="email">Email</option>
+            <option value="chat">Chat</option>
+          </select>
+        </FormField>
+        <FormField label="Category">
+          <Input
+            placeholder="e.g. onboarding, reminders"
+            value={form.category}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="Message body" required>
+          <Textarea
+            placeholder="Use {{variable}} for dynamic values"
+            value={form.body}
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+            rows={4}
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }

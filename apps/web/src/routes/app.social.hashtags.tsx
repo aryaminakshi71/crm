@@ -2,10 +2,17 @@ import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Hash, Search, TrendingUp, Plus, Copy } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/hashtags")({
   component: HashtagsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Hashtag {
   tag: string;
@@ -27,8 +34,22 @@ function HashtagsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredHashtags = MOCK_HASHTAGS.filter((h) =>
-    h.tag.toLowerCase().includes(searchQuery.toLowerCase())
+  // Hashtags come from the social analytics/listening alerts filtered by alertType=hashtag
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "hashtags"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/listening/alerts?alertType=hashtag`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch hashtags");
+      return res.json();
+    },
+  });
+
+  const hashtags: Hashtag[] = data?.data ?? MOCK_HASHTAGS;
+
+  const filteredHashtags = hashtags.filter((h) =>
+    (h.tag ?? h.keyword ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getSentimentColor = (sentiment: Hashtag["sentiment"]) => {
@@ -38,6 +59,14 @@ function HashtagsPage() {
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -77,8 +106,8 @@ function HashtagsPage() {
                     <Hash className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold">{hashtag.tag}</p>
-                    <p className="text-sm text-muted-foreground">{hashtag.posts.toLocaleString()} posts</p>
+                    <p className="font-semibold">{hashtag.tag ?? (hashtag as Record<string, unknown>).keyword}</p>
+                    <p className="text-sm text-muted-foreground">{(hashtag.posts ?? 0).toLocaleString()} posts</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

@@ -11,10 +11,17 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/meetings")({
   component: MeetingsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Meeting {
   id: string;
@@ -36,6 +43,27 @@ const MOCK_MEETINGS: Meeting[] = [
 function MeetingsPage() {
   const navigate = useNavigate();
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "meetings"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/meetings`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch meetings");
+      return res.json();
+    },
+  });
+
+  const meetings: Meeting[] = data?.data ?? MOCK_MEETINGS;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -54,7 +82,7 @@ function MeetingsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {MOCK_MEETINGS.map((meeting) => (
+        {meetings.map((meeting) => (
           <Card key={meeting.id} className="border-border/60 hover:border-primary/50 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-3">

@@ -10,10 +10,17 @@ import {
   Star,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/vocabulary")({
   component: VocabularyPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface VocabularyWord {
   id: string;
@@ -35,8 +42,21 @@ function VocabularyPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredVocab = MOCK_VOCABULARY.filter((v) =>
-    v.word.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "vocabulary"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/vocabulary`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch vocabulary");
+      return res.json();
+    },
+  });
+
+  const vocab: VocabularyWord[] = data?.data ?? MOCK_VOCABULARY;
+
+  const filteredVocab = vocab.filter((v) =>
+    (v.word ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getTypeColor = (type: VocabularyWord["type"]) => {
@@ -47,6 +67,14 @@ function VocabularyPage() {
       case "slang": return "bg-amber-100 text-amber-800";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

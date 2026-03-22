@@ -13,10 +13,17 @@ import {
   Filter,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/speech/transcribe")({
   component: TranscriptionsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Transcription {
   id: string;
@@ -43,10 +50,24 @@ function TranscriptionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "completed" | "processing">("all");
 
-  const filteredTranscriptions = MOCK_TRANSCRIPTIONS.filter((t) => {
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "all" || t.status === filter;
-    return matchesSearch && matchesFilter;
+  const { data, isLoading } = useQuery({
+    queryKey: ["speech", "transcriptions", filter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filter !== "all") params.set("status", filter);
+      const res = await fetch(`${API_BASE}/speech/transcriptions?${params}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch transcriptions");
+      return res.json();
+    },
+  });
+
+  const transcriptions: Transcription[] = data?.data ?? MOCK_TRANSCRIPTIONS;
+
+  const filteredTranscriptions = transcriptions.filter((t) => {
+    const matchesSearch = (t.name ?? t.title ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
 
   const getStatusBadge = (status: Transcription["status"]) => {
@@ -56,6 +77,14 @@ function TranscriptionsPage() {
       case "failed": return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

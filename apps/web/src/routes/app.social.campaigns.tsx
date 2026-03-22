@@ -1,10 +1,17 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Target, Plus, Calendar, Users, TrendingUp, Play, Pause } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/campaigns")({
   component: CampaignsPage,
 });
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 interface Campaign {
   id: string;
@@ -27,6 +34,19 @@ const MOCK_CAMPAIGNS: Campaign[] = [
 function CampaignsPage() {
   const navigate = useNavigate();
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["social", "campaigns"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/social/campaigns`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch campaigns");
+      return res.json();
+    },
+  });
+
+  const campaigns: Campaign[] = data?.data ?? MOCK_CAMPAIGNS;
+
   const getStatusBadge = (status: Campaign["status"]) => {
     switch (status) {
       case "active": return <Badge className="bg-green-100 text-green-800">Active</Badge>;
@@ -35,6 +55,14 @@ function CampaignsPage() {
       case "draft": return <Badge variant="outline">Draft</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -62,7 +90,7 @@ function CampaignsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active Campaigns</p>
-                <p className="text-xl font-bold">{MOCK_CAMPAIGNS.filter((c) => c.status === "active").length}</p>
+                <p className="text-xl font-bold">{campaigns.filter((c) => c.status === "active").length}</p>
               </div>
             </div>
           </CardContent>
@@ -111,7 +139,7 @@ function CampaignsPage() {
       <Card className="border-border/60">
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {MOCK_CAMPAIGNS.map((campaign) => (
+            {campaigns.map((campaign) => (
               <div key={campaign.id} className="p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">

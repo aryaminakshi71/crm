@@ -3976,3 +3976,139 @@ export const marketingApi = {
     },
   },
 };
+
+// ============ COMMUNICATIONS API ============
+
+const COMM_BASE = `${API_BASE}/communications`;
+
+async function commFetch(path: string, init?: RequestInit): Promise<any> {
+  const res = await fetch(`${COMM_BASE}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...getOrgHeader(),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
+  });
+  if (!res.ok) throw new Error(`Communications API error: ${res.status}`);
+  return res.json();
+}
+
+export const communicationsApi = {
+  summary: () => commFetch("/summary"),
+
+  conversations: {
+    list: (params?: { page?: number; limit?: number; channel?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.channel) q.set("channel", params.channel);
+      if (params?.status) q.set("status", params.status);
+      return commFetch(`/conversations?${q}`);
+    },
+    create: (data: {
+      channel?: "chat" | "sms" | "email" | "voice";
+      subject?: string;
+      participantName?: string;
+      participantContact?: string;
+    }) =>
+      commFetch("/conversations", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  messages: {
+    list: (params?: { page?: number; limit?: number; conversationId?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.conversationId) q.set("conversationId", params.conversationId);
+      return commFetch(`/messages?${q}`);
+    },
+  },
+
+  phoneNumbers: {
+    list: (params?: { page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      return commFetch(`/phone-numbers?${q}`);
+    },
+    create: (data: { number: string; friendlyName?: string; provider?: string }) =>
+      commFetch("/phone-numbers", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  queues: {
+    list: (params?: { page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      return commFetch(`/queues?${q}`);
+    },
+    create: (data: {
+      name: string;
+      description?: string;
+      channel?: "chat" | "voice" | "sms";
+      maxWait?: string;
+    }) =>
+      commFetch("/queues", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  campaigns: {
+    list: (params?: { page?: number; limit?: number; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.status) q.set("status", params.status);
+      return commFetch(`/campaigns?${q}`);
+    },
+    create: (data: {
+      name: string;
+      body: string;
+      fromNumber?: string;
+      scheduledAt?: string;
+    }) =>
+      commFetch("/campaigns", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  templates: {
+    list: (params?: { page?: number; limit?: number; channel?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.channel) q.set("channel", params.channel);
+      return commFetch(`/templates?${q}`);
+    },
+    create: (data: {
+      name: string;
+      channel?: "sms" | "email" | "chat";
+      category?: string;
+      body: string;
+      variables?: string[];
+    }) =>
+      commFetch("/templates", { method: "POST", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      commFetch(`/templates/${id}`, { method: "DELETE" }),
+  },
+
+  bots: {
+    list: (params?: { page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.limit) q.set("limit", String(params.limit));
+      return commFetch(`/bots?${q}`);
+    },
+    create: (data: {
+      name: string;
+      description?: string;
+      channel?: "chat" | "sms" | "voice";
+      systemPrompt?: string;
+      model?: string;
+      handoffThreshold?: string;
+    }) =>
+      commFetch("/bots", { method: "POST", body: JSON.stringify(data) }),
+    update: (
+      id: string,
+      data: { status?: "active" | "inactive" | "training"; name?: string; systemPrompt?: string },
+    ) =>
+      commFetch(`/bots/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  },
+};
