@@ -92,10 +92,10 @@ describe("Web Route Modules", () => {
         "/app/monitoring/uptime",
         "/app/monitoring/performance",
         "/app/monitoring/catalog",
-        "/app/integration",
-        "/app/integration/connectors",
-        "/app/integration/workflows",
-        "/app/integration/events",
+        "/app/integrations",
+        "/app/integrations/connectors",
+        "/app/integrations/workflows",
+        "/app/integrations/events",
       ];
 
       routePaths.forEach((path) => {

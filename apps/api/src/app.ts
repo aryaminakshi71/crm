@@ -332,6 +332,21 @@ export function createApp() {
     await next();
   });
 
+  // Root API info
+  app.get("/", (c: any) => {
+    return c.json({
+      name: "Nucleo One API",
+      version: "1.0.0",
+      description: "CRM and business management API",
+      endpoints: {
+        health: "/api/health",
+        docs: "/api/openapi.json",
+        rpc: "/api/rpc/*",
+        rest: "/api/v1/*"
+      }
+    });
+  });
+
   // Health check (non-RPC) - must be before rate limiting
   app.get("/api/health", (c: any) => {
     return c.json({

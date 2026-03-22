@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UserPlus,
   Plus,
@@ -19,13 +19,22 @@ import {
   Star,
   Send,
   FileText,
+  Loader2,
 } from "lucide-react";
+import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/recruitment")({
   component: RecruitmentPipeline,
+  loader: async (): Promise<{ requisitions: { data: any[] }; candidates: { data: any[] } }> => {
+    const [requisitions, candidates] = await Promise.all([
+      hrmApi.recruitment.requisitions.list({ limit: 50 }),
+      hrmApi.recruitment.candidates.list({ limit: 100 }),
+    ]);
+    return { requisitions: requisitions as any, candidates: candidates as any };
+  },
 });
 
-const candidates = [
+const defaultCandidates = [
   { id: "1", name: "Alex Rivera", role: "Senior Frontend Developer", dept: "Engineering", stage: "Technical Interview", status: "Active", rating: 4.5, appliedDate: "Mar 15, 2026", source: "LinkedIn", avatar: "AR" },
   { id: "2", name: "Maya Patel", role: "Product Designer", dept: "Design", stage: "Design Challenge", status: "Active", rating: 4.8, appliedDate: "Mar 12, 2026", source: "Referral", avatar: "MP" },
   { id: "3", name: "Jordan Lee", role: "Backend Developer", dept: "Engineering", stage: "Phone Screen", status: "Active", rating: 4.2, appliedDate: "Mar 10, 2026", source: "Indeed", avatar: "JL" },
@@ -36,7 +45,7 @@ const candidates = [
   { id: "8", name: "Jamie Garcia", role: "Account Executive", dept: "Sales", stage: "Phone Screen", status: "Active", rating: 4.0, appliedDate: "Mar 14, 2026", source: "Website", avatar: "JG" },
 ];
 
-const jobs = [
+const defaultJobs = [
   { id: "1", title: "Senior Frontend Developer", dept: "Engineering", location: "San Francisco, CA", type: "Full-time", salary: "$140K - $180K", applicants: 45, openDate: "Mar 1, 2026" },
   { id: "2", title: "Product Designer", dept: "Design", location: "Remote", type: "Full-time", salary: "$120K - $160K", applicants: 32, openDate: "Mar 5, 2026" },
   { id: "3", title: "Sales Manager", dept: "Sales", location: "New York, NY", type: "Full-time", salary: "$100K - $140K + Commission", applicants: 28, openDate: "Feb 20, 2026" },
@@ -46,18 +55,59 @@ const jobs = [
 
 const stages = ["Applied", "Phone Screen", "Technical Interview", "Design Challenge", "Final Round", "Offer"];
 
-const pipelineStats = [
-  { stage: "Applied", count: 8, color: "bg-gray-500" },
-  { stage: "Phone Screen", count: 2, color: "bg-blue-500" },
-  { stage: "Technical Interview", count: 2, color: "bg-purple-500" },
-  { stage: "Design Challenge", count: 1, color: "bg-amber-500" },
-  { stage: "Final Round", count: 1, color: "bg-teal-500" },
-  { stage: "Offer", count: 1, color: "bg-emerald-500" },
-];
-
 function RecruitmentPipeline() {
+  const loaderData = Route.useLoaderData();
   const [viewMode, setViewMode] = useState<"pipeline" | "jobs" | "candidates">("pipeline");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [candidatesList, setCandidatesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (loaderData?.requisitions?.data || loaderData?.candidates?.data) {
+      setRequisitions(loaderData.requisitions?.data || []);
+      setCandidatesList(loaderData.candidates?.data || []);
+      setLoading(false);
+    } else {
+      setRequisitions(defaultJobs);
+      setCandidatesList(defaultCandidates);
+      setLoading(false);
+    }
+  }, [loaderData]);
+
+  const jobs = requisitions.map((j: any) => ({
+    id: j.id,
+    title: j.title || "Position",
+    dept: j.department || "General",
+    location: j.location || "N/A",
+    type: j.employmentType || "Full-time",
+    salary: j.salaryMin && j.salaryMax ? `$${j.salaryMin}K - $${j.salaryMax}K` : "Competitive",
+    applicants: j.candidateCount || 0,
+    openDate: j.createdAt ? new Date(j.createdAt).toLocaleDateString() : "N/A",
+  }));
+
+  const candidates = candidatesList.map((c: any) => ({
+    id: c.id,
+    name: c.fullName || `${c.firstName} ${c.lastName}`,
+    role: c.requisitionTitle || "Position",
+    dept: c.department || "General",
+    stage: c.stage || "Applied",
+    status: c.status || "Active",
+    rating: c.rating || null,
+    appliedDate: c.appliedAt ? new Date(c.appliedAt).toLocaleDateString() : "N/A",
+    source: c.source || "Website",
+    avatar: (c.fullName || "C").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase(),
+  }));
+
+  const pipelineStats = stages.map((stage) => ({
+    stage,
+    count: candidates.filter((c: any) => c.stage === stage).length,
+    color: stage === "Applied" ? "bg-gray-500" :
+           stage === "Phone Screen" ? "bg-blue-500" :
+           stage === "Technical Interview" ? "bg-purple-500" :
+           stage === "Design Challenge" ? "bg-amber-500" :
+           stage === "Final Round" ? "bg-teal-500" : "bg-emerald-500",
+  }));
   const [stageFilter, setStageFilter] = useState("All");
   const [deptFilter, setDeptFilter] = useState("All Departments");
 

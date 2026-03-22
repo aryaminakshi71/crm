@@ -184,6 +184,59 @@ class ApiService {
   async markNotificationRead(id: string): Promise<void> {
     await this.request(`/notifications/${id}/read`, { method: 'POST' });
   }
+
+  // Helpdesk
+  async getTickets(): Promise<any[]> {
+    const response = await this.request<any[]>('/helpdesk/tickets');
+    return response.data;
+  }
+
+  // Finance
+  async getInvoices(): Promise<any[]> {
+    const response = await this.request<any[]>('/finance/invoices');
+    return response.data;
+  }
+
+  async getExpenses(): Promise<any[]> {
+    const response = await this.request<any[]>('/finance/expenses');
+    return response.data;
+  }
+
+  // Field Service
+  async getJobs(): Promise<any[]> {
+    const response = await this.request<any[]>('/field-service/jobs');
+    return response.data;
+  }
+
+  // Marketing
+  async getCampaigns(): Promise<any[]> {
+    const response = await this.request<any[]>('/marketing/campaigns');
+    return response.data;
+  }
+
+  // Inventory
+  async getProducts(): Promise<any[]> {
+    const response = await this.request<any[]>('/inventory/products');
+    return response.data;
+  }
+
+  // Agents
+  async getAgents(): Promise<any[]> {
+    const response = await this.request<any[]>('/agents');
+    return response.data;
+  }
+
+  // Communications
+  async getConversations(): Promise<any[]> {
+    const response = await this.request<any[]>('/communications/conversations');
+    return response.data;
+  }
+
+  // Social
+  async getSocialPosts(): Promise<any[]> {
+    const response = await this.request<any[]>('/social/posts');
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

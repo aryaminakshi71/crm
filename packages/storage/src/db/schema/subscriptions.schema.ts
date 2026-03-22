@@ -18,12 +18,13 @@ import {
 import { relations } from "drizzle-orm";
 import { organizations } from "./auth.schema";
 
-// Plan Types
+// Plan Types (matching nucleo-modules.ts PLAN_MODULES)
 export const PlanType = [
   "starter",
-  "growth",
+  "professional",
   "business",
   "enterprise",
+  "payg",
 ] as const;
 export type PlanType = (typeof PlanType)[number];
 
@@ -44,7 +45,7 @@ export type BillingCycle = (typeof BillingCycle)[number];
 // Plans Definition
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
-  key: varchar("key", { length: 50 }).notNull().unique(), // starter, growth, business, enterprise
+  key: varchar("key", { length: 50 }).notNull().unique(), // starter, professional, business, enterprise, payg
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   basePriceMonthly: numeric("base_price_monthly", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -60,6 +61,8 @@ export const plans = pgTable("plans", {
   stripePriceIdMonthly: varchar("stripe_price_id_monthly", { length: 100 }),
   stripePriceIdAnnual: varchar("stripe_price_id_annual", { length: 100 }),
   trialDays: integer("trial_days").notNull().default(14),
+  // Pay-as-you-go specific
+  isPayAsYouGo: boolean("is_pay_as_you_go").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -123,8 +126,8 @@ export const modulePricing = pgTable("module_pricing", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Invoices
-export const invoices = pgTable("invoices", {
+// Billing Invoices (for Stripe integration)
+export const billingInvoices = pgTable("billing_invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: text("organization_id")
     .notNull()
@@ -172,7 +175,7 @@ export const payments = pgTable("payments", {
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
-  invoiceId: uuid("invoice_id").references(() => invoices.id),
+  invoiceId: uuid("invoice_id").references(() => billingInvoices.id),
 
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("USD"),
@@ -241,9 +244,9 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   }),
 }));
 
-export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+export const billingInvoicesRelations = relations(billingInvoices, ({ one, many }) => ({
   organization: one(organizations, {
-    fields: [invoices.organizationId],
+    fields: [billingInvoices.organizationId],
     references: [organizations.id],
   }),
   payments: many(payments),
@@ -254,8 +257,8 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
     fields: [payments.organizationId],
     references: [organizations.id],
   }),
-  invoice: one(invoices, {
+  invoice: one(billingInvoices, {
     fields: [payments.invoiceId],
-    references: [invoices.id],
+    references: [billingInvoices.id],
   }),
 }));

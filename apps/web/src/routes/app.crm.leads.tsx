@@ -7,8 +7,12 @@
 import { Badge, Button, Card, CardContent, Input, Progress } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
+  ArrowRight,
   ChevronDown,
   Filter,
+  Globe,
+  Linkedin,
   Mail,
   MoreHorizontal,
   Phone,
@@ -18,10 +22,12 @@ import {
   Target,
   TrendingUp,
   User,
+  X,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { leadsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/crm/leads")({
   component: LeadsList,
@@ -147,14 +153,222 @@ const mockLeads: Lead[] = [
   },
 ];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns days since a date string */
+function daysSince(dateStr: string): number {
+  const now = new Date();
+  const then = new Date(dateStr);
+  return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** Source icon + emoji mapping */
+function SourceBadge({ source }: { source: string }) {
+  const map: Record<string, { emoji: string; color: string }> = {
+    Website: { emoji: "🌐", color: "bg-blue-100 text-blue-700" },
+    Google: { emoji: "🔍", color: "bg-red-100 text-red-700" },
+    LinkedIn: { emoji: "💼", color: "bg-sky-100 text-sky-700" },
+    Referral: { emoji: "⭐", color: "bg-yellow-100 text-yellow-700" },
+    "Cold Outreach": { emoji: "📧", color: "bg-purple-100 text-purple-700" },
+    Event: { emoji: "🎤", color: "bg-pink-100 text-pink-700" },
+    Webinar: { emoji: "🎯", color: "bg-indigo-100 text-indigo-700" },
+    Partner: { emoji: "🤝", color: "bg-emerald-100 text-emerald-700" },
+  };
+  const entry = map[source] ?? { emoji: "📌", color: "bg-gray-100 text-gray-700" };
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${entry.color}`}
+    >
+      {entry.emoji} {source}
+    </span>
+  );
+}
+
+/** Score badge: HOT / WARM / COLD */
+function ScoreTemperatureBadge({ score }: { score: number }) {
+  if (score >= 80)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+        HOT 🔥
+      </span>
+    );
+  if (score >= 50)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+        WARM
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+      COLD
+    </span>
+  );
+}
+
+// ─── Quick Add Lead Slide-Over ────────────────────────────────────────────────
+
+interface QuickAddLeadPanelProps {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (lead: Lead) => void;
+}
+
+function QuickAddLeadPanel({ open, onClose, onCreated }: QuickAddLeadPanelProps) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    company: "",
+    source: "Website",
+    estimatedValue: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const sources = ["Website", "Google", "LinkedIn", "Referral", "Cold Outreach", "Event"];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.email) {
+      toast.error("Name and email are required");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await leadsApi.create({
+        name: form.name,
+        email: form.email,
+        company: form.company,
+        source: form.source,
+        estimatedValue: Number(form.estimatedValue) || 0,
+      });
+      toast.success("Lead created successfully");
+      const newLead: Lead = {
+        id: String(Date.now()),
+        name: form.name,
+        email: form.email,
+        phone: "",
+        company: form.company,
+        jobTitle: "",
+        source: form.source,
+        status: "new",
+        score: 50,
+        scoreBreakdown: { engagement: 17, firmographics: 17, demographic: 16 },
+        assignedTo: "Unassigned",
+        createdAt: new Date().toISOString().split("T")[0],
+        lastActivity: new Date().toISOString().split("T")[0],
+        estimatedValue: Number(form.estimatedValue) || 0,
+      };
+      onCreated(newLead);
+      setForm({ name: "", email: "", company: "", source: "Website", estimatedValue: "" });
+      onClose();
+    } catch {
+      toast.error("Failed to create lead");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-background shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+          <h2 className="font-semibold text-lg">Quick Add Lead</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Full Name <span className="text-destructive">*</span>
+            </label>
+            <Input
+              placeholder="Jane Smith"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Email <span className="text-destructive">*</span>
+            </label>
+            <Input
+              type="email"
+              placeholder="jane@acme.com"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Company</label>
+            <Input
+              placeholder="Acme Corp"
+              value={form.company}
+              onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Lead Source</label>
+            <select
+              value={form.source}
+              onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Estimated Value ($)</label>
+            <Input
+              type="number"
+              min="0"
+              placeholder="50000"
+              value={form.estimatedValue}
+              onChange={(e) => setForm((f) => ({ ...f, estimatedValue: e.target.value }))}
+            />
+          </div>
+          <div className="mt-auto flex gap-3 pt-4 border-t border-border/60">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" disabled={submitting}>
+              {submitting ? "Creating..." : "Create Lead"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 function LeadsList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scoreFilter, setScoreFilter] = useState<string>("all");
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>(mockLeads);
 
-  const filteredLeads = mockLeads.filter((lead) => {
+  const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
       searchQuery === "" ||
       lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -185,13 +399,17 @@ function LeadsList() {
     unqualified: "bg-gray-100 text-gray-700 border-gray-200",
   };
 
-  const sourceIcons: Record<string, string> = {
-    Website: "globe",
-    LinkedIn: "users",
-    Referral: "star",
-    Webinar: "target",
-    "Cold Outreach": "zap",
-    Partner: "trending",
+  const handleConvert = async (lead: Lead) => {
+    try {
+      await leadsApi.convert(lead.id, {});
+      toast.success(`${lead.name} converted to contact`);
+    } catch {
+      toast.error("Failed to convert lead");
+    }
+  };
+
+  const handleLeadCreated = (lead: Lead) => {
+    setLeads((prev) => [lead, ...prev]);
   };
 
   return (
@@ -230,9 +448,9 @@ function LeadsList() {
             <option value="cold">Cold (&lt;50)</option>
           </select>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowQuickAdd(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Lead
+          Quick Add Lead
         </Button>
       </div>
 
@@ -243,7 +461,7 @@ function LeadsList() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted-foreground text-xs font-medium">Total Leads</p>
-                <p className="font-bold text-2xl">{mockLeads.length}</p>
+                <p className="font-bold text-2xl">{leads.length}</p>
               </div>
               <Target className="h-8 w-8 text-primary/20" />
             </div>
@@ -255,7 +473,7 @@ function LeadsList() {
               <div>
                 <p className="text-muted-foreground text-xs font-medium">Hot Leads</p>
                 <p className="font-bold text-2xl text-green-600">
-                  {mockLeads.filter((l) => l.score >= 80).length}
+                  {leads.filter((l) => l.score >= 80).length}
                 </p>
               </div>
               <Zap className="h-8 w-8 text-green-600/20" />
@@ -268,7 +486,7 @@ function LeadsList() {
               <div>
                 <p className="text-muted-foreground text-xs font-medium">Avg Score</p>
                 <p className="font-bold text-2xl">
-                  {Math.round(mockLeads.reduce((sum, l) => sum + l.score, 0) / mockLeads.length)}
+                  {Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length)}
                 </p>
               </div>
               <Star className="h-8 w-8 text-yellow-500/20" />
@@ -281,7 +499,7 @@ function LeadsList() {
               <div>
                 <p className="text-muted-foreground text-xs font-medium">Pipeline Value</p>
                 <p className="font-bold text-2xl">
-                  ${(mockLeads.reduce((sum, l) => sum + l.estimatedValue, 0) / 1000).toFixed(0)}K
+                  ${(leads.reduce((sum, l) => sum + l.estimatedValue, 0) / 1000).toFixed(0)}K
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-600/20" />
@@ -297,7 +515,7 @@ function LeadsList() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground w-[300px]">
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground w-[260px]">
                     Lead
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">
@@ -318,7 +536,9 @@ function LeadsList() {
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">
                     Last Activity
                   </th>
-                  <th className="w-12 p-4"></th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -331,87 +551,100 @@ function LeadsList() {
                     </td>
                   </tr>
                 ) : (
-                  filteredLeads.map((lead) => (
-                    <tr
-                      key={lead.id}
-                      className="border-b hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="p-4">
-                        <Link
-                          to={`/app/crm/leads/${lead.id}` as string}
-                          className="flex items-center gap-3"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-primary">
-                              {lead.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium hover:text-primary transition-colors">
-                              {lead.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {lead.jobTitle} at {lead.company}
-                            </p>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="secondary">{lead.source}</Badge>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="outline" className={statusColors[lead.status]}>
-                          {lead.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-muted-foreground">Score</span>
-                              <span
-                                className={`text-xs font-semibold ${getScoreColor(lead.score).split(
-                                  " "
-                                )[0]}`}
-                              >
-                                {lead.score}
+                  filteredLeads.map((lead) => {
+                    const inactiveDays = daysSince(lead.lastActivity);
+                    const isDealRot = inactiveDays > 7;
+                    return (
+                      <tr
+                        key={lead.id}
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <Link
+                            to={`/app/crm/leads/${lead.id}` as string}
+                            className="flex items-center gap-3"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <span className="text-sm font-semibold text-primary">
+                                {lead.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
                               </span>
                             </div>
-                            <Progress
-                              value={lead.score}
-                              className="h-2"
-                            />
+                            <div>
+                              <p className="font-medium hover:text-primary transition-colors">
+                                {lead.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {lead.jobTitle} at {lead.company}
+                              </p>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="p-4">
+                          <SourceBadge source={lead.source} />
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="outline" className={statusColors[lead.status]}>
+                            {lead.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-28">
+                              <div className="flex items-center justify-between mb-1">
+                                <ScoreTemperatureBadge score={lead.score} />
+                                <span
+                                  className={`text-xs font-semibold ${getScoreColor(lead.score).split(" ")[0]}`}
+                                >
+                                  {lead.score}
+                                </span>
+                              </div>
+                              <Progress value={lead.score} className="h-2" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
-                          <div>Eng: {lead.scoreBreakdown.engagement}</div>
-                          <div>Firm: {lead.scoreBreakdown.firmographics}</div>
-                          <div>Demo: {lead.scoreBreakdown.demographic}</div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm">{lead.assignedTo}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm font-medium">
-                          ${(lead.estimatedValue / 1000).toFixed(0)}K
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground">
-                          {lead.lastActivity}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                          <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
+                            <div>Eng: {lead.scoreBreakdown.engagement}</div>
+                            <div>Firm: {lead.scoreBreakdown.firmographics}</div>
+                            <div>Demo: {lead.scoreBreakdown.demographic}</div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{lead.assignedTo}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm font-medium">
+                            ${(lead.estimatedValue / 1000).toFixed(0)}K
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1">
+                            <span className="text-sm text-muted-foreground block">
+                              {lead.lastActivity}
+                            </span>
+                            {isDealRot && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+                                <AlertTriangle className="h-3 w-3" />
+                                No activity {inactiveDays}d
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs whitespace-nowrap"
+                            onClick={() => handleConvert(lead)}
+                          >
+                            Convert to Contact
+                            <ArrowRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -422,7 +655,7 @@ function LeadsList() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredLeads.length} of {mockLeads.length} leads
+          Showing {filteredLeads.length} of {leads.length} leads
         </p>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled>
@@ -436,6 +669,13 @@ function LeadsList() {
           </Button>
         </div>
       </div>
+
+      {/* Quick Add Lead Slide-Over */}
+      <QuickAddLeadPanel
+        open={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onCreated={handleLeadCreated}
+      />
     </div>
   );
 }

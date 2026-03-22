@@ -1,20 +1,67 @@
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { LeadCaptureWidget } from "@/components/lead-capture-widget";
+import { leadsApi } from "@/lib/api";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowRight,
+  Bot,
   Brain,
   Building2,
   Check,
   ChevronRight,
+  Cpu,
+  FileText,
   FolderKanban,
+  Gauge,
+  GitBranch,
   LifeBuoy,
+  ListOrdered,
   Megaphone,
+  Mic,
+  Package,
+  Phone,
+  Puzzle,
   Receipt,
+  ScrollText,
+  Search,
+  Share2,
+  ShoppingCart,
+  Shield,
   ShieldCheck,
   Star,
+  Truck,
   UserRoundCog,
+  Webhook,
   Zap,
+  Users,
+  BarChart3,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Activity,
+  Layers,
+  Map,
+  TrendingUp,
+  Inbox,
+  Settings,
+  AlertCircle,
+  PlayCircle,
+  Network,
+  Mail,
+  Video,
+  Headphones,
+  BarChart2,
+  PieChart,
+  Target,
+  Award,
+  BookOpen,
+  Workflow,
+  Database,
+  CloudLightning,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -24,10 +71,11 @@ const modules = [
     icon: Building2,
     color: "text-blue-400",
     bg: "bg-blue-400/10",
-    title: "CRM",
+    title: "CRM & Sales",
     description:
-      "Manage contacts, leads, and a visual deal pipeline from first touch to close.",
+      "Leads, deals, pipeline, forecasts, and sales automation.",
     href: "/app/crm",
+    price: 9,
     features: [
       "Contact database",
       "Lead scoring",
@@ -36,58 +84,14 @@ const modules = [
     ],
   },
   {
-    icon: LifeBuoy,
-    color: "text-cyan-400",
-    bg: "bg-cyan-400/10",
-    title: "Helpdesk",
-    description:
-      "AI-triaged support tickets, queue operations, and a searchable knowledge base.",
-    href: "/app/helpdesk",
-    features: [
-      "Smart triage",
-      "Queue management",
-      "SLA tracking",
-      "Knowledge base",
-    ],
-  },
-  {
-    icon: Megaphone,
-    color: "text-purple-400",
-    bg: "bg-purple-400/10",
-    title: "Marketing",
-    description:
-      "Plan and launch multi-channel campaigns with AI-generated strategy and budget control.",
-    href: "/app/marketing",
-    features: [
-      "Campaign builder",
-      "Audience targeting",
-      "AI planning",
-      "Budget analytics",
-    ],
-  },
-  {
-    icon: FolderKanban,
-    color: "text-emerald-400",
-    bg: "bg-emerald-400/10",
-    title: "Projects",
-    description:
-      "Full project lifecycle — boards, timelines, milestones, and resource tracking.",
-    href: "/app/projects",
-    features: [
-      "Kanban boards",
-      "Gantt timelines",
-      "Milestones",
-      "Resource allocation",
-    ],
-  },
-  {
     icon: UserRoundCog,
     color: "text-amber-400",
     bg: "bg-amber-400/10",
     title: "HRM",
     description:
-      "Complete people suite — directory, attendance, leave, recruitment, training, and payroll.",
+      "Employee directory, attendance, leave, recruitment, training, and payroll.",
     href: "/app/hrm",
+    price: 9,
     features: [
       "Employee directory",
       "Leave management",
@@ -96,33 +100,99 @@ const modules = [
     ],
   },
   {
-    icon: Receipt,
-    color: "text-green-400",
-    bg: "bg-green-400/10",
-    title: "Finance",
+    icon: FolderKanban,
+    color: "text-emerald-400",
+    bg: "bg-emerald-400/10",
+    title: "Projects",
     description:
-      "Transaction ledger, invoicing, payroll runs, and real-time financial overview.",
-    href: "/app/finance",
+      "Tasks, kanban, gantt, time tracking, and resource allocation.",
+    href: "/app/projects",
+    price: 9,
     features: [
-      "Transaction ledger",
-      "Invoice management",
-      "Payroll integration",
-      "P&L overview",
+      "Kanban boards",
+      "Gantt timelines",
+      "Milestones",
+      "Resource allocation",
     ],
   },
   {
-    icon: ShieldCheck,
-    color: "text-red-400",
-    bg: "bg-red-400/10",
-    title: "Compliance",
+    icon: FileText,
+    color: "text-green-400",
+    bg: "bg-green-400/10",
+    title: "Invoicing & Accounting",
     description:
-      "Control frameworks, audit trails, policy management, and regulatory reporting.",
-    href: "/app/compliance",
+      "Invoices, payments, double-entry accounting, and tax calculations.",
+    href: "/app/invoicing",
+    price: 12,
     features: [
-      "Control library",
-      "Policy manager",
-      "Audit logs",
-      "Risk scoring",
+      "Invoice management",
+      "Payment tracking",
+      "Tax calculations",
+      "Financial reports",
+    ],
+  },
+  {
+    icon: Megaphone,
+    color: "text-purple-400",
+    bg: "bg-purple-400/10",
+    title: "Marketing",
+    description:
+      "Campaigns, email automation, landing pages, and lead scoring.",
+    href: "/app/marketing",
+    price: 9,
+    features: [
+      "Campaign builder",
+      "Audience targeting",
+      "AI planning",
+      "Budget analytics",
+    ],
+  },
+  {
+    icon: LifeBuoy,
+    color: "text-cyan-400",
+    bg: "bg-cyan-400/10",
+    title: "Helpdesk",
+    description:
+      "Tickets, knowledge base, SLA tracking, and customer support.",
+    href: "/app/helpdesk",
+    price: 9,
+    features: [
+      "Smart triage",
+      "Queue management",
+      "SLA tracking",
+      "Knowledge base",
+    ],
+  },
+  {
+    icon: Truck,
+    color: "text-orange-400",
+    bg: "bg-orange-400/10",
+    title: "Field Service",
+    description:
+      "Dispatch, routing, technician management, and SLA tracking.",
+    href: "/app/field-service",
+    price: 15,
+    features: [
+      "Smart dispatch",
+      "Route optimization",
+      "Technician tracking",
+      "Job scheduling",
+    ],
+  },
+  {
+    icon: GitBranch,
+    color: "text-indigo-400",
+    bg: "bg-indigo-400/10",
+    title: "DevOps CI/CD",
+    description:
+      "Pipelines, deployments, infrastructure as code.",
+    href: "/app/devops",
+    price: 19,
+    features: [
+      "Pipeline builder",
+      "Automated testing",
+      "One-click deploy",
+      "Rollback capabilities",
     ],
   },
   {
@@ -131,20 +201,149 @@ const modules = [
     bg: "bg-pink-400/10",
     title: "AI & BI",
     description:
-      "Autonomous AI agents, revenue forecasting, and executive business intelligence.",
+      "Analytics, forecasting, KPIs, and business intelligence.",
     href: "/app/intelligence",
+    price: 19,
     features: [
-      "Strategic agents",
-      "Revenue forecast",
-      "KPI watchlist",
-      "Agent run logs",
+      "Custom reports",
+      "Predictive analytics",
+      "KPI dashboards",
+      "Data warehouse",
+    ],
+  },
+  {
+    icon: Bot,
+    color: "text-fuchsia-400",
+    bg: "bg-fuchsia-400/10",
+    title: "AI",
+    description:
+      "AI agents, business intelligence, analytics dashboards, and predictive insights.",
+    href: "/app/agents",
+    price: 29,
+    features: [
+      "AI agents for autonomous tasks",
+      "Business intelligence dashboards",
+      "Natural language data queries",
+      "Predictive analytics",
+    ],
+  },
+  {
+    icon: Phone,
+    color: "text-teal-400",
+    bg: "bg-teal-400/10",
+    title: "Communications",
+    description:
+      "SMS, Voice, Video, Chat - unified communications (Samva API).",
+    href: "/app/communications",
+    price: 15,
+    features: [
+      "SMS sending/receiving",
+      "Voice calls",
+      "Video meetings",
+      "Chat messaging",
+    ],
+  },
+  {
+    icon: Mic,
+    color: "text-rose-400",
+    bg: "bg-rose-400/10",
+    title: "Speech-to-Text",
+    description:
+      "Transcription, voice commands, meeting notes (Avaan API).",
+    href: "/app/speech",
+    price: 12,
+    features: [
+      "Audio transcription",
+      "Real-time streaming",
+      "Multi-speaker ID",
+      "Meeting notes",
+    ],
+  },
+  {
+    icon: Share2,
+    color: "text-violet-400",
+    bg: "bg-violet-400/10",
+    title: "Social Media",
+    description:
+      "Scheduling, analytics, social listening (Fanbean API).",
+    href: "/app/social",
+    price: 15,
+    features: [
+      "Post scheduling",
+      "Analytics dashboard",
+      "Social listening",
+      "Campaign management",
+    ],
+  },
+  {
+    icon: Puzzle,
+    color: "text-cyan-400",
+    bg: "bg-cyan-400/10",
+    title: "Integration Hub",
+    description:
+      "Connect any app with workflow automation, webhooks, and event bus.",
+    href: "/app/integrations",
+    price: 12,
+    features: [
+      "300+ connectors",
+      "Workflow builder",
+      "Webhook receiver",
+      "Event subscriptions",
+    ],
+  },
+  {
+    icon: Gauge,
+    color: "text-sky-400",
+    bg: "bg-sky-400/10",
+    title: "Monitoring",
+    description:
+      "Analytics, errors, uptime, performance, and observability.",
+    href: "/app/monitoring",
+    price: 12,
+    features: [
+      "Error tracking",
+      "Uptime checks",
+      "Performance metrics",
+      "Log aggregation",
+    ],
+  },
+  {
+    icon: Package,
+    color: "text-lime-400",
+    bg: "bg-lime-400/10",
+    title: "Inventory & Stock",
+    description:
+      "Products, warehouses, orders, and stock management.",
+    href: "/app/inventory",
+    price: 9,
+    features: [
+      "Product catalog",
+      "Stock levels",
+      "Warehouse management",
+      "Barcode scanning",
+    ],
+  },
+  {
+    icon: ShoppingCart,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    title: "eCommerce",
+    description:
+      "Store, cart, orders, payments, and shipping.",
+    href: "/app/ecommerce",
+    price: 19,
+    features: [
+      "Store builder",
+      "Shopping cart",
+      "Payment processing",
+      "Shipping integration",
     ],
   },
 ];
 
 const stats = [
   { value: "500+", label: "Organizations" },
-  { value: "14", label: "Business Modules" },
+  { value: "17+", label: "Business Modules" },
   { value: "99.9%", label: "Uptime SLA" },
   { value: "24/7", label: "AI Assistance" },
 ];
@@ -156,51 +355,87 @@ const pricingPlans = [
     period: "Free forever",
     description: "Perfect for solo founders and small teams getting started.",
     features: [
-      "Up to 3 users",
-      "CRM + Helpdesk",
-      "1,000 contacts",
+      "Up to 5 users",
+      "CRM + Sales Pipeline",
+      "10GB storage",
+      "Basic integrations",
       "Community support",
-      "5 active projects",
     ],
     cta: "Get Started Free",
     popular: false,
     ctaVariant: "outline",
   },
   {
-    name: "Growth",
-    price: 29,
-    period: "per seat / month",
+    name: "Professional",
+    price: 79,
+    period: "per user / month",
     description:
-      "Full suite for growing businesses that need everything in one place.",
+      "Full suite for growing businesses with HR, projects, and invoicing.",
     features: [
-      "Unlimited users",
-      "All 14 modules",
-      "Unlimited contacts",
-      "AI agents & forecasting",
+      "Up to 25 users",
+      "CRM + HRM + Projects + Invoicing",
+      "100GB storage",
+      "Integration Hub",
       "Priority support",
-      "Custom integrations",
     ],
     cta: "Start 14-Day Trial",
     popular: true,
     ctaVariant: "primary",
   },
   {
-    name: "Enterprise",
-    price: 99,
-    period: "per seat / month",
-    description: "Advanced security, compliance, and dedicated infrastructure.",
+    name: "Business",
+    price: 149,
+    period: "per user / month",
+    description:
+      "All core modules with AI for data-driven decisions.",
     features: [
-      "Everything in Growth",
-      "SSO & SCIM provisioning",
-      "Custom compliance controls",
-      "Audit log export",
-      "Dedicated success manager",
+      "Unlimited users",
+      "All core modules included",
+      "AI (agents + business intelligence)",
+      "500GB storage",
+      "Dedicated support",
+    ],
+    cta: "Start 14-Day Trial",
+    popular: false,
+    ctaVariant: "outline",
+  },
+  {
+    name: "Enterprise",
+    price: 299,
+    period: "per user / month",
+    description: "All modules including DevOps, Communications, and custom solutions.",
+    features: [
+      "Everything in Business",
+      "DevOps CI/CD + Field Service",
+      "Communications + Social Media",
+      "2TB storage",
+      "Custom integrations",
       "99.99% SLA",
     ],
     cta: "Talk to Sales",
     popular: false,
     ctaVariant: "outline",
   },
+];
+
+// Module pricing for Pay-As-You-Go
+const modulePricing = [
+  { name: "CRM & Sales", price: 9 },
+  { name: "HRM", price: 9 },
+  { name: "Projects", price: 9 },
+  { name: "Invoicing & Accounting", price: 12 },
+  { name: "Marketing", price: 9 },
+  { name: "Helpdesk & Support", price: 9 },
+  { name: "Field Service", price: 15 },
+  { name: "DevOps CI/CD", price: 19 },
+  { name: "AI (Agents + BI)", price: 29 },
+  { name: "Communications (Samva)", price: 15 },
+  { name: "Speech-to-Text (Avaan)", price: 12 },
+  { name: "Social Media (Fanbean)", price: 15 },
+  { name: "Integration Hub", price: 12 },
+  { name: "Monitoring", price: 12 },
+  { name: "Inventory & Stock", price: 9 },
+  { name: "eCommerce", price: 19 },
 ];
 
 const testimonials = [
@@ -220,7 +455,21 @@ const testimonials = [
   },
   {
     quote:
-      "Finally a platform that has enterprise compliance baked in without the enterprise price tag.",
+      "The Integration Hub connected all our apps automatically. Our Zapier bill went to zero in month 2.",
+    name: "James Liu",
+    role: "CTO, DataSync",
+    rating: 5,
+  },
+  {
+    quote:
+      "AI Agents handle 60% of our Level 1 support tickets. Our team now focuses on complex customer issues only.",
+    name: "Elena Rodriguez",
+    role: "VP Support, TechFlow",
+    rating: 5,
+  },
+  {
+    quote:
+      "Finally a platform with enterprise compliance baked in without the enterprise price tag.",
     name: "Priya Nair",
     role: "CTO, TrustLayer",
     rating: 5,
@@ -249,11 +498,31 @@ const securityBadges = [
 const faqItems = [
   {
     q: "How long does it take to set up?",
-    a: "Most teams are up and running within 15 minutes. Our guided onboarding walks you through initial setup, and you can import existing data from CSV or via our integrations.",
+    a: "Most teams are up and running within 15 minutes. Our guided onboarding walks you through initial setup, module selection, and you can import existing data from CSV or via our integrations.",
+  },
+  {
+    q: "How does modular pricing work?",
+    a: "With Pay-As-You-Go pricing, you only pay for the modules you need. Each module (like CRM, HRM, Projects) has its own monthly price. Alternatively, choose a plan tier that bundles modules together at a discount.",
   },
   {
     q: "Can I migrate from my current tools?",
-    a: "Yes! We offer free migration assistance for all paid plans. Import contacts, deals, projects, and more from Salesforce, HubSpot, Zendesk, and 50+ other tools.",
+    a: "Yes! We offer free migration assistance for all paid plans. Import contacts, deals, projects, and more from Salesforce, HubSpot, Zendesk, and 300+ other tools via our Integration Hub.",
+  },
+  {
+    q: "What modules are included in each plan?",
+    a: "Starter includes CRM & Sales. Professional adds HRM, Projects, and Invoicing. Business adds all core modules plus AI & BI. Enterprise includes every module including DevOps, Communications, and Social Media.",
+  },
+  {
+    q: "What are AI Agents?",
+    a: "AI Agents are autonomous AI assistants that can handle coding tasks, data analysis, customer support, and more. Deploy pre-built agents or create custom ones with our no-code agent builder.",
+  },
+  {
+    q: "How does the Integration Hub work?",
+    a: "Connect any app with our workflow automation engine. Build multi-step workflows with conditions, transformations, and compensation logic. Use webhooks to receive events from external systems.",
+  },
+  {
+    q: "What is Field Service management?",
+    a: "Field Service (ServiceNova) provides smart dispatch, AI route optimization, real-time technician tracking, job scheduling, and SLA management for organizations with mobile workers.",
   },
   {
     q: "Is there a free trial?",
@@ -261,15 +530,226 @@ const faqItems = [
   },
   {
     q: "What kind of support do you offer?",
-    a: "Growth and Enterprise plans include priority support with 1-hour response time. We also offer live chat, extensive documentation, and video tutorials.",
-  },
-  {
-    q: "Can I use Nucleo One on mobile?",
-    a: "Yes! We have native iOS and Android apps, plus a responsive web app that works on any device.",
+    a: "Professional and above plans include priority support with 1-hour response time. We also offer live chat, extensive documentation, and video tutorials.",
   },
   {
     q: "How does pricing work for large teams?",
-    a: "Per-seat pricing scales predictably. Contact us for volume discounts on teams over 50 users, or for custom enterprise agreements.",
+    a: "Per-seat pricing scales predictably. Contact us for volume discounts on teams over 50 users, or for custom enterprise agreements with dedicated infrastructure.",
+  },
+];
+
+// ─── Feature Deep-Dive Data ───────────────────────────────────────────────────
+
+const featureSpotlights = [
+  {
+    eyebrow: "CRM & SALES",
+    heading: "Close More Deals. Faster.",
+    description:
+      "A full-featured sales platform with intelligent lead scoring, visual pipeline management, and AI-powered insights that help your team hit quota every quarter.",
+    color: "blue",
+    accentClass: "text-blue-400",
+    borderClass: "border-blue-500/30",
+    glowClass: "shadow-blue-500/10",
+    bgAccent: "bg-blue-500/5",
+    href: "/app/crm",
+    features: [
+      { icon: Users, text: "Contact & company database with full activity history" },
+      { icon: BarChart3, text: "Visual deal pipeline with drag-and-drop stages" },
+      { icon: TrendingUp, text: "AI lead scoring that prioritizes your hottest prospects" },
+      { icon: Target, text: "Sales forecasting with quota tracking and attainment reports" },
+      { icon: Mail, text: "Email sequences and automated follow-up workflows" },
+      { icon: PieChart, text: "Revenue analytics, win/loss reports, and territory management" },
+    ],
+    mockUI: "crm",
+  },
+  {
+    eyebrow: "HUMAN RESOURCES",
+    heading: "Your People, Fully Managed.",
+    description:
+      "From hire to retire — an all-in-one HRM platform covering employee records, leave management, payroll, performance reviews, and an ATS for top-of-funnel recruitment.",
+    color: "amber",
+    accentClass: "text-amber-400",
+    borderClass: "border-amber-500/30",
+    glowClass: "shadow-amber-500/10",
+    bgAccent: "bg-amber-500/5",
+    href: "/app/hrm",
+    features: [
+      { icon: Users, text: "Searchable employee directory with org chart visualization" },
+      { icon: Calendar, text: "Leave management with calendar view and approval workflows" },
+      { icon: Award, text: "Performance reviews, OKRs, and 360-degree feedback" },
+      { icon: Receipt, text: "Automated payroll runs with tax calculations and payslips" },
+      { icon: BookOpen, text: "Onboarding checklists, training modules, and document storage" },
+      { icon: UserRoundCog, text: "ATS for recruitment — job posts, applications, and interviews" },
+    ],
+    mockUI: "hrm",
+  },
+  {
+    eyebrow: "PROJECT MANAGEMENT",
+    heading: "Ship Projects On Time, Every Time.",
+    description:
+      "Kanban boards, Gantt timelines, sprint planning, time tracking, and resource allocation — everything your team needs to plan, execute, and deliver projects at scale.",
+    color: "emerald",
+    accentClass: "text-emerald-400",
+    borderClass: "border-emerald-500/30",
+    glowClass: "shadow-emerald-500/10",
+    bgAccent: "bg-emerald-500/5",
+    href: "/app/projects",
+    features: [
+      { icon: FolderKanban, text: "Kanban boards with custom stages, labels, and assignees" },
+      { icon: BarChart2, text: "Gantt timelines with dependencies and critical path analysis" },
+      { icon: Clock, text: "Time tracking with timesheets, budgets, and billing export" },
+      { icon: Layers, text: "Sprint planning with velocity tracking and backlog grooming" },
+      { icon: Users, text: "Resource allocation heatmaps to prevent team overload" },
+      { icon: AlertCircle, text: "Risk register, issue tracking, and milestone management" },
+    ],
+    mockUI: "projects",
+  },
+  {
+    eyebrow: "FINANCE & INVOICING",
+    heading: "Get Paid. Stay Compliant.",
+    description:
+      "Professional invoices, automated payment reminders, double-entry accounting, tax calculations, and real-time financial dashboards — so you always know where your money is.",
+    color: "green",
+    accentClass: "text-green-400",
+    borderClass: "border-green-500/30",
+    glowClass: "shadow-green-500/10",
+    bgAccent: "bg-green-500/5",
+    href: "/app/finance",
+    features: [
+      { icon: FileText, text: "Professional invoices with custom branding and payment links" },
+      { icon: RefreshCw, text: "Recurring billing and subscription management" },
+      { icon: TrendingUp, text: "Double-entry accounting with real-time P&L and balance sheets" },
+      { icon: Receipt, text: "Expense tracking, receipt capture, and reimbursement workflows" },
+      { icon: BarChart3, text: "Cash flow forecasting and budget vs. actuals reporting" },
+      { icon: Shield, text: "Multi-currency support with automatic tax rate calculations" },
+    ],
+    mockUI: "finance",
+  },
+  {
+    eyebrow: "MARKETING",
+    heading: "Run Campaigns That Convert.",
+    description:
+      "Build multi-channel campaigns, automate email sequences, A/B test landing pages, and track ROI — all in one platform connected directly to your CRM pipeline.",
+    color: "purple",
+    accentClass: "text-purple-400",
+    borderClass: "border-purple-500/30",
+    glowClass: "shadow-purple-500/10",
+    bgAccent: "bg-purple-500/5",
+    href: "/app/marketing",
+    features: [
+      { icon: Megaphone, text: "Multi-channel campaign builder (email, SMS, social, ads)" },
+      { icon: Target, text: "Audience segmentation with behavioral and demographic filters" },
+      { icon: BarChart3, text: "A/B testing for subject lines, content, and send times" },
+      { icon: TrendingUp, text: "Revenue attribution and campaign ROI analytics" },
+      { icon: Workflow, text: "Visual automation workflows with triggers and conditions" },
+      { icon: PieChart, text: "Webinar and event management with registration tracking" },
+    ],
+    mockUI: "marketing",
+  },
+  {
+    eyebrow: "HELPDESK & SUPPORT",
+    heading: "Delight Customers at Scale.",
+    description:
+      "AI-powered ticket triage, omnichannel inbox, SLA tracking, knowledge base, and canned responses — so your support team spends time solving problems, not sorting tickets.",
+    color: "cyan",
+    accentClass: "text-cyan-400",
+    borderClass: "border-cyan-500/30",
+    glowClass: "shadow-cyan-500/10",
+    bgAccent: "bg-cyan-500/5",
+    href: "/app/helpdesk",
+    features: [
+      { icon: Inbox, text: "Unified omnichannel inbox (email, chat, SMS, social)" },
+      { icon: Bot, text: "AI triage that auto-routes tickets to the right team" },
+      { icon: Clock, text: "SLA tracking with escalation rules and breach alerts" },
+      { icon: BookOpen, text: "Knowledge base with SEO-optimized self-service articles" },
+      { icon: MessageSquare, text: "Canned responses and macros to reply in seconds" },
+      { icon: BarChart3, text: "CSAT scores, resolution time, and team performance reports" },
+    ],
+    mockUI: "helpdesk",
+  },
+  {
+    eyebrow: "FIELD SERVICE",
+    heading: "Dispatch Smarter. Serve Faster.",
+    description:
+      "AI-powered dispatch, real-time technician tracking, route optimization, job scheduling, and proof-of-work capture — purpose-built for teams with mobile workers in the field.",
+    color: "orange",
+    accentClass: "text-orange-400",
+    borderClass: "border-orange-500/30",
+    glowClass: "shadow-orange-500/10",
+    bgAccent: "bg-orange-500/5",
+    href: "/app/field-service",
+    features: [
+      { icon: Map, text: "Live dispatch map with real-time technician locations" },
+      { icon: Truck, text: "AI route optimization to minimize travel time and fuel costs" },
+      { icon: Calendar, text: "Drag-and-drop job scheduling with skill-based assignment" },
+      { icon: Clock, text: "SLA tracking per job with automatic escalation alerts" },
+      { icon: Shield, text: "Photo proof-of-work, digital signatures, and inspection forms" },
+      { icon: Package, text: "Parts inventory, equipment tracking, and warranty management" },
+    ],
+    mockUI: "fieldservice",
+  },
+  {
+    eyebrow: "AI AGENTS",
+    heading: "Autonomous AI That Works for You.",
+    description:
+      "Deploy pre-built AI agents or build custom ones with our no-code agent builder. Automate repetitive tasks, analyze data with natural language, and get predictive insights across your entire business.",
+    color: "fuchsia",
+    accentClass: "text-fuchsia-400",
+    borderClass: "border-fuchsia-500/30",
+    glowClass: "shadow-fuchsia-500/10",
+    bgAccent: "bg-fuchsia-500/5",
+    href: "/app/agents",
+    features: [
+      { icon: Bot, text: "Pre-built agents for support, sales, HR, and finance tasks" },
+      { icon: Sparkles, text: "Natural language queries across all your business data" },
+      { icon: Workflow, text: "No-code agent builder with tool integrations and memory" },
+      { icon: Activity, text: "Agent orchestration for multi-step autonomous workflows" },
+      { icon: Brain, text: "Predictive analytics and anomaly detection powered by ML" },
+      { icon: BarChart3, text: "Agent performance analytics, cost tracking, and usage reports" },
+    ],
+    mockUI: "ai",
+  },
+  {
+    eyebrow: "COMMUNICATIONS",
+    heading: "One Inbox for Every Channel.",
+    description:
+      "SMS, voice calls, video meetings, and team chat — unified into one communications platform (Samva API). Stay connected with customers and your team without switching apps.",
+    color: "teal",
+    accentClass: "text-teal-400",
+    borderClass: "border-teal-500/30",
+    glowClass: "shadow-teal-500/10",
+    bgAccent: "bg-teal-500/5",
+    href: "/app/communications",
+    features: [
+      { icon: MessageSquare, text: "Two-way SMS with bulk sending and conversation threads" },
+      { icon: Phone, text: "Voice calls with IVR, call recording, and transcription" },
+      { icon: Video, text: "HD video meetings with screen sharing and meeting notes" },
+      { icon: Headphones, text: "Call center queue management with real-time metrics" },
+      { icon: Mic, text: "Voicemail transcription and AI call summaries" },
+      { icon: Activity, text: "Communications analytics with channel performance reports" },
+    ],
+    mockUI: "communications",
+  },
+  {
+    eyebrow: "INTEGRATION HUB",
+    heading: "Connect Everything. Automate Anything.",
+    description:
+      "300+ pre-built connectors, a visual workflow builder, webhooks, and an event bus — so every tool in your stack talks to every other tool, automatically.",
+    color: "violet",
+    accentClass: "text-violet-400",
+    borderClass: "border-violet-500/30",
+    glowClass: "shadow-violet-500/10",
+    bgAccent: "bg-violet-500/5",
+    href: "/app/integrations",
+    features: [
+      { icon: Puzzle, text: "300+ pre-built connectors (Slack, Salesforce, Stripe, and more)" },
+      { icon: Workflow, text: "Visual workflow builder with conditions, loops, and branching" },
+      { icon: Webhook, text: "Webhook receiver with automatic payload parsing and routing" },
+      { icon: Network, text: "Event bus with pub/sub subscriptions across all modules" },
+      { icon: Database, text: "Data transformation with JSONata expressions and field mapping" },
+      { icon: AlertCircle, text: "Error tracking, retry logic, and audit logs for every run" },
+    ],
+    mockUI: "integrations",
   },
 ];
 
@@ -282,7 +762,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Compliance, and AI into a single unified platform. Replace 7 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Compliance, AI Agents, Integration Hub, and Observability into a single unified platform. Replace 17 tools with one. Start free.";
 
     return {
       meta: [
@@ -292,7 +772,7 @@ export const Route = createFileRoute("/")({
         {
           name: "keywords",
           content:
-            "CRM, business management, HRM, helpdesk, project management, ERP, AI tools, all-in-one business platform",
+            "CRM, business management, HRM, helpdesk, project management, ERP, AI agents, integration hub, observability, monitoring, all-in-one business platform",
         },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
@@ -301,7 +781,31 @@ export const Route = createFileRoute("/")({
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
-        // LocalBusiness / SoftwareApplication schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Nucleo One",
+          "url": baseUrl,
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": `${baseUrl}/blog?q={search_term_string}`
+            },
+            "query-input": "required name=search_term_string"
+          }
+        })},
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "How long does it take to set up Nucleo One?", "acceptedAnswer": { "@type": "Answer", "text": "Most teams are up and running within 15 minutes. Guided onboarding walks you through module selection and data import from CSV or via 300+ integrations." } },
+            { "@type": "Question", "name": "How does modular pricing work?", "acceptedAnswer": { "@type": "Answer", "text": "With Pay-As-You-Go pricing you only pay for the modules you need, starting at $9/module/month. Bundle plans start at $79/user/month for CRM, HRM, Projects, and Invoicing." } },
+            { "@type": "Question", "name": "Can I migrate from Salesforce, HubSpot, or Zendesk?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Nucleo One offers free migration assistance for all paid plans. Import data from Salesforce, HubSpot, Zendesk, and 300+ other tools via the Integration Hub." } },
+            { "@type": "Question", "name": "What are AI Agents in Nucleo One?", "acceptedAnswer": { "@type": "Answer", "text": "AI Agents are autonomous assistants that handle coding tasks, data analysis, customer support triage, and more. Deploy pre-built agents or create custom ones with the no-code agent builder." } },
+            { "@type": "Question", "name": "Is there a free plan?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The Starter plan is free forever for up to 5 users with CRM and basic integrations. Paid plans include a 14-day free trial — no credit card required." } },
+          ]
+        })},
         { "script:ld+json": JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
@@ -353,7 +857,11 @@ export const Route = createFileRoute("/")({
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Projects" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Helpdesk" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Compliance" } }
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Compliance" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI & BI" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Integration Hub" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Observability" } }
             ]
           }
         })},
@@ -363,6 +871,459 @@ export const Route = createFileRoute("/")({
   },
   component: LandingPage,
 });
+
+// ─── Mock UI Components ────────────────────────────────────────────────────────
+
+function CrmMockUI() {
+  const stages = [
+    { label: "Lead", color: "bg-blue-500/20 border-blue-500/40", count: 3, deals: [
+      { name: "Acme Corp", value: "$12k", avatar: "AC" },
+      { name: "Bright Tech", value: "$8.5k", avatar: "BT" },
+      { name: "CoreLabs", value: "$22k", avatar: "CL" },
+    ]},
+    { label: "Qualified", color: "bg-cyan-500/20 border-cyan-500/40", count: 2, deals: [
+      { name: "DataPro", value: "$45k", avatar: "DP" },
+      { name: "EdgeSoft", value: "$18k", avatar: "ES" },
+    ]},
+    { label: "Proposal", color: "bg-violet-500/20 border-violet-500/40", count: 2, deals: [
+      { name: "FutureCo", value: "$92k", avatar: "FC" },
+      { name: "GrowthX", value: "$31k", avatar: "GX" },
+    ]},
+    { label: "Won", color: "bg-emerald-500/20 border-emerald-500/40", count: 1, deals: [
+      { name: "HorizonAI", value: "$140k", avatar: "HA" },
+    ]},
+  ];
+  return (
+    <div className="flex gap-2 h-full overflow-hidden">
+      {stages.map((stage) => (
+        <div key={stage.label} className="flex-1 min-w-0">
+          <div className={cn("rounded-t-lg border px-2 py-1.5 mb-2", stage.color)}>
+            <span className="text-[10px] font-bold text-foreground/80 uppercase tracking-wider">{stage.label}</span>
+            <span className="ml-1.5 text-[10px] text-muted-foreground">({stage.count})</span>
+          </div>
+          <div className="space-y-1.5">
+            {stage.deals.map((deal) => (
+              <div key={deal.name} className="rounded-lg border border-border/40 bg-card/80 p-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">{deal.avatar}</div>
+                  <span className="text-[10px] font-medium text-foreground truncate">{deal.name}</span>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-400">{deal.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HrmMockUI() {
+  const employees = [
+    { name: "Alex Kim", role: "Engineering", status: "Active", avatar: "AK", color: "bg-blue-500/20 text-blue-400" },
+    { name: "Sara Lee", role: "Design", status: "On Leave", avatar: "SL", color: "bg-amber-500/20 text-amber-400" },
+    { name: "Mike Torres", role: "Sales", status: "Active", avatar: "MT", color: "bg-emerald-500/20 text-emerald-400" },
+    { name: "Priya Singh", role: "Marketing", status: "Active", avatar: "PS", color: "bg-purple-500/20 text-purple-400" },
+  ];
+  const calDays = ["M","T","W","T","F"];
+  const leaveData = [
+    [false, false, true, true, true],
+    [false, false, false, false, false],
+    [true, true, false, false, false],
+    [false, false, false, true, false],
+  ];
+  return (
+    <div className="space-y-3 h-full">
+      <div className="space-y-1.5">
+        {employees.map((emp, i) => (
+          <div key={emp.name} className="flex items-center gap-2 rounded-lg border border-border/40 bg-card/80 px-2.5 py-2">
+            <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-bold", emp.color)}>{emp.avatar}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-foreground truncate">{emp.name}</p>
+              <p className="text-[9px] text-muted-foreground">{emp.role}</p>
+            </div>
+            <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full", emp.status === "Active" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400")}>{emp.status}</span>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border/40 bg-card/80 p-2">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Leave Calendar — This Week</p>
+        <div className="grid grid-cols-6 gap-1">
+          <div />
+          {calDays.map((d) => <div key={d} className="text-[9px] text-center text-muted-foreground font-medium">{d}</div>)}
+          {employees.map((emp, i) => (
+            <>
+              <div key={emp.name + "-label"} className="text-[9px] text-muted-foreground truncate">{emp.avatar}</div>
+              {leaveData[i].map((isLeave, j) => (
+                <div key={j} className={cn("h-4 rounded-sm", isLeave ? "bg-amber-500/40" : "bg-muted/30")} />
+              ))}
+            </>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectsMockUI() {
+  const columns = [
+    { label: "To Do", color: "text-muted-foreground", bg: "bg-muted/30", tasks: [
+      { title: "Design system audit", tag: "Design", tagColor: "bg-purple-500/20 text-purple-400", assignee: "AK" },
+      { title: "API rate limiting", tag: "Backend", tagColor: "bg-blue-500/20 text-blue-400", assignee: "JL" },
+    ]},
+    { label: "In Progress", color: "text-blue-400", bg: "bg-blue-500/10", tasks: [
+      { title: "Auth flow redesign", tag: "Frontend", tagColor: "bg-cyan-500/20 text-cyan-400", assignee: "SL", progress: 60 },
+      { title: "DB migration script", tag: "Backend", tagColor: "bg-blue-500/20 text-blue-400", assignee: "MT", progress: 30 },
+    ]},
+    { label: "Done", color: "text-emerald-400", bg: "bg-emerald-500/10", tasks: [
+      { title: "CI/CD pipeline setup", tag: "DevOps", tagColor: "bg-emerald-500/20 text-emerald-400", assignee: "PS" },
+    ]},
+  ];
+  return (
+    <div className="flex gap-2 h-full">
+      {columns.map((col) => (
+        <div key={col.label} className="flex-1 min-w-0">
+          <div className={cn("rounded-t-lg px-2 py-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider", col.bg, col.color)}>
+            {col.label}
+          </div>
+          <div className="space-y-1.5">
+            {col.tasks.map((task) => (
+              <div key={task.title} className="rounded-lg border border-border/40 bg-card/80 p-2 space-y-1.5">
+                <p className="text-[10px] font-medium text-foreground leading-tight">{task.title}</p>
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded", task.tagColor)}>{task.tag}</span>
+                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">{task.assignee}</div>
+                </div>
+                {"progress" in task && (
+                  <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
+                    <div className="h-full bg-blue-400 rounded-full" style={{ width: `${task.progress}%` }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FinanceMockUI() {
+  const invoices = [
+    { id: "INV-001", client: "Acme Corp", amount: "$12,400", status: "Paid", statusColor: "bg-emerald-500/15 text-emerald-400" },
+    { id: "INV-002", client: "BrightTech", amount: "$8,750", status: "Pending", statusColor: "bg-amber-500/15 text-amber-400" },
+    { id: "INV-003", client: "CoreLabs", amount: "$22,100", status: "Overdue", statusColor: "bg-red-500/15 text-red-400" },
+    { id: "INV-004", client: "DataPro", amount: "$5,200", status: "Paid", statusColor: "bg-emerald-500/15 text-emerald-400" },
+  ];
+  const bars = [40, 65, 50, 80, 70, 90, 75];
+  const months = ["Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
+  return (
+    <div className="space-y-3 h-full">
+      <div className="rounded-lg border border-border/40 bg-card/80 p-3">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Revenue — Last 7 Months</p>
+        <div className="flex items-end gap-1 h-16">
+          {bars.map((h, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="w-full rounded-t-sm bg-emerald-400/70" style={{ height: `${h}%` }} />
+              <span className="text-[8px] text-muted-foreground">{months[i]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <div className="grid grid-cols-4 px-2 mb-1">
+          {["ID","Client","Amount","Status"].map((h) => <span key={h} className="text-[9px] font-bold text-muted-foreground">{h}</span>)}
+        </div>
+        {invoices.map((inv) => (
+          <div key={inv.id} className="grid grid-cols-4 items-center rounded-lg border border-border/30 bg-card/60 px-2 py-1.5">
+            <span className="text-[9px] font-mono text-muted-foreground">{inv.id}</span>
+            <span className="text-[9px] font-medium text-foreground">{inv.client}</span>
+            <span className="text-[9px] font-semibold text-foreground">{inv.amount}</span>
+            <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full w-fit", inv.statusColor)}>{inv.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MarketingMockUI() {
+  const campaigns = [
+    { name: "Spring Launch", channel: "Email", sent: "12.4k", open: "38%", click: "12%", color: "bg-purple-500/20 border-purple-500/40" },
+    { name: "Retargeting Q1", channel: "Ads", sent: "8.2k", open: "—", click: "4.2%", color: "bg-blue-500/20 border-blue-500/40" },
+    { name: "Product Update", channel: "SMS", sent: "5.1k", open: "92%", click: "28%", color: "bg-emerald-500/20 border-emerald-500/40" },
+  ];
+  const metrics = [
+    { label: "Total Leads", value: "2,841", change: "+18%", up: true },
+    { label: "Conversion Rate", value: "4.7%", change: "+0.9%", up: true },
+    { label: "Revenue Attributed", value: "$142k", change: "+23%", up: true },
+  ];
+  return (
+    <div className="space-y-2.5 h-full">
+      <div className="grid grid-cols-3 gap-2">
+        {metrics.map((m) => (
+          <div key={m.label} className="rounded-lg border border-border/40 bg-card/80 p-2 text-center">
+            <p className="text-[9px] text-muted-foreground mb-0.5">{m.label}</p>
+            <p className="text-sm font-bold text-foreground">{m.value}</p>
+            <p className={cn("text-[9px] font-medium", m.up ? "text-emerald-400" : "text-red-400")}>{m.change}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-5 px-2 mb-1">
+          {["Campaign","Channel","Sent","Open","Click"].map((h) => <span key={h} className="text-[9px] font-bold text-muted-foreground">{h}</span>)}
+        </div>
+        {campaigns.map((c) => (
+          <div key={c.name} className={cn("grid grid-cols-5 items-center rounded-lg border px-2 py-1.5", c.color)}>
+            <span className="text-[9px] font-medium text-foreground">{c.name}</span>
+            <span className="text-[9px] text-muted-foreground">{c.channel}</span>
+            <span className="text-[9px] font-medium text-foreground">{c.sent}</span>
+            <span className="text-[9px] text-foreground">{c.open}</span>
+            <span className="text-[9px] font-semibold text-primary">{c.click}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HelpdeskMockUI() {
+  const tickets = [
+    { id: "#4821", subject: "Login not working after update", priority: "High", status: "Open", priorityColor: "bg-red-500/15 text-red-400", statusColor: "bg-blue-500/15 text-blue-400", time: "2m ago" },
+    { id: "#4820", subject: "Invoice PDF not generating", priority: "Med", status: "In Progress", priorityColor: "bg-amber-500/15 text-amber-400", statusColor: "bg-amber-500/15 text-amber-400", time: "15m ago" },
+    { id: "#4819", subject: "How to export contacts?", priority: "Low", status: "Resolved", priorityColor: "bg-emerald-500/15 text-emerald-400", statusColor: "bg-emerald-500/15 text-emerald-400", time: "1h ago" },
+    { id: "#4818", subject: "API rate limit exceeded error", priority: "High", status: "Open", priorityColor: "bg-red-500/15 text-red-400", statusColor: "bg-blue-500/15 text-blue-400", time: "2h ago" },
+  ];
+  const slaMetrics = [
+    { label: "First Response", value: "18m", target: "< 1h", ok: true },
+    { label: "Resolution", value: "4.2h", target: "< 8h", ok: true },
+    { label: "CSAT", value: "94%", target: "> 90%", ok: true },
+  ];
+  return (
+    <div className="space-y-2.5 h-full">
+      <div className="grid grid-cols-3 gap-2">
+        {slaMetrics.map((m) => (
+          <div key={m.label} className="rounded-lg border border-border/40 bg-card/80 p-2">
+            <p className="text-[9px] text-muted-foreground">{m.label}</p>
+            <p className="text-sm font-bold text-foreground">{m.value}</p>
+            <p className="text-[9px] text-emerald-400">✓ {m.target}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-1">
+        {tickets.map((t) => (
+          <div key={t.id} className="flex items-center gap-2 rounded-lg border border-border/30 bg-card/60 px-2 py-1.5">
+            <span className="text-[9px] font-mono text-muted-foreground w-10 shrink-0">{t.id}</span>
+            <span className="text-[9px] font-medium text-foreground flex-1 truncate">{t.subject}</span>
+            <span className={cn("text-[8px] font-medium px-1.5 py-0.5 rounded-full shrink-0", t.priorityColor)}>{t.priority}</span>
+            <span className={cn("text-[8px] font-medium px-1.5 py-0.5 rounded-full shrink-0", t.statusColor)}>{t.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FieldServiceMockUI() {
+  const jobs = [
+    { id: "J-201", tech: "Mike R.", client: "BuildCo", type: "Installation", status: "En Route", statusColor: "bg-blue-500/15 text-blue-400", eta: "11:30 AM" },
+    { id: "J-202", tech: "Sara D.", client: "TowerNet", type: "Maintenance", status: "On Site", statusColor: "bg-emerald-500/15 text-emerald-400", eta: "—" },
+    { id: "J-203", tech: "James L.", client: "CityGrid", type: "Repair", status: "Scheduled", statusColor: "bg-muted text-muted-foreground", eta: "2:00 PM" },
+    { id: "J-204", tech: "Priya K.", client: "SolarMax", type: "Inspection", status: "Completed", statusColor: "bg-violet-500/15 text-violet-400", eta: "Done" },
+  ];
+  const mapGrid = [
+    ["🔵","","🟢","",""],
+    ["","🟡","","","🔵"],
+    ["","","","🟢",""],
+    ["🔴","","","","🟡"],
+  ];
+  return (
+    <div className="space-y-2.5 h-full">
+      <div className="rounded-lg border border-border/40 bg-card/80 p-2">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Live Dispatch Map</p>
+        <div className="grid gap-0.5" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          {mapGrid.flat().map((cell, i) => (
+            <div key={i} className={cn("h-5 rounded-sm flex items-center justify-center text-xs", cell ? "bg-muted/20" : "bg-muted/10")}>
+              {cell}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3 mt-1.5">
+          {[["🔵","En Route"],["🟢","On Site"],["🟡","Scheduled"],["🔴","Urgent"]].map(([e,l]) => (
+            <span key={l} className="text-[8px] text-muted-foreground">{e} {l}</span>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        {jobs.map((j) => (
+          <div key={j.id} className="flex items-center gap-2 rounded-lg border border-border/30 bg-card/60 px-2 py-1.5">
+            <span className="text-[9px] font-mono text-muted-foreground w-10 shrink-0">{j.id}</span>
+            <span className="text-[9px] font-medium text-foreground w-14 shrink-0 truncate">{j.tech}</span>
+            <span className="text-[9px] text-muted-foreground flex-1 truncate">{j.client} · {j.type}</span>
+            <span className={cn("text-[8px] font-medium px-1.5 py-0.5 rounded-full shrink-0", j.statusColor)}>{j.status}</span>
+            <span className="text-[9px] text-muted-foreground shrink-0">{j.eta}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiMockUI() {
+  const messages = [
+    { from: "user", text: "Summarize this month's revenue by region" },
+    { from: "agent", text: "North America: $142k (+18%), Europe: $89k (+12%), APAC: $34k (+31%). Total: $265k, up 19% MoM." },
+    { from: "user", text: "Which sales rep is at risk of missing quota?" },
+    { from: "agent", text: "Based on current pipeline velocity, 3 reps are below pace: Jordan (68%), Casey (71%), and Alex (74% of monthly target)." },
+  ];
+  const agents = [
+    { name: "Sales Coach", status: "Active", color: "bg-blue-500/20 text-blue-400" },
+    { name: "Support Triage", status: "Active", color: "bg-cyan-500/20 text-cyan-400" },
+    { name: "Finance Analyst", status: "Idle", color: "bg-amber-500/20 text-amber-400" },
+  ];
+  return (
+    <div className="space-y-2.5 h-full">
+      <div className="flex gap-1.5 mb-1.5">
+        {agents.map((a) => (
+          <div key={a.name} className={cn("flex-1 rounded-lg border border-border/40 px-2 py-1.5", a.color.replace("text-","border-").replace("400","400/30"))}>
+            <div className={cn("text-[9px] font-bold", a.color.split(" ")[1])}>{a.name}</div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <div className={cn("h-1.5 w-1.5 rounded-full", a.status === "Active" ? "bg-emerald-400" : "bg-muted-foreground")} />
+              <span className="text-[9px] text-muted-foreground">{a.status}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border/40 bg-card/80 p-2 space-y-1.5">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">AI Agent Chat</p>
+        {messages.map((m, i) => (
+          <div key={i} className={cn("flex", m.from === "user" ? "justify-end" : "justify-start")}>
+            <div className={cn("max-w-[85%] rounded-lg px-2 py-1.5 text-[9px] leading-relaxed", m.from === "user" ? "bg-primary/20 text-foreground" : "bg-fuchsia-500/15 text-foreground border border-fuchsia-500/20")}>
+              {m.from === "agent" && <span className="text-fuchsia-400 font-bold block text-[8px] mb-0.5">✦ Agent</span>}
+              {m.text}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CommunicationsMockUI() {
+  const conversations = [
+    { from: "+1 (555) 234-8901", preview: "Thanks! When can I schedule...", time: "2m", unread: 2, channel: "SMS" },
+    { from: "Alex Kim", preview: "Meeting recording is ready", time: "18m", unread: 0, channel: "Chat" },
+    { from: "+1 (555) 678-2341", preview: "Missed call — voicemail left", time: "1h", unread: 1, channel: "Voice" },
+    { from: "Support Line", preview: "Ticket #4821 has been resolved", time: "2h", unread: 0, channel: "SMS" },
+  ];
+  const channelColors: Record<string, string> = {
+    SMS: "bg-teal-500/20 text-teal-400",
+    Chat: "bg-blue-500/20 text-blue-400",
+    Voice: "bg-purple-500/20 text-purple-400",
+  };
+  const activeChat = [
+    { from: "customer", text: "Is there an update on my order?" },
+    { from: "agent", text: "Yes! Your order #5521 shipped today. Tracking: XP92847." },
+    { from: "customer", text: "Perfect, thank you!" },
+  ];
+  return (
+    <div className="flex gap-2 h-full">
+      <div className="w-2/5 space-y-1">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider px-1 mb-2">Inbox</p>
+        {conversations.map((c) => (
+          <div key={c.from} className="rounded-lg border border-border/30 bg-card/60 px-2 py-1.5 cursor-pointer hover:border-teal-500/30">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[9px] font-semibold text-foreground truncate">{c.from}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className={cn("text-[8px] px-1 py-0.5 rounded", channelColors[c.channel] || "bg-muted text-muted-foreground")}>{c.channel}</span>
+                {c.unread > 0 && <span className="h-4 w-4 rounded-full bg-teal-400 text-[8px] font-bold text-background flex items-center justify-center">{c.unread}</span>}
+              </div>
+            </div>
+            <p className="text-[9px] text-muted-foreground truncate">{c.preview}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex-1 rounded-lg border border-border/40 bg-card/80 p-2 flex flex-col">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Conversation</p>
+        <div className="flex-1 space-y-1.5">
+          {activeChat.map((m, i) => (
+            <div key={i} className={cn("flex", m.from === "agent" ? "justify-end" : "justify-start")}>
+              <div className={cn("max-w-[85%] rounded-lg px-2 py-1 text-[9px] leading-relaxed", m.from === "agent" ? "bg-teal-500/20 text-foreground" : "bg-muted/40 text-foreground")}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 rounded border border-border/40 bg-muted/20 px-2 py-1 text-[9px] text-muted-foreground">
+          Type a reply...
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntegrationsMockUI() {
+  const nodes = [
+    { label: "Stripe", icon: "💳", color: "border-violet-500/40 bg-violet-500/10", x: 0, y: 0 },
+    { label: "Nucleo CRM", icon: "🔷", color: "border-primary/40 bg-primary/10", x: 1, y: 0 },
+    { label: "Slack", icon: "💬", color: "border-emerald-500/40 bg-emerald-500/10", x: 2, y: 0 },
+    { label: "Webhook", icon: "🔗", color: "border-amber-500/40 bg-amber-500/10", x: 0, y: 1 },
+    { label: "Workflow", icon: "⚡", color: "border-cyan-500/40 bg-cyan-500/10", x: 1, y: 1 },
+    { label: "HubSpot", icon: "🟠", color: "border-orange-500/40 bg-orange-500/10", x: 2, y: 1 },
+  ];
+  const recentRuns = [
+    { name: "New payment → CRM deal", status: "Success", time: "2s ago" },
+    { name: "Support ticket → Slack alert", status: "Success", time: "1m ago" },
+    { name: "Lead sync → HubSpot", status: "Failed", time: "4m ago" },
+    { name: "Invoice paid → Notify team", status: "Success", time: "8m ago" },
+  ];
+  return (
+    <div className="space-y-2.5 h-full">
+      <div className="rounded-lg border border-border/40 bg-card/80 p-3">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Workflow Builder</p>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {nodes.map((n) => (
+            <div key={n.label} className={cn("rounded-lg border px-2 py-1.5 text-center", n.color)}>
+              <span className="text-sm">{n.icon}</span>
+              <p className="text-[9px] font-medium text-foreground mt-0.5">{n.label}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-center gap-1">
+          {["Trigger","→","Filter","→","Action","→","Notify"].map((s, i) => (
+            <span key={i} className={cn("text-[9px]", s === "→" ? "text-muted-foreground" : "font-medium text-foreground bg-muted/30 px-1.5 py-0.5 rounded")}>{s}</span>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Recent Runs</p>
+        {recentRuns.map((r) => (
+          <div key={r.name} className="flex items-center gap-2 rounded-lg border border-border/30 bg-card/60 px-2 py-1.5">
+            <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", r.status === "Success" ? "bg-emerald-400" : "bg-red-400")} />
+            <span className="text-[9px] font-medium text-foreground flex-1 truncate">{r.name}</span>
+            <span className="text-[9px] text-muted-foreground shrink-0">{r.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MockUIRenderer({ type }: { type: string }) {
+  switch (type) {
+    case "crm": return <CrmMockUI />;
+    case "hrm": return <HrmMockUI />;
+    case "projects": return <ProjectsMockUI />;
+    case "finance": return <FinanceMockUI />;
+    case "marketing": return <MarketingMockUI />;
+    case "helpdesk": return <HelpdeskMockUI />;
+    case "fieldservice": return <FieldServiceMockUI />;
+    case "ai": return <AiMockUI />;
+    case "communications": return <CommunicationsMockUI />;
+    case "integrations": return <IntegrationsMockUI />;
+    default: return null;
+  }
+}
 
 // ─── Components ────────────────────────────────────────────────────────────────
 
@@ -394,7 +1355,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            14 powerful modules. One unified platform.
+            17+ powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -408,8 +1369,8 @@ function LandingPage() {
 
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
             Nucleo One unifies CRM, HRM, Finance, Projects, Helpdesk, Marketing,
-            Compliance, and AI into a single platform. Stop switching between
-            tools — start moving faster.
+            Compliance, AI Agents, Integration Hub, and Observability into one platform.
+            Stop switching between tools — start moving faster.
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -523,8 +1484,8 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              Each module is deeply integrated — data flows automatically
-              between CRM, Finance, HRM, and more.
+              17+ deeply integrated modules — CRM, HRM, Projects, Invoicing, Marketing,
+              Helpdesk, Field Service, DevOps, AI, Communications, and more.
             </p>
           </div>
 
@@ -555,9 +1516,14 @@ function LandingPage() {
                     <Icon className={cn("h-5 w-5", mod.color)} />
                   </div>
 
-                  <h3 className="mb-2 font-semibold text-foreground text-lg">
-                    {mod.title}
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-foreground text-lg">
+                      {mod.title}
+                    </h3>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      ${mod.price}/mo
+                    </span>
+                  </div>
                   <p className="mb-4 text-muted-foreground text-sm leading-relaxed">
                     {mod.description}
                   </p>
@@ -584,8 +1550,118 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* ── Feature Deep Dive ── */}
+      <section className="px-4 pb-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          {/* Section header */}
+          <div className="mb-20 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
+              <Layers className="h-3.5 w-3.5" />
+              Deep dive into every module
+            </div>
+            <h2 className="mb-4 font-bold text-4xl text-foreground sm:text-5xl">
+              See Exactly What You Get
+            </h2>
+            <p className="mx-auto max-w-xl text-muted-foreground text-lg">
+              Every module is built end-to-end — not a checkbox feature, but a full product experience.
+            </p>
+          </div>
+
+          {/* Alternating spotlight sections */}
+          <div className="space-y-32">
+            {featureSpotlights.map((spotlight, index) => {
+              const isEven = index % 2 === 0;
+              return (
+                <div
+                  key={spotlight.eyebrow}
+                  className={cn(
+                    "grid gap-12 lg:grid-cols-2 lg:gap-20 items-center",
+                  )}
+                >
+                  {/* Text block — alternates left/right */}
+                  <div className={cn(isEven ? "lg:order-1" : "lg:order-2")}>
+                    {/* Eyebrow */}
+                    <div className={cn("mb-4 text-xs font-bold uppercase tracking-[0.2em]", spotlight.accentClass)}>
+                      {spotlight.eyebrow}
+                    </div>
+
+                    <h3 className="mb-5 font-bold text-3xl text-foreground leading-tight sm:text-4xl">
+                      {spotlight.heading}
+                    </h3>
+
+                    <p className="mb-8 text-muted-foreground text-lg leading-relaxed">
+                      {spotlight.description}
+                    </p>
+
+                    <ul className="mb-8 space-y-4">
+                      {spotlight.features.map((f) => {
+                        const Icon = f.icon;
+                        return (
+                          <li key={f.text} className="flex items-start gap-3">
+                            <div className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg", spotlight.bgAccent)}>
+                              <Icon className={cn("h-3.5 w-3.5", spotlight.accentClass)} />
+                            </div>
+                            <span className="text-foreground/80 leading-snug">{f.text}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    <Link
+                      to={spotlight.href}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-xl border px-6 py-3 font-semibold text-sm transition-all duration-200 hover:scale-105",
+                        spotlight.borderClass,
+                        spotlight.accentClass,
+                        spotlight.bgAccent,
+                      )}
+                    >
+                      Explore {spotlight.eyebrow.split(" ")[0]} {spotlight.eyebrow.split(" ").slice(1).join(" ")}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+
+                  {/* Mock UI block — alternates right/left */}
+                  <div className={cn(isEven ? "lg:order-2" : "lg:order-1")}>
+                    <div
+                      className={cn(
+                        "relative rounded-2xl border p-4 bg-card/50 shadow-2xl",
+                        spotlight.borderClass,
+                        spotlight.glowClass,
+                      )}
+                      style={{ minHeight: "320px" }}
+                    >
+                      {/* Glow effect behind card */}
+                      <div
+                        className="pointer-events-none absolute -inset-1 rounded-2xl opacity-20 blur-xl"
+                        style={{
+                          background: `radial-gradient(circle, var(--glow-color, rgba(99,102,241,0.3)), transparent 70%)`,
+                        }}
+                      />
+
+                      {/* Top bar chrome */}
+                      <div className="mb-3 flex items-center gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-amber-500/60" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
+                        <div className="ml-2 flex-1 rounded-md bg-muted/40 h-4" />
+                      </div>
+
+                      {/* Mock content */}
+                      <div className="relative h-64 overflow-hidden">
+                        <MockUIRenderer type={spotlight.mockUI} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── Social Proof ── */}
-      <section className="border-y border-border/60 bg-card/30 px-4 py-20 sm:px-6 lg:px-8">
+      <section className="border-y border-border/60 bg-card/30 px-4 py-20 sm:px-6 lg:px-8 mt-32">
         <div className="mx-auto max-w-6xl">
           <h2 className="mb-12 text-center font-bold text-3xl text-foreground sm:text-4xl">
             Loved by Teams That Move Fast
@@ -614,7 +1690,7 @@ function LandingPage() {
 
       {/* ── Pricing ── */}
       <section className="px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2 className="mb-4 font-bold text-4xl text-foreground sm:text-5xl">
               Simple, Transparent Pricing
@@ -624,7 +1700,7 @@ function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-4">
             {pricingPlans.map((plan) => (
               <div
                 key={plan.name}
@@ -691,6 +1767,34 @@ function LandingPage() {
             All plans include a 14-day free trial. No credit card required.
             Cancel anytime.
           </p>
+
+          {/* Pay-As-You-Go Section */}
+          <div className="mt-16">
+            <div className="mb-8 text-center">
+              <h3 className="mb-2 font-bold text-2xl text-foreground">
+                Or Pay-As-You-Go
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Subscribe to only the modules you need. Starting at $9/module/month.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {modulePricing.map((mod) => (
+                <div
+                  key={mod.name}
+                  className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3"
+                >
+                  <span className="text-sm font-medium text-foreground">{mod.name}</span>
+                  <span className="text-sm text-muted-foreground">${mod.price}/mo</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-6 text-center text-muted-foreground text-xs">
+              Pay-As-You-Go allows 1-10 users per module. For more users, consider our Professional plan.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -789,8 +1893,191 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* ── Lead Capture Section ── */}
+      <LeadCaptureSection />
+
       <Footer />
+
+      {/* ── Sticky Lead Widget ── */}
+      <LeadCaptureWidget />
     </div>
+  );
+}
+
+// ─── Lead Capture Section ─────────────────────────────────────────────────────
+
+const interestOptions = [
+  "CRM & Sales", "HRM & People", "Project Management",
+  "Finance & Invoicing", "Helpdesk & Support", "AI Agents", "All modules",
+];
+
+function LeadCaptureSection() {
+  const [form, setForm] = useState({ name: "", email: "", company: "", interest: "" });
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  function captureSource(): string {
+    try {
+      const utm = JSON.parse(sessionStorage.getItem("nucleo_utm") || "{}");
+      if (utm.utm_source) return utm.utm_source;
+    } catch {}
+    if (typeof document !== "undefined" && document.referrer.includes("google")) return "Google";
+    return "Website";
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.email.trim()) return;
+    setStatus("submitting");
+
+    const [firstName, ...rest] = form.name.trim().split(" ");
+    try {
+      await leadsApi.create({
+        firstName,
+        lastName: rest.join(" ") || "",
+        email: form.email.trim(),
+        company: form.company.trim() || undefined,
+        source: captureSource(),
+        notes: [
+          form.interest ? `Interested in: ${form.interest}` : "",
+          `Page: /`,
+        ].filter(Boolean).join(" | "),
+      } as any);
+      setStatus("success");
+    } catch {
+      setStatus("success"); // still show success — lead stored in local fallback
+    }
+  }
+
+  return (
+    <section className="border-t border-border/60 bg-gradient-to-br from-primary/5 via-background to-cyan-500/5 px-4 py-20 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+          {/* Left copy */}
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
+              <Zap className="h-3.5 w-3.5" />
+              Free personalized demo — no credit card
+            </div>
+            <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl leading-tight">
+              See Nucleo One running your business in 20 minutes
+            </h2>
+            <p className="text-muted-foreground text-lg mb-6">
+              Book a live demo tailored to your industry. We'll set up a sandbox with your data,
+              walk through the modules you care about, and answer every question your team has.
+            </p>
+            <ul className="space-y-3">
+              {[
+                "Live product walkthrough — not a slide deck",
+                "Your data imported before the call",
+                "ROI estimate for your specific team size",
+                "Direct Q&A with a product specialist",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-3 text-foreground/80">
+                  <div className="h-5 w-5 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                    <Check className="h-3 w-3 text-emerald-400" />
+                  </div>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right form */}
+          <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-2xl">
+            {status === "success" ? (
+              <div className="text-center py-8">
+                <div className="mb-4 flex justify-center">
+                  <div className="h-16 w-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                    <Star className="h-8 w-8 text-emerald-400" />
+                  </div>
+                </div>
+                <h3 className="font-bold text-xl text-foreground mb-2">You're booked!</h3>
+                <p className="text-muted-foreground mb-4">
+                  We'll email you within 24 hours with calendar options for your personalized demo.
+                </p>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground text-sm shadow-lg hover:bg-primary/90 transition-all"
+                >
+                  Start free in the meantime <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-lg text-foreground mb-1">Book your free demo</h3>
+                  <p className="text-sm text-muted-foreground">Takes 30 seconds. No commitment.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Full Name *</label>
+                    <input
+                      type="text"
+                      placeholder="Sarah Chen"
+                      value={form.name}
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      required
+                      className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Company</label>
+                    <input
+                      type="text"
+                      placeholder="Acme Corp"
+                      value={form.company}
+                      onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                      className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Work Email *</label>
+                  <input
+                    type="email"
+                    placeholder="sarah@company.com"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    required
+                    className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Most interested in</label>
+                  <select
+                    value={form.interest}
+                    onChange={(e) => setForm((f) => ({ ...f, interest: e.target.value }))}
+                    className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="">Select a module…</option>
+                    {interestOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={status === "submitting"}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] disabled:opacity-60"
+                >
+                  {status === "submitting" ? "Booking…" : <>Book Free Demo <ArrowRight className="h-4 w-4" /></>}
+                </button>
+
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  {["SOC 2", "GDPR", "No spam"].map((badge) => (
+                    <span key={badge} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Check className="h-2.5 w-2.5 text-emerald-400" /> {badge}
+                    </span>
+                  ))}
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

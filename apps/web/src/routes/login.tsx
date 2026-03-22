@@ -36,7 +36,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const searchParams = new URLSearchParams(router.state.location.search);
+  const searchParams = new URLSearchParams(router.state.location.search as unknown as string);
   const redirect = searchParams.get("redirect") || undefined;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

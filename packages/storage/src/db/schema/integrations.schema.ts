@@ -156,5 +156,3 @@ export type IntegrationAccount = typeof integrationAccounts.$inferSelect;
 export type NewIntegrationAccount = typeof integrationAccounts.$inferInsert;
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;
-export type ApiKey = typeof apiKeys.$inferSelect;
-export type NewApiKey = typeof apiKeys.$inferInsert;

@@ -36,6 +36,7 @@
         "drizzle-orm": "^0.45.1",
         "hono": "^4.11.7",
         "openai": "^6.18.0",
+        "stripe": "^20.4.1",
         "zod": "^4.1.13",
       },
       "devDependencies": {
@@ -74,6 +75,9 @@
     "apps/web": {
       "name": "@crm/web",
       "dependencies": {
+        "@crm/api": "file:../api",
+        "@crm/env": "file:../../packages/env",
+        "@crm/ui": "file:../../packages/ui",
         "@orpc/client": "^1.13.4",
         "@orpc/tanstack-query": "^1.13.4",
         "@radix-ui/react-alert-dialog": "^1.1.5",
@@ -112,6 +116,7 @@
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.22.1",
         "@cloudflare/workers-types": "^4.20250109.0",
+        "@playwright/test": "^1.57.0",
         "@tailwindcss/vite": "^4.1.8",
         "@tanstack/devtools-vite": "^0.3.11",
         "@tanstack/react-query-devtools": "^5.90.20",
@@ -124,6 +129,7 @@
         "@vitest/ui": "^2.1.8",
         "autoprefixer": "^10.4.23",
         "jsdom": "^25.0.1",
+        "playwright": "^1.57.0",
         "postcss": "^8.5.4",
         "rollup-plugin-visualizer": "^5.12.0",
         "tailwindcss": "^4.1.8",
@@ -131,6 +137,35 @@
         "vite": "^7.3.1",
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^2.1.8",
+      },
+    },
+    "packages/ads": {
+      "name": "@crm/ads",
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/agents": {
+      "name": "@crm/agents",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/agents-sdk": {
+      "name": "@crm/agents-sdk",
+      "version": "0.0.1",
+      "dependencies": {
+        "@crm/platform-runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
       },
     },
     "packages/auth": {
@@ -143,6 +178,15 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20250109.0",
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/connectors": {
+      "name": "@crm/connectors",
+      "version": "0.0.1",
+      "devDependencies": {
         "@crm/tsconfig": "file:../tsconfig",
         "@types/node": "^22.19.2",
         "typescript": "^5.9.3",
@@ -173,8 +217,35 @@
         "vite": "^7.2.7",
       },
     },
+    "packages/integration-hub": {
+      "name": "@crm/integration-hub",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/logger": {
       "name": "@crm/logger",
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/platform-runtime": {
+      "name": "@crm/platform-runtime",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@crm/tsconfig": "file:../tsconfig",
+        "@types/node": "^22.19.2",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/registry": {
+      "name": "@crm/registry",
+      "version": "0.0.1",
       "devDependencies": {
         "@crm/tsconfig": "file:../tsconfig",
         "@types/node": "^22.19.2",
@@ -271,7 +342,6 @@
       "name": "@crm/workflows",
       "version": "0.0.1",
       "devDependencies": {
-        "@cloudflare/workers-types": "^4.20250109.0",
         "@crm/tsconfig": "file:../tsconfig",
         "@types/node": "^22.19.2",
         "typescript": "^5.9.3",
@@ -614,15 +684,29 @@
 
     "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260116.0", "", {}, "sha512-iMZIQDco7ARzzH+r8j90757kbPKEetKY3/6V5UurOzS6T1GJ+rsREw5i7vlBA4XjFV5UMaPtUD6HuUFSMLcxPQ=="],
 
+    "@crm/ads": ["@crm/ads@workspace:packages/ads"],
+
+    "@crm/agents": ["@crm/agents@workspace:packages/agents"],
+
+    "@crm/agents-sdk": ["@crm/agents-sdk@workspace:packages/agents-sdk"],
+
     "@crm/api": ["@crm/api@workspace:apps/api"],
 
     "@crm/auth": ["@crm/auth@workspace:packages/auth"],
+
+    "@crm/connectors": ["@crm/connectors@workspace:packages/connectors"],
 
     "@crm/core": ["@crm/core@workspace:packages/core"],
 
     "@crm/env": ["@crm/env@workspace:packages/env"],
 
+    "@crm/integration-hub": ["@crm/integration-hub@workspace:packages/integration-hub"],
+
     "@crm/logger": ["@crm/logger@workspace:packages/logger"],
+
+    "@crm/platform-runtime": ["@crm/platform-runtime@workspace:packages/platform-runtime"],
+
+    "@crm/registry": ["@crm/registry@workspace:packages/registry"],
 
     "@crm/services": ["@crm/services@workspace:packages/services"],
 
@@ -2640,7 +2724,7 @@
 
     "strip-json-comments": ["strip-json-comments@2.0.1", "", {}, "sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ=="],
 
-    "stripe": ["stripe@18.5.0", "", { "dependencies": { "qs": "^6.11.0" }, "peerDependencies": { "@types/node": ">=12.x.x" }, "optionalPeers": ["@types/node"] }, "sha512-Hp+wFiEQtCB0LlNgcFh5uVyKznpDjzyUZ+CNVEf+I3fhlYvh7rZruIg+jOwzJRCpy0ZTPMjlzm7J2/M2N6d+DA=="],
+    "stripe": ["stripe@20.4.1", "", { "peerDependencies": { "@types/node": ">=16" }, "optionalPeers": ["@types/node"] }, "sha512-axCguHItc8Sxt0HC6aSkdVRPffjYPV7EQqZRb2GkIa8FzWDycE7nHJM19C6xAIynH1Qp1/BHiopSi96jGBxT0w=="],
 
     "strnum": ["strnum@2.2.0", "", {}, "sha512-Y7Bj8XyJxnPAORMZj/xltsfo55uOiyHcU2tnAVzHUnSJR/KsEX+9RoDeXEnsXtl/CX4fAcrt64gZ13aGaWPeBg=="],
 
@@ -2910,25 +2994,41 @@
 
     "@chevrotain/gast/lodash": ["lodash@4.17.21", "", {}, "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="],
 
+    "@crm/ads/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/agents/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/agents-sdk/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
     "@crm/api/@crm/auth": ["@crm/auth@file:packages/auth", { "dependencies": { "@crm/storage": "file:../storage", "better-auth": "1.4.18", "drizzle-orm": "^0.45.0", "stripe": "^18.0.0" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3" } }],
 
     "@crm/api/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
 
     "@crm/api/@crm/logger": ["@crm/logger@file:packages/logger", { "devDependencies": { "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3" } }],
 
-    "@crm/api/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
+    "@crm/api/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@smithy/fetch-http-handler": "^4.0.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
 
     "@crm/api/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
-    "@crm/auth/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
+    "@crm/auth/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@smithy/fetch-http-handler": "^4.0.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
 
     "@crm/auth/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/auth/stripe": ["stripe@18.5.0", "", { "dependencies": { "qs": "^6.11.0" }, "peerDependencies": { "@types/node": ">=12.x.x" }, "optionalPeers": ["@types/node"] }, "sha512-Hp+wFiEQtCB0LlNgcFh5uVyKznpDjzyUZ+CNVEf+I3fhlYvh7rZruIg+jOwzJRCpy0ZTPMjlzm7J2/M2N6d+DA=="],
+
+    "@crm/connectors/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/core/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
+    "@crm/integration-hub/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
     "@crm/logger/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/platform-runtime/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/registry/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/services/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
@@ -2941,6 +3041,12 @@
     "@crm/storage/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/ui/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/api": ["@crm/api@file:apps/api", { "dependencies": { "@crm/auth": "file:../../packages/auth", "@crm/env": "file:../../packages/env", "@crm/logger": "file:../../packages/logger", "@crm/storage": "file:../../packages/storage", "@orpc/openapi": "^1.13.4", "@orpc/server": "^1.13.4", "@orpc/zod": "^1.13.4", "@scalar/hono-api-reference": "^0.9.39", "@sentry/cloudflare": "^10.36.0", "@upstash/ratelimit": "^2.0.7", "@upstash/redis": "^1.36.1", "better-auth": "1.4.18", "dd-trace": "^5.0.0", "drizzle-orm": "^0.45.1", "hono": "^4.11.7", "openai": "^6.18.0", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../../packages/tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vitest": "^2.1.8", "wrangler": "^4.63.0" } }],
+
+    "@crm/web/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
+
+    "@crm/web/@crm/ui": ["@crm/ui@file:packages/ui", { "dependencies": { "@radix-ui/react-avatar": "^1.1.2", "@radix-ui/react-checkbox": "^1.1.3", "@radix-ui/react-dialog": "^1.1.4", "@radix-ui/react-dropdown-menu": "^2.1.4", "@radix-ui/react-label": "^2.1.1", "@radix-ui/react-popover": "^1.1.4", "@radix-ui/react-progress": "^1.1.1", "@radix-ui/react-select": "^2.1.4", "@radix-ui/react-separator": "^1.1.1", "@radix-ui/react-slot": "^1.2.4", "@radix-ui/react-switch": "^1.1.2", "@radix-ui/react-tabs": "^1.1.2", "@radix-ui/react-toast": "^1.2.4", "@radix-ui/react-tooltip": "^1.1.6", "@tanstack/react-router": "^1.158.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "lucide-react": "^0.562.0", "react-hot-toast": "^2.6.0", "tailwind-merge": "^3.4.0" }, "devDependencies": { "@crm/tsconfig": "file:../tsconfig", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "react": "^19.2.0", "react-dom": "^19.2.0", "typescript": "^5.9.3" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }],
 
     "@crm/workflows/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
@@ -3450,25 +3556,45 @@
 
     "@babel/highlight/chalk/supports-color": ["supports-color@5.5.0", "", { "dependencies": { "has-flag": "^3.0.0" } }, "sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow=="],
 
-    "@crm/api/@crm/auth/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
+    "@crm/api/@crm/auth/@crm/storage": ["@crm/storage@file:packages/storage", {}],
 
     "@crm/api/@crm/auth/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/api/@crm/auth/stripe": ["stripe@18.5.0", "", { "dependencies": { "qs": "^6.11.0" }, "peerDependencies": { "@types/node": ">=12.x.x" }, "optionalPeers": ["@types/node"] }, "sha512-Hp+wFiEQtCB0LlNgcFh5uVyKznpDjzyUZ+CNVEf+I3fhlYvh7rZruIg+jOwzJRCpy0ZTPMjlzm7J2/M2N6d+DA=="],
 
     "@crm/api/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/api/@crm/logger/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
-    "@crm/api/@crm/storage/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
+    "@crm/api/@crm/storage/@crm/core": ["@crm/core@file:packages/core", {}],
+
+    "@crm/api/@crm/storage/@crm/env": ["@crm/env@file:packages/env", {}],
 
     "@crm/api/@crm/storage/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
-    "@crm/auth/@crm/storage/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
+    "@crm/auth/@crm/storage/@crm/core": ["@crm/core@file:packages/core", {}],
+
+    "@crm/auth/@crm/storage/@crm/env": ["@crm/env@file:packages/env", {}],
 
     "@crm/auth/@crm/storage/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/storage/@crm/core/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/storage/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/api/@crm/auth": ["@crm/auth@file:packages/auth", { "dependencies": { "@crm/storage": "file:../storage", "better-auth": "1.4.18", "drizzle-orm": "^0.45.0", "stripe": "^18.0.0" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3" } }],
+
+    "@crm/web/@crm/api/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
+
+    "@crm/web/@crm/api/@crm/logger": ["@crm/logger@file:packages/logger", { "devDependencies": { "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3" } }],
+
+    "@crm/web/@crm/api/@crm/storage": ["@crm/storage@file:packages/storage", { "dependencies": { "@aws-sdk/client-s3": "^3.821.0", "@aws-sdk/s3-request-presigner": "^3.821.0", "@crm/core": "file:../core", "@crm/env": "file:../env", "@neondatabase/serverless": "^0.10.0", "@smithy/fetch-http-handler": "^4.0.0", "@upstash/redis": "^1.36.1", "drizzle-orm": "^0.45.0", "drizzle-zod": "^0.8.3", "nanoid": "^5.0.9", "postgres": "^3.4.8", "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "drizzle-kit": "^0.31.8", "typescript": "^5.9.3" } }],
+
+    "@crm/web/@crm/api/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/ui/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@esbuild-kit/core-utils/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.18.20", "", { "os": "android", "cpu": "arm" }, "sha512-fyi7TDI/ijKKNZTUJAQqiG5T7YjJXgnzkURqmGj13C6dCqckZBLdl4h7bkhHt/t0WP+zO9/zwroDvANaOqO5Sw=="],
 
@@ -3750,13 +3876,21 @@
 
     "@babel/highlight/chalk/supports-color/has-flag": ["has-flag@3.0.0", "", {}, "sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw=="],
 
-    "@crm/api/@crm/auth/@crm/storage/@crm/env": ["@crm/env@file:packages/env", { "dependencies": { "zod": "^4.1.13" }, "devDependencies": { "@cloudflare/workers-types": "^4.20250109.0", "@crm/tsconfig": "file:../tsconfig", "@types/node": "^22.19.2", "typescript": "^5.9.3", "vite": "^7.2.7" } }],
+    "@crm/web/@crm/api/@crm/auth/@crm/storage": ["@crm/storage@file:packages/storage", {}],
 
-    "@crm/api/@crm/auth/@crm/storage/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+    "@crm/web/@crm/api/@crm/auth/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
-    "@crm/api/@crm/storage/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+    "@crm/web/@crm/api/@crm/auth/stripe": ["stripe@18.5.0", "", { "dependencies": { "qs": "^6.11.0" }, "peerDependencies": { "@types/node": ">=12.x.x" }, "optionalPeers": ["@types/node"] }, "sha512-Hp+wFiEQtCB0LlNgcFh5uVyKznpDjzyUZ+CNVEf+I3fhlYvh7rZruIg+jOwzJRCpy0ZTPMjlzm7J2/M2N6d+DA=="],
 
-    "@crm/auth/@crm/storage/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+    "@crm/web/@crm/api/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/api/@crm/logger/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
+
+    "@crm/web/@crm/api/@crm/storage/@crm/core": ["@crm/core@file:packages/core", {}],
+
+    "@crm/web/@crm/api/@crm/storage/@crm/env": ["@crm/env@file:packages/env", {}],
+
+    "@crm/web/@crm/api/@crm/storage/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@expo/cli/glob/minimatch/brace-expansion": ["brace-expansion@5.0.4", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg=="],
 
@@ -3891,8 +4025,6 @@
     "vitest/vite/esbuild/@esbuild/win32-x64": ["@esbuild/win32-x64@0.21.5", "", { "os": "win32", "cpu": "x64" }, "sha512-tQd/1efJuzPC6rCFwEvLtci/xNFcTZknmXs98FYDfGE4wP9ClFV98nyKrzJKVPMhdDnjzLhdUyMX4PsQAPjwIw=="],
 
     "@babel/highlight/chalk/ansi-styles/color-convert/color-name": ["color-name@1.1.3", "", {}, "sha512-72fSenhMw2HZMTVHeCA9KCmpEIbzWiQsjN+BHcBbS9vr1mtt+vJjPdksIBNUmKAW8TFUDPJK5SUU3QhE9NEXDw=="],
-
-    "@crm/api/@crm/auth/@crm/storage/@crm/env/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@expo/cli/glob/minimatch/brace-expansion/balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 

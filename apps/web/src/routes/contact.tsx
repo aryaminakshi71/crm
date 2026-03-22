@@ -21,26 +21,28 @@ export const Route = createFileRoute("/contact")({
     const canonical = baseUrl.replace(/\/$/, "") + "/contact";
     return {
       meta: [
-        { title: "Nucleo One - Contact" },
+        { title: "Contact Nucleo One — Book a Demo or Get Support" },
         {
           name: "description",
           content:
-            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Get in touch with the Nucleo One team. Book a personalized demo, ask about pricing, or get help with your account. We respond within 24 hours.",
         },
         { name: "robots", content: "index, follow" },
-        { property: "og:title", content: "Nucleo One - Contact" },
+        { name: "keywords", content: "contact nucleo one, book demo, nucleo one support, nucleo one pricing" },
+        { property: "og:title", content: "Contact Nucleo One — Book a Demo or Get Support" },
         {
           property: "og:description",
           content:
-            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Get in touch with the Nucleo One team. Book a personalized demo, ask about pricing, or get help with your account.",
         },
         { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "Nucleo One - Contact" },
+        { name: "twitter:title", content: "Contact Nucleo One — Book a Demo" },
         {
           name: "twitter:description",
           content:
-            "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
+            "Get in touch with the Nucleo One team. Book a personalized demo or get support.",
         },
       ],
       links: [{ rel: "canonical", href: canonical }],

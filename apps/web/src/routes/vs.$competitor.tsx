@@ -19,18 +19,96 @@ import {
 export const Route = createFileRoute("/vs/$competitor")({
   component: ComparisonPage,
   head: ({ params }) => {
-    const competitor =
-      params.competitor.charAt(0).toUpperCase() + params.competitor.slice(1);
-    return {
-      meta: [
+    const slug = params.competitor.toLowerCase();
+    const name =
+      slug === "hubspot" ? "HubSpot" :
+      slug === "zoho" ? "Zoho" :
+      slug === "monday" ? "Monday.com" :
+      slug === "salesforce" ? "Salesforce" :
+      slug === "pipedrive" ? "Pipedrive" :
+      slug === "freshdesk" ? "Freshdesk" :
+      slug === "zendesk" ? "Zendesk" :
+      slug === "clickup" ? "ClickUp" :
+      slug === "notion" ? "Notion" :
+      slug === "asana" ? "Asana" :
+      slug === "odoo" ? "Odoo" :
+      slug === "servicenow" ? "ServiceNow" :
+      slug.charAt(0).toUpperCase() + slug.slice(1);
+
+    const baseUrl = import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
+    const canonical = `${baseUrl}/vs/${slug}`;
+    const title = `Nucleo One vs ${name} (${new Date().getFullYear()}) — Feature & Pricing Comparison`;
+    const description = `Nucleo One vs ${name}: side-by-side feature comparison, pricing, and why growing teams switch to Nucleo One's unified CRM, HRM, Projects, Finance, Helpdesk, and AI platform.`;
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
         {
-          title: `Nucleo One vs ${competitor} | The Unified Enterprise Operating System`,
+          "@type": "WebPage",
+          "@id": canonical,
+          url: canonical,
+          name: title,
+          description,
+          breadcrumb: {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+              { "@type": "ListItem", position: 2, name: `Nucleo One vs ${name}`, item: canonical },
+            ],
+          },
         },
         {
-          name: "description",
-          content: `Compare Nucleo One vs ${competitor}. Discover why scaling teams choose Nucleo One's unified CRM, Projects, HRM, and Intelligence suite over fragmented tools.`,
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: `How does Nucleo One compare to ${name}?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `Nucleo One offers a fully unified platform covering CRM, HRM, Projects, Finance, Helpdesk, AI Agents, and Integration Hub in one product. Unlike ${name}, there is no need to purchase multiple add-ons or integrate separate tools.`,
+              },
+            },
+            {
+              "@type": "Question",
+              name: `Is Nucleo One cheaper than ${name}?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `Nucleo One starts free and scales from $9/module/month, or $79/user/month for the full Professional suite. This typically represents significant savings vs ${name} when accounting for all modules needed to match equivalent functionality.`,
+              },
+            },
+            {
+              "@type": "Question",
+              name: `Can I migrate from ${name} to Nucleo One?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `Yes. Nucleo One offers free migration assistance for all paid plans, including data import from ${name} via CSV or direct Integration Hub connectors.`,
+              },
+            },
+          ],
         },
       ],
+    };
+
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { name: "robots", content: "index, follow" },
+        { name: "keywords", content: `nucleo one vs ${name.toLowerCase()}, ${name.toLowerCase()} alternative, ${name.toLowerCase()} competitor, best ${name.toLowerCase()} alternative 2026` },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+        { property: "og:image", content: `${baseUrl}/og.svg` },
+        { property: "og:site_name", content: "Nucleo One" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:site", content: "@nucleoone" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: `${baseUrl}/og.svg` },
+        { "script:ld+json": JSON.stringify(structuredData) },
+      ],
+      links: [{ rel: "canonical", href: canonical }],
     };
   },
 });
@@ -74,6 +152,78 @@ const COMPETITORS: Record<string, any> = {
     weakness:
       "Prohibitive costs; slow implementation (months/years); steep learning curve; bloated mobile experience.",
   },
+  pipedrive: {
+    name: "Pipedrive",
+    color: "text-green-500",
+    bg: "bg-green-500/10",
+    description:
+      "A solid sales-focused CRM with a clean pipeline UI, but stops short at CRM — no HRM, Finance, or Helpdesk.",
+    weakness:
+      "CRM-only; no native HRM, invoicing, or helpdesk; limited AI beyond basic activity suggestions.",
+  },
+  freshdesk: {
+    name: "Freshdesk",
+    color: "text-teal-500",
+    bg: "bg-teal-500/10",
+    description:
+      "Good entry-level helpdesk for small support teams, but fragmented across Freshworks' many products.",
+    weakness:
+      "Data is split across Freshdesk, Freshsales, and Freshservice; expensive to get a unified view; limited native automation.",
+  },
+  zendesk: {
+    name: "Zendesk",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+    description:
+      "Industry-leading helpdesk with mature ticketing, but very expensive and siloed from CRM and finance.",
+    weakness:
+      "Pricing jumps sharply with scale; no native CRM, HRM, or finance; heavy reliance on Marketplace apps adds cost.",
+  },
+  clickup: {
+    name: "ClickUp",
+    color: "text-purple-500",
+    bg: "bg-purple-500/10",
+    description:
+      "A flexible project and task management tool with many views, but not a true business OS — no CRM, HRM, or ERP.",
+    weakness:
+      "Feature sprawl without depth; no native HRM, finance, or helpdesk; reliability concerns at enterprise scale.",
+  },
+  notion: {
+    name: "Notion",
+    color: "text-gray-400",
+    bg: "bg-gray-400/10",
+    description:
+      "A great docs and knowledge tool, but not an operational platform — lacks CRM, HRM, ticketing, or finance.",
+    weakness:
+      "No native workflow automation, CRM pipelines, or financial management; challenging for structured operational data.",
+  },
+  asana: {
+    name: "Asana",
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
+    description:
+      "Excellent task and project management, but limited to work management — no CRM, HRM, or business intelligence.",
+    weakness:
+      "Work management only; no CRM, HRM, finance, or helpdesk; expensive for what it offers vs. a full platform.",
+  },
+  odoo: {
+    name: "Odoo",
+    color: "text-violet-500",
+    bg: "bg-violet-500/10",
+    description:
+      "Open-source ERP with broad module coverage, but complex to implement, maintain, and customize.",
+    weakness:
+      "Steep implementation complexity; outdated UX on many modules; requires technical expertise; slow cloud version.",
+  },
+  servicenow: {
+    name: "ServiceNow",
+    color: "text-indigo-500",
+    bg: "bg-indigo-500/10",
+    description:
+      "Enterprise ITSM and workflow powerhouse, but built for large IT departments — not accessible to growing businesses.",
+    weakness:
+      "Extremely high cost ($100k+ annually); requires dedicated ServiceNow admins; months-long implementation cycles.",
+  },
 };
 
 const COMPARISON_FEATURES = [
@@ -84,10 +234,10 @@ const COMPARISON_FEATURES = [
     detail: "Nucleo uses one schema for all modules; others sync via APIs.",
   },
   {
-    label: "Autonomous AI Agents",
+    label: "AI (Agents + Business Intelligence)",
     nucleo: true,
     competitor: false,
-    detail: "Native AI agents that execute tasks across modules autonomously.",
+    detail: "Native AI that handles both autonomous tasks and business analytics.",
   },
   {
     label: "Integrated HRM & Payroll",

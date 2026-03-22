@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Calendar,
   Plus,
@@ -14,13 +14,19 @@ import {
   ChevronRight,
   Download,
   FileText,
+  Loader2,
 } from "lucide-react";
+import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/leave")({
   component: LeaveManagement,
+  loader: async (): Promise<{ data: any[] }> => {
+    const result = await hrmApi.leaveRequests.list({ limit: 100 });
+    return result as any;
+  },
 });
 
-const leaveRequests = [
+const defaultLeaveRequests = [
   { id: "1", name: "Alex Thompson", type: "Annual Leave", days: 5, startDate: "Mar 25, 2026", endDate: "Mar 29, 2026", status: "Pending", dept: "Engineering", avatar: "AT" },
   { id: "2", name: "Jessica Lee", type: "Sick Leave", days: 2, startDate: "Mar 22, 2026", endDate: "Mar 23, 2026", status: "Pending", dept: "Engineering", avatar: "JL" },
   { id: "3", name: "Michael Brown", type: "Annual Leave", days: 10, startDate: "Apr 1, 2026", endDate: "Apr 10, 2026", status: "Pending", dept: "Marketing", avatar: "MB" },
@@ -40,21 +46,75 @@ const leaveTypes = [
 ];
 
 function LeaveManagement() {
+  const loaderData = Route.useLoaderData();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [showActions, setShowActions] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [leaveData, setLeaveData] = useState<any[]>([]);
+  const [processing, setProcessing] = useState<string | null>(null);
 
-  const filteredRequests = leaveRequests.filter((req) => {
+  useEffect(() => {
+    if (loaderData?.data) {
+      setLeaveData(loaderData.data);
+      setLoading(false);
+    } else {
+      setLeaveData(defaultLeaveRequests);
+      setLoading(false);
+    }
+  }, [loaderData]);
+
+  const handleApprove = async (id: string) => {
+    setProcessing(id);
+    try {
+      await hrmApi.leaveRequests.updateStatus(id, "approved");
+      setLeaveData((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "Approved" } : r))
+      );
+    } catch (e) {
+      console.error("Failed to approve leave:", e);
+    }
+    setProcessing(null);
+    setShowActions(null);
+  };
+
+  const handleReject = async (id: string) => {
+    setProcessing(id);
+    try {
+      await hrmApi.leaveRequests.updateStatus(id, "rejected");
+      setLeaveData((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "Rejected" } : r))
+      );
+    } catch (e) {
+      console.error("Failed to reject leave:", e);
+    }
+    setProcessing(null);
+    setShowActions(null);
+  };
+
+  const leaveRequestsList = leaveData.map((lr: any) => ({
+    id: lr.id,
+    name: lr.employeeName || "Employee",
+    type: lr.leaveType || "Leave",
+    days: lr.days || lr.numberOfDays || 1,
+    startDate: lr.startDate ? new Date(lr.startDate).toLocaleDateString() : "N/A",
+    endDate: lr.endDate ? new Date(lr.endDate).toLocaleDateString() : "N/A",
+    status: lr.status || "Pending",
+    dept: lr.department || "General",
+    avatar: (lr.employeeName || "E").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase(),
+  }));
+
+  const filteredRequests = leaveRequestsList.filter((req: any) => {
     const matchesSearch = req.name.toLowerCase().includes(search.toLowerCase()) || req.type.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "All" || req.status === statusFilter;
     const matchesType = typeFilter === "All Types" || req.type === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const pendingCount = leaveRequests.filter((r) => r.status === "Pending").length;
-  const approvedCount = leaveRequests.filter((r) => r.status === "Approved").length;
+  const pendingCount = leaveRequestsList.filter((r: any) => r.status === "Pending").length;
+  const approvedCount = leaveRequestsList.filter((r: any) => r.status === "Approved").length;
 
   return (
     <div className="space-y-6">
@@ -198,12 +258,28 @@ function LeaveManagement() {
                       </button>
                       {showActions === request.id && (
                         <div className="absolute right-0 mt-2 w-36 rounded-lg border border-border/60 bg-card shadow-lg z-10">
-                          <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-500/10">
-                            <CheckCircle2 className="h-4 w-4" />
+                          <button
+                            onClick={() => handleApprove(request.id)}
+                            disabled={processing === request.id}
+                            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-50"
+                          >
+                            {processing === request.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4" />
+                            )}
                             Approve
                           </button>
-                          <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-500/10">
-                            <XCircle className="h-4 w-4" />
+                          <button
+                            onClick={() => handleReject(request.id)}
+                            disabled={processing === request.id}
+                            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-500/10 disabled:opacity-50"
+                          >
+                            {processing === request.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
                             Reject
                           </button>
                         </div>

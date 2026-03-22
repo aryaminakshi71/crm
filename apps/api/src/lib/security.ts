@@ -27,6 +27,7 @@ export function setSecurityHeaders(headers: Headers): void {
 
   headers.set("Content-Security-Policy", csp);
   headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+  headers.set("X-Robots-Tag", "noindex");
 }
 
 /**

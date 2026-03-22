@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -14,13 +14,19 @@ import {
   Upload,
   ChevronDown,
   Users,
+  Loader2,
 } from "lucide-react";
+import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/directory")({
   component: EmployeeDirectory,
+  loader: async (): Promise<{ data: any[] }> => {
+    const result = await hrmApi.employees.list({ limit: 100 });
+    return result as any;
+  },
 });
 
-const employees = [
+const defaultEmployees = [
   {
     id: "1",
     name: "Sarah Chen",
@@ -183,17 +189,38 @@ const departments = ["All Departments", "Engineering", "Design", "Product", "Sal
 const statuses = ["All Status", "Active", "On Leave", "Remote"];
 
 function EmployeeDirectory() {
+  const loaderData = Route.useLoaderData();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const filteredEmployees = employees.filter((emp) => {
+  useEffect(() => {
+    if (loaderData?.data) setLoading(false);
+  }, [loaderData]);
+
+  const apiEmployees = loaderData?.data || [];
+  const employeesList = apiEmployees.length > 0 ? apiEmployees.map((emp: any) => ({
+    id: emp.id,
+    name: emp.fullName || `${emp.firstName} ${emp.lastName}`,
+    role: emp.jobTitle || "Employee",
+    dept: emp.department || "General",
+    email: emp.workEmail || emp.email || "",
+    phone: emp.phone || "",
+    location: emp.location || "N/A",
+    status: emp.status || "Active",
+    avatar: (emp.firstName?.[0] || "") + (emp.lastName?.[0] || ""),
+    startDate: emp.startDate ? new Date(emp.startDate).toLocaleDateString() : "N/A",
+    manager: emp.managerName || "N/A",
+  })) : defaultEmployees;
+
+  const filteredEmployees = employeesList.filter((emp: any) => {
     const matchesSearch =
       emp.name.toLowerCase().includes(search.toLowerCase()) ||
-      emp.role.toLowerCase().includes(search.toLowerCase()) ||
-      emp.email.toLowerCase().includes(search.toLowerCase());
+      (emp.role && emp.role.toLowerCase().includes(search.toLowerCase())) ||
+      (emp.email && emp.email.toLowerCase().includes(search.toLowerCase()));
     const matchesDept = deptFilter === "All Departments" || emp.dept === deptFilter;
     const matchesStatus = statusFilter === "All Status" || emp.status === statusFilter;
     return matchesSearch && matchesDept && matchesStatus;

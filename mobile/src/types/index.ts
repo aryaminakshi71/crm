@@ -114,3 +114,89 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken?: string;
 }
+
+export interface Ticket {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assignee?: string;
+  slaMinutes?: number;
+  createdAt: string;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  clientName: string;
+  amount: number;
+  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  dueDate: string;
+  createdAt: string;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface FieldJob {
+  id: string;
+  jobNumber: string;
+  customerName: string;
+  address: string;
+  scheduledTime: string;
+  status: 'scheduled' | 'en_route' | 'in_progress' | 'completed';
+  notes?: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  channel: 'Email' | 'SMS' | 'Social' | 'Ads';
+  status: 'draft' | 'active' | 'paused' | 'completed';
+  sentCount: number;
+  openRate: number;
+  clickRate: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  stock: number;
+  status: 'in_stock' | 'low_stock' | 'out_of_stock';
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  status: 'active' | 'paused' | 'error';
+  lastRun?: string;
+  runsCount: number;
+}
+
+export interface Conversation {
+  id: string;
+  contactName: string;
+  lastMessage: string;
+  time: string;
+  unreadCount: number;
+  channel: 'sms' | 'voice' | 'chat';
+}
+
+export interface SocialPost {
+  id: string;
+  platform: 'Twitter' | 'LinkedIn' | 'Instagram' | 'Facebook';
+  content: string;
+  scheduledAt: string;
+  status: 'scheduled' | 'published' | 'failed';
+}

@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
-import { organizations, users } from "./nucleo-unified.schema";
+import { organizations, users } from "./auth.schema.js";
 
 export const agents = pgTable("agents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -59,22 +59,9 @@ export const agentExecutions = pgTable("agent_executions", {
   completedAt: timestamp("completed_at"),
 });
 
-export const apiKeys = pgTable("api_keys", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
-  name: text("name").notNull(),
-  keyHash: text("key_hash").notNull(),
-  permissions: jsonb("permissions").default([]),
-  expiresAt: timestamp("expires_at"),
-  lastUsedAt: timestamp("last_used_at"),
-  createdBy: uuid("created_by").references(() => users.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
 export type AgentTemplate = typeof agentTemplates.$inferSelect;
 export type AgentConversation = typeof agentConversations.$inferSelect;
 export type AgentMessage = typeof agentMessages.$inferSelect;
 export type AgentExecution = typeof agentExecutions.$inferSelect;
-export type ApiKey = typeof apiKeys.$inferSelect;

@@ -15,6 +15,27 @@ export function createAuthFromEnv(db: Database, env: AppEnv) {
     env.VITE_PUBLIC_SITE_URL ||
     "http://localhost:3001";
 
+  const oauthConfig = {
+    google: env.GOOGLE_CLIENT_ID
+      ? {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET!,
+        }
+      : undefined,
+    github: env.GITHUB_CLIENT_ID
+      ? {
+          clientId: env.GITHUB_CLIENT_ID,
+          clientSecret: env.GITHUB_CLIENT_SECRET!,
+        }
+      : undefined,
+  };
+
+  console.log("[Auth] OAuth Config:", {
+    hasGoogle: !!env.GOOGLE_CLIENT_ID,
+    hasGitHub: !!env.GITHUB_CLIENT_ID,
+    githubClientIdPrefix: env.GITHUB_CLIENT_ID?.substring(0, 3) || "none",
+  });
+
   return createAuth({
     db,
     kv: env.CACHE,
@@ -27,20 +48,7 @@ export function createAuthFromEnv(db: Database, env: AppEnv) {
       "http://localhost:8787",
       "http://127.0.0.1:8787",
     ],
-    oauth: {
-      google: env.GOOGLE_CLIENT_ID
-        ? {
-            clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE_CLIENT_SECRET!,
-          }
-        : undefined,
-      github: env.GITHUB_CLIENT_ID
-        ? {
-            clientId: env.GITHUB_CLIENT_ID,
-            clientSecret: env.GITHUB_CLIENT_SECRET!,
-          }
-        : undefined,
-    },
+    oauth: oauthConfig,
     stripe:
       env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET
         ? {

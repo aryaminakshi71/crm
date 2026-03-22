@@ -14,12 +14,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Calendar,
+  CheckSquare,
+  Clock,
   GripVertical,
+  MessageSquare,
   MoreHorizontal,
   Plus,
   Search,
+  Square,
   Trash2,
   User,
+  X,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -70,6 +75,7 @@ function KanbanBoardPage() {
   const [search, setSearch] = useState("");
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<Task["status"] | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Get all projects
   const { data: projectsData } = useQuery({
@@ -204,6 +210,14 @@ function KanbanBoardPage() {
         ))}
       </div>
 
+      {/* Task Detail Slide-Over */}
+      {selectedTask && (
+        <TaskDetailPanel
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+        />
+      )}
+
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {KANBAN_COLS.map((col) => (
@@ -249,6 +263,7 @@ function KanbanBoardPage() {
                   onDragStart={() => handleDragStart(task)}
                   onDragEnd={handleDragEnd}
                   onDelete={() => deleteTaskMut.mutate(task.id)}
+                  onOpen={() => setSelectedTask(task)}
                 />
               ))}
 
@@ -286,11 +301,13 @@ function TaskCard({
   onDragStart,
   onDragEnd,
   onDelete,
+  onOpen,
 }: {
   task: Task;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDelete: () => void;
+  onOpen: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -299,7 +316,8 @@ function TaskCard({
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className="rounded-lg border border-border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing active:shadow-md transition-shadow"
+      onClick={onOpen}
+      className="rounded-lg border border-border bg-card p-3 shadow-sm cursor-pointer active:cursor-grabbing active:shadow-md transition-shadow hover:border-primary/40"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -312,7 +330,7 @@ function TaskCard({
             size="sm"
             variant="ghost"
             className="h-6 w-6 p-0 text-muted-foreground"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -320,7 +338,8 @@ function TaskCard({
             <div className="absolute right-0 top-full mt-1 z-10 w-32 rounded-lg border border-border bg-card shadow-lg p-1">
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   onDelete();
                   setShowMenu(false);
                 }}
@@ -488,5 +507,236 @@ function QuickAddTask({
         </Button>
       </div>
     </div>
+  );
+}
+
+// ─── Task Detail Slide-Over ──────────────────────────────────────────────────
+
+function TaskDetailPanel({
+  task,
+  onClose,
+}: {
+  task: Task;
+  onClose: () => void;
+}) {
+  const [subtasks, setSubtasks] = useState(
+    task.subtasks ?? []
+  );
+  const [logHours, setLogHours] = useState("");
+  const [comment, setComment] = useState("");
+  const [loggedTime, setLoggedTime] = useState<{ hours: string; at: string }[]>([]);
+  const [comments, setComments] = useState<{ text: string; at: string }[]>([]);
+
+  const toggleSubtask = (id: string) => {
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s))
+    );
+  };
+
+  const handleLogTime = () => {
+    if (!logHours || isNaN(Number(logHours)) || Number(logHours) <= 0) return;
+    setLoggedTime((prev) => [
+      ...prev,
+      { hours: logHours, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    ]);
+    setLogHours("");
+    toast.success(`Logged ${logHours}h`);
+  };
+
+  const handleAddComment = () => {
+    if (!comment.trim()) return;
+    setComments((prev) => [
+      ...prev,
+      { text: comment.trim(), at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    ]);
+    setComment("");
+  };
+
+  const priorityColors: Record<string, string> = {
+    high: "bg-red-100 text-red-700",
+    medium: "bg-amber-100 text-amber-700",
+    low: "bg-blue-100 text-blue-700",
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col bg-background shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-border/60 px-6 py-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-lg leading-tight">{task.title}</h2>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${priorityColors[task.priority] ?? "bg-gray-100 text-gray-700"}`}
+              >
+                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
+              </span>
+              <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {task.status.replace("_", " ")}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Description */}
+          {task.description && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Description
+              </h3>
+              <p className="text-sm text-foreground leading-relaxed">{task.description}</p>
+            </div>
+          )}
+
+          {/* Meta row: assignee + due date */}
+          <div className="flex items-center gap-6">
+            {task.assignee && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Assignee
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium">{task.assignee.name}</span>
+                </div>
+              </div>
+            )}
+            {task.dueDate && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Due Date
+                </p>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Subtasks */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Subtasks ({subtasks.filter((s) => s.completed).length}/{subtasks.length})
+            </h3>
+            {subtasks.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No subtasks</p>
+            ) : (
+              <div className="space-y-2">
+                {subtasks.map((sub) => (
+                  <label
+                    key={sub.id}
+                    className="flex items-center gap-2.5 cursor-pointer group"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSubtask(sub.id)}
+                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    >
+                      {sub.completed ? (
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
+                    <span
+                      className={`text-sm transition-colors ${
+                        sub.completed
+                          ? "line-through text-muted-foreground"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {sub.title}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Log Time */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Log Time
+            </h3>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="0.25"
+                step="0.25"
+                placeholder="Hours (e.g. 1.5)"
+                value={logHours}
+                onChange={(e) => setLogHours(e.target.value)}
+                className="flex-1"
+              />
+              <Button size="sm" variant="outline" onClick={handleLogTime}>
+                <Clock className="h-4 w-4 mr-1" />
+                Log
+              </Button>
+            </div>
+            {loggedTime.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {loggedTime.map((entry, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">
+                    {entry.hours}h logged at {entry.at}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add Comment */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Comments
+            </h3>
+            {comments.length > 0 && (
+              <div className="mb-3 space-y-2">
+                {comments.map((c, i) => (
+                  <div key={i} className="rounded-lg bg-muted/40 px-3 py-2">
+                    <p className="text-sm">{c.text}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{c.at}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Textarea
+              placeholder="Add a comment..."
+              value={comment}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value)}
+              className="resize-none"
+              rows={3}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={handleAddComment}
+              disabled={!comment.trim()}
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              Add Comment
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

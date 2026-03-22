@@ -5,40 +5,38 @@
  */
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { createOrpcClient } from "@/lib/api";
-
-const orpc = createOrpcClient();
+import { api } from "@/lib/orpc";
 
 export function useBilling() {
   // Get current subscription
   const subscriptionQuery = useQuery({
     queryKey: ["subscription"],
-    queryFn: () => orpc.billing.subscription.get({}),
+    queryFn: () => api.billing.subscription.get({}),
   });
 
   // Get available plans
   const plansQuery = useQuery({
     queryKey: ["plans"],
-    queryFn: () => orpc.billing.plans.list({}),
+    queryFn: () => api.billing.plans.list({}),
   });
 
   // Get usage
   const usageQuery = useQuery({
     queryKey: ["usage"],
-    queryFn: () => orpc.billing.usage.get({}),
+    queryFn: () => api.billing.usage.get({}),
   });
 
   // Get module access
   const moduleAccessQuery = useQuery({
     queryKey: ["moduleAccess"],
-    queryFn: () => orpc.billing.modules.getModuleAccess({}),
+    queryFn: () => api.billing.modules.getModuleAccess({}),
   });
 
   // Get invoices
   const invoicesQuery = useQuery({
     queryKey: ["invoices"],
     queryFn: () =>
-      orpc.billing.invoices.list({
+      api.billing.invoices.list({
         page: 1,
         limit: 20,
       }),
@@ -48,7 +46,7 @@ export function useBilling() {
   const paymentsQuery = useQuery({
     queryKey: ["payments"],
     queryFn: () =>
-      orpc.billing.payments.list({
+      api.billing.payments.list({
         page: 1,
         limit: 20,
       }),
@@ -61,13 +59,13 @@ export function useBilling() {
       billingCycle: "monthly" | "annual";
       successUrl: string;
       cancelUrl: string;
-    }) => orpc.billing.checkout.createCheckoutSession(input),
+    }) => api.billing.checkout.createCheckoutSession(input),
   });
 
   // Create portal session
   const portalMutation = useMutation({
     mutationFn: (input: { returnUrl: string }) =>
-      orpc.billing.portal.createPortalSession(input),
+      api.billing.portal.createPortalSession(input),
   });
 
   return {
@@ -115,7 +113,7 @@ export function useAdminBilling() {
   const subscriptionsQuery = useQuery({
     queryKey: ["adminSubscriptions"],
     queryFn: () =>
-      orpc.billing.admin.subscriptions.listAdminSubscriptions({
+      api.billing.admin.subscriptions.listAdminSubscriptions({
         page: 1,
         limit: 50,
       }),
@@ -125,7 +123,7 @@ export function useAdminBilling() {
   const statsQuery = useQuery({
     queryKey: ["billingStats"],
     queryFn: () =>
-      orpc.billing.admin.getAdminBillingStats({
+      api.billing.admin.getAdminBillingStats({
         periodStart: new Date().toISOString().slice(0, 7) + "-01",
         periodEnd: new Date().toISOString(),
       }),
@@ -136,7 +134,7 @@ export function useAdminBilling() {
     useQuery({
       queryKey: ["orgBilling", orgId],
       queryFn: () =>
-        orpc.billing.admin.getOrgBillingDetails({
+        api.billing.admin.getOrgBillingDetails({
           orgId,
         }),
     });
@@ -144,7 +142,7 @@ export function useAdminBilling() {
   // Get all plans
   const plansQuery = useQuery({
     queryKey: ["adminPlans"],
-    queryFn: () => orpc.billing.admin.listPlans({}),
+    queryFn: () => api.billing.admin.listPlans({}),
   });
 
   // Create plan
@@ -164,7 +162,7 @@ export function useAdminBilling() {
       moduleAccess: string[];
       isPublic: boolean;
       trialDays: number;
-    }) => orpc.billing.admin.createPlan(input),
+    }) => api.billing.admin.createPlan(input),
   });
 
   // Update plan
@@ -184,7 +182,7 @@ export function useAdminBilling() {
       moduleAccess?: string[];
       isPublic?: boolean;
       trialDays?: number;
-    }) => orpc.billing.admin.updatePlan(input),
+    }) => api.billing.admin.updatePlan(input),
   });
 
   return {
@@ -226,7 +224,7 @@ export function useModuleAccess(moduleKey: string) {
 
 // Helper to check usage limits
 export function useUsageLimit(type: "apiCalls" | "storage" | "users") {
-  const { usage, limits, percentages } = useBilling();
+  const { usage, usageLimits: limits, usagePercentages: percentages } = useBilling();
 
   return {
     used: usage?.[type] ?? 0,
