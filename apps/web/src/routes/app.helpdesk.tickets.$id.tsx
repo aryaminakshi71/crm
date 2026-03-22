@@ -1,9 +1,3 @@
-/**
- * Ticket Detail
- *
- * Detailed view of a support ticket with timeline and actions.
- */
-
 import {
   Badge,
   Button,
@@ -11,282 +5,308 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
+  Input,
+  Loading,
 } from "@crm/ui";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Clock,
-  Edit,
-  Lock,
-  MessageSquare,
-  MoreHorizontal,
-  Paperclip,
-  Phone,
-  Plus,
-  Send,
-  User,
-} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import { ArrowLeft, MessageSquare, Paperclip, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/tickets/$id")({
-  component: TicketDetail,
+  component: TicketDetailPage,
 });
 
-const timelineEvents = [
-  { id: "1", type: "created", content: "Ticket created by Sarah Chen", timestamp: "2 hours ago", author: "Sarah Chen" },
-  { id: "2", type: "note", content: "Customer confirmed they reset password but still cannot access account.", timestamp: "1 hour ago", author: "John Doe (Agent)" },
-  { id: "3", type: "status", content: "Status changed from Open to Pending", timestamp: "45 minutes ago", author: "John Doe (Agent)" },
-  { id: "4", type: "reply", content: "Hi Sarah, I've checked your account and it appears the password reset wasn't completed properly. Could you try resetting again using the link we just sent to your email?", timestamp: "30 minutes ago", author: "John Doe (Agent)" },
-  { id: "5", type: "reply", content: "Thank you! I just reset it again and it's working now. Really appreciate the quick help!", timestamp: "10 minutes ago", author: "Sarah Chen" },
-];
+function TicketDetailPage() {
+  const { id } = useParams({ from: "/app/helpdesk/tickets/$id" });
+  const [commentDraft, setCommentDraft] = useState("");
+  const queryClient = useQueryClient();
 
-const attachments = [
-  { name: "screenshot.png", size: "245 KB", type: "image" },
-  { name: "error-log.txt", size: "12 KB", type: "text" },
-];
+  // Fetch all tickets and find the one matching :id
+  const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
+    queryKey: ["nucleo-tickets", "all", "all"],
+    queryFn: () => nucleoApi.tickets.list({ page: 1, limit: 500 }),
+  });
 
-function TicketDetail() {
-  const [reply, setReply] = useState("");
-  const [status, setStatus] = useState("pending");
-  const [priority, setPriority] = useState("high");
+  // Fetch comments for this ticket
+  const { data: commentsData, isLoading: commentsLoading } = useQuery({
+    queryKey: ["ops-ticket-comments", id],
+    queryFn: () =>
+      nucleoApi.operations.ticketComments.list({
+        page: 1,
+        limit: 200,
+        ticketId: id,
+      }),
+  });
 
-  const ticket = {
-    id: "TKT-001",
-    subject: "Cannot login to dashboard after password reset",
-    status: "pending",
-    priority: "high",
-    channel: "email",
-    requester: "Sarah Chen",
-    requesterEmail: "sarah.chen@acmecorp.com",
-    assignedTo: "John Doe",
-    createdAt: "2 hours ago",
-    updatedAt: "30 minutes ago",
-    description: "I recently requested a password reset for my account but after resetting the password, I'm still unable to log in. I've tried multiple times but keep getting an 'Invalid credentials' error. This is urgent as I need to access important reports for a meeting today.",
-  };
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: string) =>
+      nucleoApi.tickets.updateStatus(id, status),
+    onSuccess: () => {
+      toast.success("Ticket status updated");
+      queryClient.invalidateQueries({ queryKey: ["nucleo-tickets"] });
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: (message: string) =>
+      nucleoApi.operations.ticketComments.create({ ticketId: id, message }),
+    onSuccess: () => {
+      toast.success("Comment added");
+      setCommentDraft("");
+      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments", id] });
+    },
+    onError: () => toast.error("Failed to add comment"),
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) =>
+      nucleoApi.operations.ticketComments.delete(commentId),
+    onSuccess: () => {
+      toast.success("Comment deleted");
+      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments", id] });
+    },
+    onError: () => toast.error("Failed to delete comment"),
+  });
+
+  if (ticketsLoading || commentsLoading) {
+    return <Loading text="Loading ticket..." />;
+  }
+
+  const tickets: any[] = ticketsData?.data ?? [];
+  const ticket = tickets.find((t: any) => t.id === id);
+  const comments: any[] = commentsData?.data ?? [];
+
+  if (!ticket) {
+    return (
+      <EmptyState
+        icon={<MessageSquare className="h-12 w-12" />}
+        title="Ticket not found"
+        description={`No ticket with ID ${id} exists in this organization.`}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => history.back()}>
-            Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-xl text-foreground">{ticket.id}</h2>
-              <Badge variant="warning">{ticket.status}</Badge>
-              <Badge variant="danger">{ticket.priority}</Badge>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">{ticket.subject}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" leftIcon={<Edit className="h-4 w-4" />}>
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" leftIcon={<MoreHorizontal className="h-4 w-4" />}>
-            More
-          </Button>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={<ArrowLeft className="h-4 w-4" />}
+          onClick={() => history.back()}
+        >
+          Back
+        </Button>
+        <div>
+          <h1 className="font-bold text-xl text-foreground">
+            {ticket.subject}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            #{ticket.id.slice(-8).toUpperCase()} · {ticket.queue}
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Ticket Description */}
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Description
-              </CardTitle>
+              <CardTitle className="text-sm">Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-foreground leading-relaxed">{ticket.description}</p>
-              {attachments.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.name} className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5">
-                      <Paperclip className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{attachment.name}</span>
-                      <span className="text-xs text-muted-foreground">({attachment.size})</span>
-                    </div>
-                  ))}
-                </div>
+              {ticket.description ? (
+                <p className="text-sm text-foreground">{ticket.description}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No description provided.
+                </p>
               )}
             </CardContent>
           </Card>
 
-          {/* Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Conversation
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">
+                  Timeline / Comments ({comments.length})
+                </CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {timelineEvents.map((event) => (
-                <div key={event.id} className="flex gap-3">
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    event.type === "reply" ? "bg-primary/10" : event.type === "note" ? "bg-amber-500/10" : "bg-muted"
-                  }`}>
-                    {event.type === "reply" ? (
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                    ) : event.type === "note" ? (
-                      <Edit className="h-4 w-4 text-amber-400" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{event.author}</span>
-                      <span className="text-xs text-muted-foreground">{event.timestamp}</span>
+            <CardContent className="space-y-3">
+              {comments.length === 0 ? (
+                <EmptyState
+                  icon={<MessageSquare className="h-8 w-8" />}
+                  title="No comments yet"
+                  description="Add the first internal note or customer reply."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {comments.map((comment: any) => (
+                    <div
+                      key={comment.id}
+                      className="rounded-lg border border-border bg-muted/30 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            {comment.isInternal ? (
+                              <Badge variant="outline" className="text-[10px]">
+                                Internal
+                              </Badge>
+                            ) : (
+                              <Badge variant="primary" className="text-[10px]">
+                                Reply
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {comment.createdAt
+                                ? new Date(
+                                    comment.createdAt,
+                                  ).toLocaleString()
+                                : "-"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-foreground">
+                            {comment.message}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Trash2 className="h-3 w-3" />}
+                          onClick={() =>
+                            deleteCommentMutation.mutate(comment.id)
+                          }
+                          loading={deleteCommentMutation.isPending}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-foreground">{event.content}</p>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
+                <Input
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  placeholder="Add internal note or reply..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const msg = commentDraft.trim();
+                      if (msg) addCommentMutation.mutate(msg);
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const msg = commentDraft.trim();
+                    if (!msg) {
+                      toast.error("Comment is required");
+                      return;
+                    }
+                    addCommentMutation.mutate(msg);
+                  }}
+                  loading={addCommentMutation.isPending}
+                >
+                  Add
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Reply Box */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 space-y-3">
-                  <textarea
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    placeholder="Type your reply..."
-                    className="min-h-[100px] w-full rounded-lg border border-border bg-card px-3 py-2 text-sm resize-none"
-                  />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" leftIcon={<Paperclip className="h-4 w-4" />}>
-                        Attach
-                      </Button>
-                      <Button variant="ghost" size="sm" leftIcon={<Lock className="h-4 w-4" />}>
-                        Internal
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        Save Draft
-                      </Button>
-                      <Button variant="primary" size="sm" leftIcon={<Send className="h-4 w-4" />}>
-                        Send Reply
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-sm">Attachments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<Paperclip className="h-8 w-8" />}
+                title="No attachments"
+                description="File attachment support is coming soon."
+              />
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Ticket Properties */}
+        <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Properties
-              </CardTitle>
+              <CardTitle className="text-sm">Ticket Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <PropertyRow label="Status">
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="flex h-8 w-full rounded-lg border border-border bg-card px-2 text-sm">
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                  Status
+                </p>
+                <select
+                  className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-sm"
+                  value={ticket.status}
+                  onChange={(e) =>
+                    updateStatusMutation.mutate(e.target.value)
+                  }
+                >
                   <option value="open">Open</option>
-                  <option value="pending">Pending</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="in_progress">In Progress</option>
                   <option value="closed">Closed</option>
                 </select>
-              </PropertyRow>
-              <PropertyRow label="Priority">
-                <select value={priority} onChange={(e) => setPriority(e.target.value)} className="flex h-8 w-full rounded-lg border border-border bg-card px-2 text-sm">
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </PropertyRow>
-              <PropertyRow label="Channel">
-                <span className="text-sm capitalize">{ticket.channel}</span>
-              </PropertyRow>
-              <PropertyRow label="Assignee">
-                <select defaultValue={ticket.assignedTo} className="flex h-8 w-full rounded-lg border border-border bg-card px-2 text-sm">
-                  <option>John Doe</option>
-                  <option>Jane Smith</option>
-                  <option>Mike Wilson</option>
-                  <option>Unassigned</option>
-                </select>
-              </PropertyRow>
-            </CardContent>
-          </Card>
-
-          {/* Requester Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Requester
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/10 text-violet-400 font-medium">
-                  SC
-                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                  Priority
+                </p>
+                <Badge
+                  variant={
+                    ticket.priority === "high"
+                      ? "destructive"
+                      : ticket.priority === "medium"
+                        ? "warning"
+                        : "outline"
+                  }
+                >
+                  {ticket.priority}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                  Queue
+                </p>
+                <p className="font-medium text-foreground">{ticket.queue}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                  Created
+                </p>
+                <p className="text-foreground">
+                  {ticket.createdAt
+                    ? new Date(ticket.createdAt).toLocaleString()
+                    : "-"}
+                </p>
+              </div>
+              {ticket.closedAt && (
                 <div>
-                  <p className="font-medium text-sm">{ticket.requester}</p>
-                  <p className="text-xs text-muted-foreground">{ticket.requesterEmail}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Closed
+                  </p>
+                  <p className="text-foreground">
+                    {new Date(ticket.closedAt).toLocaleString()}
+                  </p>
                 </div>
-              </div>
-              <div className="border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  +1 (555) 123-4567
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Time Tracking */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Time Tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">First Response</span>
-                <span className="font-medium">34 minutes</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Avg Response</span>
-                <span className="font-medium">28 minutes</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total Time</span>
-                <span className="font-medium">1.2 hours</span>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
-      {children}
     </div>
   );
 }

@@ -1,9 +1,3 @@
-/**
- * Widget Embed Code Generator
- *
- * Generate and customize the support widget for your website.
- */
-
 import {
   Badge,
   Button,
@@ -11,275 +5,212 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
+  Loading,
 } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Check,
-  Code,
-  Copy,
-  Eye,
-  Globe,
-  Monitor,
-  Settings,
-  Smartphone,
-  Wrench,
-} from "lucide-react";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Code, Copy, MessageSquare } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/helpdesk/widget")({
-  component: WidgetEmbed,
+  component: WidgetPage,
 });
 
-const widgetPositions = [
-  { id: "bottom-right", label: "Bottom Right", preview: "BR" },
-  { id: "bottom-left", label: "Bottom Left", preview: "BL" },
-  { id: "center", label: "Center (Launcher)", preview: "C" },
-];
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-const widgetColors = [
-  { id: "cyan", color: "#22d3ee" },
-  { id: "violet", color: "#a78bfa" },
-  { id: "rose", color: "#f472b6" },
-  { id: "emerald", color: "#34d399" },
-  { id: "amber", color: "#fbbf24" },
-];
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.companyId) return { "x-organization-id": user.companyId };
+    } catch {}
+  }
+  return {};
+}
 
-const widgetSettings = [
-  { id: "chat", label: "Live Chat", enabled: true },
-  { id: "knowledge", label: "Knowledge Base Search", enabled: true },
-  { id: "ticket", label: "Ticket Submission", enabled: true },
-  { id: "faq", label: "FAQ Accordion", enabled: false },
-  { id: "contact", label: "Contact Form", enabled: true },
-];
+async function fetchWidgetConfig() {
+  const res = await fetch(`${API_BASE}/v1/helpdesk/widget/config`, {
+    headers: { ...getOrgHeader() },
+  });
+  if (!res.ok) throw new Error("No widget endpoint");
+  return res.json();
+}
 
-function WidgetEmbed() {
-  const [position, setPosition] = useState("bottom-right");
-  const [primaryColor, setPrimaryColor] = useState("#22d3ee");
-  const [isCopied, setIsCopied] = useState(false);
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+function getOrgId(): string | null {
+  if (typeof window === "undefined") return null;
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      return user.companyId ?? null;
+    } catch {}
+  }
+  return null;
+}
 
-  const embedCode = `<!-- Nucleo One Support Widget -->
-<script>
-  window.NucleoSupportConfig = {
-    widgetId: "widget_abc123xyz",
-    position: "${position}",
-    primaryColor: "${primaryColor}",
-    zIndex: 99999,
-    greeting: "Hi there! How can we help?",
-    showKnowledgeBase: true,
-    showTicketForm: true,
-    onlineAgents: 3
+function WidgetPage() {
+  const { data: widgetData, isLoading, error } = useQuery({
+    queryKey: ["helpdesk", "widget", "config"],
+    queryFn: fetchWidgetConfig,
+    retry: false,
+  });
+
+  if (isLoading) return <Loading text="Loading widget configuration..." />;
+
+  const config = error ? null : widgetData;
+  const orgId = getOrgId();
+
+  // Generate the embed snippet using org ID
+  const embedSnippet = `<script>
+  window.NucleoWidget = {
+    orgId: "${orgId ?? "YOUR_ORG_ID"}",
+    primaryColor: "${config?.primaryColor ?? "#6366f1"}",
+    position: "${config?.position ?? "bottom-right"}",
+    greeting: "${config?.greeting ?? "Hi! How can we help you?"}",
   };
 </script>
-<script src="https://cdn.nucleo.one/widget/v1/widget.js" async></script>
-<!-- End Nucleo One Support Widget -->`;
+<script src="${API_BASE}/widget/nucleo.js" async></script>`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  function copySnippet() {
+    navigator.clipboard.writeText(embedSnippet).then(() => {
+      toast.success("Embed snippet copied to clipboard");
+    });
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/app/helpdesk">
-            <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h2 className="font-bold text-xl text-foreground">Widget Embed Code</h2>
-            <p className="text-sm text-muted-foreground">Generate and customize your support widget</p>
-          </div>
-        </div>
-        <Button variant="primary" size="sm" leftIcon={<Code className="h-4 w-4" />}>
-          Save Widget
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Active Widgets" value="1" />
-        <StatCard title="Total Embeds" value="12" />
-        <StatCard title="Widget Loads" value="45.2K" />
-        <StatCard title="Conversations" value="1,234" />
+      <div>
+        <h1 className="font-bold text-2xl text-foreground">Chat Widget</h1>
+        <p className="text-muted-foreground">
+          Embed the Nucleo helpdesk chat widget on your website.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Settings */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Widget Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Position */}
-            <div>
-              <label className="mb-2 block text-xs font-medium text-muted-foreground">Position</label>
-              <div className="grid grid-cols-3 gap-2">
-                {widgetPositions.map((pos) => (
-                  <button
-                    key={pos.id}
-                    onClick={() => setPosition(pos.id)}
-                    className={`rounded-lg border p-3 text-center transition-colors ${
-                      position === pos.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="mx-auto mb-1 h-8 w-12 rounded border-2 border-current flex items-center justify-center text-xs font-bold">
-                      {pos.preview}
-                    </div>
-                    <span className="text-xs">{pos.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color */}
-            <div>
-              <label className="mb-2 block text-xs font-medium text-muted-foreground">Primary Color</label>
-              <div className="flex items-center gap-3">
-                {widgetColors.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setPrimaryColor(c.color)}
-                    className={`h-8 w-8 rounded-full transition-transform ${primaryColor === c.color ? "scale-125 ring-2 ring-offset-2 ring-offset-card" : ""}`}
-                    style={{ backgroundColor: c.color }}
-                  />
-                ))}
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-8 w-8 rounded cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Features */}
-            <div>
-              <label className="mb-2 block text-xs font-medium text-muted-foreground">Enabled Features</label>
-              <div className="space-y-2">
-                {widgetSettings.map((setting) => (
-                  <label key={setting.id} className="flex items-center justify-between rounded-lg border border-border p-2 cursor-pointer">
-                    <span className="text-sm">{setting.label}</span>
-                    <div className={`relative h-5 w-9 rounded-full transition-colors ${setting.enabled ? "bg-primary" : "bg-muted"}`}>
-                      <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${setting.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Greeting */}
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Greeting Message</label>
-              <input
-                type="text"
-                defaultValue="Hi there! How can we help?"
-                className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Preview & Code */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Preview & Code
-            </CardTitle>
-            <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-              <button
-                onClick={() => setPreviewMode("desktop")}
-                className={`rounded p-1 ${previewMode === "desktop" ? "bg-muted" : ""}`}
-              >
-                <Monitor className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setPreviewMode("mobile")}
-                className={`rounded p-1 ${previewMode === "mobile" ? "bg-muted" : ""}`}
-              >
-                <Smartphone className="h-4 w-4" />
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Preview */}
-            <div className={`relative mx-auto bg-gray-100 rounded-lg transition-all ${previewMode === "mobile" ? "w-[375px]" : "w-full"}`}>
-              <div className={`relative ${previewMode === "mobile" ? "h-[667px]" : "h-[400px]"} bg-white rounded-lg border border-border overflow-hidden`}>
-                {/* Mock Website Content */}
-                <div className="p-4">
-                  <div className="h-8 w-32 bg-gray-200 rounded mb-4" />
-                  <div className="h-2 w-full bg-gray-100 rounded mb-2" />
-                  <div className="h-2 w-3/4 bg-gray-100 rounded mb-2" />
-                  <div className="h-2 w-1/2 bg-gray-100 rounded mb-4" />
-                  <div className="h-32 w-full bg-gray-100 rounded mb-4" />
+        <div className="lg:col-span-2 space-y-4">
+          {config ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Widget Settings</CardTitle>
+                  <Badge variant={config.enabled ? "success" : "outline"}>
+                    {config.enabled ? "Active" : "Inactive"}
+                  </Badge>
                 </div>
-
-                {/* Widget Preview */}
-                <div className={`absolute bottom-4 ${position === "bottom-right" ? "right-4" : position === "bottom-left" ? "left-4" : "left-1/2 -translate-x-1/2"}`}>
-                  <div
-                    className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center cursor-pointer"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    <Wrench className="h-6 w-6 text-white" />
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {config.primaryColor && (
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-6 w-6 rounded-full border border-border"
+                      style={{ backgroundColor: config.primaryColor }}
+                    />
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Primary Color
+                      </p>
+                      <p className="font-mono text-foreground">
+                        {config.primaryColor}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
+                )}
+                {config.position && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Position</p>
+                    <p className="font-medium text-foreground capitalize">
+                      {config.position.replace("-", " ")}
+                    </p>
+                  </div>
+                )}
+                {config.greeting && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Greeting Message
+                    </p>
+                    <p className="text-foreground">{config.greeting}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <EmptyState
+              icon={<MessageSquare className="h-12 w-12" />}
+              title="Widget not configured"
+              description="The widget configuration endpoint is not yet available. Use the embed snippet below to add the default widget to your website."
+            />
+          )}
 
-            {/* Embed Code */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-muted-foreground">Embed Code</label>
-                <Button variant="ghost" size="sm" leftIcon={<Copy className="h-4 w-4" />} onClick={handleCopy}>
-                  {isCopied ? "Copied!" : "Copy"}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Embed Snippet</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Copy className="h-3 w-3" />}
+                  onClick={copySnippet}
+                >
+                  Copy
                 </Button>
               </div>
-              <textarea
-                readOnly
-                value={embedCode}
-                className="min-h-[200px] w-full rounded-lg border border-border bg-card p-3 text-xs font-mono"
-              />
-            </div>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto rounded-lg bg-muted/40 p-4 text-xs font-mono text-foreground whitespace-pre-wrap break-all">
+                {embedSnippet}
+              </pre>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Paste this snippet before the closing{" "}
+                <code className="font-mono">&lt;/body&gt;</code> tag of your
+                website.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Installation Instructions */}
-            <div className="rounded-lg border border-border p-4">
-              <h4 className="font-medium text-sm mb-2">Installation Instructions</h4>
-              <ol className="space-y-2 text-xs text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">1</span>
-                  Copy the embed code above
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">2</span>
-                  Paste it before the closing &lt;/body&gt; tag on your website
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">3</span>
-                  The widget will automatically appear on your site
-                </li>
-              </ol>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Widget Features</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              {[
+                "Live chat with support agents",
+                "Ticket creation from chat",
+                "Knowledge base search",
+                "Custom branding & colors",
+                "Mobile responsive",
+                "Offline message collection",
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-2">
+                  <Code className="h-3 w-3 text-primary flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Integration</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground space-y-2">
+              <p>
+                The widget connects to your Nucleo helpdesk workspace
+                automatically using your organization ID.
+              </p>
+              <p>
+                Tickets submitted via the widget appear in the{" "}
+                <strong className="text-foreground">general</strong> queue by
+                default.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
-  );
-}
-
-function StatCard({ title, value }: { title: string; value: string }) {
-  return (
-    <Card className="border-border/60">
-      <CardContent className="p-4 text-center">
-        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
-        <p className="font-black text-2xl text-foreground mt-0.5">{value}</p>
-      </CardContent>
-    </Card>
   );
 }

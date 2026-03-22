@@ -1,268 +1,246 @@
-/**
- * Canned Responses
- *
- * Manage pre-written response templates.
- */
-
 import {
-  Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
+  Textarea,
 } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Copy,
-  Edit,
-  FileText,
-  MessageSquare,
-  Plus,
-  Search,
-  Tag,
-  Trash2,
-} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/helpdesk/canned")({
-  component: CannedResponses,
+  component: CannedResponsesPage,
 });
 
-const cannedResponses = [
-  {
-    id: "1",
-    title: "Greeting - Standard",
-    shortcut: "/greet",
-    category: "Greeting",
-    content: "Hi there! Thank you for contacting our support team. My name is [Agent Name] and I'll be happy to assist you today. How can I help?",
-    usageCount: 1245,
-    lastUsed: "2 hours ago",
-  },
-  {
-    id: "2",
-    title: "Password Reset Instructions",
-    shortcut: "/pwreset",
-    category: "Account",
-    content: "To reset your password, please follow these steps:\n\n1. Go to our login page\n2. Click on 'Forgot Password'\n3. Enter your email address\n4. Check your inbox for the reset link\n5. Follow the link to create a new password\n\nIf you don't receive the email within 5 minutes, please check your spam folder.",
-    usageCount: 892,
-    lastUsed: "4 hours ago",
-  },
-  {
-    id: "3",
-    title: "Billing Inquiry - Standard",
-    shortcut: "/billing",
-    category: "Billing",
-    content: "Thank you for reaching out regarding your billing concern. I've reviewed your account and I can see the charge in question. Let me explain the details and help resolve this for you.",
-    usageCount: 567,
-    lastUsed: "1 day ago",
-  },
-  {
-    id: "4",
-    title: "Feature Request Acknowledgment",
-    shortcut: "/featurereq",
-    category: "Feature",
-    content: "Thank you for sharing this feature idea! I've documented your request and passed it along to our product team for consideration. While I can't promise a specific timeline, we truly value customer feedback in shaping our roadmap.",
-    usageCount: 423,
-    lastUsed: "2 days ago",
-  },
-  {
-    id: "5",
-    title: "Escalation Notice",
-    shortcut: "/escalate",
-    category: "Escalation",
-    content: "I understand this is a critical issue for you, and I want to ensure you receive the best possible support. I'm escalating this to our senior support team who will prioritize your case and reach out within [timeframe].",
-    usageCount: 234,
-    lastUsed: "3 days ago",
-  },
-  {
-    id: "6",
-    title: "Closing - Issue Resolved",
-    shortcut: "/close",
-    category: "Closing",
-    content: "I'm glad I could help resolve this issue for you today! If you have any other questions or concerns in the future, please don't hesitate to reach out. Have a great day!",
-    usageCount: 1567,
-    lastUsed: "1 hour ago",
-  },
-  {
-    id: "7",
-    title: "API Key Reset",
-    shortcut: "/apikey",
-    category: "Technical",
-    content: "I've reset your API key as requested. Please note that the new key will take effect immediately. You can find your new API key in the Settings > API section of your dashboard. Please update your integrations with the new key.",
-    usageCount: 345,
-    lastUsed: "5 hours ago",
-  },
-];
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-const categories = ["All", "Greeting", "Account", "Billing", "Feature", "Escalation", "Closing", "Technical"];
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.companyId) return { "x-organization-id": user.companyId };
+    } catch {}
+  }
+  return {};
+}
 
-function CannedResponses() {
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedResponse, setSelectedResponse] = useState<string | null>(null);
+async function fetchCannedResponses() {
+  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses`, {
+    headers: { ...getOrgHeader() },
+  });
+  if (!res.ok) throw new Error("Not found");
+  return res.json();
+}
 
-  const filteredResponses = cannedResponses.filter((response) => {
-    if (selectedCategory !== "All" && response.category !== selectedCategory) return false;
-    if (!search.trim()) return true;
-    return (
-      response.title.toLowerCase().includes(search.toLowerCase()) ||
-      response.content.toLowerCase().includes(search.toLowerCase()) ||
-      response.shortcut.toLowerCase().includes(search.toLowerCase())
-    );
+async function createCannedResponse(data: {
+  title: string;
+  shortcut: string;
+  message: string;
+  category?: string;
+}) {
+  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getOrgHeader() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create");
+  return res.json();
+}
+
+async function deleteCannedResponse(id: string) {
+  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses/${id}`, {
+    method: "DELETE",
+    headers: { ...getOrgHeader() },
+  });
+  if (!res.ok) throw new Error("Failed to delete");
+  return res.json();
+}
+
+function CannedResponsesPage() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    shortcut: "",
+    message: "",
+    category: "General",
+  });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["helpdesk", "canned-responses"],
+    queryFn: fetchCannedResponses,
+    retry: false,
   });
 
-  const selected = cannedResponses.find((r) => r.id === selectedResponse);
+  const createMutation = useMutation({
+    mutationFn: createCannedResponse,
+    onSuccess: () => {
+      toast.success("Canned response created");
+      queryClient.invalidateQueries({
+        queryKey: ["helpdesk", "canned-responses"],
+      });
+      setIsCreateOpen(false);
+      setForm({ title: "", shortcut: "", message: "", category: "General" });
+    },
+    onError: () => toast.error("Failed to create canned response"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCannedResponse,
+    onSuccess: () => {
+      toast.success("Canned response deleted");
+      queryClient.invalidateQueries({
+        queryKey: ["helpdesk", "canned-responses"],
+      });
+    },
+    onError: () => toast.error("Failed to delete canned response"),
+  });
+
+  if (isLoading) return <Loading text="Loading canned responses..." />;
+
+  const responses: any[] = data?.data ?? [];
+  const hasEndpoint = !error;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/app/helpdesk">
-            <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h2 className="font-bold text-xl text-foreground">Canned Responses</h2>
-            <p className="text-sm text-muted-foreground">Pre-written response templates for faster replies</p>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-bold text-2xl text-foreground">
+            Canned Responses
+          </h1>
+          <p className="text-muted-foreground">
+            Pre-written replies for common support questions.
+          </p>
         </div>
-        <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-          New Response
-        </Button>
+        {hasEndpoint && (
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsCreateOpen(true)}
+          >
+            New Response
+          </Button>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Total Responses" value={cannedResponses.length.toString()} />
-        <StatCard title="Categories" value={categories.length - 1 + ""} />
-        <StatCard title="Total Usage" value="5,273" />
-        <StatCard title="This Week" value="342" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Response List */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                Responses
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search..."
-                    className="h-8 rounded-lg border border-border bg-card pl-9 pr-3 text-sm w-48"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {filteredResponses.map((response) => (
-              <button
-                key={response.id}
-                onClick={() => setSelectedResponse(response.id)}
-                className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                  selectedResponse === response.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="flex items-center justify-between">
+      {!hasEndpoint || responses.length === 0 ? (
+        <EmptyState
+          icon={<MessageSquare className="h-12 w-12" />}
+          title="No canned responses yet"
+          description="Canned responses let agents reply faster to common questions. This feature is coming soon."
+        />
+      ) : (
+        <div className="space-y-3">
+          {responses.map((resp: any) => (
+            <Card key={resp.id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{response.title}</span>
-                      <Badge variant="outline" className="text-xs">{response.shortcut}</Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{response.content}</p>
+                    <CardTitle className="text-sm">{resp.title}</CardTitle>
+                    {resp.shortcut && (
+                      <p className="text-xs text-muted-foreground">
+                        Shortcut:{" "}
+                        <span className="font-mono text-primary">
+                          /{resp.shortcut}
+                        </span>
+                      </p>
+                    )}
+                    {resp.category && (
+                      <p className="text-xs text-muted-foreground">
+                        {resp.category}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{response.usageCount} uses</span>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    leftIcon={<Trash2 className="h-4 w-4" />}
+                    onClick={() => deleteMutation.mutate(resp.id)}
+                    loading={deleteMutation.isPending}
+                  >
+                    Delete
+                  </Button>
                 </div>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{resp.message}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {/* Response Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Preview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selected ? (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold">{selected.title}</h3>
-                    <Badge variant="outline">{selected.shortcut}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Tag className="h-3 w-3" />
-                    {selected.category}
-                    <span className="mx-1">-</span>
-                    <span>Used {selected.usageCount} times</span>
-                  </div>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="whitespace-pre-wrap text-sm">{selected.content}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" leftIcon={<Copy className="h-4 w-4" />}>
-                    Copy
-                  </Button>
-                  <Button variant="outline" size="sm" leftIcon={<Edit className="h-4 w-4" />}>
-                    Edit
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="h-4 w-4 text-rose-400" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">Select a response to preview</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <FormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Canned Response"
+        submitText="Create"
+        loading={createMutation.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!form.title.trim() || !form.message.trim()) {
+            toast.error("Title and message are required");
+            return;
+          }
+          createMutation.mutate({
+            title: form.title.trim(),
+            shortcut: form.shortcut.trim(),
+            message: form.message.trim(),
+            category: form.category,
+          });
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Title" required>
+            <Input
+              value={form.title}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, title: e.target.value }))
+              }
+              placeholder="Password reset instructions"
+            />
+          </FormField>
+          <FormField label="Shortcut">
+            <Input
+              value={form.shortcut}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, shortcut: e.target.value }))
+              }
+              placeholder="pwd-reset"
+            />
+          </FormField>
+          <FormField label="Category">
+            <Input
+              value={form.category}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, category: e.target.value }))
+              }
+              placeholder="General"
+            />
+          </FormField>
+          <FormField label="Message" required>
+            <Textarea
+              value={form.message}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, message: e.target.value }))
+              }
+              placeholder="Hi, here are the steps to reset your password..."
+              rows={5}
+            />
+          </FormField>
+        </div>
+      </FormModal>
     </div>
-  );
-}
-
-function StatCard({ title, value }: { title: string; value: string }) {
-  return (
-    <Card className="border-border/60">
-      <CardContent className="p-4 text-center">
-        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
-        <p className="font-black text-2xl text-foreground mt-0.5">{value}</p>
-      </CardContent>
-    </Card>
   );
 }

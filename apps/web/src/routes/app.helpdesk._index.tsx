@@ -1,9 +1,3 @@
-/**
- * Helpdesk Dashboard
- *
- * Overview metrics, SLA tracking, ticket queue with bulk actions, and channel breakdown.
- */
-
 import {
   Badge,
   Button,
@@ -11,560 +5,1038 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
+  Textarea,
 } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import {
+  Activity,
   AlertTriangle,
-  BarChart3,
+  BookOpenText,
   CheckCircle2,
-  ChevronDown,
-  Clock,
-  Headphones,
   LifeBuoy,
-  MessageSquare,
+  ListOrdered,
   Plus,
-  RefreshCw,
   Search,
-  Ticket,
-  TrendingDown,
-  TrendingUp,
-  UserCheck,
-  Users,
-  X,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
   Zap,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
+import { aiApi, nucleoApi } from "../lib/api";
 
-export const Route = createFileRoute("/app/helpdesk/_index")({
-  component: HelpdeskDashboard,
+export const Route = createFileRoute("/app/helpdesk/")({
+  component: HelpdeskIndexPage,
 });
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-
-const ticketVolumeData = [
-  { day: "Mon", tickets: 45, resolved: 38 },
-  { day: "Tue", tickets: 52, resolved: 48 },
-  { day: "Wed", tickets: 48, resolved: 45 },
-  { day: "Thu", tickets: 61, resolved: 55 },
-  { day: "Fri", tickets: 55, resolved: 52 },
-  { day: "Sat", tickets: 28, resolved: 26 },
-  { day: "Sun", tickets: 22, resolved: 21 },
-];
-
-const channelDistribution = [
-  { name: "Email", value: 35, color: "#22d3ee" },
-  { name: "Chat", value: 28, color: "#a78bfa" },
-  { name: "Portal", value: 22, color: "#f472b6" },
-  { name: "Phone", value: 15, color: "#34d399" },
-];
-
-const agents = ["John Doe", "Jane Smith", "Carlos Ruiz", "Aisha Khan", "Tom Wei"];
-
-// tickets with SLA due times (minutes from now, negative = overdue)
-const allTickets = [
-  { id: "TKT-001", subject: "Cannot login to dashboard after SSO update", status: "open", priority: "urgent", requester: "Sarah Chen", assignedTo: "John Doe", channel: "Email", createdAt: "2 hours ago", slaMinutes: -45, tags: ["auth","login"] },
-  { id: "TKT-002", subject: "Billing invoice shows incorrect amount", status: "pending", priority: "high", requester: "Michael Roberts", assignedTo: "Jane Smith", channel: "Portal", createdAt: "4 hours ago", slaMinutes: 120, tags: ["billing"] },
-  { id: "TKT-003", subject: "Feature request: export contacts to CSV", status: "open", priority: "low", requester: "Emily Watson", assignedTo: "Unassigned", channel: "Email", createdAt: "1 day ago", slaMinutes: 840, tags: ["feature"] },
-  { id: "TKT-004", subject: "API integration returns 403 on webhooks endpoint", status: "open", priority: "urgent", requester: "David Kim", assignedTo: "Unassigned", channel: "Chat", createdAt: "3 hours ago", slaMinutes: -20, tags: ["api","integration"] },
-  { id: "TKT-005", subject: "Dashboard charts not loading in Firefox", status: "open", priority: "high", requester: "Priya Singh", assignedTo: "Carlos Ruiz", channel: "Chat", createdAt: "5 hours ago", slaMinutes: 55, tags: ["bug","ui"] },
-  { id: "TKT-006", subject: "How do I set up two-factor authentication?", status: "resolved", priority: "low", requester: "Tom Bradley", assignedTo: "Aisha Khan", channel: "Email", createdAt: "2 days ago", slaMinutes: 9999, tags: ["security","how-to"] },
-  { id: "TKT-007", subject: "Mobile app crashes on iOS 17.4", status: "open", priority: "high", requester: "Lisa Wang", assignedTo: "Tom Wei", channel: "Portal", createdAt: "6 hours ago", slaMinutes: 30, tags: ["mobile","bug"] },
-  { id: "TKT-008", subject: "Payment declined but account was charged", status: "open", priority: "urgent", requester: "James Park", assignedTo: "Jane Smith", channel: "Phone", createdAt: "1 hour ago", slaMinutes: -5, tags: ["billing","urgent"] },
-];
-
-const slaAtRisk = allTickets.filter((t) => t.slaMinutes < 60 && t.status !== "resolved");
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function slaLabel(mins: number) {
-  if (mins < 0) return { text: `${Math.abs(mins)}m overdue`, color: "text-red-400", bg: "bg-red-500/10 border-red-500/30" };
-  if (mins < 60) return { text: `${mins}m left`, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/30" };
-  const h = Math.floor(mins / 60);
-  return { text: `${h}h left`, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" };
-}
-
-function priorityColor(p: string) {
-  if (p === "urgent") return "bg-red-500/15 text-red-400 border-red-500/30";
-  if (p === "high") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  if (p === "low") return "bg-muted/40 text-muted-foreground border-border";
-  return "bg-blue-500/15 text-blue-400 border-blue-500/30";
-}
-
-function statusColor(s: string) {
-  if (s === "open") return "bg-primary/15 text-primary border-primary/30";
-  if (s === "pending") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  if (s === "resolved") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  return "bg-muted/40 text-muted-foreground border-border";
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-function HelpdeskDashboard() {
+function HelpdeskIndexPage() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [assignModal, setAssignModal] = useState<string | null>(null); // ticket id
-  const [bulkAssignAgent, setBulkAssignAgent] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [queueFilter, setQueueFilter] = useState("all");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [queueSearch, setQueueSearch] = useState("");
+  const [queueStatusFilter, setQueueStatusFilter] = useState("all");
+  const [counterDrafts, setCounterDrafts] = useState<Record<string, string>>(
+    {},
+  );
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
+    {},
+  );
+  const [newTicket, setNewTicket] = useState({
+    subject: "",
+    description: "",
+    priority: "medium" as "low" | "medium" | "high",
+    queue: "general",
+  });
+  const [newToken, setNewToken] = useState({
+    serviceType: "general",
+    ticketId: "",
+  });
+  const [triageResult, setTriageResult] = useState<{
+    priority: "low" | "medium" | "high";
+    queue: string;
+    summary: string;
+    suggestedResponse: string;
+    slaHours: number;
+    confidence: number;
+    rationale: string[];
+  } | null>(null);
+  const queryClient = useQueryClient();
 
-  const filtered = useMemo(() => {
-    return allTickets.filter((t) => {
-      const matchSearch =
-        !search ||
-        t.subject.toLowerCase().includes(search.toLowerCase()) ||
-        t.requester.toLowerCase().includes(search.toLowerCase()) ||
-        t.id.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === "all" || t.status === statusFilter;
-      const matchPriority = priorityFilter === "all" || t.priority === priorityFilter;
-      return matchSearch && matchStatus && matchPriority;
+  const { data, isLoading } = useQuery({
+    queryKey: ["nucleo-tickets", statusFilter, queueFilter],
+    queryFn: () =>
+      nucleoApi.tickets.list({
+        page: 1,
+        limit: 100,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        queue: queueFilter !== "all" ? queueFilter : undefined,
+      }),
+  });
+
+  const { data: queueData, isLoading: isQueueLoading } = useQuery({
+    queryKey: ["nucleo-queue", queueStatusFilter],
+    queryFn: () =>
+      nucleoApi.queue.list({
+        page: 1,
+        limit: 100,
+        status: queueStatusFilter !== "all" ? queueStatusFilter : undefined,
+      }),
+  });
+
+  const { data: commentsData, isLoading: isCommentsLoading } = useQuery({
+    queryKey: ["ops-ticket-comments"],
+    queryFn: () =>
+      nucleoApi.operations.ticketComments.list({
+        page: 1,
+        limit: 500,
+      }),
+  });
+
+  const createTicket = useMutation({
+    mutationFn: (payload: {
+      subject: string;
+      description?: string;
+      priority?: "low" | "medium" | "high";
+      queue?: string;
+    }) => nucleoApi.tickets.create(payload),
+    onSuccess: () => {
+      toast.success("Ticket created");
+      queryClient.invalidateQueries({ queryKey: ["nucleo-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
+      setIsCreateModalOpen(false);
+      setNewTicket({
+        subject: "",
+        description: "",
+        priority: "medium",
+        queue: "general",
+      });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create ticket"),
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      nucleoApi.tickets.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nucleo-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to update ticket"),
+  });
+
+  const deleteTicket = useMutation({
+    mutationFn: (id: string) => nucleoApi.tickets.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nucleo-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
+      toast.success("Ticket deleted");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to delete ticket"),
+  });
+
+  const createQueueToken = useMutation({
+    mutationFn: (payload: { serviceType: string; ticketId?: string }) =>
+      nucleoApi.queue.create(payload),
+    onSuccess: () => {
+      toast.success("Queue token created");
+      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
+      setIsQueueModalOpen(false);
+      setNewToken({ serviceType: "general", ticketId: "" });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create queue token"),
+  });
+
+  const aiTriageMutation = useMutation({
+    mutationFn: (payload: { subject: string; description: string }) =>
+      aiApi.triageTicket(payload),
+    onSuccess: (response) => {
+      if (!response.result) {
+        toast.error("AI triage did not return a result");
+        return;
+      }
+      const result = response.result;
+      setNewTicket((prev) => ({
+        ...prev,
+        priority: result.priority,
+        queue: result.queue || prev.queue,
+      }));
+      setTriageResult(result);
+      toast.success("AI triage suggestions applied");
+    },
+    onError: () => {
+      toast.error("Failed to generate AI triage");
+    },
+  });
+
+  const updateQueueStatus = useMutation({
+    mutationFn: ({
+      id,
+      status,
+      counter,
+    }: {
+      id: string;
+      status: string;
+      counter?: string;
+    }) => nucleoApi.queue.updateStatus(id, status, counter),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to update queue token"),
+  });
+
+  const deleteQueueToken = useMutation({
+    mutationFn: (id: string) => nucleoApi.queue.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
+      toast.success("Queue token deleted");
+    },
+    onError: () => toast.error("Failed to delete queue token"),
+  });
+
+  const addComment = useMutation({
+    mutationFn: (payload: { ticketId: string; message: string }) =>
+      nucleoApi.operations.ticketComments.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments"] });
+      toast.success("Comment added");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to add comment"),
+  });
+
+  const deleteComment = useMutation({
+    mutationFn: (id: string) => nucleoApi.operations.ticketComments.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments"] });
+      toast.success("Comment deleted");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to delete comment"),
+  });
+
+  const tickets = data?.data ?? [];
+  const queueTokens = queueData?.data ?? [];
+  const comments = commentsData?.data ?? [];
+
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket: any) => {
+      if (priorityFilter !== "all" && ticket.priority !== priorityFilter)
+        return false;
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return (
+        String(ticket.subject || "").toLowerCase().includes(s) ||
+        String(ticket.description || "").toLowerCase().includes(s) ||
+        String(ticket.queue || "").toLowerCase().includes(s)
+      );
     });
-  }, [search, statusFilter, priorityFilter]);
+  }, [tickets, search, priorityFilter]);
 
-  const allSelected = filtered.length > 0 && filtered.every((t) => selected.has(t.id));
-  const someSelected = selected.size > 0;
+  const openCount = tickets.filter((t: any) => t.status === "open").length;
+  const inProgressCount = tickets.filter(
+    (t: any) => t.status === "in_progress",
+  ).length;
+  const closedCount = tickets.filter((t: any) => t.status === "closed").length;
+  const waitingCount = queueTokens.filter(
+    (token: any) => token.status === "waiting",
+  ).length;
+  const calledCount = queueTokens.filter(
+    (token: any) => token.status === "called",
+  ).length;
+  const completedCount = queueTokens.filter(
+    (token: any) => token.status === "completed",
+  ).length;
 
-  function toggleSelect(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+  const filteredQueueTokens = useMemo(() => {
+    if (!queueSearch.trim()) return queueTokens;
+    const s = queueSearch.toLowerCase();
+    return queueTokens.filter((token: any) => {
+      return (
+        String(token.tokenNumber || "").toLowerCase().includes(s) ||
+        String(token.serviceType || "").toLowerCase().includes(s) ||
+        String(token.counter || "").toLowerCase().includes(s)
+      );
     });
-  }
+  }, [queueSearch, queueTokens]);
 
-  function toggleAll() {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(filtered.map((t) => t.id)));
+  const commentsByTicket = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    for (const comment of comments) {
+      const ticketId = String(comment.ticketId || "");
+      if (!grouped[ticketId]) grouped[ticketId] = [];
+      grouped[ticketId].push(comment);
     }
-  }
+    return grouped;
+  }, [comments]);
 
-  function bulkResolve() {
-    setSelected(new Set());
+  if (isLoading || isQueueLoading || isCommentsLoading) {
+    return <Loading text="Loading helpdesk..." />;
   }
 
   return (
-    <div className="space-y-5">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-xl text-foreground">Helpdesk</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {allTickets.filter((t) => t.status === "open").length} open tickets ·{" "}
-            {slaAtRisk.length} at SLA risk
+          <h1 className="font-bold text-2xl text-foreground">Helpdesk</h1>
+          <p className="text-muted-foreground">
+            Support operations with triage, priority, and queue-based ticketing.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline">
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            leftIcon={<ListOrdered className="h-4 w-4" />}
+            onClick={() => setIsQueueModalOpen(true)}
+            loading={createQueueToken.isPending}
+          >
+            New Queue Token
           </Button>
-          <Link to="/app/helpdesk/tickets">
-            <Button size="sm">
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> New Ticket
-            </Button>
-          </Link>
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsCreateModalOpen(true)}
+            loading={createTicket.isPending}
+          >
+            New Ticket
+          </Button>
         </div>
       </div>
 
-      {/* ── Metrics ── */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <MetricCard title="Open Tickets" value="47" trend="-12% vs yesterday" icon={<Ticket className="h-4 w-4" />} color="text-primary" positive={true} />
-        <MetricCard title="Avg Response Time" value="2.4 hrs" trend="-18% vs last week" icon={<Clock className="h-4 w-4" />} color="text-violet-400" positive={true} />
-        <MetricCard title="CSAT Score" value="94.2%" trend="+2.1% vs last month" icon={<TrendingUp className="h-4 w-4" />} color="text-emerald-400" positive={true} />
-        <MetricCard title="Resolution Rate" value="87.5%" trend="+5.3% vs last month" icon={<LifeBuoy className="h-4 w-4" />} color="text-amber-400" positive={true} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Metric
+          title="Critical Tickets"
+          value={
+            tickets.filter(
+              (t: any) => t.priority === "high" && t.status !== "closed",
+            ).length
+          }
+          icon={<AlertTriangle className="h-4 w-4" />}
+          trend={`${openCount} open`}
+          color="text-destructive"
+        />
+        <Metric
+          title="Active Queue"
+          value={waitingCount}
+          icon={<Activity className="h-4 w-4" />}
+          trend={`${calledCount} called`}
+          color="text-primary"
+        />
+        <Metric
+          title="Resolved Rate"
+          value={`${Math.round((closedCount / (tickets.length || 1)) * 100)}%`}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          trend={`${closedCount} closed`}
+          color="text-emerald-400"
+        />
+        <Metric
+          title="In Progress"
+          value={inProgressCount}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          trend={`${completedCount} completed`}
+          color="text-cyan-400"
+        />
       </div>
 
-      {/* ── SLA At Risk Banner ── */}
-      {slaAtRisk.length > 0 && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
-            <span className="text-sm font-semibold text-red-400">
-              {slaAtRisk.length} ticket{slaAtRisk.length > 1 ? "s" : ""} at SLA risk
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {slaAtRisk.map((t) => {
-              const sla = slaLabel(t.slaMinutes);
-              return (
-                <div key={t.id} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${sla.bg}`}>
-                  <span className="font-mono font-semibold text-foreground/80">{t.id}</span>
-                  <span className="text-foreground/70 truncate max-w-[180px]">{t.subject}</span>
-                  <span className={`font-bold shrink-0 ${sla.color}`}>{sla.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Charts ── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Ticket Volume — Last 7 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ticketVolumeData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
-                  <YAxis axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
-                  <Tooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: "12px", fontSize: "11px" }} />
-                  <Bar dataKey="tickets" fill="#22d3ee" radius={[4, 4, 0, 0]} name="Received" />
-                  <Bar dataKey="resolved" fill="#34d399" radius={[4, 4, 0, 0]} name="Resolved" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Channel Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[160px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={channelDistribution} cx="50%" cy="50%" innerRadius={40} outerRadius={68} paddingAngle={2} dataKey="value">
-                    {channelDistribution.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: "12px", fontSize: "11px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 space-y-1.5">
-              {channelDistribution.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs text-muted-foreground">{item.name}</span>
-                  </div>
-                  <span className="text-xs font-semibold">{item.value}%</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Ticket Queue ── */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
             <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Ticket Queue
+              Support Velocity
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search tickets..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-8 w-48 rounded-lg border border-border bg-muted/30 pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                {search && (
-                  <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                Filters
-                <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? "rotate-180" : ""}`} />
-              </button>
-              <Link to="/app/helpdesk/tickets">
-                <Button size="sm" variant="ghost" className="h-8 text-xs">
-                  View All <BarChart3 className="h-3 w-3 ml-1" />
-                </Button>
-              </Link>
-            </div>
+            <p className="text-2xl font-black text-foreground">
+              Traffic Analysis
+            </p>
           </div>
-
-          {/* Filter pills */}
-          {showFilters && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status:</span>
-                {["all", "open", "pending", "resolved"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-semibold border transition-colors ${statusFilter === s ? "bg-primary/20 text-primary border-primary/40" : "bg-muted/30 text-muted-foreground border-border hover:text-foreground"}`}
-                  >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Priority:</span>
-                {["all", "urgent", "high", "medium", "low"].map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPriorityFilter(p)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-semibold border transition-colors ${priorityFilter === p ? "bg-primary/20 text-primary border-primary/40" : "bg-muted/30 text-muted-foreground border-border hover:text-foreground"}`}
-                  >
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <Activity className="h-4 w-4 text-muted-foreground/40" />
         </CardHeader>
-
-        {/* Bulk Action Bar */}
-        {someSelected && (
-          <div className="mx-4 mb-3 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-            <span className="text-xs font-semibold text-primary">{selected.size} selected</span>
-            <div className="flex-1" />
-            <div className="flex items-center gap-1.5">
-              <select
-                value={bulkAssignAgent}
-                onChange={(e) => setBulkAssignAgent(e.target.value)}
-                className="h-7 rounded-md border border-border bg-card text-xs px-2 focus:outline-none focus:ring-1 focus:ring-primary"
+        <CardContent>
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={[
+                  { time: "08:00", open: openCount, closed: closedCount },
+                  {
+                    time: "Now",
+                    open: inProgressCount,
+                    closed: completedCount,
+                  },
+                ]}
               >
-                <option value="">Assign to…</option>
-                {agents.map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
-              {bulkAssignAgent && (
-                <button
-                  onClick={() => { setBulkAssignAgent(""); setSelected(new Set()); }}
-                  className="inline-flex items-center gap-1 rounded-md bg-primary px-3 h-7 text-xs font-semibold text-primary-foreground"
-                >
-                  <UserCheck className="h-3 w-3" /> Assign
-                </button>
-              )}
-              <button
-                onClick={bulkResolve}
-                className="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 border border-emerald-500/30 px-3 h-7 text-xs font-semibold text-emerald-400"
-              >
-                <CheckCircle2 className="h-3 w-3" /> Resolve
-              </button>
-              <button
-                onClick={() => setSelected(new Set())}
-                className="inline-flex items-center gap-1 rounded-md bg-muted/40 border border-border px-3 h-7 text-xs font-medium text-muted-foreground"
-              >
-                <X className="h-3 w-3" /> Clear
-              </button>
-            </div>
-          </div>
-        )}
-
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3 w-10">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="rounded border-border"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ID</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subject</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Priority</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SLA</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Requester</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assigned To</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Created</th>
-                  <th className="px-4 py-3 w-10" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                      No tickets match your filters.
-                    </td>
-                  </tr>
-                )}
-                {filtered.map((ticket) => {
-                  const sla = slaLabel(ticket.slaMinutes);
-                  return (
-                    <tr
-                      key={ticket.id}
-                      className={`border-b border-border transition-colors cursor-pointer ${selected.has(ticket.id) ? "bg-primary/5" : "hover:bg-muted/30"}`}
-                    >
-                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); toggleSelect(ticket.id); }}>
-                        <input type="checkbox" checked={selected.has(ticket.id)} onChange={() => toggleSelect(ticket.id)} className="rounded border-border" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs font-semibold text-muted-foreground">{ticket.id}</span>
-                      </td>
-                      <td className="px-4 py-3 max-w-[240px]">
-                        <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
-                        <div className="flex gap-1 mt-1">
-                          {ticket.tags.slice(0, 2).map((tag) => (
-                            <span key={tag} className="rounded-full bg-muted/40 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">{tag}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${statusColor(ticket.status)}`}>
-                          {ticket.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${priorityColor(ticket.priority)}`}>
-                          {ticket.priority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {ticket.status !== "resolved" ? (
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${sla.bg} ${sla.color}`}>
-                            <Clock className="h-2.5 w-2.5" />
-                            {sla.text}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{ticket.requester}</td>
-                      <td className="px-4 py-3">
-                        {ticket.assignedTo === "Unassigned" ? (
-                          <button
-                            onClick={() => setAssignModal(ticket.id)}
-                            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                          >
-                            <Plus className="h-2.5 w-2.5" /> Assign
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setAssignModal(ticket.id)}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {ticket.assignedTo}
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{ticket.createdAt}</td>
-                      <td className="px-4 py-3">
-                        <Link to="/app/helpdesk/tickets">
-                          <button className="rounded-md p-1.5 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
-                            <Zap className="h-3.5 w-3.5" />
-                          </button>
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">{filtered.length} of {allTickets.length} tickets</span>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Showing all</span>
-            </div>
+                <defs>
+                  <linearGradient id="colorOpen" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="rgba(255,255,255,0.05)"
+                />
+                <XAxis
+                  dataKey="time"
+                  axisLine={false}
+                  tickLine={false}
+                  fontSize={10}
+                  stroke="#888"
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  fontSize={10}
+                  stroke="#888"
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "11px",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="open"
+                  stroke="#22d3ee"
+                  fillOpacity={1}
+                  fill="url(#colorOpen)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="closed"
+                  stroke="#22c55e"
+                  fillOpacity={0}
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Assign Modal ── */}
-      {assignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
-            <h3 className="font-bold text-lg text-foreground mb-1">Assign Ticket</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {allTickets.find((t) => t.id === assignModal)?.id} — {allTickets.find((t) => t.id === assignModal)?.subject.slice(0, 50)}…
-            </p>
-            <div className="space-y-2 mb-5">
-              {agents.map((agent) => (
-                <button
-                  key={agent}
-                  onClick={() => setAssignModal(null)}
-                  className="flex items-center gap-3 w-full rounded-xl border border-border p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                >
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                    {agent.split(" ").map((n) => n[0]).join("")}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search subject, description, queue..."
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
+          <option value="all">All statuses</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+          className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
+          <option value="all">All priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select
+          value={queueFilter}
+          onChange={(e) => setQueueFilter(e.target.value)}
+          className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
+          <option value="all">All queues</option>
+          <option value="general">General</option>
+          <option value="billing">Billing</option>
+          <option value="technical">Technical</option>
+        </select>
+      </div>
+
+      {filteredTickets.length === 0 ? (
+        <EmptyState
+          icon={<LifeBuoy className="h-12 w-12" />}
+          title="No tickets found"
+          description="Create your first support ticket or adjust filters."
+          action={{
+            label: "Create Ticket",
+            onClick: () => setIsCreateModalOpen(true),
+          }}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filteredTickets.map((ticket: any) => {
+            const nextStatus =
+              ticket.status === "open"
+                ? "in_progress"
+                : ticket.status === "in_progress"
+                  ? "closed"
+                  : "open";
+            const actionLabel =
+              ticket.status === "open"
+                ? "Start"
+                : ticket.status === "in_progress"
+                  ? "Close"
+                  : "Reopen";
+
+            return (
+              <Card key={ticket.id}>
+                <CardHeader className="py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                        {ticket.queue} · #{ticket.id.slice(-4).toUpperCase()}
+                      </p>
+                      <CardTitle className="text-sm font-bold">
+                        {ticket.subject}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="h-6 rounded border border-border bg-card text-[10px]"
+                        value={ticket.status}
+                        onChange={(e) =>
+                          updateStatus.mutate({
+                            id: ticket.id,
+                            status: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="open">Open</option>
+                        <option value="in_progress">Working</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                      <Badge
+                        variant={
+                          ticket.status === "closed"
+                            ? "outline"
+                            : ticket.status === "in_progress"
+                              ? "primary"
+                              : "success"
+                        }
+                        className="text-[9px] py-0 h-5"
+                      >
+                        {ticket.status}
+                      </Badge>
+                      <div
+                        className={`h-2 w-2 rounded-full ${ticket.priority === "high" ? "bg-destructive animate-pulse" : ticket.priority === "medium" ? "bg-warning" : "bg-muted"}`}
+                      />
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-foreground">{agent}</span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setAssignModal(null)}
-              className="w-full rounded-xl border border-border py-2 text-sm font-medium text-muted-foreground hover:bg-muted/30 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {ticket.description ? (
+                    <p className="text-foreground">{ticket.description}</p>
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <p className="text-muted-foreground">
+                      Queue:{" "}
+                      <span className="text-foreground">{ticket.queue}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Created:{" "}
+                      <span className="text-foreground">
+                        {ticket.createdAt
+                          ? new Date(ticket.createdAt).toLocaleString()
+                          : "-"}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Closed:{" "}
+                      <span className="text-foreground">
+                        {ticket.closedAt
+                          ? new Date(ticket.closedAt).toLocaleString()
+                          : "-"}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        updateStatus.mutate({
+                          id: ticket.id,
+                          status: nextStatus,
+                        })
+                      }
+                      loading={updateStatus.isPending}
+                    >
+                      {actionLabel}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => deleteTicket.mutate(ticket.id)}
+                      loading={deleteTicket.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <p className="mb-2 font-medium text-foreground text-sm">
+                      Ticket Notes
+                    </p>
+                    <div className="space-y-2">
+                      {(commentsByTicket[ticket.id] || [])
+                        .slice(0, 4)
+                        .map((comment: any) => (
+                          <div
+                            key={comment.id}
+                            className="flex items-start justify-between gap-2 rounded-md border border-border bg-card p-2"
+                          >
+                            <p className="text-muted-foreground text-xs">
+                              {comment.message}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => deleteComment.mutate(comment.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        ))}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={commentDrafts[ticket.id] || ""}
+                          onChange={(e) =>
+                            setCommentDrafts((prev) => ({
+                              ...prev,
+                              [ticket.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Add internal note..."
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const message = (
+                              commentDrafts[ticket.id] || ""
+                            ).trim();
+                            if (!message) {
+                              toast.error("Comment is required");
+                              return;
+                            }
+                            addComment.mutate(
+                              { ticketId: ticket.id, message },
+                              {
+                                onSuccess: () => {
+                                  setCommentDrafts((prev) => ({
+                                    ...prev,
+                                    [ticket.id]: "",
+                                  }));
+                                },
+                              },
+                            );
+                          }}
+                          loading={addComment.isPending}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {/* ── Quick Actions ── */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          { to: "/app/helpdesk/tickets", icon: <Ticket className="h-5 w-5" />, label: "All Tickets", sub: "View & manage", color: "bg-primary/10 text-primary" },
-          { to: "/app/helpdesk/queue", icon: <Headphones className="h-5 w-5" />, label: "Queue View", sub: "Agent queue", color: "bg-violet-500/10 text-violet-400" },
-          { to: "/app/helpdesk/knowledge", icon: <Search className="h-5 w-5" />, label: "Knowledge Base", sub: "Articles & docs", color: "bg-emerald-500/10 text-emerald-400" },
-          { to: "/app/helpdesk/surveys", icon: <MessageSquare className="h-5 w-5" />, label: "CSAT Surveys", sub: "Feedback", color: "bg-amber-500/10 text-amber-400" },
-        ].map((a) => (
-          <Link key={a.label} to={a.to}>
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${a.color}`}>{a.icon}</div>
-                <div>
-                  <p className="font-medium text-sm">{a.label}</p>
-                  <p className="text-xs text-muted-foreground">{a.sub}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <Card>
+        <CardHeader>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>Queue Operations</CardTitle>
+                <p className="text-muted-foreground text-sm">
+                  Manage live service queue tokens alongside tickets.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<ListOrdered className="h-4 w-4" />}
+                onClick={() => setIsQueueModalOpen(true)}
+              >
+                New Queue Token
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <Input
+                value={queueSearch}
+                onChange={(e) => setQueueSearch(e.target.value)}
+                placeholder="Search queue tokens..."
+              />
+              <select
+                value={queueStatusFilter}
+                onChange={(e) => setQueueStatusFilter(e.target.value)}
+                className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              >
+                <option value="all">All queue statuses</option>
+                <option value="waiting">Waiting</option>
+                <option value="called">Called</option>
+                <option value="completed">Completed</option>
+              </select>
+              <div className="flex items-center rounded-lg border border-border px-3 py-2 text-sm">
+                Waiting:{" "}
+                <span className="ml-1 font-semibold">{waitingCount}</span>
+              </div>
+              <div className="flex items-center rounded-lg border border-border px-3 py-2 text-sm">
+                Called:{" "}
+                <span className="ml-1 font-semibold">{calledCount}</span>
+                <span className="ml-3">Completed:</span>
+                <span className="ml-1 font-semibold">{completedCount}</span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredQueueTokens.length === 0 ? (
+            <EmptyState
+              icon={<ListOrdered className="h-12 w-12" />}
+              title="No queue tokens"
+              description="Create a token to start queue operations."
+              action={{
+                label: "Create Queue Token",
+                onClick: () => setIsQueueModalOpen(true),
+              }}
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredQueueTokens.map((token: any) => {
+                const nextStatus =
+                  token.status === "waiting"
+                    ? "called"
+                    : token.status === "called"
+                      ? "completed"
+                      : "waiting";
+                const actionLabel =
+                  token.status === "waiting"
+                    ? "Call"
+                    : token.status === "called"
+                      ? "Complete"
+                      : "Reopen";
+
+                return (
+                  <Card key={token.id}>
+                    <CardContent className="pt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            Token #{token.tokenNumber} - {token.serviceType}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            Created:{" "}
+                            {token.createdAt
+                              ? new Date(token.createdAt).toLocaleTimeString()
+                              : "-"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant={
+                              token.status === "completed"
+                                ? "success"
+                                : token.status === "called"
+                                  ? "primary"
+                                  : "outline"
+                            }
+                          >
+                            {token.status}
+                          </Badge>
+                          <Input
+                            className="w-40"
+                            value={
+                              counterDrafts[token.id] ?? token.counter ?? ""
+                            }
+                            onChange={(e) =>
+                              setCounterDrafts((prev) => ({
+                                ...prev,
+                                [token.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Counter (Desk-1)"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              updateQueueStatus.mutate({
+                                id: token.id,
+                                status: nextStatus,
+                                counter:
+                                  nextStatus === "called"
+                                    ? counterDrafts[token.id] ||
+                                      token.counter ||
+                                      "Desk-1"
+                                    : token.counter || undefined,
+                              })
+                            }
+                            loading={updateQueueStatus.isPending}
+                          >
+                            {actionLabel}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            leftIcon={<Trash2 className="h-4 w-4" />}
+                            onClick={() => deleteQueueToken.mutate(token.id)}
+                            loading={deleteQueueToken.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <FormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create Ticket"
+        submitText="Create Ticket"
+        loading={createTicket.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const subject = newTicket.subject.trim();
+          if (!subject) {
+            toast.error("Ticket subject is required");
+            return;
+          }
+          createTicket.mutate({
+            subject,
+            description: newTicket.description.trim() || undefined,
+            priority: newTicket.priority,
+            queue: newTicket.queue.trim() || "general",
+          });
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Subject" required>
+            <Input
+              value={newTicket.subject}
+              onChange={(e) =>
+                setNewTicket((prev) => ({ ...prev, subject: e.target.value }))
+              }
+              placeholder="Customer cannot access billing portal"
+              required
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={newTicket.description}
+              onChange={(e) =>
+                setNewTicket((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+              placeholder="Add context for support agent..."
+              rows={5}
+            />
+          </FormField>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
+            <p className="text-muted-foreground text-sm">
+              Use AI to classify priority, queue, and SLA target from ticket
+              context.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              leftIcon={<Sparkles className="h-4 w-4" />}
+              loading={aiTriageMutation.isPending}
+              onClick={() => {
+                const subject = newTicket.subject.trim();
+                const description = newTicket.description.trim();
+                if (!subject || !description) {
+                  toast.error(
+                    "Add subject and description before AI triage",
+                  );
+                  return;
+                }
+                aiTriageMutation.mutate({ subject, description });
+              }}
+            >
+              AI Triage
+            </Button>
+          </div>
+          {triageResult ? (
+            <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+              <p className="font-medium text-foreground">
+                AI summary: {triageResult.summary}
+              </p>
+              <p className="text-muted-foreground">
+                Suggested response: {triageResult.suggestedResponse}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="primary">
+                  Priority: {triageResult.priority}
+                </Badge>
+                <Badge variant="outline">Queue: {triageResult.queue}</Badge>
+                <Badge variant="warning">SLA: {triageResult.slaHours}h</Badge>
+              </div>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Priority">
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                value={newTicket.priority}
+                onChange={(e) =>
+                  setNewTicket((prev) => ({
+                    ...prev,
+                    priority: e.target.value as "low" | "medium" | "high",
+                  }))
+                }
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </FormField>
+            <FormField label="Queue">
+              <Input
+                value={newTicket.queue}
+                onChange={(e) =>
+                  setNewTicket((prev) => ({ ...prev, queue: e.target.value }))
+                }
+                placeholder="general"
+              />
+            </FormField>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        isOpen={isQueueModalOpen}
+        onClose={() => setIsQueueModalOpen(false)}
+        title="Create Queue Token"
+        submitText="Create Token"
+        loading={createQueueToken.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const serviceType = newToken.serviceType.trim();
+          if (!serviceType) {
+            toast.error("Service type is required");
+            return;
+          }
+          createQueueToken.mutate({
+            serviceType,
+            ticketId: newToken.ticketId.trim() || undefined,
+          });
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Service Type" required>
+            <Input
+              value={newToken.serviceType}
+              onChange={(e) =>
+                setNewToken((prev) => ({
+                  ...prev,
+                  serviceType: e.target.value,
+                }))
+              }
+              placeholder="general"
+              required
+            />
+          </FormField>
+          <FormField label="Related Ticket ID">
+            <Input
+              value={newToken.ticketId}
+              onChange={(e) =>
+                setNewToken((prev) => ({ ...prev, ticketId: e.target.value }))
+              }
+              placeholder="Optional ticket UUID"
+            />
+          </FormField>
+        </div>
+      </FormModal>
     </div>
   );
 }
 
-// ─── MetricCard ───────────────────────────────────────────────────────────────
-
-function MetricCard({
-  title, value, trend, icon, color, positive,
+function Metric({
+  title,
+  value,
+  icon,
+  trend,
+  color,
 }: {
-  title: string; value: string; trend: string; icon: React.ReactNode; color: string; positive: boolean;
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
+  color?: string;
 }) {
   return (
     <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
-            <p className="font-black text-2xl text-foreground mt-0.5">{value}</p>
-            <div className="mt-1 flex items-center gap-1">
-              {positive ? <TrendingUp className="h-3 w-3 text-emerald-400" /> : <TrendingDown className="h-3 w-3 text-rose-400" />}
-              <span className={`text-[10px] font-bold ${positive ? "text-emerald-400" : "text-rose-400"}`}>{trend}</span>
-            </div>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+              {title}
+            </p>
+            <p className="font-black text-2xl text-foreground mt-0.5">
+              {value}
+            </p>
+            {trend && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Zap className="h-2.5 w-2.5 text-primary/40" />
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {trend}
+                </span>
+              </div>
+            )}
           </div>
-          <div className={`rounded-xl bg-muted/30 p-2.5 ${color}`}>{icon}</div>
+          <div
+            className={`rounded-xl bg-muted/30 p-2.5 ${color || "text-primary"}`}
+          >
+            {icon || <LifeBuoy className="h-4 w-4" />}
+          </div>
         </div>
       </CardContent>
     </Card>
