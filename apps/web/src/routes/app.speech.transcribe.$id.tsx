@@ -5,32 +5,76 @@ import {
   Play,
   Pause,
   Download,
-  Copy,
-  Clock,
-  User,
-  Volume2,
-  MessageSquare,
   BarChart3,
+  User,
+  Clock,
+  Loader2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/orpc";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/speech/transcribe/$id")({
   component: TranscriptionDetailPage,
 });
 
-const MOCK_TRANSCRIPT = [
-  { id: 1, speaker: "Speaker 1", start: "0:00", end: "0:15", text: "Good morning, everyone. Let's start today's sales meeting." },
-  { id: 2, speaker: "Speaker 2", start: "0:15", end: "0:32", text: "Thanks for joining. I wanted to share our Q4 performance update." },
-  { id: 3, speaker: "Speaker 1", start: "0:32", end: "0:48", text: "Great. Let's dive right in. What were our key achievements this quarter?" },
-  { id: 4, speaker: "Speaker 2", start: "0:48", end: "1:15", text: "We exceeded our targets by 15%, bringing in 2.3 million in revenue. Our enterprise segment grew by 23%." },
-  { id: 5, speaker: "Speaker 3", start: "1:15", end: "1:30", text: "That's impressive! What drove that growth?" },
-  { id: 6, speaker: "Speaker 2", start: "1:30", end: "2:05", text: "Mainly our new product launch and improved customer retention. We also saw strong performance in the West Coast region." },
-];
-
 function TranscriptionDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const { data: transcription, isLoading, error } = useQuery({
+    queryKey: ["speech", "transcription", id],
+    queryFn: () => api["speech"]["transcriptions.get"]({ id }),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !transcription) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <p className="text-muted-foreground">Transcription not found or failed to load.</p>
+        <Button variant="ghost" onClick={() => navigate({ to: "/app/speech/transcribe" })}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Transcriptions
+        </Button>
+      </div>
+    );
+  }
+
+  // Parse segments from the stored transcript if available
+  const segments: Array<{ id: number; speaker: string; start: string; end: string; text: string }> =
+    transcription.segments || [];
+
+  // Format duration from seconds
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "—";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const title = transcription.title || "Untitled Transcription";
+  const createdAt = transcription.createdAt
+    ? new Date(transcription.createdAt).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
+  const duration = formatDuration(transcription.audioDuration);
+  const confidence = transcription.confidence
+    ? `${(transcription.confidence * 100).toFixed(1)}%`
+    : "—";
+  const language = transcription.language || "en";
+  const status = transcription.status || "pending";
+  const fullText = transcription.transcript || transcription.text || "";
 
   return (
     <div className="space-y-6">
@@ -40,17 +84,26 @@ function TranscriptionDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h2 className="font-bold text-xl">Sales Call - Q4 Review</h2>
-            <p className="text-muted-foreground text-sm">March 18, 2024 • 45:23 duration</p>
+            <h2 className="font-bold text-xl">{title}</h2>
+            <p className="text-muted-foreground text-sm">
+              {createdAt}
+              {duration !== "—" && ` • ${duration} duration`}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Button variant="primary" leftIcon={isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />} onClick={() => setIsPlaying(!isPlaying)}>
-            {isPlaying ? "Pause" : "Play Audio"}
-          </Button>
+          {transcription.sourceUrl && (
+            <Button
+              variant="primary"
+              leftIcon={isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              onClick={() => setIsPlaying(!isPlaying)}
+            >
+              {isPlaying ? "Pause" : "Play Audio"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -59,111 +112,129 @@ function TranscriptionDetailPage() {
         <div className="lg:col-span-3">
           <Card className="border-border/60">
             <CardContent className="p-6">
-              <div className="space-y-4">
-                {MOCK_TRANSCRIPT.map((segment) => (
-                  <div key={segment.id} className="flex gap-4">
-                    <div className="w-20 shrink-0 text-right">
-                      <p className="text-xs text-muted-foreground">{segment.start}</p>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                          segment.speaker === "Speaker 1" ? "bg-blue-100 text-blue-700" :
-                          segment.speaker === "Speaker 2" ? "bg-green-100 text-green-700" :
-                          "bg-purple-100 text-purple-700"
-                        }`}>
-                          {segment.speaker === "Speaker 1" ? "1" : segment.speaker === "Speaker 2" ? "2" : "3"}
-                        </span>
-                        <span className="text-sm font-medium">{segment.speaker}</span>
+              {status === "pending" || status === "processing" ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <p className="text-muted-foreground capitalize">{status}...</p>
+                </div>
+              ) : segments.length > 0 ? (
+                <div className="space-y-4">
+                  {segments.map((segment, idx) => (
+                    <div key={segment.id ?? idx} className="flex gap-4">
+                      <div className="w-20 shrink-0 text-right">
+                        <p className="text-xs text-muted-foreground">{segment.start}</p>
                       </div>
-                      <p className="text-sm pl-8">{segment.text}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                            idx % 3 === 0 ? "bg-blue-100 text-blue-700" :
+                            idx % 3 === 1 ? "bg-green-100 text-green-700" :
+                            "bg-purple-100 text-purple-700"
+                          }`}>
+                            {(idx % 3) + 1}
+                          </span>
+                          <span className="text-sm font-medium">{segment.speaker || `Speaker ${(idx % 3) + 1}`}</span>
+                        </div>
+                        <p className="text-sm pl-8">{segment.text}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : fullText ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{fullText}</p>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  No transcript content available yet.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Metadata */}
           <Card className="border-border/60">
             <CardContent className="p-4 space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Accuracy</span>
-                <Badge className="bg-green-100 text-green-800">98.2%</Badge>
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge className={
+                  status === "completed" ? "bg-green-100 text-green-800" :
+                  status === "failed" ? "bg-red-100 text-red-800" :
+                  "bg-amber-100 text-amber-800"
+                }>
+                  {status}
+                </Badge>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Speakers</span>
-                <span className="text-sm font-medium">3</span>
-              </div>
+              {confidence !== "—" && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Accuracy</span>
+                  <Badge className="bg-green-100 text-green-800">{confidence}</Badge>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Language</span>
-                <span className="text-sm font-medium">English</span>
+                <span className="text-sm font-medium uppercase">{language}</span>
               </div>
+              {duration !== "—" && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Duration</span>
+                  <span className="text-sm font-medium">{duration}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Duration</span>
-                <span className="text-sm font-medium">45:23</span>
+                <span className="text-sm text-muted-foreground">Source</span>
+                <span className="text-sm font-medium capitalize">
+                  {transcription.sourceType?.replace("_", " ") || "—"}
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/60">
-            <CardContent className="p-4">
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" /> Sentiment
-              </h3>
-              <div className="space-y-2">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Positive</span>
-                    <span>72%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: "72%" }} />
-                  </div>
+          {/* Custom Vocabulary */}
+          {transcription.customVocabulary && transcription.customVocabulary.length > 0 && (
+            <Card className="border-border/60">
+              <CardContent className="p-4">
+                <h3 className="font-medium mb-3 flex items-center gap-2 text-sm">
+                  <BarChart3 className="h-4 w-4" /> Custom Vocabulary
+                </h3>
+                <div className="flex flex-wrap gap-1">
+                  {transcription.customVocabulary.map((term: string) => (
+                    <span key={term} className="px-2 py-0.5 rounded-full bg-muted/50 text-xs">
+                      {term}
+                    </span>
+                  ))}
                 </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Neutral</span>
-                    <span>23%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-400 rounded-full" style={{ width: "23%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Negative</span>
-                    <span>5%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-red-500 rounded-full" style={{ width: "5%" }} />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="border-border/60">
-            <CardContent className="p-4">
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <User className="h-4 w-4" /> Speakers
-              </h3>
-              <div className="space-y-2">
-                {["Sarah (Sales Manager)", "Michael (VP Sales)", "Emily (Account Exec)"].map((speaker, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs ${
-                      i === 0 ? "bg-blue-100 text-blue-700" : i === 1 ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700"
-                    }`}>
-                      {i + 1}
-                    </div>
-                    <span className="text-sm">{speaker}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Speakers (if diarization data available) */}
+          {segments.length > 0 && (
+            <Card className="border-border/60">
+              <CardContent className="p-4">
+                <h3 className="font-medium mb-3 flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4" /> Speakers Detected
+                </h3>
+                <div className="space-y-2">
+                  {Array.from(new Set(segments.map((s) => s.speaker || "Unknown"))).map(
+                    (speaker, i) => (
+                      <div key={speaker} className="flex items-center gap-2">
+                        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs ${
+                          i === 0 ? "bg-blue-100 text-blue-700" :
+                          i === 1 ? "bg-green-100 text-green-700" :
+                          "bg-purple-100 text-purple-700"
+                        }`}>
+                          {i + 1}
+                        </div>
+                        <span className="text-sm">{speaker}</span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

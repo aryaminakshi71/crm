@@ -1,17 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-} from "@crm/ui";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Card, CardContent } from "@crm/ui";
 import {
   ArrowLeft,
   MapPin,
-  Clock,
-  User,
   Phone,
   Mail,
-  Calendar,
-  FileText,
   Camera,
   Signature,
   CheckCircle2,
@@ -19,68 +12,75 @@ import {
   Package,
   DollarSign,
   MessageSquare,
-  MoreVertical,
   Play,
-  Pause,
   Check,
-  History,
+  User,
+  Wrench,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/orpc";
 
 export const Route = createFileRoute("/app/field-service/jobs/$id")({
   component: JobDetail,
 });
 
-const job = {
-  id: "JOB-1042",
-  title: "HVAC System Repair",
-  customer: "Acme Corporation",
-  customerId: "CUST-001",
-  address: "123 Business Park Dr, Suite 400, Manhattan, NY 10001",
-  phone: "+1 (555) 987-6543",
-  email: "facilities@acmecorp.com",
-  status: "in_progress",
-  priority: "high",
-  scheduledTime: "10:30 AM",
-  scheduledDate: "2026-03-20",
-  technician: "Jane Doe",
-  technicianId: "2",
-  type: "repair",
-  description: "Main HVAC unit not cooling properly. Reports indicate warm air coming from vents. Customer mentions intermittent issue for past week.",
-  estimatedDuration: "2 hours",
-  actualDuration: null,
-  sla: {
-    responseDeadline: "11:00 AM",
-    resolutionDeadline: "3:00 PM",
-    status: "on_track",
-  },
-  timeline: [
-    { time: "9:45 AM", event: "Job dispatched to Jane Doe", type: "dispatch" },
-    { time: "9:50 AM", event: "Technician en route", type: "en_route" },
-    { time: "10:15 AM", event: "Technician arrived on site", type: "arrived" },
-    { time: "10:20 AM", event: "Diagnosis started - compressor issue suspected", type: "update" },
-    { time: "10:45 AM", event: "Customer notified of diagnosis and estimated cost", type: "customer_update" },
-  ],
-  parts: [
-    { name: "Compressor Scroll", sku: "COMP-001", qty: 1, price: 450, status: "pending" },
-    { name: "Refrigerant R-410A", sku: "REF-410A", qty: 2, price: 120, status: "installed" },
-  ],
-  equipment: [
-    { name: "Carrier 24ACC636A003", type: "HVAC Unit", serial: "CR-2024-12345", installed: "2019-06-15", warranty: "2026-06-14" },
-  ],
-  photos: [
-    { id: 1, url: "/api/placeholder/200/200", caption: "Indoor unit thermostat", timestamp: "10:25 AM" },
-    { id: 2, url: "/api/placeholder/200/200", caption: "Outdoor unit serial plate", timestamp: "10:26 AM" },
-  ],
-  signature: null,
-  invoice: null,
-  payments: [],
-  notes: [
-    { author: "Jane Doe", time: "10:20 AM", text: "Unit is 7 years old, may need full replacement soon" },
-    { author: "Dispatch", time: "9:45 AM", text: "Priority customer - expedited response required" },
-  ],
-};
-
 function JobDetail() {
+  const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const { data: job, isLoading } = useQuery({
+    queryKey: ["fieldService", "job", id],
+    queryFn: () => api.fieldService.getJob({ id }),
+  });
+
+  const startMutation = useMutation({
+    mutationFn: () => api.fieldService.startJob({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fieldService", "job", id] });
+      queryClient.invalidateQueries({ queryKey: ["fieldService", "jobs"] });
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => api.fieldService.completeJob({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fieldService", "job", id] });
+      queryClient.invalidateQueries({ queryKey: ["fieldService", "jobs"] });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 bg-muted/30 rounded-lg animate-pulse" />
+        <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+        <div className="h-64 bg-muted/30 rounded-lg animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-muted-foreground">Job not found</p>
+        <Link to="/app/field-service/jobs" className="text-primary hover:underline mt-2 inline-block">
+          Back to Jobs
+        </Link>
+      </div>
+    );
+  }
+
+  const statusColor =
+    job.status === "completed" ? "bg-green-500/10 text-green-500" :
+    job.status === "in_progress" ? "bg-blue-500/10 text-blue-500" :
+    job.status === "scheduled" ? "bg-amber-500/10 text-amber-500" :
+    "bg-muted/10 text-muted-foreground";
+
+  const priorityColor =
+    job.priority === "high" || job.priority === "urgent" ? "bg-red-500/10 text-red-500" :
+    job.priority === "medium" ? "bg-amber-500/10 text-amber-500" :
+    "bg-blue-500/10 text-blue-500";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -90,20 +90,11 @@ function JobDetail() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">{job.id}</h2>
-            <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              job.status === "completed" ? "bg-green-500/10 text-green-500" :
-              job.status === "in_progress" ? "bg-blue-500/10 text-blue-500" :
-              job.status === "scheduled" ? "bg-amber-500/10 text-amber-500" :
-              "bg-muted/10 text-muted-foreground"
-            }`}>
-              {job.status.replace("_", " ")}
+            <h2 className="text-xl font-bold text-foreground">{job.jobNumber || job.id.slice(0, 8)}</h2>
+            <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusColor}`}>
+              {job.status?.replace("_", " ")}
             </span>
-            <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              job.priority === "high" ? "bg-red-500/10 text-red-500" :
-              job.priority === "medium" ? "bg-amber-500/10 text-amber-500" :
-              "bg-blue-500/10 text-blue-500"
-            }`}>
+            <span className={`rounded-full px-3 py-1 text-sm font-medium ${priorityColor}`}>
               {job.priority} priority
             </span>
           </div>
@@ -115,43 +106,26 @@ function JobDetail() {
             Message
           </button>
           {job.status === "in_progress" ? (
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors">
+            <button
+              onClick={() => completeMutation.mutate()}
+              disabled={completeMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+            >
               <Check className="h-4 w-4" />
-              Complete Job
+              {completeMutation.isPending ? "Completing..." : "Complete Job"}
             </button>
           ) : job.status === "scheduled" ? (
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors">
+            <button
+              onClick={() => startMutation.mutate()}
+              disabled={startMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+            >
               <Play className="h-4 w-4" />
-              Start Job
+              {startMutation.isPending ? "Starting..." : "Start Job"}
             </button>
           ) : null}
         </div>
       </div>
-
-      {/* SLA Status */}
-      <Card className={job.sla.status === "at_risk" ? "border-amber-500/50 bg-amber-500/5" : "border-green-500/50 bg-green-500/5"}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {job.sla.status === "at_risk" ? (
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-              ) : (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              )}
-              <div>
-                <p className="font-medium text-foreground">SLA Status: {job.sla.status === "at_risk" ? "At Risk" : "On Track"}</p>
-                <p className="text-xs text-muted-foreground">
-                  Response deadline: {job.sla.responseDeadline} | Resolution deadline: {job.sla.resolutionDeadline}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium">Est. Duration: {job.estimatedDuration}</p>
-              <p className="text-xs text-muted-foreground">Started: {job.timeline[job.timeline.length - 1]?.time}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -161,83 +135,69 @@ function JobDetail() {
             <CardContent className="p-6">
               <h3 className="font-bold text-foreground mb-4">Job Information</h3>
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Description</p>
-                  <p className="text-sm">{job.description}</p>
-                </div>
+                {job.description && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Description</p>
+                    <p className="text-sm">{job.description}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Type</p>
-                    <p className="text-sm font-medium capitalize">{job.type}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Scheduled Start</p>
+                    <p className="text-sm">
+                      {job.scheduledStart
+                        ? new Date(job.scheduledStart).toLocaleString()
+                        : "Not scheduled"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Scheduled</p>
-                    <p className="text-sm">{job.scheduledDate} at {job.scheduledTime}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Scheduled End</p>
+                    <p className="text-sm">
+                      {job.scheduledEnd
+                        ? new Date(job.scheduledEnd).toLocaleString()
+                        : "—"}
+                    </p>
                   </div>
+                  {job.actualStart && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Actual Start</p>
+                      <p className="text-sm">{new Date(job.actualStart).toLocaleString()}</p>
+                    </div>
+                  )}
+                  {job.actualEnd && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Actual End</p>
+                      <p className="text-sm">{new Date(job.actualEnd).toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Timeline */}
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <h3 className="font-bold text-foreground mb-4">Activity Timeline</h3>
-              <div className="space-y-4">
-                {job.timeline.map((event, idx) => (
-                  <div key={idx} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        event.type === "dispatch" ? "bg-blue-500" :
-                        event.type === "en_route" ? "bg-amber-500" :
-                        event.type === "arrived" ? "bg-green-500" :
-                        "bg-muted-foreground"
-                      }`} />
-                      {idx < job.timeline.length - 1 && <div className="w-0.5 h-full bg-border/40 mt-1" />}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <p className="text-sm font-medium">{event.event}</p>
-                      <p className="text-xs text-muted-foreground">{event.time}</p>
+                {job.tags && job.tags.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Tags</p>
+                    <div className="flex flex-wrap gap-1">
+                      {job.tags.map((tag: string) => (
+                        <span key={tag} className="px-2 py-0.5 rounded-full bg-muted/50 text-xs">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Parts Used */}
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Parts Used</h3>
-                <button className="text-xs text-primary hover:underline">Add Part</button>
-              </div>
-              <div className="space-y-3">
-                {job.parts.map((part, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border/40">
-                    <div className="flex items-center gap-3">
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-sm">{part.name}</p>
-                        <p className="text-xs text-muted-foreground">SKU: {part.sku}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm">Qty: {part.qty}</span>
-                      <span className="text-sm font-medium">${part.price}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${
-                        part.status === "installed" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"
-                      }`}>
-                        {part.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Notes */}
+          {job.notes && (
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-foreground mb-3">Notes</h3>
+                <p className="text-sm text-muted-foreground">{job.notes}</p>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Photos & Proof */}
+          {/* Proof of Service */}
           <Card className="border-border/60">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -248,24 +208,11 @@ function JobDetail() {
                 </button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {job.photos.map((photo) => (
-                  <div key={photo.id} className="relative rounded-lg border border-border/40 overflow-hidden">
-                    <div className="aspect-square bg-muted/30 flex items-center justify-center">
-                      <Camera className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <p className="text-white text-xs">{photo.caption}</p>
-                      <p className="text-white/60 text-xs">{photo.timestamp}</p>
-                    </div>
-                  </div>
-                ))}
                 <button className="aspect-square rounded-lg border-2 border-dashed border-border/40 flex flex-col items-center justify-center hover:bg-muted/30 transition-colors">
                   <Camera className="h-8 w-8 text-muted-foreground mb-2" />
                   <span className="text-xs text-muted-foreground">Add Photo</span>
                 </button>
               </div>
-
-              {/* Signature */}
               <div className="mt-4 pt-4 border-t border-border/40">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium">Customer Signature</h4>
@@ -275,11 +222,7 @@ function JobDetail() {
                   </button>
                 </div>
                 <div className="h-24 rounded-lg border border-border/40 bg-muted/20 flex items-center justify-center">
-                  {job.signature ? (
-                    <p className="text-muted-foreground text-sm">Signature captured</p>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">No signature captured yet</p>
-                  )}
+                  <p className="text-muted-foreground text-sm">No signature captured yet</p>
                 </div>
               </div>
             </CardContent>
@@ -293,115 +236,75 @@ function JobDetail() {
             <CardContent className="p-6">
               <h3 className="font-bold text-foreground mb-4">Customer</h3>
               <div className="space-y-3">
-                <Link to="/app/crm" className="block">
-                  <p className="font-medium text-primary hover:underline">{job.customer}</p>
-                  <p className="text-xs text-muted-foreground">{job.customerId}</p>
-                </Link>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{job.address}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{job.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{job.email}</span>
-                </div>
+                {job.customerName && (
+                  <p className="font-medium">{job.customerName}</p>
+                )}
+                {job.customerAddress && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{job.customerAddress}</span>
+                  </div>
+                )}
+                {job.customerPhone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{job.customerPhone}</span>
+                  </div>
+                )}
+                {job.customerEmail && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{job.customerEmail}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* Technician */}
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <h3 className="font-bold text-foreground mb-4">Technician</h3>
-              <Link to="/app/field-service/technicians/$id" params={{ id: job.technicianId }} className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-primary hover:underline">{job.technician}</p>
-                  <p className="text-xs text-muted-foreground">View profile</p>
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Equipment */}
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Equipment</h3>
-                <Link to="/app/field-service/equipment" className="text-xs text-primary hover:underline">Manage</Link>
-              </div>
-              <div className="space-y-3">
-                {job.equipment.map((eq, idx) => (
-                  <div key={idx} className="p-3 rounded-lg border border-border/40">
-                    <p className="font-medium text-sm">{eq.name}</p>
-                    <p className="text-xs text-muted-foreground">{eq.type}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Serial: {eq.serial}</p>
-                    <p className="text-xs text-muted-foreground">Installed: {eq.installed}</p>
-                    <p className="text-xs text-amber-500 mt-1">Warranty: {eq.warranty}</p>
+          {job.technicianId && (
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-foreground mb-4">Technician</h3>
+                <Link
+                  to="/app/field-service/technicians/$id"
+                  params={{ id: job.technicianId }}
+                  className="flex items-center gap-3"
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div>
+                    <p className="font-medium text-primary hover:underline">View Profile</p>
+                    <p className="text-xs text-muted-foreground">{job.technicianId}</p>
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Invoice & Payment */}
           <Card className="border-border/60">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-foreground">Invoice</h3>
-                <Link to="/app/field-service/invoicing" className="text-xs text-primary hover:underline">View All</Link>
-              </div>
-              {job.invoice ? (
-                <div className="p-3 rounded-lg border border-green-500/20 bg-green-500/5">
-                  <p className="font-medium text-green-600">INV-{job.invoice}</p>
-                  <p className="text-xs text-muted-foreground">Generated</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span>Parts</span>
-                    <span>$690</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Labor (2 hrs)</span>
-                    <span>$180</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium pt-2 border-t">
-                    <span>Total</span>
-                    <span>$870</span>
-                  </div>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-                    <DollarSign className="h-4 w-4" />
-                    Generate Invoice
-                  </button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Notes */}
-          <Card className="border-border/60">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Notes</h3>
-                <button className="text-xs text-primary hover:underline">Add Note</button>
+                <Link to="/app/field-service/invoicing" className="text-xs text-primary hover:underline">
+                  View All
+                </Link>
               </div>
               <div className="space-y-3">
-                {job.notes.map((note, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-muted/30">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium">{note.author}</span>
-                      <span className="text-xs text-muted-foreground">{note.time}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{note.text}</p>
-                  </div>
-                ))}
+                <div className="flex justify-between text-sm">
+                  <span>Labor</span>
+                  <span>—</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium pt-2 border-t">
+                  <span>Total</span>
+                  <span>—</span>
+                </div>
+                <button className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+                  <DollarSign className="h-4 w-4" />
+                  Generate Invoice
+                </button>
               </div>
             </CardContent>
           </Card>

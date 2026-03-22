@@ -1,37 +1,73 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-} from "@crm/ui";
+import { Card, CardContent } from "@crm/ui";
 import {
   Rocket,
   Search,
-  Filter,
-  ArrowRight,
   CheckCircle2,
   AlertCircle,
   Clock,
   RotateCcw,
-  Play,
-  Pause,
+  ArrowRight,
+  Filter,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
 
 export const Route = createFileRoute("/app/devops/deployments")({
   component: Deployments,
 });
 
-const deployments = [
-  { id: 1, application: "frontend-app", version: "v2.1.45", environment: "production", status: "success", deployedBy: "John Smith", deployedAt: "Mar 20, 2026 8:30 AM", duration: "2m 15s", commit: "abc1234" },
-  { id: 2, application: "backend-api", version: "v3.2.12", environment: "production", status: "success", deployedBy: "Jane Doe", deployedAt: "Mar 20, 2026 8:15 AM", duration: "3m 45s", commit: "def5678" },
-  { id: 3, application: "frontend-app", version: "v2.1.44", environment: "staging", status: "success", deployedBy: "Mike Wilson", deployedAt: "Mar 20, 2026 7:45 AM", duration: "2m 20s", commit: "ghi9012" },
-  { id: 4, application: "data-pipeline", version: "v1.5.8", environment: "production", status: "failed", deployedBy: "Sarah Johnson", deployedAt: "Mar 20, 2026 7:30 AM", duration: "1m 30s", commit: "jkl3456", error: "Health check failed" },
-  { id: 5, application: "mobile-app", version: "v2.1.0", environment: "production", status: "success", deployedBy: "Tom Brown", deployedAt: "Mar 19, 2026 6:00 PM", duration: "4m 10s", commit: "mno7890" },
-  { id: 6, application: "backend-api", version: "v3.2.11", environment: "staging", status: "success", deployedBy: "Lisa Chen", deployedAt: "Mar 19, 2026 4:30 PM", duration: "3m 50s", commit: "pqr2345" },
-];
-
-const environments = ["production", "staging", "development", "qa"];
-
 function Deployments() {
+  const queryClient = useQueryClient();
+  const [environmentFilter, setEnvironmentFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["devops", "deployments", environmentFilter, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: "1", limit: "50" });
+      if (environmentFilter) params.set("environment", environmentFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      const res = await fetch(`${API_BASE}/devops/deployments?${params}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch deployments");
+      return res.json();
+    },
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: async (deploymentId: string) => {
+      const res = await fetch(`${API_BASE}/devops/deployments/${deploymentId}/rollback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Rollback failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "deployments"] });
+    },
+  });
+
+  const deployments = (data?.data || []).filter((d: any) =>
+    search
+      ? d.version?.toLowerCase().includes(search.toLowerCase()) ||
+        d.environment?.toLowerCase().includes(search.toLowerCase())
+      : true,
+  );
+
+  const total = data?.total ?? 0;
+  const successful = deployments.filter((d: any) => d.status === "success" || d.status === "deployed").length;
+  const failed = deployments.filter((d: any) => d.status === "failed").length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -59,28 +95,28 @@ function Deployments() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Rocket className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">142</p>
+            <p className="text-2xl font-bold">{total}</p>
             <p className="text-xs text-muted-foreground">Total Deployments</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">136</p>
+            <p className="text-2xl font-bold">{successful}</p>
             <p className="text-xs text-muted-foreground">Successful</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <AlertCircle className="h-5 w-5 text-red-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">4</p>
+            <p className="text-2xl font-bold">{failed}</p>
             <p className="text-xs text-muted-foreground">Failed</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Clock className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">2.8m</p>
+            <p className="text-2xl font-bold">—</p>
             <p className="text-xs text-muted-foreground">Avg Duration</p>
           </CardContent>
         </Card>
@@ -93,81 +129,124 @@ function Deployments() {
           <input
             type="text"
             placeholder="Search deployments..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-border bg-card pl-10 pr-4 py-2 text-sm"
           />
         </div>
-        <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <select
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          value={environmentFilter}
+          onChange={(e) => setEnvironmentFilter(e.target.value)}
+        >
           <option value="">All Environments</option>
-          {environments.map((env) => (
-            <option key={env} value={env}>{env}</option>
-          ))}
+          <option value="production">Production</option>
+          <option value="staging">Staging</option>
+          <option value="development">Development</option>
+          <option value="qa">QA</option>
         </select>
-        <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <select
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option value="">All Status</option>
           <option value="success">Success</option>
           <option value="failed">Failed</option>
           <option value="pending">Pending</option>
+          <option value="rolled_back">Rolled Back</option>
         </select>
       </div>
 
       {/* Deployments List */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="divide-y divide-border/40">
-            {deployments.map((deployment) => (
-              <div key={deployment.id} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
-                <div className={`p-2 rounded-lg ${
-                  deployment.status === "success" ? "bg-green-500/10" :
-                  deployment.status === "failed" ? "bg-red-500/10" :
-                  "bg-blue-500/10"
-                }`}>
-                  {deployment.status === "success" ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : deployment.status === "failed" ? (
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <Clock className="h-5 w-5 text-blue-500" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground">{deployment.application}</p>
-                    <span className="text-xs text-muted-foreground font-mono">{deployment.version}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      deployment.environment === "production" ? "bg-red-500/10 text-red-500" :
-                      deployment.environment === "staging" ? "bg-blue-500/10 text-blue-500" :
-                      "bg-green-500/10 text-green-500"
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-16 rounded-lg bg-muted/30 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <Card className="border-border/60">
+          <CardContent className="p-0">
+            {deployments.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No deployments found</div>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {deployments.map((deployment: any) => (
+                  <div key={deployment.id} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                    <div className={`p-2 rounded-lg ${
+                      deployment.status === "success" || deployment.status === "deployed" ? "bg-green-500/10" :
+                      deployment.status === "failed" ? "bg-red-500/10" :
+                      "bg-blue-500/10"
                     }`}>
-                      {deployment.environment}
-                    </span>
+                      {deployment.status === "success" || deployment.status === "deployed" ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : deployment.status === "failed" ? (
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-blue-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-foreground font-mono text-sm">{deployment.version || "—"}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          deployment.environment === "production" ? "bg-red-500/10 text-red-500" :
+                          deployment.environment === "staging" ? "bg-blue-500/10 text-blue-500" :
+                          "bg-green-500/10 text-green-500"
+                        }`}>
+                          {deployment.environment || "—"}
+                        </span>
+                        {deployment.rolloutStrategy && (
+                          <span className="text-xs text-muted-foreground">{deployment.rolloutStrategy}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {deployment.previousVersion && `Prev: ${deployment.previousVersion} — `}
+                        {deployment.deployedBy || "System"}
+                      </p>
+                    </div>
+                    <div className="text-right min-w-[150px]">
+                      <p className="text-sm">
+                        {deployment.deployedAt
+                          ? new Date(deployment.deployedAt).toLocaleString()
+                          : new Date(deployment.createdAt).toLocaleString()}
+                      </p>
+                      <p className={`text-xs font-medium ${
+                        deployment.status === "success" || deployment.status === "deployed" ? "text-green-600" :
+                        deployment.status === "failed" ? "text-red-600" :
+                        "text-muted-foreground"
+                      }`}>
+                        {deployment.status}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {(deployment.status === "success" || deployment.status === "deployed") &&
+                        deployment.previousVersion && (
+                          <button
+                            onClick={() => rollbackMutation.mutate(deployment.id)}
+                            disabled={rollbackMutation.isPending}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors"
+                            title="Rollback"
+                          >
+                            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        )}
+                      <Link
+                        to="/app/devops/deployments/$id"
+                        params={{ id: deployment.id }}
+                        className="p-2 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {deployment.error || `Deployed by ${deployment.deployedBy} - ${deployment.commit}`}
-                  </p>
-                </div>
-                <div className="text-right min-w-[150px]">
-                  <p className="text-sm">{deployment.deployedAt}</p>
-                  <p className="text-xs text-muted-foreground">{deployment.duration}</p>
-                </div>
-                <div className="flex gap-1">
-                  {deployment.status === "success" && (
-                    <button className="p-2 rounded-lg hover:bg-muted transition-colors" title="Rollback">
-                      <RotateCcw className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  )}
-                  <Link
-                    to="/app/devops/deployments/$id"
-                    params={{ id: String(deployment.id) }}
-                    className="p-2 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </Link>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

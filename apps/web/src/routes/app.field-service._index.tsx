@@ -11,35 +11,27 @@ import {
   CheckCircle2,
   DollarSign,
   Clock,
-  MapPin,
   ArrowRight,
   TrendingUp,
   TrendingDown,
   Signal,
   Smartphone,
   WifiOff,
+  MapPin,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/orpc";
-import { ErrorBoundaryWrapper } from "@/components/error-boundary-wrapper";
-import { SkeletonCard } from "@crm/ui";
 
 export const Route = createFileRoute("/app/field-service/_index")({
-  component: () => (
-    <ErrorBoundaryWrapper>
-      <FieldServiceDashboard />
-    </ErrorBoundaryWrapper>
-  ),
+  component: FieldServiceDashboard,
 });
 
 function FieldServiceDashboard() {
-  // Fetch jobs data
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["fieldService", "jobs"],
     queryFn: () => api.fieldService.listJobs({ page: 1, limit: 100 }),
   });
 
-  // Fetch technicians data
   const { data: techniciansData } = useQuery({
     queryKey: ["fieldService", "technicians"],
     queryFn: () => api.fieldService.listTechnicians({ page: 1, limit: 100 }),
@@ -48,7 +40,6 @@ function FieldServiceDashboard() {
   const jobs = jobsData?.data || [];
   const technicians = techniciansData?.data || [];
 
-  // Calculate stats from real data
   const jobsToday = jobs.filter((j: any) => {
     const today = new Date().toDateString();
     const jobDate = new Date(j.scheduledStart || j.createdAt).toDateString();
@@ -60,18 +51,18 @@ function FieldServiceDashboard() {
   const activeTechnicians = technicians.filter((t: any) => t.status !== "on_break").length;
   const urgentJobs = jobs.filter((j: any) => j.priority === "high" && j.status !== "completed").length;
 
-  // Recent jobs (last 5)
   const recentJobs = jobs.slice(0, 5).map((job: any) => ({
     id: job.id,
     title: job.title,
     customer: job.customerName || "No customer",
     technician: technicians.find((t: any) => t.id === job.technicianId)?.name || "Unassigned",
     status: job.status,
-    time: job.scheduledStart ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Not scheduled",
+    time: job.scheduledStart
+      ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "Not scheduled",
     priority: job.priority,
   }));
 
-  // Top technicians by jobs completed
   const topTechnicians = technicians
     .sort((a: any, b: any) => (b.jobsCompleted || 0) - (a.jobsCompleted || 0))
     .slice(0, 3)
@@ -86,12 +77,9 @@ function FieldServiceDashboard() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-lg bg-muted/30 animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -111,9 +99,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  Jobs Today
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Jobs Today</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">{jobsToday.length}</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
@@ -130,9 +116,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  Completed
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Completed</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">{completedJobs}</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
@@ -149,9 +133,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  SLA Breaches
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">SLA Breaches</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">{urgentJobs}</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   <TrendingDown className="h-3 w-3 text-red-500" />
@@ -168,9 +150,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  Revenue Today
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Revenue Today</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">${(completedJobs * 270).toLocaleString()}</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
@@ -187,9 +167,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  Active Technicians
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Active Technicians</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">{activeTechnicians}</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   {technicians.filter((t: any) => t.status === "on_break").length} on break
@@ -205,9 +183,7 @@ function FieldServiceDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  Avg Response Time
-                </p>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Avg Response Time</p>
                 <p className="font-black text-2xl text-foreground mt-0.5">24m</p>
                 <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
                   <TrendingDown className="h-3 w-3 text-green-500" />
@@ -234,18 +210,21 @@ function FieldServiceDashboard() {
               </span>
             </div>
             <div className="space-y-2">
-              {jobs.filter((j: any) => j.priority === "high" && j.status !== "completed").slice(0, 3).map((job: any) => (
-                <div key={job.id} className="flex items-center justify-between py-2 border-b border-red-500/10 last:border-0">
-                  <div>
-                    <span className="font-medium">{job.jobNumber || job.id.slice(0, 8)}</span>
-                    <span className="text-muted-foreground ml-2">{job.customerName || "No customer"}</span>
+              {jobs
+                .filter((j: any) => j.priority === "high" && j.status !== "completed")
+                .slice(0, 3)
+                .map((job: any) => (
+                  <div key={job.id} className="flex items-center justify-between py-2 border-b border-red-500/10 last:border-0">
+                    <div>
+                      <span className="font-medium">{job.jobNumber || job.id.slice(0, 8)}</span>
+                      <span className="text-muted-foreground ml-2">{job.customerName || "No customer"}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">Response Time</span>
+                      <span className="text-xs text-red-500">Breached</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">Response Time</span>
-                    <span className="text-xs text-red-500">Breached</span>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -253,7 +232,6 @@ function FieldServiceDashboard() {
 
       {/* Quick Actions and Top Performers */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Quick Actions */}
         <Card className="border-border/60">
           <CardContent className="p-6">
             <h3 className="font-bold text-foreground mb-4">Quick Actions</h3>
@@ -286,7 +264,6 @@ function FieldServiceDashboard() {
           </CardContent>
         </Card>
 
-        {/* Top Technicians */}
         <Card className="border-border/60">
           <CardContent className="p-6">
             <h3 className="font-bold text-foreground mb-4">Top Performers Today</h3>
@@ -301,7 +278,9 @@ function FieldServiceDashboard() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{tech.name}</p>
-                      <p className="text-xs text-muted-foreground">{tech.jobsCompleted} jobs - {tech.rating.toFixed(1)} rating</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tech.jobsCompleted} jobs - {tech.rating.toFixed(1)} rating
+                      </p>
                     </div>
                     <span className="text-sm font-medium text-green-600">{tech.revenue}</span>
                   </div>
@@ -311,7 +290,6 @@ function FieldServiceDashboard() {
           </CardContent>
         </Card>
 
-        {/* Mobile App Mockup */}
         <Card className="border-border/60 overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6">

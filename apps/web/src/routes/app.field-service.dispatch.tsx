@@ -1,8 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-} from "@crm/ui";
+import { Card, CardContent } from "@crm/ui";
 import {
   Truck,
   MapPin,
@@ -18,35 +15,26 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/orpc";
-import { ErrorBoundaryWrapper } from "@/components/error-boundary-wrapper";
-import { SkeletonCard } from "@crm/ui";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/field-service/dispatch")({
-  component: () => (
-    <ErrorBoundaryWrapper>
-      <DispatchBoard />
-    </ErrorBoundaryWrapper>
-  ),
+  component: DispatchBoard,
 });
 
 function DispatchBoard() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // Fetch dispatch data
   const { data: dispatchData, isLoading } = useQuery({
     queryKey: ["fieldService", "dispatch", selectedDate],
     queryFn: () => api.fieldService.getDispatchBoard({ date: selectedDate }),
   });
 
-  // Fetch technicians for assignment dropdown
   const { data: techniciansData } = useQuery({
     queryKey: ["fieldService", "technicians"],
     queryFn: () => api.fieldService.listTechnicians({ page: 1, limit: 100 }),
   });
 
-  // Assign job mutation
   const assignJobMutation = useMutation({
     mutationFn: ({ jobId, technicianId }: { jobId: string; technicianId: string }) =>
       api.fieldService.assignJob({ id: jobId, technicianId }),
@@ -58,21 +46,18 @@ function DispatchBoard() {
   const technicians = techniciansData?.data || [];
   const jobs = dispatchData?.jobs || [];
 
-  // Calculate stats from real data
   const availableTechs = technicians.filter((t: any) => t.status === "available").length;
   const onJobTechs = technicians.filter((t: any) => t.status === "on_job").length;
   const onBreakTechs = technicians.filter((t: any) => t.status === "on_break").length;
   const unassignedJobs = jobs.filter((j: any) => !j.technicianId);
   const scheduledJobs = jobs.filter((j: any) => j.technicianId);
 
-  // Helper to get technician name by ID
   const getTechName = (techId: string | null) => {
     if (!techId) return "Unassigned";
     const tech = technicians.find((t: any) => t.id === techId);
     return tech?.name || "Unknown";
   };
 
-  // Handle assign button click
   const handleAssign = (jobId: string, technicianId: string) => {
     if (technicianId) {
       assignJobMutation.mutate({ jobId, technicianId });
@@ -89,10 +74,9 @@ function DispatchBoard() {
           </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 bg-muted/30 rounded-lg animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -104,9 +88,7 @@ function DispatchBoard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Dispatch Board</h2>
-          <p className="text-sm text-muted-foreground">
-            Smart dispatch with AI route optimization
-          </p>
+          <p className="text-sm text-muted-foreground">Smart dispatch with AI route optimization</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -236,11 +218,8 @@ function DispatchBoard() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {(tech.skills || []).join(", ")} - {(tech.rating || 0).toFixed(1)} rating
+                          {(tech.skills || []).join(", ")} — {(tech.rating || 0).toFixed(1)} rating
                         </p>
-                        {tech.currentJob && (
-                          <p className="text-xs text-blue-500 mt-1">Working on: {tech.currentJob}</p>
-                        )}
                       </div>
                       <div className="flex flex-col gap-1">
                         <button className="p-2 rounded-lg hover:bg-muted transition-colors">
@@ -258,13 +237,13 @@ function DispatchBoard() {
           </CardContent>
         </Card>
 
-        {/* Jobs Column */}
+        {/* Unassigned Jobs Column */}
         <Card className="border-border/60">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-foreground">Unassigned Jobs</h3>
               <span className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded-full">
-                {unassignedJobs.length} urgent
+                {unassignedJobs.length} pending
               </span>
             </div>
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -282,7 +261,7 @@ function DispatchBoard() {
                         <p className="text-xs text-muted-foreground">{job.customerName || "No customer"}</p>
                       </div>
                       <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        job.priority === "high" ? "bg-red-500/10 text-red-500" :
+                        job.priority === "high" || job.priority === "urgent" ? "bg-red-500/10 text-red-500" :
                         job.priority === "medium" ? "bg-amber-500/10 text-amber-500" :
                         "bg-blue-500/10 text-blue-500"
                       }`}>
@@ -296,7 +275,9 @@ function DispatchBoard() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {job.scheduledStart ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Not scheduled"}
+                        {job.scheduledStart
+                          ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                          : "Not scheduled"}
                       </span>
                     </div>
                     <div className="flex gap-2">
@@ -306,12 +287,16 @@ function DispatchBoard() {
                         defaultValue=""
                       >
                         <option value="">Assign technician...</option>
-                        {technicians.filter((t: any) => t.status === "available").map((tech: any) => (
-                          <option key={tech.id} value={tech.id}>{tech.name}</option>
-                        ))}
+                        {technicians
+                          .filter((t: any) => t.status === "available")
+                          .map((tech: any) => (
+                            <option key={tech.id} value={tech.id}>
+                              {tech.name}
+                            </option>
+                          ))}
                       </select>
                       <button
-                        className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
+                        className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
                         disabled={assignJobMutation.isPending}
                       >
                         {assignJobMutation.isPending ? "Assigning..." : "Assign"}
@@ -337,7 +322,9 @@ function DispatchBoard() {
                 <div key={job.id} className="flex items-center gap-4 p-3 rounded-lg border border-border/40">
                   <div className="w-16 text-center">
                     <p className="text-xs text-muted-foreground">
-                      {job.scheduledStart ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
+                      {job.scheduledStart
+                        ? new Date(job.scheduledStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "N/A"}
                     </p>
                   </div>
                   <div className={`w-2 h-2 rounded-full ${
@@ -357,7 +344,7 @@ function DispatchBoard() {
                     {job.status === "completed" ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
-                      job.scheduledEnd ? new Date(job.scheduledEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress"
+                      job.status?.replace("_", " ") || "scheduled"
                     )}
                   </span>
                 </div>
