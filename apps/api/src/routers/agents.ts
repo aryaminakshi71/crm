@@ -1,72 +1,44 @@
 /**
- * AI Agents Router
+ * Agents Router
  *
- * AI agents operations for chatbot, autonomous, code execution, and data analysis agents.
+ * Agent workflow management operations.
  */
 
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { agents, agentTemplates, agentConversations, agentMessages, agentExecutions } = schema;
+const { agentWorkflows } = schema;
 
-// Agent Types
-const agentSchema = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string().uuid(),
-  name: z.string(),
-  description: z.string().nullable(),
-  agentType: z.string(),
-  status: z.string(),
-  config: z.record(z.string(), z.unknown()),
-  createdBy: z.string().uuid(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-const conversationSchema = z.object({
-  id: z.string().uuid(),
-  agentId: z.string().uuid(),
-  organizationId: z.string().uuid(),
-  userId: z.string().uuid(),
-  status: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-const messageSchema = z.object({
-  id: z.string().uuid(),
-  conversationId: z.string().uuid(),
-  role: z.string(),
-  content: z.string(),
-  metadata: z.record(z.string(), z.unknown()).nullable(),
-  tokens: z.string().nullable(),
-  createdAt: z.date(),
+const workflowStepSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  agentId: z.string().optional(),
+  config: z.record(z.unknown()),
 });
 
 export const agentsRouter = {
-  // ─── Agents ──────────────────────────────────────────────────────────────────
-
-  listAgents: orgAuthed
+  /**
+   * List agent workflows for the organization
+   */
+  "workflows.list": orgAuthed
     .route({
       method: "GET",
-      path: "/agents",
-      summary: "List agents",
-      tags: ["AI Agents"],
+      path: "/agents/workflows",
+      summary: "List agent workflows",
+      tags: ["Agents"],
     })
     .input(
       z.object({
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(200).default(50),
-        type: z.string().optional(),
         status: z.string().optional(),
       }),
     )
     .output(
       z.object({
-        data: z.array(agentSchema),
+        data: z.array(z.any()),
         total: z.number(),
         page: z.number(),
         limit: z.number(),
@@ -79,33 +51,36 @@ export const agentsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { page: number; limit: number; type?: string; status?: string };
+        input: { page: number; limit: number; status?: string };
       }) => {
         const db = getDb(context);
         const offset = (input.page - 1) * input.limit;
+        const orgId = context.organization.id;
 
-        const conditions = [eq(agents.organizationId, context.organization.id)];
-        if (input.type) conditions.push(eq(agents.agentType, input.type));
-        if (input.status) conditions.push(eq(agents.status, input.status));
+        const conditions = [
+          eq(agentWorkflows.organizationId, orgId),
+          isNull(agentWorkflows.deletedAt),
+        ];
+        if (input.status) {
+          conditions.push(eq(agentWorkflows.status, input.status));
+        }
+        const where = and(...conditions);
 
-        const whereConditions = conditions.length > 1 ? and(...conditions) : conditions[0];
+        const [all, paginated] = await Promise.all([
+          db.select({ count: sql<number>`count(*)` }).from(agentWorkflows).where(where),
+          db
+            .select()
+            .from(agentWorkflows)
+            .where(where)
+            .orderBy(desc(agentWorkflows.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+        ]);
 
-        const countResult = await db
-          .select({ count: count() })
-          .from(agents)
-          .where(whereConditions);
-        const total = countResult[0]?.count ?? 0;
-
-        const data = await db
-          .select()
-          .from(agents)
-          .where(whereConditions)
-          .orderBy(desc(agents.createdAt))
-          .limit(input.limit)
-          .offset(offset);
+        const total = Number(all[0]?.count ?? 0);
 
         return {
-          data,
+          data: paginated,
           total,
           page: input.page,
           limit: input.limit,
@@ -114,22 +89,29 @@ export const agentsRouter = {
       },
     ),
 
-  createAgent: orgAuthed
+  /**
+   * Create a new agent workflow
+   */
+  "workflows.create": orgAuthed
     .route({
       method: "POST",
-      path: "/agents",
-      summary: "Create agent",
-      tags: ["AI Agents"],
+      path: "/agents/workflows",
+      summary: "Create agent workflow",
+      tags: ["Agents"],
     })
     .input(
       z.object({
-        name: z.string(),
+        name: z.string().min(1).max(255),
         description: z.string().optional(),
-        agentType: z.enum(["chatbot", "autonomous", "code_execution", "data_analysis"]),
-        config: z.record(z.string(), z.unknown()).optional(),
+        status: z.enum(["active", "paused", "draft"]).default("draft"),
+        triggerType: z
+          .enum(["schedule", "event", "manual", "webhook"])
+          .optional(),
+        triggerConfig: z.record(z.unknown()).optional(),
+        steps: z.array(workflowStepSchema).optional(),
       }),
     )
-    .output(agentSchema)
+    .output(z.any())
     .handler(
       async ({
         context,
@@ -139,240 +121,216 @@ export const agentsRouter = {
         input: {
           name: string;
           description?: string;
-          agentType: "chatbot" | "autonomous" | "code_execution" | "data_analysis";
-          config?: Record<string, unknown>;
+          status: string;
+          triggerType?: string;
+          triggerConfig?: Record<string, unknown>;
+          steps?: Array<{
+            id: string;
+            type: string;
+            agentId?: string;
+            config: Record<string, unknown>;
+          }>;
         };
       }) => {
         const db = getDb(context);
-        const [agent] = await db
-          .insert(agents)
+        const [workflow] = await db
+          .insert(agentWorkflows)
           .values({
             organizationId: context.organization.id,
             name: input.name,
-            description: input.description || null,
-            agentType: input.agentType,
-            config: input.config || {},
+            description: input.description ?? null,
+            status: input.status,
+            triggerType: input.triggerType ?? null,
+            triggerConfig: input.triggerConfig ?? null,
+            steps: input.steps ?? [],
             createdBy: context.user.id,
-            status: "inactive",
           })
           .returning();
-        return agent;
+
+        return workflow;
       },
     ),
 
-  listTemplates: orgAuthed
+  /**
+   * Get a single agent workflow by ID
+   */
+  "workflows.get": orgAuthed
     .route({
       method: "GET",
-      path: "/agents/templates",
-      summary: "List agent templates",
-      tags: ["AI Agents"],
-    })
-    .input(z.object({}))
-    .output(z.object({ data: z.array(z.any()) }))
-    .handler(async () => {
-      // Return predefined templates
-      const templates = [
-        {
-          id: "template-1",
-          name: "Customer Support Agent",
-          description: "AI agent for handling customer support queries",
-          agentType: "chatbot",
-          defaultConfig: { temperature: 0.7, maxTokens: 2048 },
-          isPublic: "true",
-        },
-        {
-          id: "template-2",
-          name: "Data Analyst Agent",
-          description: "AI agent for analyzing data and generating insights",
-          agentType: "data_analysis",
-          defaultConfig: { temperature: 0.5, maxTokens: 4096 },
-          isPublic: "true",
-        },
-        {
-          id: "template-3",
-          name: "Code Assistant Agent",
-          description: "AI agent for helping with code reviews and debugging",
-          agentType: "code_execution",
-          defaultConfig: { temperature: 0.3, maxTokens: 4096 },
-          isPublic: "true",
-        },
-      ];
-      return { data: templates };
-    }),
-
-  getAgent: orgAuthed
-    .route({
-      method: "GET",
-      path: "/agents/:id",
-      summary: "Get agent",
-      tags: ["AI Agents"],
+      path: "/agents/workflows/:id",
+      summary: "Get agent workflow",
+      tags: ["Agents"],
     })
     .input(z.object({ id: z.string().uuid() }))
-    .output(agentSchema)
+    .output(z.any())
     .handler(
-      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string };
+      }) => {
         const db = getDb(context);
-        const [agent] = await db
+        const [workflow] = await db
           .select()
-          .from(agents)
+          .from(agentWorkflows)
           .where(
-            and(eq(agents.id, input.id), eq(agents.organizationId, context.organization.id)),
+            and(
+              eq(agentWorkflows.id, input.id),
+              eq(agentWorkflows.organizationId, context.organization.id),
+              isNull(agentWorkflows.deletedAt),
+            ),
           )
           .limit(1);
 
-        if (!agent) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Agent not found", 404);
+        if (!workflow) {
+          throw new Error("Workflow not found");
         }
-        return agent;
+
+        return workflow;
       },
     ),
 
-  updateAgent: orgAuthed
+  /**
+   * Update an agent workflow
+   */
+  "workflows.update": orgAuthed
     .route({
       method: "PATCH",
-      path: "/agents/:id",
-      summary: "Update agent",
-      tags: ["AI Agents"],
+      path: "/agents/workflows/:id",
+      summary: "Update agent workflow",
+      tags: ["Agents"],
     })
     .input(
       z.object({
         id: z.string().uuid(),
-        name: z.string().optional(),
+        name: z.string().min(1).max(255).optional(),
         description: z.string().optional(),
-        status: z.string().optional(),
-        config: z.record(z.string(), z.unknown()).optional(),
+        status: z.enum(["active", "paused", "draft"]).optional(),
+        triggerType: z
+          .enum(["schedule", "event", "manual", "webhook"])
+          .optional(),
+        triggerConfig: z.record(z.unknown()).optional(),
+        steps: z.array(workflowStepSchema).optional(),
       }),
     )
-    .output(agentSchema)
+    .output(z.any())
     .handler(
-      async ({ context, input }: { context: OrgContext; input: any }) => {
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: {
+          id: string;
+          name?: string;
+          description?: string;
+          status?: string;
+          triggerType?: string;
+          triggerConfig?: Record<string, unknown>;
+          steps?: Array<{
+            id: string;
+            type: string;
+            agentId?: string;
+            config: Record<string, unknown>;
+          }>;
+        };
+      }) => {
         const db = getDb(context);
-        const [agent] = await db
-          .update(agents)
-          .set({
-            ...(input.name !== undefined ? { name: input.name } : {}),
-            ...(input.description !== undefined ? { description: input.description } : {}),
-            ...(input.status !== undefined ? { status: input.status } : {}),
-            ...(input.config !== undefined ? { config: input.config } : {}),
-            updatedAt: new Date(),
-          })
+        const { id, ...rest } = input;
+
+        const updateData: Record<string, unknown> = {
+          updatedAt: new Date(),
+        };
+        if (rest.name !== undefined) updateData.name = rest.name;
+        if (rest.description !== undefined)
+          updateData.description = rest.description;
+        if (rest.status !== undefined) updateData.status = rest.status;
+        if (rest.triggerType !== undefined)
+          updateData.triggerType = rest.triggerType;
+        if (rest.triggerConfig !== undefined)
+          updateData.triggerConfig = rest.triggerConfig;
+        if (rest.steps !== undefined) updateData.steps = rest.steps;
+
+        const [workflow] = await db
+          .update(agentWorkflows)
+          .set(updateData as any)
           .where(
-            and(eq(agents.id, input.id), eq(agents.organizationId, context.organization.id)),
+            and(
+              eq(agentWorkflows.id, id),
+              eq(agentWorkflows.organizationId, context.organization.id),
+              isNull(agentWorkflows.deletedAt),
+            ),
           )
           .returning();
 
-        if (!agent) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Agent not found", 404);
+        if (!workflow) {
+          throw new Error("Workflow not found");
         }
-        return agent;
+
+        return workflow;
       },
     ),
 
-  deleteAgent: orgAuthed
+  /**
+   * Soft-delete an agent workflow
+   */
+  "workflows.delete": orgAuthed
     .route({
       method: "DELETE",
-      path: "/agents/:id",
-      summary: "Delete agent",
-      tags: ["AI Agents"],
+      path: "/agents/workflows/:id",
+      summary: "Delete agent workflow",
+      tags: ["Agents"],
     })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ success: z.boolean() }))
     .handler(
-      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string };
+      }) => {
         const db = getDb(context);
         await db
-          .delete(agents)
+          .update(agentWorkflows)
+          .set({ deletedAt: new Date() })
           .where(
-            and(eq(agents.id, input.id), eq(agents.organizationId, context.organization.id)),
+            and(
+              eq(agentWorkflows.id, input.id),
+              eq(agentWorkflows.organizationId, context.organization.id),
+              isNull(agentWorkflows.deletedAt),
+            ),
           );
+
         return { success: true };
       },
     ),
 
-  // ─── Chat ────────────────────────────────────────────────────────────────────
-
-  chat: orgAuthed
+  /**
+   * Trigger a workflow run
+   */
+  "workflows.run": orgAuthed
     .route({
       method: "POST",
-      path: "/agents/:id/chat",
-      summary: "Chat with agent",
-      tags: ["AI Agents"],
+      path: "/agents/workflows/:id/run",
+      summary: "Run agent workflow",
+      tags: ["Agents"],
     })
     .input(
       z.object({
         id: z.string().uuid(),
-        message: z.string(),
-        conversationId: z.string().uuid().optional(),
-        stream: z.boolean().optional(),
-      }),
-    )
-    .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { id: string; message: string; conversationId?: string; stream?: boolean };
-      }) => {
-        const db = getDb(context);
-
-        // Get or create conversation
-        let conversationId = input.conversationId;
-        if (!conversationId) {
-          const [conversation] = await db
-            .insert(agentConversations)
-            .values({
-              agentId: input.id,
-              organizationId: context.organization.id,
-              userId: context.user.id,
-              status: "active",
-            })
-            .returning();
-          conversationId = conversation.id;
-        }
-
-        // Store user message
-        await db.insert(agentMessages).values({
-          conversationId,
-          role: "user",
-          content: input.message,
-        });
-
-        // Simulated AI response (would call actual AI API)
-        const response = "This is a simulated AI response.";
-
-        // Store assistant message
-        await db.insert(agentMessages).values({
-          conversationId,
-          role: "assistant",
-          content: response,
-        });
-
-        return { conversationId, message: response };
-      },
-    ),
-
-  listConversations: orgAuthed
-    .route({
-      method: "GET",
-      path: "/agents/:id/conversations",
-      summary: "List agent conversations",
-      tags: ["AI Agents"],
-    })
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        page: z.number().min(1).default(1),
-        limit: z.number().min(1).max(100).default(20),
+        input: z.record(z.unknown()).optional(),
       }),
     )
     .output(
       z.object({
-        data: z.array(conversationSchema),
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
+        runId: z.string(),
+        workflowId: z.string(),
+        status: z.string(),
+        startedAt: z.string(),
       }),
     )
     .handler(
@@ -381,247 +339,110 @@ export const agentsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { id: string; page: number; limit: number };
+        input: { id: string; input?: Record<string, unknown> };
       }) => {
         const db = getDb(context);
-        const offset = (input.page - 1) * input.limit;
 
-        const countResult = await db
-          .select({ count: count() })
-          .from(agentConversations)
-          .where(
-            and(
-              eq(agentConversations.agentId, input.id),
-              eq(agentConversations.organizationId, context.organization.id),
-            ),
-          );
-        const total = countResult[0]?.count ?? 0;
-
-        const data = await db
+        // Verify workflow exists and belongs to org
+        const [workflow] = await db
           .select()
-          .from(agentConversations)
+          .from(agentWorkflows)
           .where(
             and(
-              eq(agentConversations.agentId, input.id),
-              eq(agentConversations.organizationId, context.organization.id),
-            ),
-          )
-          .orderBy(desc(agentConversations.updatedAt))
-          .limit(input.limit)
-          .offset(offset);
-
-        return { data, total, page: input.page, limit: input.limit };
-      },
-    ),
-
-  getConversation: orgAuthed
-    .route({
-      method: "GET",
-      path: "/agents/:id/conversations/:cid",
-      summary: "Get conversation messages",
-      tags: ["AI Agents"],
-    })
-    .input(z.object({ id: z.string().uuid(), cid: z.string().uuid() }))
-    .output(z.object({ data: z.array(messageSchema) }))
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { id: string; cid: string };
-      }) => {
-        const db = getDb(context);
-        const data = await db
-          .select()
-          .from(agentMessages)
-          .where(eq(agentMessages.conversationId, input.cid))
-          .orderBy(desc(agentMessages.createdAt));
-        return { data };
-      },
-    ),
-
-  // ─── Execution ───────────────────────────────────────────────────────────────
-
-  execute: orgAuthed
-    .route({
-      method: "POST",
-      path: "/agents/:id/execute",
-      summary: "Execute autonomous task",
-      tags: ["AI Agents"],
-    })
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        task: z.string(),
-        conversationId: z.string().uuid().optional(),
-      }),
-    )
-    .output(z.object({ executionId: z.string().uuid(), status: z.string() }))
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { id: string; task: string; conversationId?: string };
-      }) => {
-        const db = getDb(context);
-        const [execution] = await db
-          .insert(agentExecutions)
-          .values({
-            agentId: input.id,
-            conversationId: input.conversationId || null,
-            organizationId: context.organization.id,
-            task: input.task,
-            status: "pending",
-          })
-          .returning();
-        return { executionId: execution.id, status: execution.status };
-      },
-    ),
-
-  listExecutions: orgAuthed
-    .route({
-      method: "GET",
-      path: "/agents/:id/executions",
-      summary: "List agent executions",
-      tags: ["AI Agents"],
-    })
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        page: z.number().min(1).default(1),
-        limit: z.number().min(1).max(100).default(20),
-      }),
-    )
-    .output(
-      z.object({
-        data: z.array(z.any()),
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-      }),
-    )
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { id: string; page: number; limit: number };
-      }) => {
-        const db = getDb(context);
-        const offset = (input.page - 1) * input.limit;
-
-        const countResult = await db
-          .select({ count: count() })
-          .from(agentExecutions)
-          .where(
-            and(
-              eq(agentExecutions.agentId, input.id),
-              eq(agentExecutions.organizationId, context.organization.id),
-            ),
-          );
-        const total = countResult[0]?.count ?? 0;
-
-        const data = await db
-          .select()
-          .from(agentExecutions)
-          .where(
-            and(
-              eq(agentExecutions.agentId, input.id),
-              eq(agentExecutions.organizationId, context.organization.id),
-            ),
-          )
-          .orderBy(desc(agentExecutions.startedAt))
-          .limit(input.limit)
-          .offset(offset);
-
-        return { data, total, page: input.page, limit: input.limit };
-      },
-    ),
-
-  getExecution: orgAuthed
-    .route({
-      method: "GET",
-      path: "/agents/:id/executions/:eid",
-      summary: "Get execution",
-      tags: ["AI Agents"],
-    })
-    .input(z.object({ id: z.string().uuid(), eid: z.string().uuid() }))
-    .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { id: string; eid: string };
-      }) => {
-        const db = getDb(context);
-        const [execution] = await db
-          .select()
-          .from(agentExecutions)
-          .where(
-            and(
-              eq(agentExecutions.id, input.eid),
-              eq(agentExecutions.organizationId, context.organization.id),
+              eq(agentWorkflows.id, input.id),
+              eq(agentWorkflows.organizationId, context.organization.id),
+              isNull(agentWorkflows.deletedAt),
             ),
           )
           .limit(1);
 
-        if (!execution) {
-          throw new APIError(ErrorCode.NOT_FOUND, "Execution not found", 404);
+        if (!workflow) {
+          throw new Error("Workflow not found");
         }
-        return execution;
+
+        // Increment run count and update lastRunAt
+        await db
+          .update(agentWorkflows)
+          .set({
+            runCount: sql`${agentWorkflows.runCount} + 1`,
+            lastRunAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(agentWorkflows.id, input.id));
+
+        const runId = crypto.randomUUID();
+        const startedAt = new Date().toISOString();
+
+        return {
+          runId,
+          workflowId: input.id,
+          status: "running",
+          startedAt,
+        };
       },
     ),
 
-  // ─── Token Usage ─────────────────────────────────────────────────────────────
-
-  tokenUsage: orgAuthed
-    .route({ method: "GET", path: "/agents/token-usage", summary: "Agent token usage by day", tags: ["Agents"] })
-    .input(z.object({ days: z.number().min(1).max(90).default(7) }))
-    .output(z.object({ data: z.array(z.object({ day: z.string(), tokens: z.number() })), total: z.number() }))
-    .handler(async ({ context, input }: { context: OrgContext; input: any }) => {
+  /**
+   * Get workflow statistics for the organization
+   */
+  "workflows.stats": orgAuthed
+    .route({
+      method: "GET",
+      path: "/agents/workflows/stats",
+      summary: "Get agent workflow stats",
+      tags: ["Agents"],
+    })
+    .input(z.object({}).optional())
+    .output(
+      z.object({
+        totalWorkflows: z.number(),
+        activeWorkflows: z.number(),
+        runsToday: z.number(),
+      }),
+    )
+    .handler(async ({ context }: { context: OrgContext }) => {
       const db = getDb(context);
-      // Try to get real token data from executions table
-      // The executions table has a `tokens` text field; use COUNT * 100 as proxy when null
-      try {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - input.days);
+      const orgId = context.organization.id;
 
-        // Group by day
-        const results = await db
-          .select({
-            day: sql<string>`to_char(${agentExecutions.startedAt}, 'Dy')`,
-            tokens: sql<number>`COALESCE(SUM(CAST(NULLIF(${agentExecutions.tokens}, '') AS INTEGER)), COUNT(*) * 100)`,
-          })
-          .from(agentExecutions)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const [total, active, runsToday] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(agentWorkflows)
           .where(
             and(
-              eq(agentExecutions.organizationId, context.organization.id),
-              gte(agentExecutions.startedAt, cutoff),
-            )
-          )
-          .groupBy(sql`to_char(${agentExecutions.startedAt}, 'Dy'), DATE(${agentExecutions.startedAt})`)
-          .orderBy(sql`DATE(${agentExecutions.startedAt})`);
+              eq(agentWorkflows.organizationId, orgId),
+              isNull(agentWorkflows.deletedAt),
+            ),
+          ),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(agentWorkflows)
+          .where(
+            and(
+              eq(agentWorkflows.organizationId, orgId),
+              eq(agentWorkflows.status, "active"),
+              isNull(agentWorkflows.deletedAt),
+            ),
+          ),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(agentWorkflows)
+          .where(
+            and(
+              eq(agentWorkflows.organizationId, orgId),
+              isNull(agentWorkflows.deletedAt),
+              sql`${agentWorkflows.lastRunAt} >= ${today.toISOString()}`,
+            ),
+          ),
+      ]);
 
-        const total = results.reduce((sum, r) => sum + Number(r.tokens), 0);
-
-        if (results.length > 0) {
-          return { data: results.map(r => ({ day: r.day, tokens: Number(r.tokens) })), total };
-        }
-      } catch {
-        // Fall through to defaults
-      }
-
-      // Return empty data when no executions yet
-      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       return {
-        data: days.slice(0, input.days > 7 ? 7 : input.days).map(day => ({ day, tokens: 0 })),
-        total: 0,
+        totalWorkflows: Number(total[0]?.count ?? 0),
+        activeWorkflows: Number(active[0]?.count ?? 0),
+        runsToday: Number(runsToday[0]?.count ?? 0),
       };
     }),
 };
