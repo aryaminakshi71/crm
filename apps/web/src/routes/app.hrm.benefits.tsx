@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Heart,
   Plus,
@@ -21,7 +22,13 @@ export const Route = createFileRoute("/app/hrm/benefits")({
   component: BenefitsManagement,
 });
 
-const benefitPlans = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_BENEFIT_PLANS = [
   {
     id: "1",
     name: "Premium Health Insurance",
@@ -128,7 +135,7 @@ const benefitPlans = [
   },
 ];
 
-const enrollments = [
+const MOCK_ENROLLMENTS = [
   { id: "1", employee: "Sarah Chen", plan: "Premium Health Insurance", status: "Enrolled", effectiveDate: "Jan 1, 2026", dependents: 2 },
   { id: "2", employee: "Marcus Johnson", plan: "Dental Plus", status: "Enrolled", effectiveDate: "Mar 10, 2026", dependents: 1 },
   { id: "3", employee: "Jessica Lee", plan: "401(k) Retirement Plan", status: "Enrolled", effectiveDate: "Aug 12, 2023", dependents: 0 },
@@ -142,15 +149,44 @@ function BenefitsManagement() {
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [viewMode, setViewMode] = useState<"plans" | "enrollments">("plans");
 
-  const filteredPlans = benefitPlans.filter((plan) => {
+  const plansQuery = useQuery({
+    queryKey: ["hrm", "benefit-plans"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/benefit-plans`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch benefit plans");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const enrollmentsQuery = useQuery({
+    queryKey: ["hrm", "benefit-enrollments"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/benefit-enrollments`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch benefit enrollments");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const benefitPlans = plansQuery.data?.data ?? MOCK_BENEFIT_PLANS;
+  const enrollments = enrollmentsQuery.data?.data ?? MOCK_ENROLLMENTS;
+
+  const filteredPlans = benefitPlans.filter((plan: any) => {
     const matchesSearch = plan.name.toLowerCase().includes(search.toLowerCase()) || plan.provider.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "All Types" || plan.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
   const types = ["All Types", "Health", "Dental", "Vision", "Retirement", "Life", "Disability", "Transportation", "Housing"];
-  const totalEnrolled = enrollments.filter((e) => e.status === "Enrolled").length;
-  const pendingEnrollments = enrollments.filter((e) => e.status === "Pending").length;
+  const totalEnrolled = enrollments.filter((e: any) => e.status === "Enrolled").length;
+  const pendingEnrollments = enrollments.filter((e: any) => e.status === "Pending").length;
+
+  const isLoading = plansQuery.isLoading || enrollmentsQuery.isLoading;
 
   return (
     <div className="space-y-6">
@@ -271,95 +307,120 @@ function BenefitsManagement() {
         </div>
       )}
 
-      {/* Plans Grid */}
-      {viewMode === "plans" && (
+      {/* Loading skeleton */}
+      {isLoading && viewMode === "plans" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPlans.map((plan) => (
-            <div key={plan.id} className="rounded-lg border border-border/60 bg-card p-6 hover:bg-muted/30 transition-colors">
-              <div className="flex items-start justify-between mb-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${plan.bgColor}`}>
-                  <plan.icon className={`h-6 w-6 ${plan.color}`} />
-                </div>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {plan.status}
-                </span>
-              </div>
-              <h3 className="font-semibold text-foreground mb-1">{plan.name}</h3>
-              <p className="text-xs text-muted-foreground mb-3">{plan.provider}</p>
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{plan.description}</p>
-              <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Cost</p>
-                  <p className="text-sm font-semibold text-foreground">{plan.cost}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Enrolled</p>
-                  <p className="text-sm font-semibold text-foreground">{plan.employeesEnrolled}</p>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50">
-                  <Edit className="h-3 w-3 inline mr-1" />
-                  Edit
-                </button>
-                <button className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50">
-                  <Eye className="h-3 w-3 inline mr-1" />
-                  View
-                </button>
-              </div>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card p-6 animate-pulse">
+              <div className="h-12 w-12 rounded-lg bg-muted mb-4" />
+              <div className="h-4 bg-muted rounded mb-2 w-3/4" />
+              <div className="h-3 bg-muted rounded mb-3 w-1/2" />
+              <div className="h-10 bg-muted rounded" />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Plans Grid */}
+      {viewMode === "plans" && !isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredPlans.map((plan: any) => {
+            const PlanIcon = plan.icon ?? Heart;
+            return (
+              <div key={plan.id} className="rounded-lg border border-border/60 bg-card p-6 hover:bg-muted/30 transition-colors">
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${plan.bgColor ?? "bg-primary/10"}`}>
+                    <PlanIcon className={`h-6 w-6 ${plan.color ?? "text-primary"}`} />
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {plan.status}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">{plan.name}</h3>
+                <p className="text-xs text-muted-foreground mb-3">{plan.provider}</p>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{plan.description}</p>
+                <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cost</p>
+                    <p className="text-sm font-semibold text-foreground">{plan.cost}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Enrolled</p>
+                    <p className="text-sm font-semibold text-foreground">{plan.employeesEnrolled}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50">
+                    <Edit className="h-3 w-3 inline mr-1" />
+                    Edit
+                  </button>
+                  <button className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50">
+                    <Eye className="h-3 w-3 inline mr-1" />
+                    View
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Enrollments Table */}
       {viewMode === "enrollments" && (
         <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60 bg-muted/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Plan</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Dependents</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Effective Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {enrollments.map((enrollment) => (
-                <tr key={enrollment.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-foreground text-sm">{enrollment.employee}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.plan}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.dependents}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.effectiveDate}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      enrollment.status === "Enrolled"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : "bg-amber-500/10 text-amber-500"
-                    }`}>
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {enrollment.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                      <Edit className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
+          {enrollmentsQuery.isLoading ? (
+            <div className="p-6 space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-10 bg-muted rounded animate-pulse" />
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Plan</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Dependents</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Effective Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {enrollments.map((enrollment: any) => (
+                  <tr key={enrollment.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground text-sm">{enrollment.employee}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.plan}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.dependents}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{enrollment.effectiveDate}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        enrollment.status === "Enrolled"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-amber-500/10 text-amber-500"
+                      }`}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {enrollment.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <Edit className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {/* Empty State */}
-      {filteredPlans.length === 0 && viewMode === "plans" && (
+      {filteredPlans.length === 0 && viewMode === "plans" && !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card py-12">
           <Heart className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-semibold text-foreground mb-1">No plans found</h3>

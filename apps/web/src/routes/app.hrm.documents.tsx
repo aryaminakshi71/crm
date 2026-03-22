@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
   Plus,
@@ -28,7 +29,13 @@ export const Route = createFileRoute("/app/hrm/documents")({
   component: DocumentManagement,
 });
 
-const documents = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_DOCUMENTS = [
   { id: "1", name: "Employee Handbook 2026", type: "PDF", category: "Policies", size: "2.4 MB", uploadedAt: "Jan 15, 2026", uploadedBy: "Amanda White", status: "Active", signings: 0 },
   { id: "2", name: "NDA - Standard Template", type: "DOCX", category: "Templates", size: "156 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 45 },
   { id: "3", name: "Offer Letter Template", type: "DOCX", category: "Templates", size: "124 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 28 },
@@ -41,7 +48,7 @@ const documents = [
   { id: "10", name: "Confidentiality Agreement", type: "PDF", category: "Contracts", size: "234 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 112 },
 ];
 
-const pendingSignatures = [
+const MOCK_PENDING_SIGNATURES = [
   { id: "1", document: "Sarah Chen - Offer Letter", sentTo: "sarah.chen@email.com", sentAt: "Mar 18, 2026", status: "Pending", dueDate: "Mar 25, 2026" },
   { id: "2", document: "Marcus Johnson - NDA", sentTo: "marcus.johnson@email.com", sentAt: "Mar 17, 2026", status: "Pending", dueDate: "Mar 24, 2026" },
   { id: "3", document: "Employee Handbook Acknowledgment", sentTo: "all-employees@nucleo.one", sentAt: "Mar 15, 2026", status: "Sent", dueDate: "Mar 31, 2026", completedCount: 180, totalCount: 248 },
@@ -49,11 +56,6 @@ const pendingSignatures = [
 ];
 
 const categories = ["All Categories", "Policies", "Templates", "Contracts", "Benefits", "Onboarding"];
-const typeIcons: Record<string, React.ElementType> = {
-  PDF: FileText,
-  DOCX: FileText,
-  XLSX: FileText,
-};
 
 function DocumentManagement() {
   const [viewMode, setViewMode] = useState<"documents" | "signatures">("documents");
@@ -61,14 +63,41 @@ function DocumentManagement() {
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const filteredDocuments = documents.filter((doc) => {
+  const documentsQuery = useQuery({
+    queryKey: ["hrm", "documents"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/documents`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch documents");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const signaturesQuery = useQuery({
+    queryKey: ["hrm", "document-signatures"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/document-signatures`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch signatures");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const documents = documentsQuery.data?.data ?? MOCK_DOCUMENTS;
+  const pendingSignatures = signaturesQuery.data?.data ?? MOCK_PENDING_SIGNATURES;
+
+  const filteredDocuments = documents.filter((doc: any) => {
     const matchesSearch = doc.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "All Categories" || doc.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const pendingSigsCount = pendingSignatures.filter((s) => s.status === "Pending" || s.status === "Sent").length;
-  const completedSigsCount = pendingSignatures.filter((s) => s.status === "Completed").length;
+  const pendingSigsCount = pendingSignatures.filter((s: any) => s.status === "Pending" || s.status === "Sent").length;
+  const completedSigsCount = pendingSignatures.filter((s: any) => s.status === "Completed").length;
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -82,6 +111,8 @@ function DocumentManagement() {
         return { icon: File, color: "text-gray-500", bgColor: "bg-gray-500/10" };
     }
   };
+
+  const isLoading = documentsQuery.isLoading;
 
   return (
     <div className="space-y-6">
@@ -173,11 +204,11 @@ function DocumentManagement() {
           >
             <tab.icon className="h-4 w-4" />
             {tab.label}
-            {tab.badge && (
+            {tab.badge ? (
               <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-medium text-white">
                 {tab.badge}
               </span>
-            )}
+            ) : null}
           </button>
         ))}
       </div>
@@ -210,63 +241,81 @@ function DocumentManagement() {
             </div>
           </div>
 
-          {/* Documents Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredDocuments.map((doc) => {
-              const fileIcon = getFileIcon(doc.type);
-              return (
-                <div key={doc.id} className="rounded-lg border border-border/60 bg-card p-4 hover:bg-muted/30 transition-colors group">
+          {/* Loading skeleton */}
+          {isLoading && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-border/60 bg-card p-4 animate-pulse">
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${fileIcon.bgColor}`}>
-                      <fileIcon.icon className={`h-5 w-5 ${fileIcon.color}`} />
+                    <div className="h-10 w-10 rounded-lg bg-muted" />
+                  </div>
+                  <div className="h-4 bg-muted rounded mb-1 w-3/4" />
+                  <div className="h-3 bg-muted rounded mb-3 w-1/2" />
+                  <div className="h-8 bg-muted rounded" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Documents Grid */}
+          {!isLoading && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredDocuments.map((doc: any) => {
+                const fileIcon = getFileIcon(doc.type);
+                return (
+                  <div key={doc.id} className="rounded-lg border border-border/60 bg-card p-4 hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${fileIcon.bgColor}`}>
+                        <fileIcon.icon className={`h-5 w-5 ${fileIcon.color}`} />
+                      </div>
+                      <div className="relative">
+                        <button className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="relative">
-                      <button className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-4 w-4" />
+                    <h3 className="font-medium text-foreground text-sm mb-1 truncate">{doc.name}</h3>
+                    <p className="text-xs text-muted-foreground mb-3">{doc.type} · {doc.size}</p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {doc.category}
+                      </span>
+                      {doc.signings > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-500">
+                          {doc.signings} signings
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border/40 pt-3">
+                      <div className="text-[10px] text-muted-foreground">
+                        <p>Uploaded {doc.uploadedAt}</p>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        doc.status === "Active"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : doc.status === "Pending Review"
+                            ? "bg-amber-500/10 text-amber-500"
+                            : "bg-gray-500/10 text-gray-500"
+                      }`}>
+                        {doc.status === "Active" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button className="flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                        <Eye className="h-3 w-3 inline mr-1" />
+                        View
+                      </button>
+                      <button className="flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                        <Download className="h-3 w-3 inline mr-1" />
+                        Download
                       </button>
                     </div>
                   </div>
-                  <h3 className="font-medium text-foreground text-sm mb-1 truncate">{doc.name}</h3>
-                  <p className="text-xs text-muted-foreground mb-3">{doc.type} · {doc.size}</p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {doc.category}
-                    </span>
-                    {doc.signings > 0 && (
-                      <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-500">
-                        {doc.signings} signings
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border/40 pt-3">
-                    <div className="text-[10px] text-muted-foreground">
-                      <p>Uploaded {doc.uploadedAt}</p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      doc.status === "Active"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : doc.status === "Pending Review"
-                          ? "bg-amber-500/10 text-amber-500"
-                          : "bg-gray-500/10 text-gray-500"
-                    }`}>
-                      {doc.status === "Active" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                      {doc.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <button className="flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                      <Eye className="h-3 w-3 inline mr-1" />
-                      View
-                    </button>
-                    <button className="flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                      <Download className="h-3 w-3 inline mr-1" />
-                      Download
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 
@@ -281,75 +330,85 @@ function DocumentManagement() {
             </button>
           </div>
 
-          <div className="space-y-4">
-            {pendingSignatures.map((sig) => (
-              <div key={sig.id} className="rounded-lg border border-border/60 bg-card">
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      sig.status === "Completed"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : sig.status === "Sent"
-                          ? "bg-blue-500/10 text-blue-500"
-                          : "bg-amber-500/10 text-amber-500"
-                    }`}>
-                      <PenTool className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{sig.document}</p>
-                      <p className="text-xs text-muted-foreground">Sent to: {sig.sentTo}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-muted-foreground">Sent</p>
-                      <p className="text-sm font-medium text-foreground">{sig.sentAt}</p>
-                    </div>
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-muted-foreground">Due</p>
-                      <p className="text-sm font-medium text-foreground">{sig.dueDate}</p>
-                    </div>
-                    {sig.totalCount && (
-                      <div className="text-right hidden sm:block">
-                        <p className="text-xs text-muted-foreground">Progress</p>
-                        <p className="text-sm font-medium text-foreground">{sig.completedCount}/{sig.totalCount}</p>
-                      </div>
-                    )}
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      sig.status === "Completed"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : sig.status === "Sent"
-                          ? "bg-blue-500/10 text-blue-500"
-                          : "bg-amber-500/10 text-amber-500"
-                    }`}>
-                      {sig.status === "Completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                      {sig.status === "Sent" && <Send className="h-3 w-3 mr-1" />}
-                      {sig.status === "Pending" && <Clock className="h-3 w-3 mr-1" />}
-                      {sig.status}
-                    </span>
-                    <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
+          {signaturesQuery.isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-border/60 bg-card p-4 animate-pulse">
+                  <div className="h-10 bg-muted rounded" />
                 </div>
-                {sig.totalCount && (
-                  <div className="px-4 pb-4">
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all"
-                        style={{ width: `${(sig.completedCount / sig.totalCount) * 100}%` }}
-                      />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingSignatures.map((sig: any) => (
+                <div key={sig.id} className="rounded-lg border border-border/60 bg-card">
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                        sig.status === "Completed"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : sig.status === "Sent"
+                            ? "bg-blue-500/10 text-blue-500"
+                            : "bg-amber-500/10 text-amber-500"
+                      }`}>
+                        <PenTool className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{sig.document}</p>
+                        <p className="text-xs text-muted-foreground">Sent to: {sig.sentTo}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-muted-foreground">Sent</p>
+                        <p className="text-sm font-medium text-foreground">{sig.sentAt}</p>
+                      </div>
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-muted-foreground">Due</p>
+                        <p className="text-sm font-medium text-foreground">{sig.dueDate}</p>
+                      </div>
+                      {sig.totalCount && (
+                        <div className="text-right hidden sm:block">
+                          <p className="text-xs text-muted-foreground">Progress</p>
+                          <p className="text-sm font-medium text-foreground">{sig.completedCount}/{sig.totalCount}</p>
+                        </div>
+                      )}
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        sig.status === "Completed"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : sig.status === "Sent"
+                            ? "bg-blue-500/10 text-blue-500"
+                            : "bg-amber-500/10 text-amber-500"
+                      }`}>
+                        {sig.status === "Completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {sig.status === "Sent" && <Send className="h-3 w-3 mr-1" />}
+                        {sig.status === "Pending" && <Clock className="h-3 w-3 mr-1" />}
+                        {sig.status}
+                      </span>
+                      <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  {sig.totalCount && (
+                    <div className="px-4 pb-4">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all"
+                          style={{ width: `${(sig.completedCount / sig.totalCount) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
       {/* Empty State */}
-      {filteredDocuments.length === 0 && viewMode === "documents" && (
+      {filteredDocuments.length === 0 && viewMode === "documents" && !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card py-12">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-semibold text-foreground mb-1">No documents found</h3>

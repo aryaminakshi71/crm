@@ -23,7 +23,14 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -62,26 +69,10 @@ type TemplateMilestone = {
   description?: string;
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Mock Data ───────────────────────────────────────────────────────────────
 
-function TemplatesPage() {
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-  const [newTemplate, setNewTemplate] = useState({
-    name: "",
-    description: "",
-    category: "software" as Template["category"],
-    estimatedDuration: "",
-    budget: "",
-  });
-
-  // Mock templates data
-  const templates: Template[] = [
-    {
+const MOCK_TEMPLATES: Template[] = [
+  {
       id: "t1",
       name: "Agile Software Development",
       description: "Complete sprint-based development workflow with standard Agile ceremonies",
@@ -201,7 +192,38 @@ function TemplatesPage() {
       usageCount: 45,
       createdAt: "2023-10-05",
     },
-  ];
+];
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+function TemplatesPage() {
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    description: "",
+    category: "software" as Template["category"],
+    estimatedDuration: "",
+    budget: "",
+  });
+
+  const templatesQuery = useQuery({
+    queryKey: ["projects", "templates"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/projects/templates`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch templates");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const templates: Template[] = templatesQuery.data?.data ?? MOCK_TEMPLATES;
 
   // Filter templates
   const filteredTemplates = templates.filter((t) => {
@@ -340,7 +362,27 @@ function TemplatesPage() {
         </Card>
       )}
 
+      {/* Loading skeleton */}
+      {templatesQuery.isLoading && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 animate-pulse">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="h-10 w-10 rounded-lg bg-muted shrink-0" />
+                  <div className="h-5 w-16 bg-muted rounded" />
+                </div>
+                <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                <div className="h-3 bg-muted rounded w-full mb-1" />
+                <div className="h-3 bg-muted rounded w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Templates Grid */}
+      {!templatesQuery.isLoading && (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredTemplates.map((template) => (
           <Card
@@ -420,6 +462,7 @@ function TemplatesPage() {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Preview Modal */}
       {selectedTemplate && (

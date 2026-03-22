@@ -25,7 +25,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +56,73 @@ type Risk = {
   updatedAt: string;
 };
 
+const MOCK_RISKS: Risk[] = [
+  {
+    id: "r1",
+    title: "Scope Creep",
+    description: "Additional features being added beyond original scope",
+    category: "scope",
+    probability: "high",
+    impact: "high",
+    status: "mitigating",
+    owner: "Sarah Chen",
+    mitigation: "Weekly scope reviews and change control process",
+    createdAt: "2024-01-10",
+    updatedAt: "2024-01-15",
+  },
+  {
+    id: "r2",
+    title: "Resource Availability",
+    description: "Key developer on vacation for 2 weeks",
+    category: "resource",
+    probability: "medium",
+    impact: "high",
+    status: "identified",
+    owner: "Mike Johnson",
+    mitigation: "Cross-training team members",
+    createdAt: "2024-01-12",
+    updatedAt: "2024-01-12",
+  },
+  {
+    id: "r3",
+    title: "Third-party API Changes",
+    description: "External API may change breaking our integration",
+    category: "technical",
+    probability: "low",
+    impact: "high",
+    status: "mitigating",
+    owner: "Emily Davis",
+    mitigation: "Implementing adapter pattern for external dependencies",
+    createdAt: "2024-01-08",
+    updatedAt: "2024-01-14",
+  },
+  {
+    id: "r4",
+    title: "Budget Overrun",
+    description: "Infrastructure costs higher than anticipated",
+    category: "budget",
+    probability: "medium",
+    impact: "medium",
+    status: "accepted",
+    owner: "Alex Kim",
+    createdAt: "2024-01-05",
+    updatedAt: "2024-01-10",
+  },
+  {
+    id: "r5",
+    title: "Regulatory Changes",
+    description: "New data privacy regulations may affect product",
+    category: "external",
+    probability: "low",
+    impact: "medium",
+    status: "identified",
+    owner: "Jordan Lee",
+    mitigation: "Monitoring regulatory developments",
+    createdAt: "2024-01-15",
+    updatedAt: "2024-01-15",
+  },
+];
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function RiskRegisterPage() {
@@ -68,73 +142,19 @@ function RiskRegisterPage() {
     mitigation: "",
   });
 
-  // Mock risks data
-  const risks: Risk[] = [
-    {
-      id: "r1",
-      title: "Scope Creep",
-      description: "Additional features being added beyond original scope",
-      category: "scope",
-      probability: "high",
-      impact: "high",
-      status: "mitigating",
-      owner: "Sarah Chen",
-      mitigation: "Weekly scope reviews and change control process",
-      createdAt: "2024-01-10",
-      updatedAt: "2024-01-15",
+  const risksQuery = useQuery({
+    queryKey: ["projects", "risks"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/projects/risks`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch risks");
+      return res.json();
     },
-    {
-      id: "r2",
-      title: "Resource Availability",
-      description: "Key developer on vacation for 2 weeks",
-      category: "resource",
-      probability: "medium",
-      impact: "high",
-      status: "identified",
-      owner: "Mike Johnson",
-      mitigation: "Cross-training team members",
-      createdAt: "2024-01-12",
-      updatedAt: "2024-01-12",
-    },
-    {
-      id: "r3",
-      title: "Third-party API Changes",
-      description: "External API may change breaking our integration",
-      category: "technical",
-      probability: "low",
-      impact: "high",
-      status: "mitigating",
-      owner: "Emily Davis",
-      mitigation: "Implementing adapter pattern for external dependencies",
-      createdAt: "2024-01-08",
-      updatedAt: "2024-01-14",
-    },
-    {
-      id: "r4",
-      title: "Budget Overrun",
-      description: "Infrastructure costs higher than anticipated",
-      category: "budget",
-      probability: "medium",
-      impact: "medium",
-      status: "accepted",
-      owner: "Alex Kim",
-      createdAt: "2024-01-05",
-      updatedAt: "2024-01-10",
-    },
-    {
-      id: "r5",
-      title: "Regulatory Changes",
-      description: "New data privacy regulations may affect product",
-      category: "external",
-      probability: "low",
-      impact: "medium",
-      status: "identified",
-      owner: "Jordan Lee",
-      mitigation: "Monitoring regulatory developments",
-      createdAt: "2024-01-15",
-      updatedAt: "2024-01-15",
-    },
-  ];
+    retry: false,
+  });
+
+  const risks: Risk[] = risksQuery.data?.data ?? MOCK_RISKS;
 
   // Filter and sort risks
   const filteredRisks = risks
@@ -439,8 +459,27 @@ function RiskRegisterPage() {
       </div>
 
       {/* Risk List */}
+      {risksQuery.isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-lg bg-muted shrink-0" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-muted rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                  <div className="h-6 w-16 bg-muted rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-3">
-        {filteredRisks.map((risk) => {
+        {!risksQuery.isLoading && filteredRisks.map((risk) => {
           const score = getRiskScore(risk);
           const level = getRiskLevel(score);
           const isExpanded = expandedRisk === risk.id;
@@ -629,7 +668,7 @@ function RiskRegisterPage() {
           );
         })}
 
-        {filteredRisks.length === 0 && (
+        {filteredRisks.length === 0 && !risksQuery.isLoading && (
           <Card>
             <CardContent className="py-12 text-center">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />

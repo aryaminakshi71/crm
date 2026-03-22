@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Target,
   Plus,
@@ -22,7 +23,13 @@ export const Route = createFileRoute("/app/hrm/okrs")({
   component: OKRTracking,
 });
 
-const okrData = [
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+function getOrgHeader(): Record<string, string> {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+}
+
+const MOCK_OKR_DATA = [
   {
     id: "1",
     objective: "Improve System Performance",
@@ -100,7 +107,7 @@ const okrData = [
   },
 ];
 
-const companyOKRs = {
+const MOCK_COMPANY_OKRS = {
   objective: "Achieve Market Leadership",
   progress: 52,
   status: "On Track",
@@ -121,7 +128,34 @@ function OKRTracking() {
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [expandedOKR, setExpandedOKR] = useState<string | null>(null);
 
-  const filteredOKRs = okrData.filter((okr) => {
+  const okrsQuery = useQuery({
+    queryKey: ["hrm", "okrs"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/okrs`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch OKRs");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const companyOKRsQuery = useQuery({
+    queryKey: ["hrm", "company-okrs"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/hrm/okrs/company`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to fetch company OKRs");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const okrData = okrsQuery.data?.data ?? MOCK_OKR_DATA;
+  const companyOKRs = companyOKRsQuery.data?.data ?? MOCK_COMPANY_OKRS;
+
+  const filteredOKRs = okrData.filter((okr: any) => {
     const matchesSearch = okr.objective.toLowerCase().includes(search.toLowerCase()) || okr.owner.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "All" || okr.status === statusFilter;
     const matchesDept = deptFilter === "All Departments" || okr.dept === deptFilter;
@@ -131,9 +165,13 @@ function OKRTracking() {
   const statuses = ["All", "On Track", "At Risk", "Behind", "Completed"];
   const departments = ["All Departments", "Engineering", "Design", "Product", "Sales", "Marketing", "Operations"];
 
-  const avgProgress = Math.round(okrData.reduce((acc, o) => acc + o.progress, 0) / okrData.length);
-  const onTrackCount = okrData.filter((o) => o.status === "On Track").length;
-  const atRiskCount = okrData.filter((o) => o.status === "At Risk" || o.status === "Behind").length;
+  const avgProgress = okrData.length > 0
+    ? Math.round(okrData.reduce((acc: number, o: any) => acc + o.progress, 0) / okrData.length)
+    : 0;
+  const onTrackCount = okrData.filter((o: any) => o.status === "On Track").length;
+  const atRiskCount = okrData.filter((o: any) => o.status === "At Risk" || o.status === "Behind").length;
+
+  const isLoading = okrsQuery.isLoading;
 
   return (
     <div className="space-y-6">
@@ -226,7 +264,7 @@ function OKRTracking() {
           <div className="h-full bg-primary rounded-full" style={{ width: `${companyOKRs.progress}%` }} />
         </div>
         <div className="grid gap-3 sm:grid-cols-4">
-          {companyOKRs.initiatives.map((initiative, idx) => (
+          {companyOKRs.initiatives.map((initiative: any, idx: number) => (
             <div key={idx} className="bg-card/50 rounded-lg p-3">
               <p className="text-sm font-medium text-foreground mb-2">{initiative.title}</p>
               <div className="flex items-center gap-2">
@@ -289,111 +327,131 @@ function OKRTracking() {
         </div>
       </div>
 
-      {/* OKRs List */}
-      <div className="space-y-4">
-        {filteredOKRs.map((okr) => (
-          <div key={okr.id} className="rounded-lg border border-border/60 bg-card">
-            <div
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-              onClick={() => setExpandedOKR(expandedOKR === okr.id ? null : okr.id)}
-            >
+      {/* Loading skeleton */}
+      {isLoading && (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-card p-4 animate-pulse">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                  {okr.avatar}
+                <div className="h-10 w-10 rounded-full bg-muted" />
+                <div className="flex-1">
+                  <div className="h-4 bg-muted rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-muted rounded w-1/4" />
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">{okr.objective}</p>
-                  <p className="text-xs text-muted-foreground">{okr.owner} · {okr.dept}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-muted-foreground">Due Date</p>
-                  <p className="text-sm font-medium text-foreground">{okr.dueDate}</p>
-                </div>
-                <div className="flex items-center gap-2 w-32">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        okr.status === "Completed" ? "bg-emerald-500" :
-                        okr.status === "On Track" ? "bg-blue-500" :
-                        "bg-amber-500"
-                      }`}
-                      style={{ width: `${okr.progress}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground w-10">{okr.progress}%</span>
-                </div>
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                  okr.status === "Completed"
-                    ? "bg-emerald-500/10 text-emerald-500"
-                    : okr.status === "On Track"
-                      ? "bg-blue-500/10 text-blue-500"
-                      : okr.status === "At Risk"
-                        ? "bg-amber-500/10 text-amber-500"
-                        : "bg-red-500/10 text-red-500"
-                }`}>
-                  {okr.status}
-                </span>
-                {expandedOKR === okr.id ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                )}
+                <div className="h-8 w-32 bg-muted rounded" />
               </div>
             </div>
-            {expandedOKR === okr.id && (
-              <div className="border-t border-border/40 bg-muted/20 p-4">
-                <p className="text-xs font-medium text-muted-foreground mb-3">Key Results</p>
-                <div className="space-y-3">
-                  {okr.keyResults.map((kr) => (
-                    <div key={kr.id} className="flex items-center gap-4 bg-card rounded-lg p-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">{kr.title}</p>
-                      </div>
-                      <div className="flex items-center gap-2 w-32">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              kr.status === "Completed" ? "bg-emerald-500" :
-                              kr.status === "On Track" ? "bg-blue-500" :
-                              "bg-amber-500"
-                            }`}
-                            style={{ width: `${kr.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-semibold text-foreground w-8">{kr.progress}%</span>
-                      </div>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        kr.status === "Completed"
-                          ? "bg-emerald-500/10 text-emerald-500"
-                          : kr.status === "On Track"
-                            ? "bg-blue-500/10 text-blue-500"
-                            : "bg-amber-500/10 text-amber-500"
-                      }`}>
-                        {kr.status}
-                      </span>
-                    </div>
-                  ))}
+          ))}
+        </div>
+      )}
+
+      {/* OKRs List */}
+      {!isLoading && (
+        <div className="space-y-4">
+          {filteredOKRs.map((okr: any) => (
+            <div key={okr.id} className="rounded-lg border border-border/60 bg-card">
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => setExpandedOKR(expandedOKR === okr.id ? null : okr.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                    {okr.avatar}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{okr.objective}</p>
+                    <p className="text-xs text-muted-foreground">{okr.owner} · {okr.dept}</p>
+                  </div>
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <button className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                    <Edit className="h-3 w-3 inline mr-1" />
-                    Edit OKR
-                  </button>
-                  <button className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                    <Plus className="h-3 w-3 inline mr-1" />
-                    Add Key Result
-                  </button>
+                <div className="flex items-center gap-6">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-xs text-muted-foreground">Due Date</p>
+                    <p className="text-sm font-medium text-foreground">{okr.dueDate}</p>
+                  </div>
+                  <div className="flex items-center gap-2 w-32">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          okr.status === "Completed" ? "bg-emerald-500" :
+                          okr.status === "On Track" ? "bg-blue-500" :
+                          "bg-amber-500"
+                        }`}
+                        style={{ width: `${okr.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground w-10">{okr.progress}%</span>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    okr.status === "Completed"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : okr.status === "On Track"
+                        ? "bg-blue-500/10 text-blue-500"
+                        : okr.status === "At Risk"
+                          ? "bg-amber-500/10 text-amber-500"
+                          : "bg-red-500/10 text-red-500"
+                  }`}>
+                    {okr.status}
+                  </span>
+                  {expandedOKR === okr.id ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+              {expandedOKR === okr.id && (
+                <div className="border-t border-border/40 bg-muted/20 p-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Key Results</p>
+                  <div className="space-y-3">
+                    {(okr.keyResults ?? []).map((kr: any) => (
+                      <div key={kr.id} className="flex items-center gap-4 bg-card rounded-lg p-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{kr.title}</p>
+                        </div>
+                        <div className="flex items-center gap-2 w-32">
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                kr.status === "Completed" ? "bg-emerald-500" :
+                                kr.status === "On Track" ? "bg-blue-500" :
+                                "bg-amber-500"
+                              }`}
+                              style={{ width: `${kr.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold text-foreground w-8">{kr.progress}%</span>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          kr.status === "Completed"
+                            ? "bg-emerald-500/10 text-emerald-500"
+                            : kr.status === "On Track"
+                              ? "bg-blue-500/10 text-blue-500"
+                              : "bg-amber-500/10 text-amber-500"
+                        }`}>
+                          {kr.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                      <Edit className="h-3 w-3 inline mr-1" />
+                      Edit OKR
+                    </button>
+                    <button className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                      <Plus className="h-3 w-3 inline mr-1" />
+                      Add Key Result
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredOKRs.length === 0 && (
+      {filteredOKRs.length === 0 && !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-card py-12">
           <Target className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-semibold text-foreground mb-1">No OKRs found</h3>
