@@ -5,6 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -25,17 +26,85 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { dealsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/crm/deals/$id")({
   component: DealDetail,
 });
+
+const MOCK_DEAL = {
+  id: "",
+  title: "Enterprise SaaS License",
+  company: "Acme Corporation",
+  contact: "John Smith",
+  contactEmail: "john.smith@acmecorp.com",
+  contactPhone: "+1 (555) 123-4567",
+  value: 125000,
+  stage: "negotiation" as const,
+  probability: 75,
+  expectedClose: "2024-04-15",
+  createdAt: "2024-02-01",
+  lastActivity: "2024-03-15",
+  owner: "Sarah Chen",
+  description: "Enterprise license agreement for Acme Corporation's engineering team.",
+  nextStep: "Awaiting legal review of contract terms",
+  tags: ["enterprise", "hot", "multi-year"],
+  activities: [
+    { id: "1", type: "stage_change", title: "Stage changed to Negotiation", description: "Deal moved from Proposal to Negotiation", date: "2024-03-15", user: "Sarah Chen" },
+    { id: "2", type: "email", title: "Sent Proposal Document", date: "2024-03-10", user: "Sales Team" },
+  ],
+  timeline: [
+    { date: "2024-02-01", title: "Lead Created", stage: "lead" },
+    { date: "2024-02-15", title: "Qualified", stage: "qualified" },
+    { date: "2024-03-05", title: "Proposal Sent", stage: "proposal" },
+    { date: "2024-03-15", title: "Negotiation", stage: "negotiation" },
+  ],
+};
 
 function DealDetail() {
   const navigate = useNavigate();
   const { id } = Route.useParams();
   const [activeTab, setActiveTab] = useState<"timeline" | "details" | "files">("timeline");
 
-  // Mock deal data
+  const { data: apiDeal, isLoading, isError } = useQuery({
+    queryKey: ["deals", id],
+    queryFn: () => dealsApi.get(id),
+    retry: false,
+    enabled: !!id,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded bg-muted animate-pulse" />
+          <div className="flex-1">
+            <div className="h-7 w-64 bg-muted animate-pulse rounded mb-2" />
+            <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="h-48 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="h-32 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const raw = apiDeal ?? (isError ? { ...MOCK_DEAL, id } : MOCK_DEAL);
+
   const deal: {
     id: string;
     title: string;
@@ -53,92 +122,27 @@ function DealDetail() {
     description: string;
     nextStep: string;
     tags: string[];
-    activities: Array<{
-      id: string;
-      type: string;
-      title: string;
-      description?: string;
-      date: string;
-      user: string;
-    }>;
-    timeline: Array<{
-      date: string;
-      title: string;
-      stage: string;
-    }>;
+    activities: Array<{ id: string; type: string; title: string; description?: string; date: string; user: string }>;
+    timeline: Array<{ date: string; title: string; stage: string }>;
   } = {
-    id,
-    title: "Enterprise SaaS License",
-    company: "Acme Corporation",
-    contact: "John Smith",
-    contactEmail: "john.smith@acmecorp.com",
-    contactPhone: "+1 (555) 123-4567",
-    value: 125000,
-    stage: "negotiation",
-    probability: 75,
-    expectedClose: "2024-04-15",
-    createdAt: "2024-02-01",
-    lastActivity: "2024-03-15",
-    owner: "Sarah Chen",
-    description: "Enterprise license agreement for Acme Corporation's engineering team. Multi-year contract with annual billing. Includes premium support and custom integrations.",
-    nextStep: "Awaiting legal review of contract terms",
-    tags: ["enterprise", "hot", "multi-year"],
-    activities: [
-      {
-        id: "1",
-        type: "stage_change",
-        title: "Stage changed to Negotiation",
-        description: "Deal moved from Proposal to Negotiation",
-        date: "2024-03-15",
-        user: "Sarah Chen",
-      },
-      {
-        id: "2",
-        type: "meeting",
-        title: "Contract Review Meeting",
-        description: "Discussed contract terms with legal team. Minor revisions requested.",
-        date: "2024-03-14",
-        user: "Sarah Chen",
-      },
-      {
-        id: "3",
-        type: "email",
-        title: "Sent Proposal Document",
-        description: "Formal proposal sent to John Smith for approval",
-        date: "2024-03-10",
-        user: "Sales Team",
-      },
-      {
-        id: "4",
-        type: "call",
-        title: "Discovery Call Completed",
-        description: "45-minute call discussing requirements and pricing tiers",
-        date: "2024-03-05",
-        user: "Sarah Chen",
-      },
-      {
-        id: "5",
-        type: "note",
-        title: "Note added: Budget confirmed",
-        description: "John confirmed budget approved for Q2 fiscal year",
-        date: "2024-03-03",
-        user: "Sarah Chen",
-      },
-      {
-        id: "6",
-        type: "email",
-        title: "Introduction Email Sent",
-        description: "Initial outreach email with product overview",
-        date: "2024-02-01",
-        user: "Sales Team",
-      },
-    ],
-    timeline: [
-      { date: "2024-02-01", title: "Lead Created", stage: "lead" },
-      { date: "2024-02-15", title: "Qualified", stage: "qualified" },
-      { date: "2024-03-05", title: "Proposal Sent", stage: "proposal" },
-      { date: "2024-03-15", title: "Negotiation", stage: "negotiation" },
-    ],
+    id: raw.id ?? id,
+    title: raw.name ?? raw.title ?? MOCK_DEAL.title,
+    company: raw.companyName ?? raw.company ?? MOCK_DEAL.company,
+    contact: raw.contactName ?? raw.contact ?? MOCK_DEAL.contact,
+    contactEmail: raw.contactEmail ?? MOCK_DEAL.contactEmail,
+    contactPhone: raw.contactPhone ?? MOCK_DEAL.contactPhone,
+    value: typeof raw.value === "string" ? parseFloat(raw.value) || 0 : (raw.value ?? MOCK_DEAL.value),
+    stage: raw.stage ?? MOCK_DEAL.stage,
+    probability: raw.probability ?? MOCK_DEAL.probability,
+    expectedClose: raw.expectedCloseDate ?? raw.expectedClose ?? MOCK_DEAL.expectedClose,
+    createdAt: raw.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_DEAL.createdAt,
+    lastActivity: raw.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_DEAL.lastActivity,
+    owner: raw.ownerName ?? raw.owner ?? MOCK_DEAL.owner,
+    description: raw.notes ?? raw.description ?? MOCK_DEAL.description,
+    nextStep: raw.nextStep ?? MOCK_DEAL.nextStep,
+    tags: raw.tags ?? MOCK_DEAL.tags,
+    activities: raw.activities ?? MOCK_DEAL.activities,
+    timeline: raw.timeline ?? MOCK_DEAL.timeline,
   };
 
   const stageColors: Record<string, string> = {

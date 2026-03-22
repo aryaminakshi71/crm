@@ -5,6 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, Input, Progress } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Briefcase,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { dealsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/crm/deals")({
   component: DealsList,
@@ -40,7 +42,7 @@ interface Deal {
   tags: string[];
 }
 
-const mockDeals: Deal[] = [
+const MOCK_DEALS: Deal[] = [
   {
     id: "1",
     title: "Enterprise SaaS License",
@@ -69,90 +71,6 @@ const mockDeals: Deal[] = [
     owner: "David Park",
     tags: ["cloud", "mid-market"],
   },
-  {
-    id: "3",
-    title: "Security Audit Services",
-    company: "DataFlow Ltd",
-    contact: "Mike Chen",
-    value: 45000,
-    stage: "qualified",
-    probability: 40,
-    expectedClose: "2024-05-15",
-    createdAt: "2024-02-20",
-    lastActivity: "2024-03-13",
-    owner: "Emily Zhang",
-    tags: ["security", "consulting"],
-  },
-  {
-    id: "4",
-    title: "Platform Integration",
-    company: "Global Industries",
-    contact: "Emily Wong",
-    value: 156000,
-    stage: "negotiation",
-    probability: 80,
-    expectedClose: "2024-03-30",
-    createdAt: "2024-01-15",
-    lastActivity: "2024-03-15",
-    owner: "Sarah Chen",
-    tags: ["enterprise", "integration"],
-  },
-  {
-    id: "5",
-    title: "Annual Support Contract",
-    company: "StartupXYZ",
-    contact: "David Park",
-    value: 36000,
-    stage: "closed_won",
-    probability: 100,
-    expectedClose: "2024-03-01",
-    createdAt: "2024-01-20",
-    lastActivity: "2024-03-01",
-    owner: "Mike Lee",
-    tags: ["recurring"],
-  },
-  {
-    id: "6",
-    title: "Data Analytics Suite",
-    company: "FinanceHub",
-    contact: "Jennifer Lee",
-    value: 78000,
-    stage: "proposal",
-    probability: 55,
-    expectedClose: "2024-05-01",
-    createdAt: "2024-02-25",
-    lastActivity: "2024-03-12",
-    owner: "Emily Zhang",
-    tags: ["analytics", "finance"],
-  },
-  {
-    id: "7",
-    title: "Mobile App Development",
-    company: "RetailCo",
-    contact: "Robert Kim",
-    value: 92000,
-    stage: "qualified",
-    probability: 35,
-    expectedClose: "2024-06-15",
-    createdAt: "2024-03-01",
-    lastActivity: "2024-03-10",
-    owner: "David Park",
-    tags: ["mobile", "retail"],
-  },
-  {
-    id: "8",
-    title: "Full Platform License",
-    company: "MegaCorp",
-    contact: "Lisa Wang",
-    value: 245000,
-    stage: "closed_won",
-    probability: 100,
-    expectedClose: "2024-02-28",
-    createdAt: "2024-01-10",
-    lastActivity: "2024-02-28",
-    owner: "Sarah Chen",
-    tags: ["enterprise", "platform"],
-  },
 ];
 
 function DealsList() {
@@ -162,7 +80,33 @@ function DealsList() {
   const [sortBy, setSortBy] = useState<string>("value");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const filteredDeals = mockDeals
+  const { data: dealsData, isLoading: dealsLoading } = useQuery({
+    queryKey: ["deals", { stage: stageFilter !== "all" ? stageFilter : undefined, search: searchQuery || undefined }],
+    queryFn: () =>
+      dealsApi.list({
+        stage: stageFilter !== "all" ? stageFilter : undefined,
+        search: searchQuery || undefined,
+        limit: 100,
+      }),
+    retry: false,
+  });
+
+  const rawDeals: Deal[] = (dealsData?.data ?? MOCK_DEALS).map((d: any) => ({
+    id: d.id,
+    title: d.name ?? d.title ?? "",
+    company: d.companyName ?? d.company ?? "",
+    contact: d.contactName ?? d.contact ?? "",
+    value: typeof d.value === "string" ? parseFloat(d.value) || 0 : (d.value ?? 0),
+    stage: d.stage ?? "lead",
+    probability: d.probability ?? 0,
+    expectedClose: d.expectedCloseDate ?? d.expectedClose ?? "",
+    createdAt: d.createdAt ? String(d.createdAt).slice(0, 10) : "",
+    lastActivity: d.updatedAt ? String(d.updatedAt).slice(0, 10) : "",
+    owner: d.ownerName ?? d.owner ?? "",
+    tags: d.tags ?? [],
+  }));
+
+  const filteredDeals = rawDeals
     .filter((deal) => {
       const matchesSearch =
         searchQuery === "" ||
@@ -199,9 +143,35 @@ function DealsList() {
     closed_lost: "Closed Lost",
   };
 
-  const totalValue = mockDeals.reduce((sum, d) => sum + d.value, 0);
-  const weightedValue = mockDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0);
-  const wonValue = mockDeals.filter((d) => d.stage === "closed_won").reduce((sum, d) => sum + d.value, 0);
+  const totalValue = rawDeals.reduce((sum, d) => sum + d.value, 0);
+  const weightedValue = rawDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0);
+  const wonValue = rawDeals.filter((d) => d.stage === "closed_won" || d.stage === "won").reduce((sum, d) => sum + d.value, 0);
+
+  if (dealsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-10 w-48 rounded-md bg-muted animate-pulse" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="border-border/60">
+              <CardContent className="p-4">
+                <div className="h-16 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card className="border-border/60">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -253,7 +223,7 @@ function DealsList() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted-foreground text-xs font-medium">Total Deals</p>
-                <p className="font-bold text-2xl">{mockDeals.length}</p>
+                <p className="font-bold text-2xl">{rawDeals.length}</p>
               </div>
               <Briefcase className="h-8 w-8 text-primary/20" />
             </div>
@@ -406,7 +376,7 @@ function DealsList() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredDeals.length} of {mockDeals.length} deals
+          Showing {filteredDeals.length} of {rawDeals.length} deals
         </p>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled>

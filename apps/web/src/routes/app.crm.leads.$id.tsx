@@ -5,6 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -27,81 +28,109 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { leadsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/crm/leads/$id")({
   component: LeadDetail,
 });
 
+const MOCK_LEAD = {
+  id: "",
+  name: "Alex Rivera",
+  email: "alex.r@techventures.com",
+  phone: "+1 (555) 111-2222",
+  company: "Tech Ventures LLC",
+  jobTitle: "CTO",
+  location: "San Francisco, CA",
+  website: "techventures.com",
+  source: "Website",
+  status: "qualified" as const,
+  score: 92,
+  scoreBreakdown: {
+    engagement: { score: 30, max: 35, label: "Engagement", description: "Website visits, email opens, content downloads" },
+    firmographics: { score: 35, max: 40, label: "Firmographics", description: "Company size, industry, revenue" },
+    demographic: { score: 27, max: 25, label: "Demographics", description: "Job title, seniority, decision-making authority" },
+  },
+  assignedTo: "Sarah Chen",
+  createdAt: "2024-03-10",
+  lastActivity: "2024-03-15",
+  estimatedValue: 150000,
+  notes: "Highly engaged prospect. Perfect fit for enterprise tier.",
+  tags: ["hot-lead", "enterprise", "decision-maker", "tech"],
+  activities: [
+    { id: "1", type: "page_view", title: "Viewed Pricing Page", description: "Enterprise tier pricing viewed for 3 minutes", date: "2024-03-15", user: "System" },
+    { id: "2", type: "email", title: "Opened Email: Product Demo Invite", date: "2024-03-14", user: "Sales Team" },
+    { id: "3", type: "form", title: "Submitted Contact Form", date: "2024-03-10", user: "System" },
+  ],
+  deals: [{ id: "1", name: "Enterprise SaaS License", value: 150000, stage: "Qualified" }],
+};
+
 function LeadDetail() {
   const navigate = useNavigate();
   const { id } = Route.useParams();
 
-  // Mock lead data
+  const { data: apiLead, isLoading, isError } = useQuery({
+    queryKey: ["leads", id],
+    queryFn: () => leadsApi.get(id),
+    retry: false,
+    enabled: !!id,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded bg-muted animate-pulse" />
+          <div className="flex-1">
+            <div className="h-7 w-48 bg-muted animate-pulse rounded mb-2" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="h-48 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="h-32 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const raw = apiLead ?? (isError ? { ...MOCK_LEAD, id } : MOCK_LEAD);
+
   const lead = {
-    id,
-    name: "Alex Rivera",
-    email: "alex.r@techventures.com",
-    phone: "+1 (555) 111-2222",
-    company: "Tech Ventures LLC",
-    jobTitle: "CTO",
-    location: "San Francisco, CA",
-    website: "techventures.com",
-    source: "Website",
-    status: "qualified" as const,
-    score: 92,
-    scoreBreakdown: {
-      engagement: { score: 30, max: 35, label: "Engagement", description: "Website visits, email opens, content downloads" },
-      firmographics: { score: 35, max: 40, label: "Firmographics", description: "Company size, industry, revenue" },
-      demographic: { score: 27, max: 25, label: "Demographics", description: "Job title, seniority, decision-making authority" },
-    },
-    assignedTo: "Sarah Chen",
-    createdAt: "2024-03-10",
-    lastActivity: "2024-03-15",
-    estimatedValue: 150000,
-    notes: "Highly engaged prospect. Visited pricing page 5 times in the last week. Downloaded ROI calculator. Responded to email within 2 hours. Perfect fit for enterprise tier.",
-    tags: ["hot-lead", "enterprise", "decision-maker", "tech"],
-    activities: [
-      {
-        id: "1",
-        type: "page_view",
-        title: "Viewed Pricing Page",
-        description: "Enterprise tier pricing viewed for 3 minutes",
-        date: "2024-03-15",
-        user: "System",
-      },
-      {
-        id: "2",
-        type: "email",
-        title: "Opened Email: Product Demo Invite",
-        date: "2024-03-14",
-        user: "Sales Team",
-      },
-      {
-        id: "3",
-        type: "download",
-        title: "Downloaded ROI Calculator",
-        date: "2024-03-13",
-        user: "System",
-      },
-      {
-        id: "4",
-        type: "email",
-        title: "Replied to Outreach Email",
-        description: "Interested in scheduling a demo this week",
-        date: "2024-03-12",
-        user: "Alex Rivera",
-      },
-      {
-        id: "5",
-        type: "form",
-        title: "Submitted Contact Form",
-        date: "2024-03-10",
-        user: "System",
-      },
-    ],
-    deals: [
-      { id: "1", name: "Enterprise SaaS License", value: 150000, stage: "Qualified" },
-    ],
+    id: raw.id ?? id,
+    name: raw.firstName && raw.lastName
+      ? `${raw.firstName} ${raw.lastName}`
+      : raw.firstName ?? raw.lastName ?? raw.name ?? MOCK_LEAD.name,
+    email: raw.email ?? MOCK_LEAD.email,
+    phone: raw.phone ?? MOCK_LEAD.phone,
+    company: raw.companyName ?? raw.company ?? MOCK_LEAD.company,
+    jobTitle: raw.jobTitle ?? MOCK_LEAD.jobTitle,
+    location: raw.location ?? MOCK_LEAD.location,
+    website: raw.website ?? MOCK_LEAD.website,
+    source: raw.source ?? MOCK_LEAD.source,
+    status: (raw.status ?? MOCK_LEAD.status) as "new" | "contacted" | "qualified" | "unqualified",
+    score: raw.score ?? MOCK_LEAD.score,
+    scoreBreakdown: raw.scoreBreakdown ?? MOCK_LEAD.scoreBreakdown,
+    assignedTo: raw.assignedToName ?? raw.assignedTo ?? MOCK_LEAD.assignedTo,
+    createdAt: raw.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_LEAD.createdAt,
+    lastActivity: raw.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_LEAD.lastActivity,
+    estimatedValue: raw.estimatedValue ?? MOCK_LEAD.estimatedValue,
+    notes: raw.notes ?? MOCK_LEAD.notes,
+    tags: raw.tags ?? MOCK_LEAD.tags,
+    activities: raw.activities ?? MOCK_LEAD.activities,
+    deals: raw.deals ?? MOCK_LEAD.deals,
   };
 
   const statusConfig = {

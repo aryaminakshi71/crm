@@ -5,6 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -23,75 +24,105 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
+import { contactsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/crm/contacts/$id")({
   component: ContactDetail,
 });
 
+const MOCK_CONTACT = {
+  id: "",
+  firstName: "John",
+  lastName: "Smith",
+  email: "john.smith@acmecorp.com",
+  phone: "+1 (555) 123-4567",
+  company: "Acme Corporation",
+  jobTitle: "VP of Engineering",
+  location: "San Francisco, CA",
+  website: "acmecorp.com",
+  status: "active" as const,
+  createdAt: "2023-06-15",
+  lastActivity: "2024-03-15",
+  dealsCount: 3,
+  totalValue: 245000,
+  tags: ["enterprise", "decision-maker", "technical"],
+  notes: "Key decision maker for enterprise deals.",
+  deals: [
+    { id: "1", name: "Enterprise SaaS License", value: 125000, stage: "Negotiation" },
+    { id: "2", name: "Cloud Migration Project", value: 89000, stage: "Proposal" },
+  ],
+  activities: [
+    { id: "1", type: "email", title: "Email sent: Follow-up on proposal", date: "2024-03-15", user: "Sales Team" },
+    { id: "2", type: "call", title: "Discovery call completed (45 min)", date: "2024-03-12", user: "Sarah Chen" },
+  ],
+};
+
 function ContactDetail() {
   const navigate = useNavigate();
   const { id } = Route.useParams();
 
-  // Mock contact data
+  const { data: apiContact, isLoading, isError } = useQuery({
+    queryKey: ["contacts", id],
+    queryFn: () => contactsApi.get(id),
+    retry: false,
+    enabled: !!id,
+  });
+
+  const raw = apiContact ?? (isError ? { ...MOCK_CONTACT, id } : null);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded bg-muted animate-pulse" />
+          <div className="flex-1">
+            <div className="h-7 w-48 bg-muted animate-pulse rounded mb-2" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-10 bg-muted animate-pulse rounded" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-6">
+            <Card className="border-border/60">
+              <CardContent className="p-6">
+                <div className="h-32 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const contact = {
-    id,
-    firstName: "John",
-    lastName: "Smith",
-    email: "john.smith@acmecorp.com",
-    phone: "+1 (555) 123-4567",
-    company: "Acme Corporation",
-    jobTitle: "VP of Engineering",
-    location: "San Francisco, CA",
-    website: "acmecorp.com",
-    status: "active" as const,
-    createdAt: "2023-06-15",
-    lastActivity: "2024-03-15",
-    dealsCount: 3,
-    totalValue: 245000,
-    tags: ["enterprise", "decision-maker", "technical"],
-    notes: "Key decision maker for enterprise deals. Prefers email communication. Recently promoted to VP of Engineering.",
-    deals: [
-      { id: "1", name: "Enterprise SaaS License", value: 125000, stage: "Negotiation" },
-      { id: "2", name: "Cloud Migration Project", value: 89000, stage: "Proposal" },
-      { id: "3", name: "Support Contract Renewal", value: 31000, stage: "Closed Won" },
-    ],
-    activities: [
-      {
-        id: "1",
-        type: "email",
-        title: "Email sent: Follow-up on proposal",
-        date: "2024-03-15",
-        user: "Sales Team",
-      },
-      {
-        id: "2",
-        type: "call",
-        title: "Discovery call completed (45 min)",
-        date: "2024-03-12",
-        user: "Sarah Chen",
-      },
-      {
-        id: "3",
-        type: "meeting",
-        title: "Product demo scheduled",
-        date: "2024-03-10",
-        user: "David Park",
-      },
-      {
-        id: "4",
-        type: "deal",
-        title: "Deal updated: Enterprise SaaS License",
-        date: "2024-03-08",
-        user: "System",
-      },
-      {
-        id: "5",
-        type: "note",
-        title: "Note added: Budget approved for Q2",
-        date: "2024-03-05",
-        user: "Emily Zhang",
-      },
-    ],
+    id: raw?.id ?? id,
+    firstName: raw?.firstName ?? MOCK_CONTACT.firstName,
+    lastName: raw?.lastName ?? MOCK_CONTACT.lastName,
+    email: raw?.email ?? MOCK_CONTACT.email,
+    phone: raw?.phone ?? MOCK_CONTACT.phone,
+    company: raw?.companyName ?? raw?.company ?? MOCK_CONTACT.company,
+    jobTitle: raw?.jobTitle ?? MOCK_CONTACT.jobTitle,
+    location: raw?.location ?? MOCK_CONTACT.location,
+    website: raw?.website ?? MOCK_CONTACT.website,
+    status: (raw?.status ?? "active") as "active" | "inactive",
+    createdAt: raw?.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_CONTACT.createdAt,
+    lastActivity: raw?.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_CONTACT.lastActivity,
+    dealsCount: raw?.dealsCount ?? MOCK_CONTACT.dealsCount,
+    totalValue: raw?.totalValue ?? MOCK_CONTACT.totalValue,
+    tags: raw?.tags ?? MOCK_CONTACT.tags,
+    notes: raw?.notes ?? MOCK_CONTACT.notes,
+    deals: raw?.deals ?? MOCK_CONTACT.deals,
+    activities: raw?.activities ?? MOCK_CONTACT.activities,
   };
 
   const activityIcons = {
