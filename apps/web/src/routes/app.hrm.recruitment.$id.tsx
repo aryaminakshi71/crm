@@ -185,17 +185,6 @@ function CandidateDetail() {
     { id: "notes", label: "Notes", icon: MessageSquare },
   ];
 
-  const getActionColor = (type: string) => {
-    switch (type) {
-      case "application": return "bg-blue-500";
-      case "review": return "bg-purple-500";
-      case "interview": return "bg-amber-500";
-      case "progress": return "bg-emerald-500";
-      case "referral": return "bg-teal-500";
-      default: return "bg-gray-500";
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -382,25 +371,32 @@ function OverviewTab({ candidate }: { candidate: any }) {
 }
 
 function NotesTab({ candidate }: { candidate: any }) {
-  const notes: string[] = Array.isArray(candidate.notes)
-    ? candidate.notes
-    : candidate.notes
-      ? [candidate.notes]
-      : [];
+  // notes may be an array of objects {author, date, content} or strings, or a bare string
+  const rawNotes = candidate.notes ?? [];
+  const notes: Array<{ content: string; author?: string; date?: string }> = Array.isArray(rawNotes)
+    ? rawNotes.map((n: any) =>
+        typeof n === "string" ? { content: n } : { content: n.content ?? String(n), author: n.author, date: n.date }
+      )
+    : [{ content: String(rawNotes) }];
+
+  const hasNotes = notes.length > 0 && notes.some((n) => n.content);
 
   return (
     <div className="rounded-lg border border-border/60 bg-card p-6">
       <h3 className="font-semibold text-foreground mb-4">Notes</h3>
-      {notes.length === 0 ? (
+      {!hasNotes ? (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
           <FileText className="h-10 w-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No notes recorded for this candidate.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {notes.map((note, idx) => (
+          {notes.filter((n) => n.content).map((note, idx) => (
             <div key={idx} className="rounded-lg bg-muted/30 p-4 text-sm text-foreground whitespace-pre-wrap">
-              {note}
+              {note.author && (
+                <p className="text-xs text-muted-foreground mb-1 font-medium">{note.author}{note.date ? ` · ${note.date}` : ""}</p>
+              )}
+              {note.content}
             </div>
           ))}
         </div>

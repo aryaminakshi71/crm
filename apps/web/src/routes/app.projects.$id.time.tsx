@@ -69,17 +69,22 @@ function TimeTrackingPage() {
   } | null>(null);
   const [timerElapsed, setTimerElapsed] = useState(0);
 
-  // Mock data
-  const timeEntries: TimeEntry[] = [
-    { id: "1", taskId: "t1", taskName: "API Integration", userId: "u1", userName: "Sarah Chen", duration: 240, date: "2024-01-15", description: "Worked on REST endpoints" },
-    { id: "2", taskId: "t2", taskName: "UI Design", userId: "u2", userName: "Mike Johnson", duration: 180, date: "2024-01-15", description: "Dashboard mockups" },
-    { id: "3", taskId: "t1", taskName: "API Integration", userId: "u1", userName: "Sarah Chen", duration: 120, date: "2024-01-14", description: "Authentication flow" },
-    { id: "t3", taskId: "t3", taskName: "Database Setup", userId: "u3", userName: "Emily Davis", duration: 300, date: "2024-01-14", description: "Schema design" },
-  ];
+  // Fetch real tasks for this project
+  const { data: tasksData } = useQuery({
+    queryKey: ["nucleo-project-tasks", id],
+    queryFn: () => nucleoApi.projects.tasks.list(id),
+    enabled: !!id,
+  });
+
+  const projectTasks = (tasksData?.data ?? []) as any[];
+
+  // No time-tracking API — show empty local entries
+  const timeEntries: TimeEntry[] = [];
 
   // Calculate totals
+  const todayStr = new Date().toISOString().split("T")[0];
   const totalHoursToday = timeEntries
-    .filter((e) => e.date === "2024-01-15")
+    .filter((e) => e.date === todayStr)
     .reduce((sum, e) => sum + e.duration, 0) / 60;
 
   const totalHoursWeek = timeEntries.reduce((sum, e) => sum + e.duration, 0) / 60;
@@ -187,9 +192,10 @@ function TimeTrackingPage() {
                   size="lg"
                   leftIcon={<Play className="h-5 w-5" />}
                   onClick={() => {
+                    const firstTask = projectTasks[0];
                     setActiveTimer({
-                      taskId: "t1",
-                      taskName: "New Task",
+                      taskId: firstTask?.id ?? "new",
+                      taskName: firstTask?.title ?? "New Task",
                       startTime: new Date(),
                     });
                   }}
