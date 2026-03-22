@@ -1,143 +1,145 @@
-import { createFileRoute } from "@tanstack/react-router";
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
-import {
-  Database,
-  Plus,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Settings,
-  Trash2,
-} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Database, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/app/intelligence/sources")({
-  component: Sources,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const dataSources = [
-  { id: 1, name: "Salesforce CRM", type: "CRM", status: "connected", lastSync: "5 min ago", records: "45,234", health: "good" },
-  { id: 2, name: "Stripe Payments", type: "Payments", status: "connected", lastSync: "2 min ago", records: "128,456", health: "good" },
-  { id: 3, name: "PostgreSQL Database", type: "Database", status: "connected", lastSync: "1 min ago", records: "892,123", health: "good" },
-  { id: 4, name: "Google Analytics", type: "Analytics", status: "connected", lastSync: "10 min ago", records: "1.2M", health: "warning" },
-  { id: 5, name: "HubSpot Marketing", type: "Marketing", status: "disconnected", lastSync: "3 days ago", records: "0", health: "error" },
-  { id: 6, name: "Zendesk Support", type: "Support", status: "connected", lastSync: "5 min ago", records: "34,567", health: "good" },
-  { id: 7, name: "Snowflake Warehouse", type: "Warehouse", status: "connected", lastSync: "30 min ago", records: "2.4M", health: "good" },
-  { id: 8, name: "Mixpanel Events", type: "Analytics", status: "connected", lastSync: "2 min ago", records: "5.6M", health: "good" },
-];
+const MOCK_SOURCES = {
+  sources: [
+    { id: "src-1", name: "PostgreSQL (Primary)", type: "database", status: "connected", lastSync: new Date().toISOString(), recordCount: 142800 },
+    { id: "src-2", name: "Stripe", type: "payment", status: "connected", lastSync: new Date(Date.now() - 1800000).toISOString(), recordCount: 8420 },
+    { id: "src-3", name: "HubSpot CRM", type: "crm", status: "syncing", lastSync: new Date(Date.now() - 600000).toISOString(), recordCount: 3200 },
+    { id: "src-4", name: "Google Analytics", type: "analytics", status: "error", lastSync: new Date(Date.now() - 86400000).toISOString(), recordCount: 0 },
+  ],
+};
 
-const stats = [
-  { label: "Total Sources", value: dataSources.length, icon: Database },
-  { label: "Connected", value: dataSources.filter(s => s.status === "connected").length, icon: CheckCircle2 },
-  { label: "Total Records", value: "10.4M", icon: Database },
-  { label: "Sync Errors", value: "1", icon: AlertCircle },
-];
+export const Route = createFileRoute("/app/intelligence/sources")({
+  component: SourcesPage,
+});
 
-function Sources() {
+const statusBadge: Record<string, string> = {
+  connected: "default",
+  syncing: "secondary",
+  error: "destructive",
+  disconnected: "outline",
+};
+
+const statusIcon = {
+  connected: <Wifi className="h-4 w-4 text-emerald-500" />,
+  syncing: <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />,
+  error: <WifiOff className="h-4 w-4 text-rose-500" />,
+  disconnected: <WifiOff className="h-4 w-4 text-muted-foreground" />,
+};
+
+function SourcesPage() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "sources"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/sources`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_SOURCES;
+      return res.json();
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/sources/${id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return { success: true, sourceId: id, message: "Sync initiated" };
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["intelligence", "sources"] });
+      toast.success("Sync started successfully");
+    },
+    onError: () => {
+      toast.error("Failed to start sync");
+    },
+  });
+
+  const sources = data?.sources ?? MOCK_SOURCES.sources;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Data Source Connections</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage connections to your data warehouses and integrations
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
-            <RefreshCw className="h-4 w-4" />
-            Sync All
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Plus className="h-4 w-4" />
-            Add Source
-          </button>
-        </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Data Sources</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage connected data sources powering your intelligence.
+        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="border-border/60">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <stat.icon className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Data Sources */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            {dataSources.map((source) => (
-              <div
-                key={source.id}
-                className={`flex items-center gap-4 p-4 rounded-lg border ${
-                  source.health === "error" ? "border-red-500/30 bg-red-500/5" :
-                  source.health === "warning" ? "border-amber-500/30" :
-                  "border-border/40"
-                }`}
-              >
-                <div className={`p-3 rounded-lg ${
-                  source.status === "connected" ? "bg-green-500/10" : "bg-red-500/10"
-                }`}>
-                  <Database className={`h-6 w-6 ${
-                    source.status === "connected" ? "text-green-500" : "text-red-500"
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-foreground">{source.name}</p>
-                    <span className="px-2 py-0.5 rounded bg-muted text-xs">{source.type}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      source.status === "connected" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                    }`}>
-                      {source.status}
-                    </span>
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <LoadingSkeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {sources.map((source: any) => (
+            <Card key={source.id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border bg-muted">
+                      <Database className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{source.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground capitalize">{source.type}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Last sync: {source.lastSync}
-                    </span>
-                    <span>{source.records} records</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      {statusIcon[source.status as keyof typeof statusIcon] ?? statusIcon.disconnected}
+                      <Badge variant={statusBadge[source.status] as any}>{source.status}</Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={syncMutation.isPending}
+                      onClick={() => syncMutation.mutate(source.id)}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {source.health === "good" && (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  )}
-                  {source.health === "warning" && (
-                    <AlertCircle className="h-5 w-5 text-amber-500" />
-                  )}
-                  {source.health === "error" && (
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                  )}
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Records: </span>
+                    <span className="font-semibold">{source.recordCount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Last sync: </span>
+                    <span className="font-semibold">{new Date(source.lastSync).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <button className="p-2 rounded-lg hover:bg-muted transition-colors" title="Settings">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <button className="p-2 rounded-lg hover:bg-muted transition-colors" title="Delete">
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

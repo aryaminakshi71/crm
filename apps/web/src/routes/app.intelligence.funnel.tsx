@@ -1,129 +1,119 @@
-import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
-import {
-  Target,
-  Users,
-  TrendingUp,
-  ArrowRight,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Filter, TrendingDown } from "lucide-react";
 
-export const Route = createFileRoute("/app/intelligence/funnel")({
-  component: Funnel,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const funnelStages = [
-  { name: "Website Visitors", value: 45000, percentage: 100, dropoff: null },
-  { name: "Product Page Views", value: 18000, percentage: 40, dropoff: "-60%" },
-  { name: "Add to Cart", value: 5400, percentage: 12, dropoff: "-75%" },
-  { name: "Checkout Started", value: 3240, percentage: 7.2, dropoff: "-40%" },
-  { name: "Purchase Complete", value: 1710, percentage: 3.8, dropoff: "-47%" },
-];
+const MOCK_FUNNEL = {
+  stages: [
+    { name: "Visitors", count: 12400, conversion: 100 },
+    { name: "Leads", count: 2480, conversion: 20 },
+    { name: "Qualified", count: 744, conversion: 6 },
+    { name: "Proposals", count: 298, conversion: 2.4 },
+    { name: "Closed Won", count: 119, conversion: 0.96 },
+  ],
+  overallConversion: 0.96,
+  avgDealCycle: 46,
+};
 
-function Funnel() {
+const STAGE_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#ec4899", "#f43f5e"];
+
+export const Route = createFileRoute("/app/intelligence/funnel")({
+  component: FunnelPage,
+});
+
+function FunnelPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "funnel"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/funnel`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_FUNNEL;
+      return res.json();
+    },
+  });
+
+  const funnel = data ?? MOCK_FUNNEL;
+  const maxCount = funnel.stages?.[0]?.count ?? 1;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Funnel Visualization</h2>
-          <p className="text-sm text-muted-foreground">
-            Analyze conversion rates through your sales funnel
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Funnel Analysis</h1>
+        <p className="text-muted-foreground mt-1">
+          Visualize conversion across each stage of your pipeline.
+        </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Target className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">3.8%</p>
-            <p className="text-xs text-muted-foreground">Overall Conversion</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Overall Conversion
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{funnel.overallConversion}%</p>
           </CardContent>
         </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Users className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">1,710</p>
-            <p className="text-xs text-muted-foreground">Total Conversions</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">+0.4%</p>
-            <p className="text-xs text-muted-foreground">Conversion vs Last Week</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <ArrowRight className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">62%</p>
-            <p className="text-xs text-muted-foreground">Cart Abandonment</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" />
+              Avg Deal Cycle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{funnel.avgDealCycle} days</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Funnel Visualization */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-6">Sales Funnel</h3>
-          <div className="space-y-4">
-            {funnelStages.map((stage, idx) => (
-              <div key={stage.name} className="relative">
-                <div className="flex items-center gap-4">
-                  <div
-                    className="h-16 bg-primary rounded-r-lg flex items-center justify-start pl-4"
-                    style={{ width: `${stage.percentage}%`, minWidth: "120px" }}
-                  >
-                    <span className="text-white font-medium whitespace-nowrap">{stage.value.toLocaleString()}</span>
+      {isLoading ? (
+        <LoadingSkeleton className="h-64 w-full rounded-lg" />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Funnel Stages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {funnel.stages?.map((stage: any, i: number) => {
+              const pct = maxCount > 0 ? (stage.count / maxCount) * 100 : 0;
+              return (
+                <div key={stage.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{stage.name}</span>
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <span>{stage.count.toLocaleString()} users</span>
+                      <span className="font-semibold text-foreground">{stage.conversion}%</span>
+                    </div>
                   </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <span className="text-sm font-medium">{stage.name}</span>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">{stage.percentage}%</span>
-                      {stage.dropoff && (
-                        <span className="text-xs text-red-500 bg-red-500/10 px-2 py-1 rounded">
-                          {stage.dropoff} drop
-                        </span>
-                      )}
+                  <div className="h-8 bg-muted rounded-md overflow-hidden">
+                    <div
+                      className="h-full rounded-md transition-all duration-700 flex items-center pl-3"
+                      style={{ width: `${pct}%`, backgroundColor: STAGE_COLORS[i] }}
+                    >
+                      <span className="text-xs text-white font-medium truncate">{stage.name}</span>
                     </div>
                   </div>
                 </div>
-                {idx < funnelStages.length - 1 && (
-                  <div className="flex items-center justify-end mr-4">
-                    <div className="w-0 h-6 border-l-2 border-dashed border-border" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stage Analysis */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">Stage Analysis</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
-              <p className="font-medium text-amber-500 mb-2">Biggest Drop-off: Product Page Views</p>
-              <p className="text-sm text-muted-foreground">
-                60% of visitors leave after viewing products. Consider improving product images or adding customer reviews.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5">
-              <p className="font-medium text-green-500 mb-2">Best Performer: Checkout Started</p>
-              <p className="text-sm text-muted-foreground">
-                Only 40% dropoff at checkout - your checkout flow is performing well above industry average.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

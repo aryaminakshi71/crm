@@ -1,362 +1,170 @@
-/**
- * Connector Detail
- *
- * Configure and manage a specific connector.
- */
-
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  Settings,
-  RefreshCw,
-  Trash2,
-  Play,
-  Pause,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Key,
-  Bell,
-  ExternalLink,
-  Copy,
-  AlertTriangle,
-} from "lucide-react";
-import { useState } from "react";
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
+} from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { ArrowLeft, CheckCircle2, Clock, Plug, XCircle } from "lucide-react";
 
-export const Route = createFileRoute("/app/integrations/connectors/$id")({
-  component: ConnectorDetail,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-function ConnectorDetail() {
-  const [isActive, setIsActive] = useState(true);
-  const [syncInterval, setSyncInterval] = useState("5");
+const MOCK_CONNECTOR = (id: string) => ({
+  id,
+  name: "Sample Connector",
+  type: "webhook",
+  status: "connected",
+  config: { endpoint: "https://hooks.example.com/webhook" },
+  connectedAt: new Date().toISOString(),
+  rateLimit: { limit: 1000, remaining: 847, resetAt: new Date(Date.now() + 3600000).toISOString() },
+  recentRuns: [
+    { id: "run-1", status: "success", executedAt: new Date().toISOString(), durationMs: 124 },
+    { id: "run-2", status: "success", executedAt: new Date(Date.now() - 3600000).toISOString(), durationMs: 98 },
+    { id: "run-3", status: "failed", executedAt: new Date(Date.now() - 7200000).toISOString(), durationMs: 234, error: "Timeout" },
+  ],
+});
 
-  // Mock connector data
-  const connector = {
-    id: "salesforce",
-    name: "Salesforce",
-    category: "CRM",
-    description: "Sync leads, contacts, and opportunities with Salesforce CRM.",
-    status: "connected",
-    lastSync: "5 min ago",
-    nextSync: "in 4 min",
-    events: 4521,
-    icon: "SF",
-    color: "#00a1e0",
-    version: "2.4.1",
-    credentials: {
-      instanceUrl: "https://acme.salesforce.com",
-      clientId: "3MVG9...",
-      username: "admin@acme.com",
+export const Route = createFileRoute("/app/integrations/connectors/$id")({
+  component: ConnectorDetailPage,
+});
+
+function ConnectorDetailPage() {
+  const { id } = useParams({ from: "/app/integrations/connectors/$id" });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["integration", "connectors", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/integration/connectors/${id}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_CONNECTOR(id);
+      return res.json();
     },
-    scopes: ["api", "refresh_token"],
-  };
+    enabled: !!id,
+  });
 
-  const workflows = [
-    { id: "wf1", name: "Lead Sync", status: "active", lastRun: "2 min ago", events: 1243 },
-    { id: "wf2", name: "Contact Update", status: "active", lastRun: "5 min ago", events: 892 },
-    { id: "wf3", name: "Opportunity Alert", status: "paused", lastRun: "1 hour ago", events: 156 },
-  ];
+  const connector = data ?? MOCK_CONNECTOR(id);
 
-  const eventLog = [
-    { id: "1", type: "contact.created", timestamp: "2 min ago", status: "success" },
-    { id: "2", type: "lead.updated", timestamp: "5 min ago", status: "success" },
-    { id: "3", type: "opportunity.closed", timestamp: "12 min ago", status: "success" },
-    { id: "4", type: "sync.error", timestamp: "1 hour ago", status: "error" },
-  ];
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <LoadingSkeleton className="h-8 w-64 rounded" />
+        <LoadingSkeleton className="h-48 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/app/integrations/connectors">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <Link to="/app/integrations/connectors" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">{connector.name} Configuration</h1>
-            <Badge variant="success" size="sm">Connected</Badge>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border bg-muted">
+            <Plug className="h-5 w-5 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Configure webhook endpoints, authentication, and sync settings.
-          </p>
+          <div>
+            <h1 className="text-xl font-bold">{connector.name}</h1>
+            <p className="text-sm text-muted-foreground capitalize">{connector.type}</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<RefreshCw className="h-4 w-4" />}
-          >
-            Test Connection
-          </Button>
-          <Button
-            variant={isActive ? "outline" : "ghost"}
-            size="sm"
-            leftIcon={isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            onClick={() => setIsActive(!isActive)}
-          >
-            {isActive ? "Pause" : "Activate"}
-          </Button>
-        </div>
+        <Badge variant={connector.status === "connected" ? "default" : "secondary"} className="ml-auto">
+          {connector.status}
+        </Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Configuration */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Authentication */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  Authentication
-                </CardTitle>
-                <Button variant="ghost" size="sm" leftIcon={<ExternalLink className="h-3 w-3" />}>
-                  Reauthorize
-                </Button>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {connector.connectedAt && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Connected At</span>
+                <span>{new Date(connector.connectedAt).toLocaleString()}</span>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Instance URL</label>
-                  <Input value={connector.credentials.instanceUrl} readOnly />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Client ID</label>
-                  <Input value={connector.credentials.clientId} readOnly />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Username</label>
-                  <Input value={connector.credentials.username} readOnly />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Scopes</label>
-                  <div className="flex gap-2">
-                    {connector.scopes.map((scope) => (
-                      <Badge key={scope} variant="default" size="sm">{scope}</Badge>
-                    ))}
-                  </div>
-                </div>
+            )}
+            {connector.config && Object.entries(connector.config).map(([k, v]) => (
+              <div key={k} className="flex justify-between text-sm">
+                <span className="text-muted-foreground capitalize">{k}</span>
+                <span className="font-mono text-xs">{String(v)}</span>
               </div>
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-muted-foreground">
-                  Authentication is valid. Token expires in 45 days.
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+            ))}
+          </CardContent>
+        </Card>
 
-          {/* Sync Settings */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Sync Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Sync Interval</label>
-                  <select
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm"
-                    value={syncInterval}
-                    onChange={(e) => setSyncInterval(e.target.value)}
-                  >
-                    <option value="1">Every 1 minute</option>
-                    <option value="5">Every 5 minutes</option>
-                    <option value="15">Every 15 minutes</option>
-                    <option value="30">Every 30 minutes</option>
-                    <option value="60">Every hour</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Retry Policy</label>
-                  <select className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                    <option>3 retries with exponential backoff</option>
-                    <option>5 retries with exponential backoff</option>
-                    <option>No retries</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Next sync in 4 minutes</p>
-                    <p className="text-xs text-muted-foreground">Last sync: 5 minutes ago</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Sync Now</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Webhook Configuration */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Webhook Endpoints
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {[
-                  { name: "Contact Events", url: "https://api.nucleo.io/webhooks/salesforce/contacts", events: 1243 },
-                  { name: "Lead Events", url: "https://api.nucleo.io/webhooks/salesforce/leads", events: 892 },
-                  { name: "Opportunity Events", url: "https://api.nucleo.io/webhooks/salesforce/opportunities", events: 156 },
-                ].map((endpoint, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{endpoint.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{endpoint.url}</p>
-                    </div>
-                    <Badge variant="success" size="sm">{endpoint.events} events</Badge>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                Add Webhook Endpoint
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Event Log */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Recent Events</CardTitle>
-                <Link to="/app/integrations/events/log">
-                  <Button variant="ghost" size="sm">View All</Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {eventLog.map((event) => (
-                  <div key={event.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg">
-                    {event.status === "success" ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-600" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{event.type}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{event.timestamp}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Status Card */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Connection</span>
-                <Badge variant="success" size="sm">Healthy</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Version</span>
-                <span className="text-sm font-medium">v{connector.version}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Events</span>
-                <span className="text-sm font-medium">{connector.events.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Last Sync</span>
-                <span className="text-sm font-medium">{connector.lastSync}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Next Sync</span>
-                <span className="text-sm font-medium">{connector.nextSync}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Workflows */}
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Using This Connector</CardTitle>
-                <Link to="/app/integrations/workflows">
-                  <Button variant="ghost" size="sm">View All</Button>
-                </Link>
-              </div>
+        {connector.rateLimit && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Rate Limits</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {workflows.map((workflow) => (
-                <Link
-                  key={workflow.id}
-                  to="/app/integrations/workflows/$id"
-                  params={{ id: workflow.id }}
-                  className="block p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-foreground">{workflow.name}</p>
-                    <Badge variant={workflow.status === "active" ? "success" : "warning"} size="sm">
-                      {workflow.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Last run: {workflow.lastRun} / {workflow.events} events
-                  </p>
-                </Link>
-              ))}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Limit</span>
+                <span className="font-semibold">{connector.rateLimit.limit}/hour</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Remaining</span>
+                <span className="font-semibold">{connector.rateLimit.remaining}</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full"
+                  style={{ width: `${(connector.rateLimit.remaining / connector.rateLimit.limit) * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Resets: {new Date(connector.rateLimit.resetAt).toLocaleTimeString()}</span>
+                <span>{Math.round((connector.rateLimit.remaining / connector.rateLimit.limit) * 100)}% remaining</span>
+              </div>
             </CardContent>
           </Card>
+        )}
+      </div>
 
-          {/* Actions */}
-          <Card className="border-border/60">
-            <CardContent className="p-4 space-y-2">
-              <Button variant="outline" className="w-full" leftIcon={<ExternalLink className="h-4 w-4" />}>
-                View API Docs
-              </Button>
-              <Button variant="outline" className="w-full" leftIcon={<Copy className="h-4 w-4" />}>
-                Duplicate Config
-              </Button>
-              <Button variant="outline" className="w-full text-destructive" leftIcon={<Trash2 className="h-4 w-4" />}>
-                Remove Connector
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      {connector.recentRuns?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Runs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {connector.recentRuns.map((run: any) => (
+                <div key={run.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex items-center gap-2">
+                    {run.status === "success"
+                      ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      : <XCircle className="h-4 w-4 text-rose-500" />}
+                    <span className="text-sm capitalize">{run.status}</span>
+                    {run.error && <span className="text-xs text-rose-500">– {run.error}</span>}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {run.durationMs}ms
+                    </span>
+                    <span>{new Date(run.executedAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex gap-3">
+        <Button variant="outline">Edit Connector</Button>
+        <Button variant="destructive">Disconnect</Button>
       </div>
     </div>
-  );
-}
-
-function Plus(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
   );
 }

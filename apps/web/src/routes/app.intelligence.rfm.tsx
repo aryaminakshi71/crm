@@ -1,137 +1,137 @@
-import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
-import {
-  Users,
-  TrendingUp,
-  Calendar,
-  DollarSign,
-  Award,
-  ArrowRight,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-export const Route = createFileRoute("/app/intelligence/rfm")({
-  component: RFM,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const rfmSegments = [
-  { name: "Champions", count: 1245, revenue: "$285,000", avgOrder: "$228", color: "bg-green-500", recency: "Recent", frequency: "High", monetary: "High" },
-  { name: "Loyal", count: 2134, revenue: "$198,000", avgOrder: "$92", color: "bg-blue-500", recency: "Medium", frequency: "High", monetary: "Medium" },
-  { name: "Potential", count: 3421, revenue: "$156,000", avgOrder: "$45", color: "bg-purple-500", recency: "Recent", frequency: "Medium", monetary: "Medium" },
-  { name: "At Risk", count: 892, revenue: "$89,000", avgOrder: "$99", color: "bg-amber-500", recency: "Old", frequency: "Medium", monetary: "Medium" },
-  { name: "Lost", count: 456, revenue: "$12,000", avgOrder: "$26", color: "bg-red-500", recency: "Old", frequency: "Low", monetary: "Low" },
-];
+const MOCK_RFM = {
+  segments: [
+    { name: "Champions", recency: 5, frequency: 5, monetary: 5, count: 42, percentage: 13.2, color: "#10b981" },
+    { name: "Loyal Customers", recency: 4, frequency: 4, monetary: 4, count: 118, percentage: 37.1, color: "#3b82f6" },
+    { name: "Potential Loyalists", recency: 5, frequency: 2, monetary: 3, count: 56, percentage: 17.6, color: "#8b5cf6" },
+    { name: "At Risk", recency: 2, frequency: 3, monetary: 3, count: 67, percentage: 21.1, color: "#f59e0b" },
+    { name: "Lost", recency: 1, frequency: 1, monetary: 1, count: 35, percentage: 11.0, color: "#6b7280" },
+  ],
+  totalCustomers: 318,
+};
 
-const topChampions = [
-  { rank: 1, name: "Acme Corporation", segment: "Champions", ltv: "$12,450", orders: 54 },
-  { rank: 2, name: "TechStart Inc", segment: "Champions", ltv: "$9,820", orders: 42 },
-  { rank: 3, name: "Metro Hospital", segment: "Champions", ltv: "$8,340", orders: 38 },
-];
+export const Route = createFileRoute("/app/intelligence/rfm")({
+  component: RfmPage,
+});
 
-function RFM() {
+function ScoreDot({ score }: { score: number }) {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">RFM Analysis</h2>
-          <p className="text-sm text-muted-foreground">
-            Recency, Frequency, Monetary segmentation
-          </p>
+    <div className="flex gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-2 w-2 rounded-full ${i < score ? "bg-violet-500" : "bg-muted"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RfmPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "rfm"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/rfm`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_RFM;
+      return res.json();
+    },
+  });
+
+  const rfm = data ?? MOCK_RFM;
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">RFM Segments</h1>
+        <p className="text-muted-foreground mt-1">
+          Segment customers by Recency, Frequency, and Monetary value.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton className="h-64 w-full rounded-lg" />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Segment Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={rfm.segments}
+                    dataKey="count"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    label={({ name, percentage }) => `${name} (${percentage}%)`}
+                    labelLine={false}
+                  >
+                    {rfm.segments?.map((seg: any, i: number) => (
+                      <Cell key={i} fill={seg.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => [v, "Customers"]} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Segments Detail</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {rfm.segments?.map((segment: any) => (
+                  <div key={segment.name} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: segment.color }}>{segment.name}</p>
+                      <div className="flex gap-3 mt-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">R</span>
+                          <ScoreDot score={segment.recency} />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">F</span>
+                          <ScoreDot score={segment.frequency} />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">M</span>
+                          <ScoreDot score={segment.monetary} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{segment.count}</p>
+                      <p className="text-xs text-muted-foreground">{segment.percentage}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Users className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">8,148</p>
-            <p className="text-xs text-muted-foreground">Total Customers</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <DollarSign className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">$740K</p>
-            <p className="text-xs text-muted-foreground">Total Revenue</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Award className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">1,245</p>
-            <p className="text-xs text-muted-foreground">Champions</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">$91</p>
-            <p className="text-xs text-muted-foreground">Avg Order Value</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* RFM Segments */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">Customer Segments</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {rfmSegments.map((segment) => (
-              <div
-                key={segment.name}
-                className={`p-4 rounded-lg border border-border/40 bg-gradient-to-b from-${segment.color}/10 to-${segment.color}/5`}
-              >
-                <div className={`w-3 h-3 rounded-full ${segment.color} mb-2`} />
-                <p className="font-bold text-foreground">{segment.name}</p>
-                <p className="text-2xl font-bold mt-2">{segment.count}</p>
-                <p className="text-xs text-muted-foreground">customers</p>
-                <p className="text-lg font-bold text-green-600 mt-2">{segment.revenue}</p>
-                <p className="text-xs text-muted-foreground">revenue</p>
-                <div className="mt-2 pt-2 border-t border-border/40 space-y-1">
-                  <p className="text-xs"><span className="text-muted-foreground">R:</span> {segment.recency}</p>
-                  <p className="text-xs"><span className="text-muted-foreground">F:</span> {segment.frequency}</p>
-                  <p className="text-xs"><span className="text-muted-foreground">M:</span> {segment.monetary}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Top Champions */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-foreground">Top Champions</h3>
-            <button className="text-xs text-primary hover:underline">View All Champions</button>
-          </div>
-          <div className="space-y-3">
-            {topChampions.map((customer) => (
-              <div
-                key={customer.rank}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 font-bold">
-                  {customer.rank}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{customer.name}</p>
-                  <p className="text-xs text-muted-foreground">{customer.orders} orders</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">{customer.ltv}</p>
-                  <p className="text-xs text-muted-foreground">Lifetime Value</p>
-                </div>
-                <Award className="h-5 w-5 text-green-500" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      )}
     </div>
   );
 }

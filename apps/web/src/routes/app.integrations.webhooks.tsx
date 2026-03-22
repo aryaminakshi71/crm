@@ -1,228 +1,134 @@
-/**
- * Webhook Configuration
- *
- * Configure webhook endpoints for receiving and sending data.
- */
-
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Webhook,
-  Search,
-  Plus,
-  Copy,
-  Trash2,
-  Settings,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Eye,
-  EyeOff,
-} from "lucide-react";
-import { useState } from "react";
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
+} from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Copy, Plus, Webhook } from "lucide-react";
+import { toast } from "sonner";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+});
+
+const MOCK_WEBHOOKS = {
+  data: [
+    { id: "conn-2", name: "Slack", type: "webhook", status: "connected", connectedAt: new Date().toISOString(), rateLimit: { limit: 500, remaining: 498 } },
+    { id: "conn-5", name: "PagerDuty Webhook", type: "webhook", status: "active", connectedAt: new Date().toISOString(), rateLimit: { limit: 200, remaining: 199 } },
+  ],
+};
 
 export const Route = createFileRoute("/app/integrations/webhooks")({
   component: WebhooksPage,
 });
 
 function WebhooksPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const { data, isLoading } = useQuery({
+    queryKey: ["integration", "connectors", "webhook"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/integration/connectors?type=webhook`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_WEBHOOKS;
+      return res.json();
+    },
+  });
 
-  const webhooks = [
-    {
-      id: "wh1",
-      name: "Production Webhook",
-      url: "https://api.nucleo.io/webhooks/prod/abc123",
-      secret: "whsec_••••••••••••••••",
-      status: "active",
-      events: 12453,
-      lastEvent: "2 min ago",
-      createdAt: "Jan 15, 2024",
-      endpoints: ["order.created", "payment.succeeded", "customer.updated"],
-    },
-    {
-      id: "wh2",
-      name: "Staging Webhook",
-      url: "https://api-staging.nucleo.io/webhooks/stg/xyz789",
-      secret: "whsec_••••••••••••••••",
-      status: "active",
-      events: 2341,
-      lastEvent: "5 min ago",
-      createdAt: "Feb 1, 2024",
-      endpoints: ["order.created", "payment.succeeded"],
-    },
-    {
-      id: "wh3",
-      name: "Development Webhook",
-      url: "https://api-dev.nucleo.io/webhooks/dev/def456",
-      secret: "whsec_••••••••••••••••",
-      status: "paused",
-      events: 156,
-      lastEvent: "3 days ago",
-      createdAt: "Mar 10, 2024",
-      endpoints: ["order.created"],
-    },
-    {
-      id: "wh4",
-      name: "Legacy Integration",
-      url: "https://api.nucleo.io/webhooks/legacy/ghi789",
-      secret: "whsec_••••••••••••••••",
-      status: "error",
-      events: 892,
-      lastEvent: "1 hour ago",
-      createdAt: "Dec 5, 2023",
-      endpoints: ["contact.created", "contact.updated", "contact.deleted"],
-    },
-  ];
+  const webhooks = data?.data ?? MOCK_WEBHOOKS.data;
 
-  const filteredWebhooks = webhooks.filter(
-    (wh) =>
-      wh.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      wh.url.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge variant="success" size="sm">Active</Badge>;
-      case "paused":
-        return <Badge variant="warning" size="sm">Paused</Badge>;
-      case "error":
-        return <Badge variant="danger" size="sm">Error</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{status}</Badge>;
-    }
+  const copyEndpoint = (id: string) => {
+    const url = `${window.location.origin}/api/v1/webhooks/inbound/${id}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Webhook URL copied");
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Webhook Configuration</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage webhook endpoints for receiving HTTP callbacks
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Webhook className="h-6 w-6" />
+            Webhooks
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage incoming and outgoing webhook connections.
           </p>
         </div>
-        <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-          Create Webhook
+        <Button asChild>
+          <Link to="/app/integrations/connectors/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Webhook
+          </Link>
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search webhooks..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Webhooks List */}
-      <div className="space-y-4">
-        {filteredWebhooks.map((webhook) => (
-          <Card key={webhook.id} className="border-border/60">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="rounded-lg bg-primary/10 p-2 mt-1">
-                  <Webhook className="h-5 w-5 text-primary" />
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <LoadingSkeleton key={i} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : webhooks.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Webhook className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No webhooks configured yet.</p>
+            <Button className="mt-4" asChild>
+              <Link to="/app/integrations/connectors/new">Add your first webhook</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {webhooks.map((webhook: any) => (
+            <Card key={webhook.id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Webhook className="h-4 w-4" />
+                    {webhook.name}
+                  </CardTitle>
+                  <Badge variant={webhook.status === "connected" || webhook.status === "active" ? "default" : "secondary"}>
+                    {webhook.status}
+                  </Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-foreground">{webhook.name}</h3>
-                    {getStatusBadge(webhook.status)}
-                  </div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate max-w-md">
-                      {webhook.url}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {/* copy to clipboard */}}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-muted-foreground">Secret:</span>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">
-                      {showSecrets[webhook.id] ? webhook.secret.replace("••••••", "abc123def456") : webhook.secret}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setShowSecrets({ ...showSecrets, [webhook.id]: !showSecrets[webhook.id] })}
-                    >
-                      {showSecrets[webhook.id] ? (
-                        <EyeOff className="h-3 w-3" />
-                      ) : (
-                        <Eye className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {webhook.endpoints.map((endpoint) => (
-                      <Badge key={endpoint} variant="outline" size="sm">{endpoint}</Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>{webhook.events.toLocaleString()} events</span>
-                    <span>Last: {webhook.lastEvent}</span>
-                    <span>Created: {webhook.createdAt}</span>
-                  </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 font-mono text-xs bg-muted rounded px-3 py-2">
+                  <span className="flex-1 truncate text-muted-foreground">
+                    {window.location.origin}/api/v1/webhooks/inbound/{webhook.id}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyEndpoint(webhook.id)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
+                {webhook.rateLimit && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Rate limit: {webhook.rateLimit.remaining}/{webhook.rateLimit.limit}/hr</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/app/integrations/connectors/$id" params={{ id: webhook.id }}>
+                      Configure
+                    </Link>
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Code Example */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Webhook Payload Example</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted rounded-lg p-4 overflow-x-auto">
-            <pre className="text-sm">
-              <code>{`{
-  "event": "order.created",
-  "timestamp": "2024-03-20T10:30:00Z",
-  "data": {
-    "order_id": "ord_123456",
-    "customer": {
-      "email": "customer@example.com",
-      "name": "John Smith"
-    },
-    "total": 99.99,
-    "currency": "USD"
-  },
-  "signature": "sha256=abc123..."
-}`}</code>
-            </pre>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Verify webhook signatures using the secret key to ensure requests are authentic.
-          </p>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

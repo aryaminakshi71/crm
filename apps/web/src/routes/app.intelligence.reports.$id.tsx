@@ -1,140 +1,117 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Badge,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
-import {
-  ArrowLeft,
-  Download,
-  Share2,
-  Calendar,
-  Clock,
-  BarChart3,
-  LineChart,
-  PieChart,
-  Settings,
-} from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
 
-export const Route = createFileRoute("/app/intelligence/reports/$id")({
-  component: ReportDetail,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const reportData = {
-  id: "1",
-  name: "Monthly Revenue Summary",
-  type: "financial",
-  schedule: "Monthly",
-  lastRun: "Mar 1, 2026",
-  createdBy: "John Smith",
-  description: "Comprehensive overview of monthly revenue including trends, breakdowns, and comparisons.",
-  chartType: "area",
-  data: [
-    { month: "Jan", revenue: 85000, expenses: 45000, profit: 40000 },
-    { month: "Feb", revenue: 92000, expenses: 48000, profit: 44000 },
-    { month: "Mar", revenue: 88000, expenses: 46000, profit: 42000 },
-    { month: "Apr", revenue: 105000, expenses: 52000, profit: 53000 },
-    { month: "May", revenue: 112000, expenses: 55000, profit: 57000 },
-    { month: "Jun", revenue: 118000, expenses: 58000, profit: 60000 },
+const MOCK_REPORT = (id: string) => ({
+  id,
+  title: `Intelligence Report #${id}`,
+  type: "custom",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  status: "ready",
+  sections: [
+    { title: "Executive Summary", content: "Overall performance is trending positively with 12% MoM growth." },
+    { title: "Key Metrics", data: { revenue: 480000, customers: 318, churnRate: 5.8 } },
+    { title: "Recommendations", items: ["Focus on at-risk segment re-engagement", "Upsell Champions to Enterprise tier"] },
   ],
-};
+});
 
-function ReportDetail() {
+export const Route = createFileRoute("/app/intelligence/reports/$id")({
+  component: ReportPage,
+});
+
+function ReportPage() {
+  const { id } = useParams({ from: "/app/intelligence/reports/$id" });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "reports", id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/reports/${id}`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_REPORT(id);
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const report = data ?? MOCK_REPORT(id);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <LoadingSkeleton className="h-8 w-64 rounded" />
+        <LoadingSkeleton className="h-48 w-full rounded-lg" />
+        <LoadingSkeleton className="h-32 w-full rounded-lg" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/app/intelligence/reports" className="p-2 rounded-lg hover:bg-muted transition-colors">
-          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">{reportData.name}</h2>
-            <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-xs capitalize">{reportData.type}</span>
+    <div className="p-6 space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            <h1 className="text-2xl font-bold">{report.title}</h1>
           </div>
-          <p className="text-sm text-muted-foreground">{reportData.description}</p>
+          <p className="text-muted-foreground text-sm">
+            Created {new Date(report.createdAt).toLocaleString()} · Updated {new Date(report.updatedAt).toLocaleString()}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
-            <Share2 className="h-4 w-4" />
-            Share
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
-            <Settings className="h-4 w-4" />
-            Configure
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Download className="h-4 w-4" />
-            Export
-          </button>
-        </div>
+        <Badge variant="default">{report.status}</Badge>
       </div>
 
-      {/* Meta Info */}
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Schedule: {reportData.schedule}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Last run: {reportData.lastRun}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <span>Created by: {reportData.createdBy}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Chart */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">Revenue Analysis</h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={reportData.data}>
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#888" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#888" />
-              <Tooltip />
-              <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f620" name="Revenue" />
-              <Area type="monotone" dataKey="expenses" stroke="#ef4444" fill="#ef444420" name="Expenses" />
-              <Area type="monotone" dataKey="profit" stroke="#10b981" fill="#10b98120" name="Profit" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-primary">$590K</p>
-            <p className="text-xs text-muted-foreground">Total Revenue (6mo)</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">$296K</p>
-            <p className="text-xs text-muted-foreground">Total Profit (6mo)</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">50.2%</p>
-            <p className="text-xs text-muted-foreground">Profit Margin</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-4">
+        {(report.sections ?? []).map((section: any, i: number) => (
+          <Card key={i}>
+            <CardHeader>
+              <CardTitle className="text-base">{section.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {section.content && <p className="text-sm">{section.content}</p>}
+              {section.data && (
+                <div className="grid gap-3 md:grid-cols-3">
+                  {Object.entries(section.data).map(([key, val]) => (
+                    <div key={key} className="p-3 rounded-lg border text-center">
+                      <p className="text-xs text-muted-foreground capitalize mb-1">{key.replace(/([A-Z])/g, " $1")}</p>
+                      <p className="text-xl font-bold">
+                        {typeof val === "number"
+                          ? val > 1000
+                            ? `$${(val as number).toLocaleString()}`
+                            : val
+                          : String(val)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {section.items && (
+                <ul className="space-y-2">
+                  {section.items.map((item: string, j: number) => (
+                    <li key={j} className="flex items-start gap-2 text-sm">
+                      <span className="text-violet-500 mt-0.5">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

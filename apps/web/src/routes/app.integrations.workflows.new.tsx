@@ -1,341 +1,215 @@
-/**
- * Workflow Builder
- *
- * Drag-and-drop workflow creation interface.
- */
-
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Plus,
-  Trash2,
-  GripVertical,
-  Play,
-  Pause,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Zap,
-  Clock,
-  Webhook,
-  Database,
-  Mail,
-  Bell,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  FormField,
+  Input,
+} from "@crm/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight, GitBranch } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/app/integrations/workflows/new")({
-  component: WorkflowBuilder,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-function WorkflowBuilder() {
-  const [workflowName, setWorkflowName] = useState("");
-  const [steps, setSteps] = useState([
-    { id: "trigger", type: "trigger", name: "New Lead Created", description: "Triggered when a new lead is created" },
-  ]);
-  const [selectedStep, setSelectedStep] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"trigger" | "action" | "logic">("trigger");
+const APP_OPTIONS = [
+  { value: "crm", label: "CRM" },
+  { value: "finance", label: "Finance" },
+  { value: "helpdesk", label: "Helpdesk" },
+  { value: "hrm", label: "HRM" },
+  { value: "marketing", label: "Marketing" },
+  { value: "slack", label: "Slack" },
+  { value: "email", label: "Email" },
+  { value: "webhook", label: "Webhook" },
+];
 
-  const triggerNodes = [
-    { id: "new_lead", name: "New Lead", description: "When a new lead is created", icon: Zap, category: "CRM" },
-    { id: "new_contact", name: "New Contact", description: "When a contact is added", icon: Zap, category: "CRM" },
-    { id: "deal_won", name: "Deal Won", description: "When a deal is closed won", icon: Zap, category: "CRM" },
-    { id: "payment_failed", name: "Payment Failed", description: "When a payment fails", icon: Zap, category: "Payments" },
-    { id: "order_created", name: "Order Created", description: "When an order is placed", icon: Zap, category: "E-commerce" },
-    { id: "webhook", name: "Webhook", description: "Receive an HTTP webhook", icon: Webhook, category: "HTTP" },
-    { id: "schedule", name: "Schedule", description: "Run on a schedule", icon: Clock, category: "Time" },
-  ];
+const TRIGGER_OPTIONS: Record<string, string[]> = {
+  crm: ["contact.created", "deal.won", "deal.lost", "lead.created"],
+  finance: ["invoice.paid", "transaction.created"],
+  helpdesk: ["ticket.created", "ticket.resolved"],
+  hrm: ["employee.onboarded", "leave.approved"],
+  marketing: ["campaign.sent", "lead.captured"],
+};
 
-  const actionNodes = [
-    { id: "create_contact", name: "Create Contact", description: "Create a new contact", icon: Plus, category: "CRM" },
-    { id: "send_email", name: "Send Email", description: "Send an email notification", icon: Mail, category: "Communication" },
-    { id: "send_slack", name: "Send Slack", description: "Send a Slack message", icon: Bell, category: "Communication" },
-    { id: "update_record", name: "Update Record", description: "Update a CRM record", icon: Database, category: "CRM" },
-    { id: "http_request", name: "HTTP Request", description: "Make an HTTP request", icon: Webhook, category: "HTTP" },
-    { id: "webhook", name: "Send Webhook", description: "Send data to a webhook", icon: Webhook, category: "HTTP" },
-  ];
+const ACTION_OPTIONS: Record<string, string[]> = {
+  slack: ["send_message", "create_channel"],
+  email: ["send_email"],
+  webhook: ["post_webhook"],
+  crm: ["create_contact", "update_deal"],
+  finance: ["create_invoice"],
+  helpdesk: ["create_ticket", "assign_agent"],
+};
 
-  const logicNodes = [
-    { id: "filter", name: "Filter", description: "Filter based on conditions", icon: ChevronRight, category: "Logic" },
-    { id: "switch", name: "Switch", description: "Branch based on conditions", icon: ChevronDown, category: "Logic" },
-    { id: "delay", name: "Delay", description: "Wait for a duration", icon: Clock, category: "Time" },
-    { id: "loop", name: "Loop", description: "Loop over items", icon: Plus, category: "Logic" },
-  ];
+export const Route = createFileRoute("/app/integrations/workflows/new")({
+  component: NewWorkflowPage,
+});
 
-  const addStep = (nodeId: string, type: "trigger" | "action" | "logic") => {
-    const nodeLists = { trigger: triggerNodes, action: actionNodes, logic: logicNodes };
-    const node = nodeLists[type].find((n) => n.id === nodeId);
-    if (node) {
-      setSteps([...steps, { id: `${nodeId}_${Date.now()}`, type: type === "trigger" ? "action" : type, name: node.name, description: node.description }]);
+function NewWorkflowPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [form, setForm] = useState({
+    name: "",
+    sourceApp: "crm",
+    targetApp: "slack",
+    triggerEvent: "contact.created",
+    actionType: "send_message",
+    isActive: true,
+  });
+
+  const triggers = TRIGGER_OPTIONS[form.sourceApp] ?? [];
+  const actions = ACTION_OPTIONS[form.targetApp] ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await fetch(`${API_BASE}/v1/integration/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        return { id: `wf-${Date.now()}`, ...data, createdAt: new Date().toISOString(), runCount: 0 };
+      }
+      return res.json();
+    },
+    onSuccess: (workflow) => {
+      queryClient.invalidateQueries({ queryKey: ["integration", "workflows"] });
+      toast.success("Workflow created successfully");
+      navigate({ to: "/app/integrations/workflows/$id", params: { id: workflow.id } });
+    },
+    onError: () => {
+      toast.error("Failed to create workflow");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.sourceApp || !form.targetApp || !form.triggerEvent || !form.actionType) {
+      toast.error("All fields are required");
+      return;
     }
-  };
-
-  const removeStep = (stepId: string) => {
-    if (stepId !== "trigger") {
-      setSteps(steps.filter((s) => s.id !== stepId));
-    }
+    createMutation.mutate({
+      ...form,
+      name: form.name || `${form.sourceApp} → ${form.targetApp}`,
+    });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/app/integrations/workflows">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="p-6 space-y-6 max-w-xl">
+      <div className="flex items-center gap-3">
+        <Link to="/app/integrations/workflows" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="flex-1">
-          <Input
-            placeholder="Untitled Workflow"
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            className="max-w-md font-bold text-lg border-0 shadow-none p-0 h-auto focus:ring-0"
-          />
-          <p className="text-sm text-muted-foreground">Draft workflow</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-          <Button variant="outline" size="sm">
-            <Play className="h-4 w-4 mr-2" />
-            Test
-          </Button>
-          <Button size="sm">Save Workflow</Button>
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-5 w-5 text-muted-foreground" />
+          <h1 className="text-xl font-bold">New Workflow</h1>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* Node Palette */}
-        <Card className="border-border/60 lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Components</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search..." className="pl-10 h-9" />
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Workflow Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FormField label="Workflow Name">
+              <Input
+                placeholder="e.g. New Lead → Slack Notify"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </FormField>
 
-            {/* Tabs */}
-            <div className="flex border-b">
-              {(["trigger", "action", "logic"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2 text-sm font-medium capitalize ${
-                    activeTab === tab
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {tab}s
-                </button>
-              ))}
-            </div>
-
-            {/* Nodes */}
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {(activeTab === "trigger" ? triggerNodes : activeTab === "action" ? actionNodes : logicNodes).map((node) => (
-                <button
-                  key={node.id}
-                  onClick={() => addStep(node.id, activeTab)}
-                  className="w-full p-3 text-left rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <node.icon className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">{node.name}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{node.description}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Workflow Canvas */}
-        <Card className="border-border/60 lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Workflow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 min-h-[500px] bg-muted/30 rounded-lg p-4">
-              {steps.map((step, idx) => (
-                <div key={step.id}>
-                  {/* Step Card */}
-                  <div
-                    className={`relative bg-card border rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedStep === step.id ? "border-primary shadow-md" : "border-border"
-                    }`}
-                    onClick={() => setSelectedStep(step.id)}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 space-y-2">
+                <FormField label="Source App" required>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={form.sourceApp}
+                    onChange={(e) => {
+                      const sourceApp = e.target.value;
+                      const newTriggers = TRIGGER_OPTIONS[sourceApp] ?? [];
+                      setForm((f) => ({ ...f, sourceApp, triggerEvent: newTriggers[0] ?? "" }));
+                    }}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1">
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={step.type === "trigger" ? "info" : step.type === "action" ? "success" : "warning"} size="sm">
-                            {step.type}
-                          </Badge>
-                          <h4 className="font-medium text-sm">{step.name}</h4>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                      </div>
-                      {step.id !== "trigger" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeStep(step.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Connector Arrow */}
-                  {idx < steps.length - 1 && (
-                    <div className="flex justify-center py-2">
-                      <div className="w-0.5 h-8 bg-border" />
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {steps.length === 1 && (
-                <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                  <div className="rounded-full bg-muted p-4 mb-4">
-                    <Plus className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground mb-2">Add your first action</p>
-                  <p className="text-xs text-muted-foreground">
-                    Click on components in the left panel to add steps
-                  </p>
-                </div>
-              )}
-
-              {/* Add Step Button */}
-              {steps.length > 1 && (
-                <Button variant="outline" className="w-full" leftIcon={<Plus className="h-4 w-4" />}>
-                  Add Step
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Properties Panel */}
-        <Card className="border-border/60 lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Properties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedStep ? (
-              <StepProperties step={steps.find((s) => s.id === selectedStep)} />
-            ) : (
-              <div className="text-center py-8">
-                <Settings className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  Select a step to configure its properties
-                </p>
+                    {APP_OPTIONS.filter((a) => TRIGGER_OPTIONS[a.value]).map((a) => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </select>
+                </FormField>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function StepProperties({ step }: { step?: { id: string; type: string; name: string; description: string } }) {
-  if (!step) return null;
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium text-foreground mb-1 block">Step Name</label>
-        <Input defaultValue={step.name} />
-      </div>
-      <div>
-        <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
-        <Input defaultValue={step.description} />
-      </div>
-
-      {step.type === "trigger" && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium">Configuration</h4>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Connector</label>
-            <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm">
-              <option>Salesforce</option>
-              <option>HubSpot</option>
-              <option>Stripe</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Event Type</label>
-            <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm">
-              <option>New Record</option>
-              <option>Updated Record</option>
-              <option>Deleted Record</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {step.type === "action" && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium">Configuration</h4>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Action</label>
-            <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm">
-              <option>Create Record</option>
-              <option>Update Record</option>
-              <option>Delete Record</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Target Object</label>
-            <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm">
-              <option>Contact</option>
-              <option>Lead</option>
-              <option>Opportunity</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Field Mappings</label>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs w-20">email</span>
-                <Input placeholder="source.email" className="h-8 text-xs" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs w-20">name</span>
-                <Input placeholder="source.name" className="h-8 text-xs" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground mt-6 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <FormField label="Target App" required>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={form.targetApp}
+                    onChange={(e) => {
+                      const targetApp = e.target.value;
+                      const newActions = ACTION_OPTIONS[targetApp] ?? [];
+                      setForm((f) => ({ ...f, targetApp, actionType: newActions[0] ?? "" }));
+                    }}
+                  >
+                    {APP_OPTIONS.filter((a) => ACTION_OPTIONS[a.value]).map((a) => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </select>
+                </FormField>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      <div className="pt-4 border-t">
-        <Button variant="outline" size="sm" className="w-full" leftIcon={<Play className="h-4 w-4" />}>
-          Test Step
-        </Button>
-      </div>
+            <FormField label="Trigger Event" required>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.triggerEvent}
+                onChange={(e) => setForm((f) => ({ ...f, triggerEvent: e.target.value }))}
+              >
+                {triggers.length > 0
+                  ? triggers.map((t) => <option key={t} value={t}>{t}</option>)
+                  : <option value="">No triggers available</option>}
+              </select>
+            </FormField>
+
+            <FormField label="Action Type" required>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.actionType}
+                onChange={(e) => setForm((f) => ({ ...f, actionType: e.target.value }))}
+              >
+                {actions.length > 0
+                  ? actions.map((a) => <option key={a} value={a}>{a}</option>)
+                  : <option value="">No actions available</option>}
+              </select>
+            </FormField>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={form.isActive}
+                onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                className="h-4 w-4"
+              />
+              <label htmlFor="isActive" className="text-sm">Enable workflow immediately</label>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Creating..." : "Create Workflow"}
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <Link to="/app/integrations/workflows">Cancel</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

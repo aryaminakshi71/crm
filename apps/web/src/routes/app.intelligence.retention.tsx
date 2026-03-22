@@ -1,154 +1,138 @@
-import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { UserCheck, UserMinus, UserPlus } from "lucide-react";
 import {
-  Users,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-} from "lucide-react";
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-export const Route = createFileRoute("/app/intelligence/retention")({
-  component: Retention,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const retentionMatrix = [
-  { week: "Week 0", day0: 100, day7: 85, day14: 72, day30: 65, day60: 58, day90: 52 },
-  { week: "Week 4", day0: 100, day7: 88, day14: 76, day30: 68, day60: 62, day90: null },
-  { week: "Week 8", day0: 100, day7: 90, day14: 78, day30: 70, day60: null, day90: null },
-  { week: "Week 12", day0: 100, day7: 87, day14: 74, day30: 66, day60: null, day90: null },
-];
+const MOCK_RETENTION = {
+  periods: [
+    { period: "Jan 2025", retained: 89.2, churned: 10.8, newCustomers: 42 },
+    { period: "Feb 2025", retained: 91.4, churned: 8.6, newCustomers: 38 },
+    { period: "Mar 2025", retained: 88.7, churned: 11.3, newCustomers: 55 },
+    { period: "Apr 2025", retained: 92.1, churned: 7.9, newCustomers: 61 },
+    { period: "May 2025", retained: 90.5, churned: 9.5, newCustomers: 49 },
+  ],
+  averageRetention: 90.4,
+  trend: "stable",
+};
 
-const retentionBySegment = [
-  { segment: "Enterprise", retention: 92, change: "+3%" },
-  { segment: "Professional", retention: 84, change: "+1%" },
-  { segment: "Starter", retention: 68, change: "-2%" },
-  { segment: "Free Trial", retention: 45, change: "+5%" },
-];
+export const Route = createFileRoute("/app/intelligence/retention")({
+  component: RetentionPage,
+});
 
-function Retention() {
-  const getColor = (value: number | null) => {
-    if (value === null) return "bg-muted";
-    if (value >= 80) return "bg-green-500";
-    if (value >= 60) return "bg-green-400";
-    if (value >= 40) return "bg-amber-400";
-    if (value >= 20) return "bg-amber-300";
-    return "bg-red-300";
-  };
+function RetentionPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "retention"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/retention`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_RETENTION;
+      return res.json();
+    },
+  });
+
+  const retention = data ?? MOCK_RETENTION;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Retention Matrix</h2>
-          <p className="text-sm text-muted-foreground">
-            Track customer retention over time
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Retention Metrics</h1>
+        <p className="text-muted-foreground mt-1">
+          Monitor how well you retain customers over time.
+        </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Users className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">52%</p>
-            <p className="text-xs text-muted-foreground">90-Day Retention</p>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Avg Retention Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{retention.averageRetention}%</p>
           </CardContent>
         </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">+4%</p>
-            <p className="text-xs text-muted-foreground">vs Last Quarter</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <UserMinus className="h-4 w-4" />
+              Latest Churn
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">
+              {retention.periods?.[retention.periods.length - 1]?.churned}%
+            </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Calendar className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">68%</p>
-            <p className="text-xs text-muted-foreground">30-Day Retention</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4 text-center">
-            <Users className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">2.4x</p>
-            <p className="text-xs text-muted-foreground">Avg User Lifetime</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              New This Month
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">
+              {retention.periods?.[retention.periods.length - 1]?.newCustomers}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Retention Matrix */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">Cohort Retention Matrix</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border/60">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Cohort</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 0</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 7</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 14</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 30</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 60</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Day 90</th>
-                </tr>
-              </thead>
-              <tbody>
-                {retentionMatrix.map((row) => (
-                  <tr key={row.week} className="border-b border-border/40">
-                    <td className="px-4 py-3 text-sm font-medium">{row.week}</td>
-                    {[row.day0, row.day7, row.day14, row.day30, row.day60, row.day90].map((val, idx) => (
-                      <td key={idx} className="px-4 py-3">
-                        <div className="flex items-center justify-center">
-                          {val !== null ? (
-                            <div className={`w-12 h-8 rounded flex items-center justify-center text-white text-xs font-medium ${getColor(val)}`}>
-                              {val}%
-                            </div>
-                          ) : (
-                            <div className="w-12 h-8 rounded flex items-center justify-center text-xs text-muted-foreground">-</div>
-                          )}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Retention by Segment */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">Retention by Customer Segment</h3>
-          <div className="space-y-3">
-            {retentionBySegment.map((segment) => (
-              <div key={segment.segment} className="flex items-center gap-4">
-                <span className="w-24 text-sm font-medium">{segment.segment}</span>
-                <div className="flex-1">
-                  <div className="h-4 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${segment.retention >= 80 ? "bg-green-500" : segment.retention >= 60 ? "bg-amber-500" : "bg-red-500"}`}
-                      style={{ width: `${segment.retention}%` }}
-                    />
-                  </div>
-                </div>
-                <span className="w-12 text-sm font-medium text-right">{segment.retention}%</span>
-                <span className={`w-12 text-xs ${
-                  segment.change.startsWith("+") ? "text-green-500" : "text-red-500"
-                }`}>{segment.change}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <LoadingSkeleton className="h-64 w-full rounded-lg" />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Retention Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={retention.periods}>
+                <defs>
+                  <linearGradient id="retentionGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="churnGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                <Tooltip formatter={(v: any, name: string) => [`${v}%`, name === "retained" ? "Retained" : "Churned"]} />
+                <Area type="monotone" dataKey="retained" stroke="#10b981" fill="url(#retentionGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="churned" stroke="#f43f5e" fill="url(#churnGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -1,143 +1,155 @@
-import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
 } from "@crm/ui";
-import {
-  DollarSign,
-  TrendingUp,
-  Users,
-  Target,
-  ArrowRight,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Crown, DollarSign, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
+  CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
-export const Route = createFileRoute("/app/intelligence/clv")({
-  component: CLV,
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
-const clvDistribution = [
-  { range: "$0-100", count: 2340 },
-  { range: "$100-500", count: 1890 },
-  { range: "$500-1K", count: 1245 },
-  { range: "$1K-5K", count: 890 },
-  { range: "$5K-10K", count: 345 },
-  { range: "$10K+", count: 89 },
-];
+const MOCK_CLV = {
+  segments: [
+    { name: "Champions", count: 42, avgClv: 8400, totalClv: 352800, color: "#10b981" },
+    { name: "Loyal", count: 118, avgClv: 4200, totalClv: 495600, color: "#3b82f6" },
+    { name: "At Risk", count: 67, avgClv: 1800, totalClv: 120600, color: "#f59e0b" },
+    { name: "Dormant", count: 93, avgClv: 600, totalClv: 55800, color: "#6b7280" },
+  ],
+  averageClv: 3200,
+  topCustomers: [
+    { id: "t-1", name: "MegaCorp", clv: 42000, purchases: 38, tenure: "4y 2m" },
+    { id: "t-2", name: "Pinnacle Ltd", clv: 31500, purchases: 29, tenure: "3y 7m" },
+    { id: "t-3", name: "Zenith Group", clv: 28900, purchases: 24, tenure: "2y 11m" },
+  ],
+};
 
-const topCLV = [
-  { rank: 1, name: "Acme Corporation", clv: "$12,450", orders: 54, avgOrder: "$230" },
-  { rank: 2, name: "TechStart Inc", clv: "$9,820", orders: 42, avgOrder: "$233" },
-  { rank: 3, name: "Metro Hospital", clv: "$8,340", orders: 38, avgOrder: "$219" },
-  { rank: 4, name: "Harbor View Hotel", clv: "$7,120", orders: 35, avgOrder: "$203" },
-  { rank: 5, name: "Green Valley Clinic", clv: "$6,890", orders: 31, avgOrder: "$222" },
-];
+export const Route = createFileRoute("/app/intelligence/clv")({
+  component: ClvPage,
+});
 
-const clvStats = [
-  { label: "Avg CLV", value: "$1,245", change: "+12%", icon: DollarSign },
-  { label: "Median CLV", value: "$580", change: "+8%", icon: Target },
-  { label: "Total Customer Value", value: "$10.1M", change: "+15%", icon: TrendingUp },
-  { label: "High Value Customers", value: "1,324", change: "+22", icon: Users },
-];
+function ClvPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["intelligence", "clv"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/intelligence/clv`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_CLV;
+      return res.json();
+    },
+  });
 
-function CLV() {
+  const clv = data ?? MOCK_CLV;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Customer Lifetime Value</h2>
-          <p className="text-sm text-muted-foreground">
-            Analyze and predict customer lifetime value
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Customer Lifetime Value</h1>
+        <p className="text-muted-foreground mt-1">
+          Understand the long-term value of your customer segments.
+        </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {clvStats.map((stat) => (
-          <Card key={stat.label} className="border-border/60">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
-                  <p className="text-xs text-green-500 mt-1">{stat.change}</p>
-                </div>
-                <stat.icon className="h-5 w-5 text-primary" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Average CLV
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">${clv.averageClv?.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Segments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{clv.segments?.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Crown className="h-4 w-4" />
+              Top Customer CLV
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">${clv.topCustomers?.[0]?.clv?.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton className="h-64 w-full rounded-lg" />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>CLV by Segment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={clv.segments}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Avg CLV"]} />
+                  <Bar dataKey="avgClv" radius={[4, 4, 0, 0]}>
+                    {clv.segments?.map((seg: any, i: number) => (
+                      <Cell key={i} fill={seg.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Customers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {clv.topCustomers?.map((customer: any, i: number) => (
+                  <div key={customer.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-muted-foreground w-5">#{i + 1}</span>
+                      <div>
+                        <p className="font-semibold">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.purchases} purchases · {customer.tenure}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-emerald-600">${customer.clv.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* CLV Distribution */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-4">CLV Distribution</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={clvDistribution}>
-              <XAxis dataKey="range" tick={{ fontSize: 12 }} stroke="#888" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#888" />
-              <Tooltip />
-              <Bar dataKey="count" fill="#3b82f6" name="Customers" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Top CLV Customers */}
-      <Card className="border-border/60">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-foreground">Top Customers by Lifetime Value</h3>
-            <button className="text-xs text-primary hover:underline">View All</button>
-          </div>
-          <div className="space-y-3">
-            {topCLV.map((customer) => (
-              <div
-                key={customer.rank}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                  {customer.rank}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{customer.name}</p>
-                  <p className="text-xs text-muted-foreground">{customer.orders} orders - Avg ${customer.avgOrder}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">{customer.clv}</p>
-                  <p className="text-xs text-muted-foreground">Lifetime Value</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CLV Insights */}
-      <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-foreground mb-3">AI Insights</h3>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Your top 5% of customers generate 35% of total revenue. Focus retention efforts on this segment.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Customers with CLV above $5,000 have 78% higher retention rate than average.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
