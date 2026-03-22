@@ -15,7 +15,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  AlertCircle,
   ArrowRight,
   ArrowRightLeft,
   BarChart3,
@@ -448,7 +447,7 @@ function CrmWorkspacePage() {
     queryKey: ["crm-contacts", search],
     queryFn: () => contactsApi.list({ page: 1, limit: 200, search }),
   });
-  const { data: leadsData, isLoading: isLeadsLoading, isError: isLeadsError, error: leadsError, refetch: refetchLeads } = useQuery({
+  const { data: leadsData, isLoading: isLeadsLoading } = useQuery({
     queryKey: ["crm-leads", search, leadStatusFilter],
     queryFn: () =>
       leadsApi.list({
@@ -1208,7 +1207,11 @@ function CrmWorkspacePage() {
             icon={<Users className="h-12 w-12" />}
             title="No contacts found"
             description="Add your first contact to start building your network."
-            action={<Button onClick={() => setIsContactModalOpen(true)}>Add Contact</Button>}
+            action={
+              <Button onClick={() => setIsContactModalOpen(true)}>
+                Add Contact
+              </Button>
+            }
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1288,20 +1291,14 @@ function CrmWorkspacePage() {
 
       {/* ─── Leads ─── */}
       {view === "leads" &&
-        (isLeadsError ? (
-          <EmptyState
-            variant="error"
-            icon={<AlertCircle className="h-8 w-8 text-destructive" />}
-            title="Failed to load"
-            description={(leadsError as Error)?.message ?? "Something went wrong. Please try again."}
-            action={<Button variant="outline" onClick={() => refetchLeads()}>Try again</Button>}
-          />
-        ) : filteredLeads.length === 0 ? (
+        (filteredLeads.length === 0 ? (
           <EmptyState
             icon={<Mail className="h-12 w-12" />}
             title="No leads found"
             description="Capture leads from campaigns, forms, or outbound channels."
-            action={<Button onClick={() => setIsLeadModalOpen(true)}>Add Lead</Button>}
+            action={
+              <Button onClick={() => setIsLeadModalOpen(true)}>Add Lead</Button>
+            }
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1455,7 +1452,11 @@ function CrmWorkspacePage() {
               icon={<Target className="h-12 w-12" />}
               title="No deals found"
               description="Build a forecastable pipeline from qualified opportunities."
-              action={<Button onClick={() => setIsDealModalOpen(true)}>Add Deal</Button>}
+              action={
+                <Button onClick={() => setIsDealModalOpen(true)}>
+                  Add Deal
+                </Button>
+              }
             />
           ) : (
             <div className="overflow-x-auto pb-2">

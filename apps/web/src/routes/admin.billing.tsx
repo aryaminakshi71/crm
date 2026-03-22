@@ -1,12 +1,35 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { DollarSign, Users, CreditCard, TrendingUp, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/admin/billing")({
   component: AdminBillingPage,
 });
 
 function AdminBillingPage() {
+  const { data: session, isPending } = useSession();
+
+  // Admin guard
+  if (isPending) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground">Please sign in to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Mock data - in real app, this would come from API
   const stats = {
     totalOrganizations: 156,
@@ -34,7 +57,7 @@ function AdminBillingPage() {
     { key: "invoicing", name: "Invoicing", subscribers: 124, revenue: 37200 },
     { key: "helpdesk", name: "Helpdesk", subscribers: 87, revenue: 24360 },
     { key: "campaign_pro", name: "Marketing", subscribers: 45, revenue: 13050 },
-    { key: "ai_agents", name: "AI Agents", subscribers: 32, revenue: 9600 },
+    { key: "ai", name: "AI", subscribers: 32, revenue: 9600 },
     { key: "monitoring", name: "Monitoring", subscribers: 67, revenue: 18760 },
     { key: "integrations", name: "Integrations", subscribers: 89, revenue: 24920 },
   ];

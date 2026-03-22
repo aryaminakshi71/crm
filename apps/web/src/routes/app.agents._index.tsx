@@ -1,4 +1,5 @@
-import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, EmptyState, Badge } from "@crm/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, EmptyState, Badge, LoadingSkeleton } from "@crm/ui";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bot,
@@ -14,80 +15,34 @@ import {
   Zap,
   Clock,
   TrendingUp,
+  ChevronRight,
+  ChevronLeft,
+  DollarSign,
+  Activity,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/app/agents/_index")({
   component: AgentsIndexPage,
 });
 
-const MOCK_AGENTS = [
-  {
-    id: "agent-001",
-    name: "Support Assistant",
-    description: "Handles customer support queries with natural language understanding and ticket creation.",
-    agentType: "chatbot",
-    status: "active",
-    model: "gpt-4",
-    tasksCompleted: 1247,
-    avgResponseTime: "1.2s",
-    lastActive: "2 min ago",
-  },
-  {
-    id: "agent-002",
-    name: "Data Analyst",
-    description: "Analyzes datasets, generates insights, and creates visualizations from raw data.",
-    agentType: "data_analysis",
-    status: "active",
-    model: "gpt-4-turbo",
-    tasksCompleted: 423,
-    avgResponseTime: "3.5s",
-    lastActive: "15 min ago",
-  },
-  {
-    id: "agent-003",
-    name: "Code Assistant",
-    description: "Helps with code reviews, debugging, and code generation across multiple languages.",
-    agentType: "code_execution",
-    status: "idle",
-    model: "claude-3-opus",
-    tasksCompleted: 892,
-    avgResponseTime: "2.1s",
-    lastActive: "1 hour ago",
-  },
-  {
-    id: "agent-004",
-    name: "Research Agent",
-    description: "Autonomously researches topics, summarizes findings, and generates comprehensive reports.",
-    agentType: "autonomous",
-    status: "active",
-    model: "gpt-4",
-    tasksCompleted: 156,
-    avgResponseTime: "8.2s",
-    lastActive: "5 min ago",
-  },
-  {
-    id: "agent-005",
-    name: "Sales Qualifier",
-    description: "Qualifies leads, answers product questions, and schedules demos for the sales team.",
-    agentType: "chatbot",
-    status: "idle",
-    model: "gpt-4-turbo",
-    tasksCompleted: 2341,
-    avgResponseTime: "1.5s",
-    lastActive: "30 min ago",
-  },
-  {
-    id: "agent-006",
-    name: "SEO Analyzer",
-    description: "Analyzes website content for SEO optimization and generates improvement recommendations.",
-    agentType: "data_analysis",
-    status: "active",
-    model: "gpt-4",
-    tasksCompleted: 567,
-    avgResponseTime: "4.2s",
-    lastActive: "10 min ago",
-  },
+const TOKEN_USAGE_DATA = [
+  { day: "Mon", tokens: 48200 },
+  { day: "Tue", tokens: 72100 },
+  { day: "Wed", tokens: 61400 },
+  { day: "Thu", tokens: 89300 },
+  { day: "Fri", tokens: 95600 },
+  { day: "Sat", tokens: 31200 },
+  { day: "Sun", tokens: 22800 },
 ];
 
 const AGENT_TYPES = [
@@ -100,31 +55,128 @@ const AGENT_TYPES = [
 function AgentsIndexPage() {
   const navigate = useNavigate();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [agents, setAgents] = useState(MOCK_AGENTS);
+  const [wizardStep, setWizardStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [newAgent, setNewAgent] = useState({ name: "", description: "", agentType: "chatbot" });
 
-  const handleCreate = () => {
-    if (!newAgent.name.trim()) return;
-    const agent = {
-      id: crypto.randomUUID(),
-      name: newAgent.name,
-      description: newAgent.description,
-      agentType: newAgent.agentType,
-      status: "idle",
-      model: "gpt-4",
+  const queryClient = useQueryClient();
+
+  // Fetch agents from real API
+  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: ["agents", "list"],
+    queryFn: async () => {
+      const res = await fetch("/api/agents", { headers: { "Content-Type": "application/json" } });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  // Create agent mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string; agentType: string; config: any }) => {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents", "list"] }),
+  });
+
+  // Delete agent mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/agents/${id}`, { method: "DELETE" });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents", "list"] }),
+  });
+
+  // Map API agents to the display shape
+  const agents = useMemo(() => {
+    const apiItems: any[] = agentsData?.data ?? [];
+    return apiItems.map((agent: any) => ({
+      id: agent.id,
+      name: agent.name,
+      description: agent.description ?? "",
+      agentType: agent.agentType ?? "autonomous",
+      status: agent.status === "active" ? "active" : "idle",
+      model: (agent.config as any)?.model ?? "gpt-4",
       tasksCompleted: 0,
       avgResponseTime: "-",
-      lastActive: "Just now",
+      lastActive: agent.updatedAt
+        ? new Date(agent.updatedAt).toLocaleString()
+        : new Date(agent.createdAt).toLocaleString(),
+      health: (agent.status === "active" ? "healthy" : agent.status === "error" ? "error" : "degraded") as "healthy" | "degraded" | "error",
+      errorRate: 0,
+    }));
+  }, [agentsData]);
+
+  const [wizardData, setWizardData] = useState({
+    // Step 1
+    name: "",
+    description: "",
+    type: "Support",
+    // Step 2
+    model: "gpt-4",
+    maxTokens: 4096,
+    temperature: 0.7,
+    // Step 3
+    tools: [] as string[],
+  });
+
+  const WIZARD_TOOLS = [
+    "CRM Access",
+    "HRM Access",
+    "Finance Access",
+    "Web Search",
+    "Code Execution",
+    "Email Sending",
+  ];
+
+  const toggleTool = (tool: string) => {
+    setWizardData((prev) => ({
+      ...prev,
+      tools: prev.tools.includes(tool)
+        ? prev.tools.filter((t) => t !== tool)
+        : [...prev.tools, tool],
+    }));
+  };
+
+  const handleCreate = () => {
+    if (!wizardData.name.trim()) return;
+    const agentTypeMap: Record<string, string> = {
+      Support: "chatbot",
+      Sales: "chatbot",
+      "Data Analysis": "data_analysis",
+      Code: "code_execution",
+      Research: "autonomous",
     };
-    setAgents([...agents, agent]);
-    setNewAgent({ name: "", description: "", agentType: "chatbot" });
-    setShowCreateDialog(false);
+    createMutation.mutate(
+      {
+        name: wizardData.name,
+        description: wizardData.description,
+        agentType: agentTypeMap[wizardData.type] ?? "autonomous",
+        config: {
+          model: wizardData.model,
+          maxTokens: wizardData.maxTokens,
+          temperature: wizardData.temperature,
+          tools: wizardData.tools,
+        },
+      },
+      {
+        onSuccess: () => {
+          setWizardData({ name: "", description: "", type: "Support", model: "gpt-4", maxTokens: 4096, temperature: 0.7, tools: [] });
+          setWizardStep(1);
+          setShowCreateDialog(false);
+        },
+      },
+    );
   };
 
   const handleDelete = (id: string) => {
-    setAgents(agents.filter((a) => a.id !== id));
+    deleteMutation.mutate(id);
   };
 
   const filteredAgents = agents.filter((agent) => {
@@ -148,8 +200,77 @@ function AgentsIndexPage() {
     }
   };
 
+  const getHealthDot = (health: "healthy" | "degraded" | "error") => {
+    const colors = { healthy: "bg-green-500", degraded: "bg-yellow-500", error: "bg-red-500" };
+    const labels = { healthy: "Healthy", degraded: "Degraded", error: "Error" };
+    const textColors = { healthy: "text-green-700", degraded: "text-yellow-700", error: "text-red-700" };
+    return (
+      <span className={`flex items-center gap-1 text-[10px] font-semibold ${textColors[health]}`}>
+        <span className={`inline-block h-2 w-2 rounded-full ${colors[health]}`} />
+        {labels[health]}
+      </span>
+    );
+  };
+
+  // TODO: Replace TOKEN_USAGE_DATA with API when a token usage endpoint is available
+  const totalTokensToday = TOKEN_USAGE_DATA[TOKEN_USAGE_DATA.length - 1].tokens;
+  const estimatedCost = ((TOKEN_USAGE_DATA.reduce((s, d) => s + d.tokens, 0) / 1000) * 0.002).toFixed(2);
+
+  if (agentsLoading) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton className="h-40 rounded-xl" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <LoadingSkeleton key={i} className="h-52 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Token Usage Tracker */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Token Usage — Last 7 Days
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Today</p>
+                <p className="text-sm font-black text-foreground">{totalTokensToday.toLocaleString()} tokens</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Est. Cost (7d)</p>
+                <p className="text-sm font-black text-green-600">${estimatedCost}</p>
+              </div>
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Rate</p>
+                <p className="text-[10px] text-muted-foreground">$0.002/1k tokens</p>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[100px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={TOKEN_USAGE_DATA} barSize={20}>
+                <XAxis dataKey="day" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
+                <Tooltip
+                  contentStyle={{ background: "#1e293b", border: "none", borderRadius: "6px", fontSize: "11px" }}
+                  formatter={(value: number) => [`${value.toLocaleString()} tokens`, "Usage"]}
+                />
+                <Bar dataKey="tokens" fill="#2172cd" opacity={0.85} radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -188,11 +309,10 @@ function AgentsIndexPage() {
               title="No agents found"
               description={searchQuery ? "Try adjusting your search or filters." : "Create your first AI agent to get started."}
               action={
-                searchQuery ? undefined : (
-                  <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateDialog(true)}>
-                    Create Agent
-                  </Button>
-                )
+                searchQuery ? undefined : {
+                  label: "Create Agent",
+                  onClick: () => setShowCreateDialog(true),
+                }
               }
             />
           </CardContent>
@@ -212,7 +332,10 @@ function AgentsIndexPage() {
                       <p className="text-muted-foreground text-xs">{agent.lastActive}</p>
                     </div>
                   </div>
-                  <Badge className={getStatusColor(agent.status)}>{agent.status}</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={getStatusColor(agent.status)}>{agent.status}</Badge>
+                    {getHealthDot(agent.health)}
+                  </div>
                 </div>
 
                 <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{agent.description}</p>
@@ -277,54 +400,182 @@ function AgentsIndexPage() {
         </div>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+      {/* Agent Creation Wizard */}
+      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) setWizardStep(1); }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create New Agent</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              Create New Agent
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Agent Name</label>
-              <input
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                placeholder="My AI Agent"
-                value={newAgent.name}
-                onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                className="w-full px-3 py-2 border rounded-md bg-background h-20"
-                placeholder="Describe what this agent does..."
-                value={newAgent.description}
-                onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Agent Type</label>
-              <div className="grid grid-cols-2 gap-3">
-                {AGENT_TYPES.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setNewAgent({ ...newAgent, agentType: type.value })}
-                    className={`p-3 border rounded-lg text-left transition-colors ${
-                      newAgent.agentType === type.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="font-medium text-sm">{type.label}</div>
-                    <div className="text-muted-foreground text-xs mt-1">{type.description}</div>
-                  </button>
-                ))}
+
+          {/* Step Indicator */}
+          <div className="flex items-center gap-2 py-2">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center gap-2">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                  wizardStep >= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}>
+                  {step}
+                </div>
+                <span className={`text-xs font-medium ${wizardStep === step ? "text-foreground" : "text-muted-foreground"}`}>
+                  {step === 1 ? "Basic Info" : step === 2 ? "Configuration" : "Tools"}
+                </span>
+                {step < 3 && <div className={`h-px w-8 ${wizardStep > step ? "bg-primary" : "bg-border"}`} />}
+              </div>
+            ))}
+          </div>
+
+          {/* Step 1: Basic Info */}
+          {wizardStep === 1 && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Agent Name <span className="text-destructive">*</span></label>
+                <input
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                  placeholder="My AI Agent"
+                  value={wizardData.name}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm h-20 resize-none"
+                  placeholder="Describe what this agent does..."
+                  value={wizardData.description}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <select
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                  value={wizardData.type}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, type: e.target.value }))}
+                >
+                  <option value="Support">Support</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Data Analysis">Data Analysis</option>
+                  <option value="Code">Code</option>
+                  <option value="Research">Research</option>
+                </select>
               </div>
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleCreate}>Create Agent</Button>
+          )}
+
+          {/* Step 2: Configuration */}
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Model</label>
+                <select
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                  value={wizardData.model}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, model: e.target.value }))}
+                >
+                  <option value="gpt-4">GPT-4</option>
+                  <option value="claude-3-opus">Claude 3 Opus</option>
+                  <option value="gemini-pro">Gemini Pro</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Max Tokens</label>
+                  <span className="text-sm font-bold text-primary">{wizardData.maxTokens.toLocaleString()}</span>
+                </div>
+                <input
+                  type="range"
+                  min="1024"
+                  max="16384"
+                  step="512"
+                  value={wizardData.maxTokens}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, maxTokens: Number(e.target.value) }))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>1k</span><span>16k</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Temperature</label>
+                  <span className="text-sm font-bold text-primary">{wizardData.temperature.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={wizardData.temperature}
+                  onChange={(e) => setWizardData((prev) => ({ ...prev, temperature: Number(e.target.value) }))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0.0 (Focused)</span><span>1.0 (Creative)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Tools & Integrations */}
+          {wizardStep === 3 && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">Select the tools and integrations this agent can access.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {WIZARD_TOOLS.map((tool) => (
+                  <label
+                    key={tool}
+                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                      wizardData.tools.includes(tool)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={wizardData.tools.includes(tool)}
+                      onChange={() => toggleTool(tool)}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm font-medium">{tool}</span>
+                  </label>
+                ))}
+              </div>
+              {wizardData.tools.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {wizardData.tools.length} tool{wizardData.tools.length > 1 ? "s" : ""} selected
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (wizardStep === 1) { setShowCreateDialog(false); setWizardStep(1); }
+                else setWizardStep((s) => s - 1);
+              }}
+              leftIcon={wizardStep > 1 ? <ChevronLeft className="h-4 w-4" /> : undefined}
+            >
+              {wizardStep === 1 ? "Cancel" : "Back"}
+            </Button>
+            {wizardStep < 3 ? (
+              <Button
+                variant="primary"
+                rightIcon={<ChevronRight className="h-4 w-4" />}
+                onClick={() => setWizardStep((s) => s + 1)}
+                disabled={wizardStep === 1 && !wizardData.name.trim()}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={handleCreate} disabled={!wizardData.name.trim()}>
+                Create Agent
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

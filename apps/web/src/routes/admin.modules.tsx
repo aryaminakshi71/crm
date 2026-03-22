@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Progress } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
+import { useSession } from "@/lib/auth-client";
 import {
   Users,
   Layers,
@@ -120,9 +121,9 @@ const moduleDetails: Record<string, {
     plans: ["business", "enterprise"],
   },
   agents: {
-    name: "AI Agents",
+    name: "AI",
     icon: Bot,
-    description: "Autonomous AI coding agents",
+    description: "AI agents and business intelligence",
     category: "ai",
     adoption: 23,
     revenue: 18400,
@@ -147,6 +148,28 @@ const plans = [
 ];
 
 function AdminModulesPage() {
+  const { data: session, isPending } = useSession();
+
+  // Admin guard
+  if (isPending) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground">Please sign in to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   const categories = [
     { key: "core", name: "Core Modules", description: "Always available" },
     { key: "ops", name: "Operations", description: "Day-to-day business ops" },

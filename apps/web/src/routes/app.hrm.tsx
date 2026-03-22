@@ -799,7 +799,11 @@ function HrmPage() {
               icon={<Users className="h-12 w-12" />}
               title="No employees found"
               description="Add personnel records to build your HR directory."
-              action={<Button onClick={() => setIsEmployeeModalOpen(true)}>Add Employee</Button>}
+              action={
+                <Button onClick={() => setIsEmployeeModalOpen(true)}>
+                  Add Employee
+                </Button>
+              }
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

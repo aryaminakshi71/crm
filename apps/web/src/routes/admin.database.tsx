@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Select } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useSession } from "@/lib/auth-client";
 import {
   Database,
   Table2,
@@ -113,7 +114,7 @@ const moduleSchemas: Record<string, {
     ],
   },
   agents: {
-    name: "AI Agents",
+    name: "AI",
     icon: Bot,
     tables: [
       { name: "agents", rows: 45, description: "Agent definitions" },
@@ -150,6 +151,7 @@ const moduleSchemas: Record<string, {
 };
 
 function AdminDatabasePage() {
+  const { data: session, isPending } = useSession();
   const [selectedModule, setSelectedModule] = useState<string>("crm");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [view, setView] = useState<"modules" | "tables" | "data" | "schema">("modules");
@@ -157,6 +159,26 @@ function AdminDatabasePage() {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Admin guard
+  if (isPending) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground">Please sign in to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentModule = moduleSchemas[selectedModule];
 

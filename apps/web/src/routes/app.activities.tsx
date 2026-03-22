@@ -303,10 +303,9 @@ function ActivitiesPage() {
           icon={<Calendar className="h-12 w-12" />}
           title="No activities yet"
           description="Start logging your interactions with contacts."
-          action={{
-            label: "Log Activity",
-            onClick: () => setIsModalOpen(true),
-          }}
+          action={
+            <Button onClick={() => setIsModalOpen(true)}>Log Activity</Button>
+          }
         />
       ) : (
         <>

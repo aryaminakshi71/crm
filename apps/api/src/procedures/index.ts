@@ -179,9 +179,19 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
     });
   }
 
-  // TODO: Add subscription status check once schema.subscriptions is available.
-  // When added, query subscriptions table for this org and throw FORBIDDEN if
-  // sub.status is not in ["active", "trialing"].
+  // Check subscription status (skip for demo)
+  const [sub] = await db
+    .select({ status: schema.subscriptions.status })
+    .from(schema.subscriptions)
+    .where(eq(schema.subscriptions.organizationId, result[0].organization.id))
+    .limit(1);
+
+  const allowedStatuses = ["active", "trialing"];
+  if (sub && !allowedStatuses.includes(sub.status)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Your subscription is not active. Please update your billing to continue.",
+    });
+  }
 
   // Cast role to proper type and add default plan
   const role = result[0].member.role as "owner" | "admin" | "member";

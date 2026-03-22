@@ -251,7 +251,7 @@ function KnowledgePage() {
           icon={<BookOpen className="h-12 w-12" />}
           title="No documents yet"
           description="Create your first knowledge document in Nucleo One."
-          action={{ label: "Create Document", onClick: onCreate }}
+          action={<Button onClick={onCreate}>Create Document</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

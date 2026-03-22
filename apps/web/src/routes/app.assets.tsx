@@ -466,10 +466,11 @@ function AssetsPage() {
             icon={<ImageIcon className="h-12 w-12" />}
             title="No assets yet"
             description="Upload files to get started with AI tagging."
-            action={{
-              label: "Upload Asset",
-              onClick: () => fileInputRef.current?.click(),
-            }}
+            action={
+              <Button onClick={() => fileInputRef.current?.click()}>
+                Upload Asset
+              </Button>
+            }
           />
         ) : (
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
@@ -562,10 +563,11 @@ function AssetsPage() {
                 icon={<FolderOpen className="h-12 w-12" />}
                 title="No documents found"
                 description="Create a new document or clear your search."
-                action={{
-                  label: "Create Document",
-                  onClick: () => setIsDocumentModalOpen(true),
-                }}
+                action={
+                  <Button onClick={() => setIsDocumentModalOpen(true)}>
+                    Create Document
+                  </Button>
+                }
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

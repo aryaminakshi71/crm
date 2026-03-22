@@ -9,8 +9,7 @@ import {
   FormField,
   FormModal,
   Input,
-  SkeletonStatGrid,
-  SkeletonTable,
+  Loading,
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -367,7 +366,7 @@ function HelpdeskPage() {
   }, [comments]);
 
   if (isLoading || isQueueLoading || isCommentsLoading || isArticlesLoading) {
-    return <div className="space-y-4 p-6"><SkeletonStatGrid /><SkeletonTable rows={5} columns={4} /></div>;
+    return <Loading text="Loading helpdesk workspace..." />;
   }
 
   return (
@@ -625,7 +624,11 @@ function HelpdeskPage() {
           icon={<LifeBuoy className="h-12 w-12" />}
           title="No tickets found"
           description="Create your first support ticket or adjust filters."
-          action={<Button onClick={() => setIsCreateModalOpen(true)}>Create Ticket</Button>}
+          action={
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              Create Ticket
+            </Button>
+          }
         />
       ) : (
         <div className="space-y-3">
@@ -867,7 +870,11 @@ function HelpdeskPage() {
               icon={<ListOrdered className="h-12 w-12" />}
               title="No queue tokens"
               description="Create a token to start queue operations."
-              action={<Button onClick={() => setIsQueueModalOpen(true)}>Create Queue Token</Button>}
+              action={
+                <Button onClick={() => setIsQueueModalOpen(true)}>
+                  Create Queue Token
+                </Button>
+              }
             />
           ) : (
             <div className="space-y-3">

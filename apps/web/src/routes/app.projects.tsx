@@ -9,7 +9,7 @@ import {
   FormField,
   FormModal,
   Input,
-  SkeletonListPage,
+  Loading,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -407,7 +407,7 @@ function ProjectsPage() {
     deleteResourceMut.mutate(id);
   };
 
-  if (isLoading) return <div className="p-6"><SkeletonListPage /></div>;
+  if (isLoading) return <Loading text="Loading projects..." />;
 
   return (
     <div className="space-y-6">
@@ -615,7 +615,11 @@ function ProjectsPage() {
             <EmptyState
               icon={<FolderKanban className="h-10 w-10" />}
               title="No projects"
-              action={<Button onClick={() => setIsCreateModalOpen(true)}>Create</Button>}
+              action={
+                <Button onClick={() => setIsCreateModalOpen(true)}>
+                  Create
+                </Button>
+              }
             />
           ) : (
             filtered.map((project: any) => (

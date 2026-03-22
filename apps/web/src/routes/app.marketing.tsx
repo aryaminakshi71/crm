@@ -9,13 +9,13 @@ import {
   FormField,
   FormModal,
   Input,
-  SkeletonStatGrid,
-  SkeletonTable,
+  Loading,
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  AlertCircle,
   BarChart3,
   DollarSign,
   Eye,
@@ -202,7 +202,13 @@ function MarketingPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["nucleo-campaigns"],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
   });
@@ -373,7 +379,23 @@ function MarketingPage() {
     setSegments(next);
   };
 
-  if (isLoading) return <div className="space-y-4 p-6"><SkeletonStatGrid /><SkeletonTable rows={5} columns={4} /></div>;
+  if (isLoading) return <Loading text="Loading marketing..." />;
+
+  if (isError) {
+    return (
+      <EmptyState
+        variant="error"
+        icon={<AlertCircle className="h-8 w-8 text-destructive" />}
+        title="Failed to load campaigns"
+        description={(error as Error)?.message ?? "Something went wrong. Please try again."}
+        action={
+          <Button variant="outline" onClick={() => refetch()}>
+            Try again
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -614,7 +636,11 @@ function MarketingPage() {
               icon={<Megaphone className="h-12 w-12" />}
               title="No campaigns"
               description="Create your first campaign with AI assistance."
-              action={<Button onClick={() => setIsCreateOpen(true)}>Create Campaign</Button>}
+              action={
+                <Button onClick={() => setIsCreateOpen(true)}>
+                  Create Campaign
+                </Button>
+              }
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -913,7 +939,11 @@ function MarketingPage() {
               icon={<Users className="h-12 w-12" />}
               title="No audience segments"
               description="Create segments to target your campaigns effectively."
-              action={<Button onClick={() => setIsSegmentOpen(true)}>Create Segment</Button>}
+              action={
+                <Button onClick={() => setIsSegmentOpen(true)}>
+                  Create Segment
+                </Button>
+              }
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
