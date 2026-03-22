@@ -1,4 +1,5 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,37 +21,69 @@ export const Route = createFileRoute("/app/communications/voice")({
 
 interface Call {
   id: string;
-  contact: string;
-  phone: string;
-  duration: string;
-  timestamp: string;
-  type: "incoming" | "outgoing" | "missed";
-  status: "completed" | "voicemail" | "failed";
+  contactName?: string;
+  to: string;
+  from: string;
+  durationSeconds?: number;
+  createdAt: string;
+  direction: "inbound" | "outbound";
+  status: string;
 }
 
 const MOCK_CALLS: Call[] = [
-  { id: "1", contact: "Sarah Johnson", phone: "+1 555-123-4567", duration: "5:23", timestamp: "10:30 AM", type: "incoming", status: "completed" },
-  { id: "2", contact: "Michael Chen", phone: "+1 555-234-5678", duration: "12:45", timestamp: "10:15 AM", type: "outgoing", status: "completed" },
-  { id: "3", contact: "Emily Davis", phone: "+1 555-345-6789", duration: "-", timestamp: "09:45 AM", type: "missed", status: "failed" },
-  { id: "4", contact: "Robert Wilson", phone: "+1 555-456-7890", duration: "3:12", timestamp: "09:30 AM", type: "incoming", status: "voicemail" },
-  { id: "5", contact: "Jennifer Martinez", phone: "+1 555-567-8901", duration: "8:56", timestamp: "Yesterday", type: "outgoing", status: "completed" },
+  { id: "1", contactName: "Sarah Johnson", from: "+1 555-123-4567", to: "+1 555-000-0001", durationSeconds: 323, createdAt: new Date().toISOString(), direction: "inbound", status: "completed" },
+  { id: "2", contactName: "Michael Chen", from: "+1 555-000-0001", to: "+1 555-234-5678", durationSeconds: 765, createdAt: new Date().toISOString(), direction: "outbound", status: "completed" },
+  { id: "3", contactName: "Emily Davis", from: "+1 555-345-6789", to: "+1 555-000-0001", durationSeconds: undefined, createdAt: new Date().toISOString(), direction: "inbound", status: "missed" },
 ];
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+function formatDuration(seconds?: number): string {
+  if (!seconds) return "-";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function VoiceCallsPage() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<"all" | "incoming" | "outgoing" | "missed">("all");
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<"all" | "inbound" | "outbound" | "missed">("all");
 
-  const filteredCalls = MOCK_CALLS.filter((call) => {
-    return filter === "all" || call.type === filter;
+  const { data, isLoading } = useQuery({
+    queryKey: ["communications", "calls"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/communications/calls`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to load calls");
+      return res.json() as Promise<{ data: Call[] }>;
+    },
   });
 
-  const getCallIcon = (type: Call["type"]) => {
-    switch (type) {
-      case "incoming": return <PhoneIncoming className="h-4 w-4 text-green-600" />;
-      case "outgoing": return <PhoneOutgoing className="h-4 w-4 text-blue-600" />;
-      case "missed": return <PhoneMissed className="h-4 w-4 text-red-600" />;
+  const calls = data?.data ?? MOCK_CALLS;
+
+  const filteredCalls = calls.filter((call) => {
+    if (filter === "all") return true;
+    if (filter === "missed") return call.status === "missed" || call.status === "failed";
+    return call.direction === filter;
+  });
+
+  const getCallIcon = (call: Call) => {
+    if (call.status === "missed" || call.status === "failed") {
+      return <PhoneMissed className="h-4 w-4 text-red-600" />;
     }
+    if (call.direction === "inbound") return <PhoneIncoming className="h-4 w-4 text-green-600" />;
+    return <PhoneOutgoing className="h-4 w-4 text-blue-600" />;
   };
+
+  const incoming = calls.filter((c) => c.direction === "inbound" && c.status !== "missed" && c.status !== "failed").length;
+  const outgoing = calls.filter((c) => c.direction === "outbound").length;
+  const missed = calls.filter((c) => c.status === "missed" || c.status === "failed").length;
 
   return (
     <div className="space-y-6">
@@ -83,7 +116,7 @@ function VoiceCallsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Calls</p>
-                <p className="text-xl font-bold">42</p>
+                <p className="text-xl font-bold">{isLoading ? "…" : calls.length}</p>
               </div>
             </div>
           </CardContent>
@@ -96,7 +129,7 @@ function VoiceCallsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Incoming</p>
-                <p className="text-xl font-bold">18</p>
+                <p className="text-xl font-bold">{isLoading ? "…" : incoming}</p>
               </div>
             </div>
           </CardContent>
@@ -109,7 +142,7 @@ function VoiceCallsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Outgoing</p>
-                <p className="text-xl font-bold">21</p>
+                <p className="text-xl font-bold">{isLoading ? "…" : outgoing}</p>
               </div>
             </div>
           </CardContent>
@@ -122,7 +155,7 @@ function VoiceCallsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Missed</p>
-                <p className="text-xl font-bold">3</p>
+                <p className="text-xl font-bold">{isLoading ? "…" : missed}</p>
               </div>
             </div>
           </CardContent>
@@ -141,7 +174,7 @@ function VoiceCallsPage() {
         </Link>
         <Link to="/app/communications/voice/recordings" className="rounded-lg border border-border/60 bg-card p-4 hover:bg-muted/50 transition-colors text-center">
           <Disc className="h-8 w-8 text-primary mx-auto mb-2" />
-          <h3 className="font-semibold text-sm">Discs</h3>
+          <h3 className="font-semibold text-sm">Recordings</h3>
         </Link>
         <Link to="/app/communications/voice/transcriptions" className="rounded-lg border border-border/60 bg-card p-4 hover:bg-muted/50 transition-colors text-center">
           <Mic className="h-8 w-8 text-primary mx-auto mb-2" />
@@ -151,7 +184,7 @@ function VoiceCallsPage() {
 
       {/* Filters */}
       <div className="flex gap-2">
-        {(["all", "incoming", "outgoing", "missed"] as const).map((f) => (
+        {(["all", "inbound", "outbound", "missed"] as const).map((f) => (
           <Button
             key={f}
             variant={filter === f ? "primary" : "outline"}
@@ -170,20 +203,22 @@ function VoiceCallsPage() {
             {filteredCalls.map((call) => (
               <div key={call.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  {getCallIcon(call.type)}
+                  {getCallIcon(call)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold">{call.contact}</h3>
-                    <span className="text-xs text-muted-foreground">{call.timestamp}</span>
+                    <h3 className="font-semibold">{call.contactName ?? (call.direction === "inbound" ? call.from : call.to)}</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(call.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{call.phone}</span>
-                    {call.duration !== "-" && (
+                    <span>{call.direction === "inbound" ? call.from : call.to}</span>
+                    {call.durationSeconds != null && (
                       <>
                         <span>•</span>
                         <Clock className="h-3 w-3" />
-                        <span>{call.duration}</span>
+                        <span>{formatDuration(call.durationSeconds)}</span>
                       </>
                     )}
                   </div>
@@ -192,14 +227,12 @@ function VoiceCallsPage() {
                   <Button variant="outline" size="sm">
                     <Phone className="h-4 w-4" />
                   </Button>
-                  {call.status === "voicemail" && (
-                    <Button variant="ghost" size="sm">
-                      <Disc className="h-4 w-4" />
-                    </Button>
-                  )}
                 </div>
               </div>
             ))}
+            {filteredCalls.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground text-sm">No calls found</div>
+            )}
           </div>
         </CardContent>
       </Card>

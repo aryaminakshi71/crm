@@ -1,5 +1,6 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Mic,
@@ -19,26 +20,65 @@ export const Route = createFileRoute("/app/communications/voice/transcriptions")
 
 interface Transcription {
   id: string;
-  contact: string;
-  phone: string;
-  duration: string;
-  timestamp: string;
-  speakers: number;
-  preview: string;
+  callId?: string;
+  contactName?: string;
+  phone?: string;
+  durationSeconds?: number;
+  createdAt: string;
+  transcript?: string;
+  speakers?: number;
+  preview?: string;
 }
 
 const MOCK_TRANSCRIPTIONS: Transcription[] = [
-  { id: "t1", contact: "Sarah Johnson", phone: "+1 555-123-4567", duration: "5:23", timestamp: "Mar 18, 2024 10:30 AM", speakers: 2, preview: "Agent: Thank you for calling. How can I help you today? Customer: Hi, I wanted to check on my order status..." },
-  { id: "t2", contact: "Michael Chen", phone: "+1 555-234-5678", duration: "12:45", timestamp: "Mar 18, 2024 10:15 AM", speakers: 2, preview: "Agent: Welcome to customer support. Customer: Yes, I have a question about my invoice..." },
-  { id: "t3", contact: "Emily Davis", phone: "+1 555-345-6789", duration: "3:12", timestamp: "Mar 17, 2024 09:30 AM", speakers: 2, preview: "Agent: Hi, how can I assist you? Customer: I'd like to schedule a callback..." },
+  { id: "t1", contactName: "Sarah Johnson", phone: "+1 555-123-4567", durationSeconds: 323, createdAt: new Date(Date.now() - 3600000).toISOString(), speakers: 2, preview: "Agent: Thank you for calling. How can I help you today? Customer: Hi, I wanted to check on my order status..." },
+  { id: "t2", contactName: "Michael Chen", phone: "+1 555-234-5678", durationSeconds: 765, createdAt: new Date(Date.now() - 7200000).toISOString(), speakers: 2, preview: "Agent: Welcome to customer support. Customer: Yes, I have a question about my invoice..." },
+  { id: "t3", contactName: "Emily Davis", phone: "+1 555-345-6789", durationSeconds: 192, createdAt: new Date(Date.now() - 86400000).toISOString(), speakers: 2, preview: "Agent: Hi, how can I assist you? Customer: I'd like to schedule a callback..." },
 ];
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
+function formatDuration(seconds?: number): string {
+  if (!seconds) return "-";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function TranscriptionsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const selectedTranscription = MOCK_TRANSCRIPTIONS.find((t) => t.id === selectedId);
+  // Transcriptions come from the speech router (/api/speech/transcriptions)
+  const { data, isLoading } = useQuery({
+    queryKey: ["communications", "transcriptions"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/speech/transcriptions`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to load transcriptions");
+      return res.json() as Promise<{ data: Transcription[] }>;
+    },
+  });
+
+  const transcriptions = data?.data ?? MOCK_TRANSCRIPTIONS;
+
+  const filtered = transcriptions.filter((t) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      t.contactName?.toLowerCase().includes(q) ||
+      t.phone?.includes(q) ||
+      t.preview?.toLowerCase().includes(q)
+    );
+  });
+
+  const selectedTranscription = transcriptions.find((t) => t.id === selectedId);
 
   return (
     <div className="space-y-6">
@@ -68,29 +108,42 @@ function TranscriptionsPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            {MOCK_TRANSCRIPTIONS.map((t) => (
-              <Card
-                key={t.id}
-                className={`cursor-pointer transition-colors ${selectedId === t.id ? "border-primary" : ""}`}
-                onClick={() => setSelectedId(t.id)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Mic className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">{t.contact}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{t.preview}</p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{t.duration}</span>
-                    <span>•</span>
-                    <span>{t.speakers} speakers</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((t) => (
+                <Card
+                  key={t.id}
+                  className={`cursor-pointer transition-colors ${selectedId === t.id ? "border-primary" : ""}`}
+                  onClick={() => setSelectedId(t.id)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mic className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">{t.contactName ?? t.phone ?? "Unknown"}</span>
+                    </div>
+                    {t.preview && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{t.preview}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatDuration(t.durationSeconds)}</span>
+                      {t.speakers && (
+                        <>
+                          <span>•</span>
+                          <span>{t.speakers} speakers</span>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {filtered.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-8">No transcriptions found</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Transcription Detail */}
@@ -100,8 +153,10 @@ function TranscriptionsPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="font-semibold text-lg">{selectedTranscription.contact}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedTranscription.phone}</p>
+                    <h3 className="font-semibold text-lg">{selectedTranscription.contactName ?? "Unknown"}</h3>
+                    {selectedTranscription.phone && (
+                      <p className="text-sm text-muted-foreground">{selectedTranscription.phone}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" leftIcon={<Play className="h-4 w-4" />}>
@@ -119,58 +174,24 @@ function TranscriptionsPage() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 text-sm">
                     <Badge variant="outline">
-                      <Clock className="h-3 w-3 mr-1" /> {selectedTranscription.duration}
+                      <Clock className="h-3 w-3 mr-1" /> {formatDuration(selectedTranscription.durationSeconds)}
                     </Badge>
-                    <Badge variant="outline">
-                      <User className="h-3 w-3 mr-1" /> {selectedTranscription.speakers} speakers
-                    </Badge>
+                    {selectedTranscription.speakers && (
+                      <Badge variant="outline">
+                        <User className="h-3 w-3 mr-1" /> {selectedTranscription.speakers} speakers
+                      </Badge>
+                    )}
                     <Badge className="bg-green-100 text-green-800">98% accuracy</Badge>
                   </div>
 
                   <div className="border-t pt-4 space-y-4">
-                    <div className="flex gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                        A
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium mb-1">Agent</p>
-                        <p className="text-sm">Thank you for calling. How can I help you today?</p>
-                        <p className="text-xs text-muted-foreground mt-1">0:00 - 0:05</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
-                        C
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium mb-1">Customer</p>
-                        <p className="text-sm">Hi, I wanted to check on my order status. I placed an order last week and haven't received any updates.</p>
-                        <p className="text-xs text-muted-foreground mt-1">0:05 - 0:15</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                        A
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium mb-1">Agent</p>
-                        <p className="text-sm">I'd be happy to help you with that. Let me look up your order. Could you please provide your order number?</p>
-                        <p className="text-xs text-muted-foreground mt-1">0:15 - 0:25</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
-                        C
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium mb-1">Customer</p>
-                        <p className="text-sm">Sure, it's order number 12345.</p>
-                        <p className="text-xs text-muted-foreground mt-1">0:25 - 0:30</p>
-                      </div>
-                    </div>
+                    {selectedTranscription.transcript ? (
+                      <p className="text-sm whitespace-pre-wrap">{selectedTranscription.transcript}</p>
+                    ) : selectedTranscription.preview ? (
+                      <p className="text-sm">{selectedTranscription.preview}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Transcript not available</p>
+                    )}
                   </div>
                 </div>
               </CardContent>

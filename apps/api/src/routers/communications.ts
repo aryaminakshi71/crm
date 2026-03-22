@@ -1,11 +1,10 @@
 /**
  * Communications Router
  *
- * Handles conversations, messages, phone numbers, queues,
- * SMS campaigns, templates and bots.
+ * Voice calls, recordings, IVR flows, video rooms, and call routing rules.
  */
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
@@ -19,24 +18,27 @@ function toOffset(page: number, limit: number) {
   return (page - 1) * limit;
 }
 
-// ─── Helper: paginated list builder ──────────────────────────────────────────
-
-async function paginatedList<T extends { organizationId: string }>(
+async function paginatedList(
   db: ReturnType<typeof getDb>,
   table: any,
   orgId: string,
   page: number,
   limit: number,
+  extra?: any,
 ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+  const where = extra
+    ? and(eq(table.organizationId, orgId), extra)
+    : eq(table.organizationId, orgId);
+
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(table)
-    .where(eq(table.organizationId, orgId));
+    .where(where);
 
   const rows = await db
     .select()
     .from(table)
-    .where(eq(table.organizationId, orgId))
+    .where(where)
     .orderBy(desc(table.createdAt))
     .limit(limit)
     .offset(toOffset(page, limit));
@@ -52,74 +54,18 @@ async function paginatedList<T extends { organizationId: string }>(
 // ─── Router ──────────────────────────────────────────────────────────────────
 
 export const communicationsRouter = {
-  // ── Summary ────────────────────────────────────────────────────────────────
-  summary: orgAuthed
+  // ── Voice Calls ────────────────────────────────────────────────────────────
+
+  "calls.list": orgAuthed
     .route({
       method: "GET",
-      path: "/communications/summary",
-      summary: "Get communications summary stats",
-      tags: ["Communications"],
-    })
-    .input(z.object({}).optional())
-    .output(z.any())
-    .handler(async ({ context }: { context: OrgContext }) => {
-      const db = getDb(context);
-      const orgId = context.organization.id;
-
-      const [conversations, messages, phoneNumbers, queues, campaigns, templates, bots] =
-        await Promise.all([
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.conversations)
-            .where(eq(schema.conversations.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.commMessages)
-            .where(eq(schema.commMessages.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.phoneNumbers)
-            .where(eq(schema.phoneNumbers.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.commQueues)
-            .where(eq(schema.commQueues.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.smsCampaigns)
-            .where(eq(schema.smsCampaigns.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.commTemplates)
-            .where(eq(schema.commTemplates.organizationId, orgId)),
-          db
-            .select({ count: sql<number>`count(*)` })
-            .from(schema.commBots)
-            .where(eq(schema.commBots.organizationId, orgId)),
-        ]);
-
-      return {
-        conversations: Number(conversations[0]?.count ?? 0),
-        messages: Number(messages[0]?.count ?? 0),
-        phoneNumbers: Number(phoneNumbers[0]?.count ?? 0),
-        queues: Number(queues[0]?.count ?? 0),
-        campaigns: Number(campaigns[0]?.count ?? 0),
-        templates: Number(templates[0]?.count ?? 0),
-        bots: Number(bots[0]?.count ?? 0),
-      };
-    }),
-
-  // ── Conversations ──────────────────────────────────────────────────────────
-  listConversations: orgAuthed
-    .route({
-      method: "GET",
-      path: "/communications/conversations",
-      summary: "List conversations",
+      path: "/communications/calls",
+      summary: "List voice calls",
       tags: ["Communications"],
     })
     .input(
       pageInput.extend({
-        channel: z.string().optional(),
+        direction: z.enum(["inbound", "outbound"]).optional(),
         status: z.string().optional(),
       }),
     )
@@ -130,32 +76,62 @@ export const communicationsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { page: number; limit: number; channel?: string; status?: string };
+        input: { page: number; limit: number; direction?: string; status?: string };
       }) => {
         const db = getDb(context);
-        return paginatedList(
-          db,
-          schema.conversations,
-          context.organization.id,
-          input.page,
-          input.limit,
-        );
+        const orgId = context.organization.id;
+
+        const conditions: any[] = [
+          eq(schema.commVoiceCalls.organizationId, orgId),
+          isNull(schema.commVoiceCalls.deletedAt),
+        ];
+        if (input.direction) {
+          conditions.push(eq(schema.commVoiceCalls.direction, input.direction));
+        }
+        if (input.status) {
+          conditions.push(eq(schema.commVoiceCalls.status, input.status));
+        }
+
+        const where = and(...conditions);
+
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.commVoiceCalls)
+          .where(where);
+
+        const rows = await db
+          .select()
+          .from(schema.commVoiceCalls)
+          .where(where)
+          .orderBy(desc(schema.commVoiceCalls.createdAt))
+          .limit(input.limit)
+          .offset(toOffset(input.page, input.limit));
+
+        return {
+          data: rows,
+          total: Number(countRow?.count ?? 0),
+          page: input.page,
+          limit: input.limit,
+        };
       },
     ),
 
-  createConversation: orgAuthed
+  "calls.create": orgAuthed
     .route({
       method: "POST",
-      path: "/communications/conversations",
-      summary: "Create conversation",
+      path: "/communications/calls",
+      summary: "Initiate a call record",
       tags: ["Communications"],
     })
     .input(
       z.object({
-        channel: z.enum(["chat", "sms", "email", "voice"]).default("chat"),
-        subject: z.string().optional(),
-        participantName: z.string().optional(),
-        participantContact: z.string().optional(),
+        direction: z.enum(["inbound", "outbound"]).default("outbound"),
+        from: z.string().min(1),
+        to: z.string().min(1),
+        contactName: z.string().optional(),
+        status: z
+          .enum(["initiated", "ringing", "answered", "completed", "missed", "failed"])
+          .default("initiated"),
       }),
     )
     .output(z.any())
@@ -166,62 +142,36 @@ export const communicationsRouter = {
       }: {
         context: OrgContext;
         input: {
-          channel: "chat" | "sms" | "email" | "voice";
-          subject?: string;
-          participantName?: string;
-          participantContact?: string;
+          direction: "inbound" | "outbound";
+          from: string;
+          to: string;
+          contactName?: string;
+          status: string;
         };
       }) => {
         const db = getDb(context);
         const [row] = await db
-          .insert(schema.conversations)
+          .insert(schema.commVoiceCalls)
           .values({
             organizationId: context.organization.id,
-            channel: input.channel,
-            subject: input.subject ?? null,
-            participantName: input.participantName ?? null,
-            participantContact: input.participantContact ?? null,
+            direction: input.direction,
+            from: input.from,
+            to: input.to,
+            contactName: input.contactName ?? null,
+            status: input.status,
           })
           .returning();
         return row;
       },
     ),
 
-  // ── Messages ───────────────────────────────────────────────────────────────
-  listMessages: orgAuthed
-    .route({
-      method: "GET",
-      path: "/communications/messages",
-      summary: "List messages",
-      tags: ["Communications"],
-    })
-    .input(pageInput.extend({ conversationId: z.string().uuid().optional() }))
-    .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { page: number; limit: number; conversationId?: string };
-      }) => {
-        const db = getDb(context);
-        return paginatedList(
-          db,
-          schema.commMessages,
-          context.organization.id,
-          input.page,
-          input.limit,
-        );
-      },
-    ),
+  // ── Recordings ─────────────────────────────────────────────────────────────
 
-  // ── Phone Numbers ──────────────────────────────────────────────────────────
-  listPhoneNumbers: orgAuthed
+  "recordings.list": orgAuthed
     .route({
       method: "GET",
-      path: "/communications/phone-numbers",
-      summary: "List phone numbers",
+      path: "/communications/recordings",
+      summary: "List call recordings",
       tags: ["Communications"],
     })
     .input(pageInput)
@@ -231,57 +181,49 @@ export const communicationsRouter = {
         const db = getDb(context);
         return paginatedList(
           db,
-          schema.phoneNumbers,
+          schema.commCallRecordings,
           context.organization.id,
           input.page,
           input.limit,
+          isNull(schema.commCallRecordings.deletedAt),
         );
       },
     ),
 
-  createPhoneNumber: orgAuthed
+  "recordings.get": orgAuthed
     .route({
-      method: "POST",
-      path: "/communications/phone-numbers",
-      summary: "Add phone number",
+      method: "GET",
+      path: "/communications/recordings/:id",
+      summary: "Get a call recording",
       tags: ["Communications"],
     })
-    .input(
-      z.object({
-        number: z.string().min(1),
-        friendlyName: z.string().optional(),
-        provider: z.string().optional(),
-      }),
-    )
+    .input(z.object({ id: z.string().uuid() }))
     .output(z.any())
     .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { number: string; friendlyName?: string; provider?: string };
-      }) => {
+      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
         const db = getDb(context);
         const [row] = await db
-          .insert(schema.phoneNumbers)
-          .values({
-            organizationId: context.organization.id,
-            number: input.number,
-            friendlyName: input.friendlyName ?? null,
-            provider: input.provider ?? "twilio",
-          })
-          .returning();
-        return row;
+          .select()
+          .from(schema.commCallRecordings)
+          .where(
+            and(
+              eq(schema.commCallRecordings.id, input.id),
+              eq(schema.commCallRecordings.organizationId, context.organization.id),
+              isNull(schema.commCallRecordings.deletedAt),
+            ),
+          )
+          .limit(1);
+        return row ?? null;
       },
     ),
 
-  // ── Comm Queues ────────────────────────────────────────────────────────────
-  listQueues: orgAuthed
+  // ── IVR Flows ──────────────────────────────────────────────────────────────
+
+  "ivr.list": orgAuthed
     .route({
       method: "GET",
-      path: "/communications/queues",
-      summary: "List communication queues",
+      path: "/communications/ivr",
+      summary: "List IVR flows",
       tags: ["Communications"],
     })
     .input(pageInput)
@@ -291,27 +233,38 @@ export const communicationsRouter = {
         const db = getDb(context);
         return paginatedList(
           db,
-          schema.commQueues,
+          schema.commIvrFlows,
           context.organization.id,
           input.page,
           input.limit,
+          isNull(schema.commIvrFlows.deletedAt),
         );
       },
     ),
 
-  createQueue: orgAuthed
+  "ivr.create": orgAuthed
     .route({
       method: "POST",
-      path: "/communications/queues",
-      summary: "Create communication queue",
+      path: "/communications/ivr",
+      summary: "Create an IVR flow",
       tags: ["Communications"],
     })
     .input(
       z.object({
         name: z.string().min(1),
         description: z.string().optional(),
-        channel: z.enum(["chat", "voice", "sms"]).default("chat"),
-        maxWait: z.string().optional(),
+        status: z.enum(["draft", "active", "inactive"]).default("draft"),
+        nodes: z
+          .array(
+            z.object({
+              id: z.string(),
+              type: z.enum(["greeting", "menu", "action", "transfer", "voicemail"]),
+              label: z.string(),
+              config: z.record(z.unknown()),
+              children: z.array(z.string()).optional(),
+            }),
+          )
+          .optional(),
       }),
     )
     .output(z.any())
@@ -321,29 +274,93 @@ export const communicationsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { name: string; description?: string; channel: "chat" | "voice" | "sms"; maxWait?: string };
+        input: {
+          name: string;
+          description?: string;
+          status: "draft" | "active" | "inactive";
+          nodes?: Array<{
+            id: string;
+            type: "greeting" | "menu" | "action" | "transfer" | "voicemail";
+            label: string;
+            config: Record<string, unknown>;
+            children?: string[];
+          }>;
+        };
       }) => {
         const db = getDb(context);
         const [row] = await db
-          .insert(schema.commQueues)
+          .insert(schema.commIvrFlows)
           .values({
             organizationId: context.organization.id,
             name: input.name,
             description: input.description ?? null,
-            channel: input.channel,
-            maxWait: input.maxWait ?? null,
+            status: input.status,
+            nodes: input.nodes ?? [],
           })
           .returning();
         return row;
       },
     ),
 
-  // ── SMS Campaigns ──────────────────────────────────────────────────────────
-  listSmsCampaigns: orgAuthed
+  "ivr.update": orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/communications/ivr/:id",
+      summary: "Update an IVR flow",
+      tags: ["Communications"],
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        status: z.enum(["draft", "active", "inactive"]).optional(),
+        nodes: z.array(z.record(z.unknown())).optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: {
+          id: string;
+          name?: string;
+          description?: string;
+          status?: string;
+          nodes?: Array<Record<string, unknown>>;
+        };
+      }) => {
+        const db = getDb(context);
+        const updateData: Record<string, unknown> = { updatedAt: new Date() };
+        if (input.name !== undefined) updateData.name = input.name;
+        if (input.description !== undefined) updateData.description = input.description;
+        if (input.status !== undefined) updateData.status = input.status;
+        if (input.nodes !== undefined) updateData.nodes = input.nodes;
+
+        const [row] = await db
+          .update(schema.commIvrFlows)
+          .set(updateData)
+          .where(
+            and(
+              eq(schema.commIvrFlows.id, input.id),
+              eq(schema.commIvrFlows.organizationId, context.organization.id),
+            ),
+          )
+          .returning();
+        return row;
+      },
+    ),
+
+  // ── Video Rooms ────────────────────────────────────────────────────────────
+
+  "videoRooms.list": orgAuthed
     .route({
       method: "GET",
-      path: "/communications/campaigns",
-      summary: "List SMS campaigns",
+      path: "/communications/video-rooms",
+      summary: "List video rooms",
       tags: ["Communications"],
     })
     .input(pageInput.extend({ status: z.string().optional() }))
@@ -357,28 +374,47 @@ export const communicationsRouter = {
         input: { page: number; limit: number; status?: string };
       }) => {
         const db = getDb(context);
-        return paginatedList(
-          db,
-          schema.smsCampaigns,
-          context.organization.id,
-          input.page,
-          input.limit,
-        );
+        const orgId = context.organization.id;
+
+        const conditions: any[] = [eq(schema.commVideoRooms.organizationId, orgId)];
+        if (input.status) {
+          conditions.push(eq(schema.commVideoRooms.status, input.status));
+        }
+        const where = and(...conditions);
+
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.commVideoRooms)
+          .where(where);
+
+        const rows = await db
+          .select()
+          .from(schema.commVideoRooms)
+          .where(where)
+          .orderBy(desc(schema.commVideoRooms.createdAt))
+          .limit(input.limit)
+          .offset(toOffset(input.page, input.limit));
+
+        return {
+          data: rows,
+          total: Number(countRow?.count ?? 0),
+          page: input.page,
+          limit: input.limit,
+        };
       },
     ),
 
-  createSmsCampaign: orgAuthed
+  "videoRooms.create": orgAuthed
     .route({
       method: "POST",
-      path: "/communications/campaigns",
-      summary: "Create SMS campaign",
+      path: "/communications/video-rooms",
+      summary: "Create a video room",
       tags: ["Communications"],
     })
     .input(
       z.object({
         name: z.string().min(1),
-        body: z.string().min(1),
-        fromNumber: z.string().optional(),
+        maxParticipants: z.number().int().min(2).max(100).default(10),
         scheduledAt: z.string().optional(),
       }),
     )
@@ -389,16 +425,16 @@ export const communicationsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { name: string; body: string; fromNumber?: string; scheduledAt?: string };
+        input: { name: string; maxParticipants: number; scheduledAt?: string };
       }) => {
         const db = getDb(context);
         const [row] = await db
-          .insert(schema.smsCampaigns)
+          .insert(schema.commVideoRooms)
           .values({
             organizationId: context.organization.id,
             name: input.name,
-            body: input.body,
-            fromNumber: input.fromNumber ?? null,
+            maxParticipants: input.maxParticipants,
+            status: input.scheduledAt ? "scheduled" : "active",
             scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
           })
           .returning();
@@ -406,88 +442,11 @@ export const communicationsRouter = {
       },
     ),
 
-  // ── Templates ──────────────────────────────────────────────────────────────
-  listTemplates: orgAuthed
+  "videoRooms.end": orgAuthed
     .route({
-      method: "GET",
-      path: "/communications/templates",
-      summary: "List message templates",
-      tags: ["Communications"],
-    })
-    .input(pageInput.extend({ channel: z.string().optional() }))
-    .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: { page: number; limit: number; channel?: string };
-      }) => {
-        const db = getDb(context);
-        return paginatedList(
-          db,
-          schema.commTemplates,
-          context.organization.id,
-          input.page,
-          input.limit,
-        );
-      },
-    ),
-
-  createTemplate: orgAuthed
-    .route({
-      method: "POST",
-      path: "/communications/templates",
-      summary: "Create message template",
-      tags: ["Communications"],
-    })
-    .input(
-      z.object({
-        name: z.string().min(1),
-        channel: z.enum(["sms", "email", "chat"]).default("sms"),
-        category: z.string().optional(),
-        body: z.string().min(1),
-        variables: z.array(z.string()).optional(),
-      }),
-    )
-    .output(z.any())
-    .handler(
-      async ({
-        context,
-        input,
-      }: {
-        context: OrgContext;
-        input: {
-          name: string;
-          channel: "sms" | "email" | "chat";
-          category?: string;
-          body: string;
-          variables?: string[];
-        };
-      }) => {
-        const db = getDb(context);
-        const [row] = await db
-          .insert(schema.commTemplates)
-          .values({
-            organizationId: context.organization.id,
-            name: input.name,
-            channel: input.channel,
-            category: input.category ?? "general",
-            body: input.body,
-            variables: input.variables ?? [],
-            createdById: context.user.id,
-          })
-          .returning();
-        return row;
-      },
-    ),
-
-  deleteTemplate: orgAuthed
-    .route({
-      method: "DELETE",
-      path: "/communications/templates/:id",
-      summary: "Delete message template",
+      method: "PATCH",
+      path: "/communications/video-rooms/:id/end",
+      summary: "End a video room",
       tags: ["Communications"],
     })
     .input(z.object({ id: z.string().uuid() }))
@@ -495,19 +454,27 @@ export const communicationsRouter = {
     .handler(
       async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
         const db = getDb(context);
-        await db
-          .delete(schema.commTemplates)
-          .where(eq(schema.commTemplates.id, input.id));
-        return { success: true };
+        const [row] = await db
+          .update(schema.commVideoRooms)
+          .set({ status: "ended", endedAt: new Date(), updatedAt: new Date() })
+          .where(
+            and(
+              eq(schema.commVideoRooms.id, input.id),
+              eq(schema.commVideoRooms.organizationId, context.organization.id),
+            ),
+          )
+          .returning();
+        return row;
       },
     ),
 
-  // ── Bots ───────────────────────────────────────────────────────────────────
-  listBots: orgAuthed
+  // ── Routing Rules ──────────────────────────────────────────────────────────
+
+  "routing.list": orgAuthed
     .route({
       method: "GET",
-      path: "/communications/bots",
-      summary: "List chatbots",
+      path: "/communications/routing-rules",
+      summary: "List call routing rules",
       tags: ["Communications"],
     })
     .input(pageInput)
@@ -517,29 +484,29 @@ export const communicationsRouter = {
         const db = getDb(context);
         return paginatedList(
           db,
-          schema.commBots,
+          schema.commRoutingRules,
           context.organization.id,
           input.page,
           input.limit,
+          isNull(schema.commRoutingRules.deletedAt),
         );
       },
     ),
 
-  createBot: orgAuthed
+  "routing.create": orgAuthed
     .route({
       method: "POST",
-      path: "/communications/bots",
-      summary: "Create chatbot",
+      path: "/communications/routing-rules",
+      summary: "Create a routing rule",
       tags: ["Communications"],
     })
     .input(
       z.object({
         name: z.string().min(1),
-        description: z.string().optional(),
-        channel: z.enum(["chat", "sms", "voice"]).default("chat"),
-        systemPrompt: z.string().optional(),
-        model: z.string().optional(),
-        handoffThreshold: z.string().optional(),
+        priority: z.number().int().min(1).default(1),
+        conditions: z.array(z.string()).default([]),
+        destination: z.string().min(1),
+        status: z.enum(["active", "paused"]).default("active"),
       }),
     )
     .output(z.any())
@@ -551,43 +518,43 @@ export const communicationsRouter = {
         context: OrgContext;
         input: {
           name: string;
-          description?: string;
-          channel: "chat" | "sms" | "voice";
-          systemPrompt?: string;
-          model?: string;
-          handoffThreshold?: string;
+          priority: number;
+          conditions: string[];
+          destination: string;
+          status: "active" | "paused";
         };
       }) => {
         const db = getDb(context);
         const [row] = await db
-          .insert(schema.commBots)
+          .insert(schema.commRoutingRules)
           .values({
             organizationId: context.organization.id,
             name: input.name,
-            description: input.description ?? null,
-            channel: input.channel,
-            systemPrompt: input.systemPrompt ?? null,
-            model: input.model ?? "gpt-4o-mini",
-            handoffThreshold: input.handoffThreshold ?? "0.7",
+            priority: input.priority,
+            conditions: input.conditions,
+            destination: input.destination,
+            status: input.status,
           })
           .returning();
         return row;
       },
     ),
 
-  updateBot: orgAuthed
+  "routing.update": orgAuthed
     .route({
       method: "PATCH",
-      path: "/communications/bots/:id",
-      summary: "Update chatbot",
+      path: "/communications/routing-rules/:id",
+      summary: "Update a routing rule",
       tags: ["Communications"],
     })
     .input(
       z.object({
         id: z.string().uuid(),
-        status: z.enum(["active", "inactive", "training"]).optional(),
         name: z.string().optional(),
-        systemPrompt: z.string().optional(),
+        priority: z.number().int().min(1).optional(),
+        conditions: z.array(z.string()).optional(),
+        destination: z.string().optional(),
+        status: z.enum(["active", "paused"]).optional(),
       }),
     )
     .output(z.any())
@@ -597,22 +564,59 @@ export const communicationsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { id: string; status?: string; name?: string; systemPrompt?: string };
+        input: {
+          id: string;
+          name?: string;
+          priority?: number;
+          conditions?: string[];
+          destination?: string;
+          status?: string;
+        };
       }) => {
         const db = getDb(context);
-        const updateData: Record<string, unknown> = {
-          updatedAt: new Date(),
-        };
-        if (input.status !== undefined) updateData.status = input.status;
+        const updateData: Record<string, unknown> = { updatedAt: new Date() };
         if (input.name !== undefined) updateData.name = input.name;
-        if (input.systemPrompt !== undefined) updateData.systemPrompt = input.systemPrompt;
+        if (input.priority !== undefined) updateData.priority = input.priority;
+        if (input.conditions !== undefined) updateData.conditions = input.conditions;
+        if (input.destination !== undefined) updateData.destination = input.destination;
+        if (input.status !== undefined) updateData.status = input.status;
 
         const [row] = await db
-          .update(schema.commBots)
+          .update(schema.commRoutingRules)
           .set(updateData)
-          .where(eq(schema.commBots.id, input.id))
+          .where(
+            and(
+              eq(schema.commRoutingRules.id, input.id),
+              eq(schema.commRoutingRules.organizationId, context.organization.id),
+            ),
+          )
           .returning();
         return row;
+      },
+    ),
+
+  "routing.delete": orgAuthed
+    .route({
+      method: "DELETE",
+      path: "/communications/routing-rules/:id",
+      summary: "Delete (soft-delete) a routing rule",
+      tags: ["Communications"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(
+      async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
+        const db = getDb(context);
+        await db
+          .update(schema.commRoutingRules)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(
+            and(
+              eq(schema.commRoutingRules.id, input.id),
+              eq(schema.commRoutingRules.organizationId, context.organization.id),
+            ),
+          );
+        return { success: true };
       },
     ),
 };
