@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,6 +8,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
+  AlertCircle,
   Bot,
   Hash,
   LayoutList,
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/app/communications/")({
 });
 
 function CommunicationsIndexPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["communications", "summary"],
     queryFn: () => communicationsApi.summary(),
   });
@@ -87,6 +89,14 @@ function CommunicationsIndexPage() {
       color: "text-pink-400",
     },
   ];
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

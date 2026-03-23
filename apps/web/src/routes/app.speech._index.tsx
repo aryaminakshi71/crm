@@ -1,7 +1,8 @@
-import { Card, CardContent, Badge } from "@crm/ui";
+import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Mic,
   FileText,
   MessageSquare,
@@ -37,7 +38,7 @@ const QUICK_ACTIONS = [
 ];
 
 function SpeechDashboard() {
-  const { data: transcriptionsData } = useQuery({
+  const { data: transcriptionsData, isError, refetch } = useQuery({
     queryKey: ["speech", "transcriptions"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/speech/transcriptions?limit=10`, {
@@ -47,6 +48,14 @@ function SpeechDashboard() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const recentTranscriptions = transcriptionsData?.data?.length
     ? transcriptionsData.data.map((t: any) => ({

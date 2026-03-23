@@ -14,6 +14,7 @@ const getOrgHeader = () => {
   return orgId ? { "x-org-id": orgId } : {};
 };
 import {
+  AlertCircle,
   Percent,
   Plus,
   Edit,
@@ -41,7 +42,7 @@ const MOCK_DISCOUNTS = [
 function DiscountsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-discounts"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/discounts?limit=100`, {
@@ -51,6 +52,14 @@ function DiscountsPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const discounts = apiData?.data?.length > 0 ? apiData.data : MOCK_DISCOUNTS;
 

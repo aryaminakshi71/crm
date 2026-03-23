@@ -14,6 +14,7 @@ const getOrgHeader = () => {
   return orgId ? { "x-org-id": orgId } : {};
 };
 import {
+  AlertCircle,
   Truck,
   Plus,
   Edit,
@@ -36,7 +37,7 @@ const MOCK_SHIPPING_RATES = [
 ];
 
 function ShippingPage() {
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-shipping"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/shipping?limit=100`, {
@@ -46,6 +47,14 @@ function ShippingPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const shippingRates = apiData?.data?.length > 0 ? apiData.data : MOCK_SHIPPING_RATES;
 

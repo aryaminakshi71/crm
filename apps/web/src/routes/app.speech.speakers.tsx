@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowLeft,
   User,
   Plus,
@@ -44,7 +45,7 @@ function SpeakersPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["speech", "speakers"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/speech/speakers`, {
@@ -54,6 +55,14 @@ function SpeakersPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const speakers: Speaker[] = data?.data ?? MOCK_SPEAKERS;
 

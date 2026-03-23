@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/orpc";
+import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/field-service/jobs")({
@@ -12,7 +13,7 @@ function FieldServiceJobs() {
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["fieldService", "jobs", statusFilter, priorityFilter],
     queryFn: () =>
       api.fieldService.listJobs({
@@ -22,6 +23,14 @@ function FieldServiceJobs() {
         ...(priorityFilter && { priority: priorityFilter }),
       }),
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <button onClick={() => refetch()} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Retry</button>
+    </div>
+  );
 
   const jobs = data?.data || [];
 

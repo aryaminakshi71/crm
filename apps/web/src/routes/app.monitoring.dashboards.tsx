@@ -7,6 +7,7 @@
 import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  AlertCircle,
   LayoutDashboard,
   Search,
   Plus,
@@ -52,6 +53,14 @@ function DashboardsPage() {
     (d) =>
       d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (dashboardQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => dashboardQuery.refetch()}>Retry</Button>
+    </div>
   );
 
   if (dashboardQuery.isLoading) {

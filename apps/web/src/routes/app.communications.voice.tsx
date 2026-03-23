@@ -54,7 +54,7 @@ function VoiceCallsPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "inbound" | "outbound" | "missed">("all");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["communications", "calls"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/communications/calls`, {
@@ -64,6 +64,14 @@ function VoiceCallsPage() {
       return res.json() as Promise<{ data: Call[] }>;
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const calls = data?.data ?? MOCK_CALLS;
 

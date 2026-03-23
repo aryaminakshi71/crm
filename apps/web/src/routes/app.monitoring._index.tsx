@@ -4,7 +4,7 @@
  * Real-time monitoring dashboard with live data.
  */
 
-import { Card, CardContent, Badge } from "@crm/ui";
+import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/app/monitoring/_index")({
 
 function MonitoringOverview() {
   // Fetch dashboard data using React Query
-  const { data: dashboard, isLoading, refetch, isFetching } = useQuery({
+  const { data: dashboard, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "dashboard"],
     queryFn: () => monitoringApi.getDashboard(),
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -48,6 +48,14 @@ function MonitoringOverview() {
     queryFn: () => monitoringApi.getIncidents(),
     refetchInterval: 30000,
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const activeAlertCount = alerts?.filter((a: any) => a.enabled).length || 0;
   const activeIncidentCount = incidents?.filter((i: any) => i.status !== "resolved").length || 0;

@@ -25,7 +25,7 @@ function DispatchBoard() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
 
-  const { data: dispatchData, isLoading } = useQuery({
+  const { data: dispatchData, isLoading, isError, refetch } = useQuery({
     queryKey: ["fieldService", "dispatch", selectedDate],
     queryFn: () => api.fieldService.getDispatchBoard({ date: selectedDate }),
   });
@@ -63,6 +63,14 @@ function DispatchBoard() {
       assignJobMutation.mutate({ jobId, technicianId });
     }
   };
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <button onClick={() => refetch()} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Retry</button>
+    </div>
+  );
 
   if (isLoading) {
     return (

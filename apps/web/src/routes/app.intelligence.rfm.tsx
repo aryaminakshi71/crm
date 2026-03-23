@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,6 +8,7 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { AlertCircle } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -43,7 +45,7 @@ function ScoreDot({ score }: { score: number }) {
 }
 
 function RfmPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "rfm"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/rfm`, {
@@ -53,6 +55,14 @@ function RfmPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const rfm = data ?? MOCK_RFM;
 

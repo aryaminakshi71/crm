@@ -18,6 +18,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowLeft,
   Building2,
   Edit,
@@ -74,6 +75,14 @@ function VendorManagement() {
     },
     retry: false,
   });
+  if (vendorsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => vendorsQuery.refetch()}>Retry</Button>
+    </div>
+  );
+
   const vendors: Vendor[] = vendorsQuery.data?.data?.length ? vendorsQuery.data.data : mockVendors;
 
   const filteredVendors = vendors.filter((vendor) => {

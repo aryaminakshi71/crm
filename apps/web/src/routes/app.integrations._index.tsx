@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Puzzle,
   Workflow,
   Bell,
@@ -71,7 +72,7 @@ const MOCK_EVENTS = [
 ];
 
 function IntegrationsOverview() {
-  const { data: connectorsData, isLoading: connectorsLoading } = useQuery({
+  const { data: connectorsData, isLoading: connectorsLoading, isError: connectorsError, refetch: connectorsRefetch } = useQuery({
     queryKey: ["integration-connectors"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/integration/connectors`, { headers: getOrgHeader() });
@@ -88,6 +89,14 @@ function IntegrationsOverview() {
       return res.json();
     },
   });
+
+  if (connectorsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => connectorsRefetch()}>Retry</Button>
+    </div>
+  );
 
   const connectors = connectorsData?.data ?? MOCK_CONNECTORS;
   const workflows = workflowsData?.data ?? MOCK_WORKFLOWS;

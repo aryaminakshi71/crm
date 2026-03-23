@@ -100,7 +100,7 @@ function MiniBar({ value, color }: { value: number; color: string }) {
 function DevOpsDashboard() {
   const [rollbackTarget, setRollbackTarget] = useState<typeof MOCK_DEPLOYMENT_TIMELINE[0] | null>(null);
 
-  const { data: pipelinesData, isLoading: pipelinesLoading } = useQuery({
+  const { data: pipelinesData, isLoading: pipelinesLoading, isError: pipelinesError, refetch: pipelinesRefetch } = useQuery({
     queryKey: ["devops", "pipelines"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/devops/pipelines?limit=5`, {
@@ -196,6 +196,14 @@ function DevOpsDashboard() {
         : new Date(d.createdAt).toLocaleString(),
     }));
   }, [deploymentsData]);
+
+  if (pipelinesError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => pipelinesRefetch()}>Retry</Button>
+    </div>
+  );
 
   if (pipelinesLoading || envsLoading) {
     return (

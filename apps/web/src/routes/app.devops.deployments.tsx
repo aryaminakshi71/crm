@@ -29,7 +29,7 @@ function Deployments() {
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "deployments", environmentFilter, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: "1", limit: "50" });
@@ -56,6 +56,14 @@ function Deployments() {
       queryClient.invalidateQueries({ queryKey: ["devops", "deployments"] });
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <button onClick={() => refetch()} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Retry</button>
+    </div>
+  );
 
   const deployments = (data?.data || []).filter((d: any) =>
     search

@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,7 +8,7 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Filter, TrendingDown } from "lucide-react";
+import { AlertCircle, Filter, TrendingDown } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/app/intelligence/funnel")({
 });
 
 function FunnelPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "funnel"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/funnel`, {
@@ -43,6 +44,14 @@ function FunnelPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const funnel = data ?? MOCK_FUNNEL;
   const maxCount = funnel.stages?.[0]?.count ?? 1;

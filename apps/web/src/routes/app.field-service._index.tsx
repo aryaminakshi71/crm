@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Button,
   Card,
   CardContent,
 } from "@crm/ui";
 import {
+  AlertCircle,
   Truck,
   Users,
   Calendar,
@@ -27,7 +29,7 @@ export const Route = createFileRoute("/app/field-service/_index")({
 });
 
 function FieldServiceDashboard() {
-  const { data: jobsData, isLoading: jobsLoading } = useQuery({
+  const { data: jobsData, isLoading: jobsLoading, isError: jobsError, refetch: jobsRefetch } = useQuery({
     queryKey: ["fieldService", "jobs"],
     queryFn: () => api.fieldService.listJobs({ page: 1, limit: 100 }),
   });
@@ -72,6 +74,14 @@ function FieldServiceDashboard() {
       rating: tech.rating || 0,
       revenue: `$${((tech.jobsCompleted || 0) * 250).toLocaleString()}`,
     }));
+
+  if (jobsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => jobsRefetch()}>Retry</Button>
+    </div>
+  );
 
   if (jobsLoading) {
     return (

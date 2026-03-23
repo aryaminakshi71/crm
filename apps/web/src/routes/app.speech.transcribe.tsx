@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowLeft,
   FileText,
   Plus,
@@ -50,7 +51,7 @@ function TranscriptionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "completed" | "processing">("all");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["speech", "transcriptions", filter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -62,6 +63,14 @@ function TranscriptionsPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const transcriptions: Transcription[] = data?.data ?? MOCK_TRANSCRIPTIONS;
 

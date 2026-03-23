@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowLeft,
   Plus,
   Search,
@@ -55,7 +56,7 @@ function PostsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "published" | "scheduled" | "draft">("all");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["social", "posts", filter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -65,6 +66,21 @@ function PostsPage() {
       });
       if (!res.ok) throw new Error("Failed to fetch posts");
       return res.json();
+    },
+  });
+
+  const createPostMutation = useMutation({
+    mutationFn: async (post: { content: string; platform: string; status: string }) => {
+      const res = await fetch(`${API_BASE}/social/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(post),
+      });
+      if (!res.ok) throw new Error("Failed to create post");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
     },
   });
 
@@ -81,6 +97,14 @@ function PostsPage() {
       queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const posts: Post[] = data?.data ?? MOCK_POSTS;
 

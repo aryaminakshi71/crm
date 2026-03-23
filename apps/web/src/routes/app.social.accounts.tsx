@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowLeft,
   Plus,
   Settings,
@@ -48,7 +49,7 @@ function AccountsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["social", "accounts"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/accounts`, {
@@ -72,6 +73,14 @@ function AccountsPage() {
       queryClient.invalidateQueries({ queryKey: ["social", "accounts"] });
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const accounts: Account[] = data?.data ?? MOCK_ACCOUNTS;
 

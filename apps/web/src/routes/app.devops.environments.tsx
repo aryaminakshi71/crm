@@ -33,7 +33,7 @@ const ENV_COLORS: Record<string, string> = {
 function Environments() {
   const queryClient = useQueryClient();
 
-  const { data: environments, isLoading } = useQuery({
+  const { data: environments, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "environments"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/devops/environments`, {
@@ -43,6 +43,14 @@ function Environments() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <button onClick={() => refetch()} className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Retry</button>
+    </div>
+  );
 
   const envList: any[] = Array.isArray(environments) ? environments : (environments?.data ?? []);
 

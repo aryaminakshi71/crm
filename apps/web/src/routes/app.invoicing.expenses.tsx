@@ -16,6 +16,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowLeft,
   Calendar,
   Download,
@@ -93,6 +94,14 @@ function ExpenseManagement() {
     },
     retry: false,
   });
+  if (expensesQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => expensesQuery.refetch()}>Retry</Button>
+    </div>
+  );
+
   const expenses: Expense[] = expensesQuery.data?.data?.length ? expensesQuery.data.data : mockExpenses;
 
   const filteredExpenses = expenses.filter((expense) => {

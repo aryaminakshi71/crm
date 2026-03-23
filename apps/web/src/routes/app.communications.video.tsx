@@ -49,7 +49,7 @@ function VideoRoomsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["communications", "video-rooms"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/communications/video-rooms`, {
@@ -59,6 +59,14 @@ function VideoRoomsPage() {
       return res.json() as Promise<{ data: VideoRoom[] }>;
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const rooms = data?.data ?? MOCK_ROOMS;
 

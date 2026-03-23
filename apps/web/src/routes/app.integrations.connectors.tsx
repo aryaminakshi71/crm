@@ -14,7 +14,7 @@ import {
   Link,
   useLocation,
 } from "@tanstack/react-router";
-import { Plug, Plus } from "lucide-react";
+import { AlertCircle, Plug, Plus } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -45,7 +45,7 @@ function ConnectorsLayout() {
 }
 
 function ConnectorsListPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["integration", "connectors"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/integration/connectors`, {
@@ -55,6 +55,14 @@ function ConnectorsListPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const connectors = data?.data ?? MOCK_CONNECTORS.data;
 

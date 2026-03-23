@@ -34,11 +34,19 @@ function AlertsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   // Fetch alerts from API
-  const { data: alerts = [], isLoading, refetch, isFetching } = useQuery({
+  const { data: alerts = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "alerts"],
     queryFn: () => monitoringApi.getAlerts(),
     refetchInterval: 60000,
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const filteredAlerts = alerts.filter((alert: any) => {
     const matchesSearch = alert.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

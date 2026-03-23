@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,7 +8,7 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { UserCheck, UserMinus, UserPlus } from "lucide-react";
+import { AlertCircle, UserCheck, UserMinus, UserPlus } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/app/intelligence/retention")({
 });
 
 function RetentionPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "retention"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/retention`, {
@@ -50,6 +51,14 @@ function RetentionPage() {
       return res.json();
     },
   });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const retention = data ?? MOCK_RETENTION;
 

@@ -19,6 +19,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowLeft,
   Clock,
   Copy,
@@ -73,6 +74,14 @@ function QuoteBuilder() {
     },
     retry: false,
   });
+  if (quotesQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => quotesQuery.refetch()}>Retry</Button>
+    </div>
+  );
+
   const quotes: Quote[] = quotesQuery.data?.data?.length ? quotesQuery.data.data : mockQuotes;
 
   const filteredQuotes = quotes.filter((quote) => {
