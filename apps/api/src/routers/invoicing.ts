@@ -5,7 +5,7 @@
  * chart of accounts, tax rates, and financial reports.
  */
 
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
@@ -37,8 +37,44 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; search?: string };
       }) => {
-        // Invoices table not yet in schema – return stub with correct shape
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [
+          eq(schema.invoices.organizationId, orgId),
+          isNull(schema.invoices.deletedAt),
+        ];
+
+        if (input.status) {
+          conditions.push(
+            eq(
+              schema.invoices.status,
+              input.status as "draft" | "sent" | "viewed" | "paid" | "overdue" | "cancelled",
+            ),
+          );
+        }
+        if (input.search) {
+          conditions.push(ilike(schema.invoices.clientEmail, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.invoices)
+            .where(where)
+            .orderBy(desc(schema.invoices.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.invoices)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -85,22 +121,34 @@ export const invoicingRouter = {
           notes?: string;
         };
       }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
         const now = new Date();
         const year = now.getFullYear();
         const num = String(Math.floor(Math.random() * 9000) + 1000);
         const tax = (input.amount * input.taxRate) / 100;
-        return {
-          id: crypto.randomUUID(),
-          organizationId: context.organization.id,
-          invoiceNumber: `INV-${year}-${num}`,
-          ...input,
-          tax,
-          total: input.amount + tax,
-          status: "draft",
-          issueDate: now.toISOString(),
-          createdById: context.user.id,
-          createdAt: now.toISOString(),
-        };
+        const total = input.amount + tax;
+
+        const [invoice] = await db
+          .insert(schema.invoices)
+          .values({
+            organizationId: orgId,
+            invoiceNumber: `INV-${year}-${num}`,
+            clientName: input.client,
+            clientEmail: input.clientEmail,
+            subtotal: input.amount.toString(),
+            taxAmount: tax.toString(),
+            total: total.toString(),
+            dueDate: input.dueDate ?? null,
+            notes: input.notes,
+            items: input.items ?? [],
+            status: "draft",
+            issueDate: now.toISOString().split("T")[0],
+          })
+          .returning();
+
+        return invoice;
       },
     ),
 
@@ -121,8 +169,22 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
-        // Invoices table not yet in schema – return null
-        return null;
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [invoice] = await db
+          .select()
+          .from(schema.invoices)
+          .where(
+            and(
+              eq(schema.invoices.id, input.id),
+              eq(schema.invoices.organizationId, orgId),
+              isNull(schema.invoices.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        return invoice ?? null;
       },
     ),
 
@@ -161,7 +223,6 @@ export const invoicingRouter = {
           notes?: string;
         };
       }) => {
-        // Invoices table not yet in schema – return stub
         return { id: input.id, ...input, updatedAt: new Date().toISOString() };
       },
     ),
@@ -183,7 +244,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
-        // Invoices table not yet in schema – return success
         return { success: true };
       },
     ),
@@ -213,7 +273,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string };
       }) => {
-        // Quotes table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -293,7 +352,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; method?: string };
       }) => {
-        // Payments table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -324,8 +382,41 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; category?: string; status?: string };
       }) => {
-        // Expenses table not yet in schema – return stub
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [eq(schema.invoiceExpenses.organizationId, orgId)];
+
+        if (input.category) {
+          conditions.push(eq(schema.invoiceExpenses.category, input.category));
+        }
+        if (input.status) {
+          conditions.push(
+            eq(
+              schema.invoiceExpenses.status,
+              input.status as "pending" | "approved" | "rejected",
+            ),
+          );
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.invoiceExpenses)
+            .where(where)
+            .orderBy(desc(schema.invoiceExpenses.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.invoiceExpenses)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -402,8 +493,36 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; category?: string; search?: string };
       }) => {
-        // Vendors table not yet in schema – return stub
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [
+          eq(schema.invoiceVendors.organizationId, orgId),
+          isNull(schema.invoiceVendors.deletedAt),
+        ];
+
+        if (input.search) {
+          conditions.push(ilike(schema.invoiceVendors.name, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.invoiceVendors)
+            .where(where)
+            .orderBy(desc(schema.invoiceVendors.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.invoiceVendors)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -476,7 +595,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string };
       }) => {
-        // Recurring invoices table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -507,7 +625,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; search?: string };
       }) => {
-        // Purchase orders (invoicing) table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -538,7 +655,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; type?: string; search?: string };
       }) => {
-        // Accounts table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -568,7 +684,6 @@ export const invoicingRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string };
       }) => {
-        // Tax rates table not yet in schema – return stub
         return { data: [], total: 0 };
       },
     ),
@@ -585,16 +700,54 @@ export const invoicingRouter = {
     .input(z.object({}).optional())
     .output(z.any())
     .handler(async ({ context }: { context: OrgContext }) => {
-      // No invoicing tables in schema yet – return zeroed stats
-      return {
-        totalRevenue: 0,
-        outstanding: 0,
-        overdue: 0,
-        expenses: 0,
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      const [invoiceStats, expenseStats] = await Promise.all([
+        db
+          .select({
+            totalRevenue: sql<string>`COALESCE(SUM(CASE WHEN ${schema.invoices.status} = 'paid' THEN ${schema.invoices.total} ELSE 0 END), 0)`,
+            outstanding: sql<string>`COALESCE(SUM(CASE WHEN ${schema.invoices.status} IN ('sent', 'viewed') THEN ${schema.invoices.total} ELSE 0 END), 0)`,
+            overdue: sql<string>`COALESCE(SUM(CASE WHEN ${schema.invoices.status} = 'overdue' THEN ${schema.invoices.total} ELSE 0 END), 0)`,
+            paidInvoices: sql<number>`COUNT(CASE WHEN ${schema.invoices.status} = 'paid' THEN 1 END)`,
+            draftInvoices: sql<number>`COUNT(CASE WHEN ${schema.invoices.status} = 'draft' THEN 1 END)`,
+            sentInvoices: sql<number>`COUNT(CASE WHEN ${schema.invoices.status} IN ('sent', 'viewed') THEN 1 END)`,
+            overdueInvoices: sql<number>`COUNT(CASE WHEN ${schema.invoices.status} = 'overdue' THEN 1 END)`,
+          })
+          .from(schema.invoices)
+          .where(
+            and(
+              eq(schema.invoices.organizationId, orgId),
+              isNull(schema.invoices.deletedAt),
+            ),
+          ),
+        db
+          .select({
+            total: sql<string>`COALESCE(SUM(${schema.invoiceExpenses.amount}), 0)`,
+          })
+          .from(schema.invoiceExpenses)
+          .where(eq(schema.invoiceExpenses.organizationId, orgId)),
+      ]);
+
+      const inv = invoiceStats[0] ?? {
+        totalRevenue: "0",
+        outstanding: "0",
+        overdue: "0",
         paidInvoices: 0,
         draftInvoices: 0,
         sentInvoices: 0,
         overdueInvoices: 0,
+      };
+
+      return {
+        totalRevenue: Number(inv.totalRevenue),
+        outstanding: Number(inv.outstanding),
+        overdue: Number(inv.overdue),
+        expenses: Number(expenseStats[0]?.total ?? 0),
+        paidInvoices: Number(inv.paidInvoices),
+        draftInvoices: Number(inv.draftInvoices),
+        sentInvoices: Number(inv.sentInvoices),
+        overdueInvoices: Number(inv.overdueInvoices),
       };
     }),
 

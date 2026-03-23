@@ -22,3 +22,5 @@ export * from "./marketing.schema.js";
 export * from "./inventory.schema.js";
 export * from "./helpdesk.schema.js";
 export * from "./projects.schema.js";
+export * from "./ecommerce.schema.js";
+export * from "./invoicing.schema.js";

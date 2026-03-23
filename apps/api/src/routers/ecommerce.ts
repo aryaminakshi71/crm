@@ -3,10 +3,6 @@
  *
  * Products, orders, customers, discounts, reviews, shipping, taxes,
  * wishlists, upsell rules, and abandoned carts.
- *
- * NOTE: ecommerce-specific DB tables are not yet in the schema.
- * All handlers return correctly-shaped stubs so the API surface is
- * stable and ready for when the schema is added.
  */
 
 import { and, count, desc, eq, ilike, isNull, sql } from "drizzle-orm";
@@ -15,10 +11,6 @@ import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-function stubList(overrides: object = {}) {
-  return { data: [], total: 0, ...overrides };
-}
 
 function stubCreated(input: object, orgId: string) {
   return {
@@ -45,10 +37,33 @@ export const ecommerceRouter = {
     .input(z.object({}).optional())
     .output(z.any())
     .handler(async ({ context }: { context: OrgContext }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      const [orderStats, customerCount] = await Promise.all([
+        db
+          .select({
+            totalOrders: count(),
+            totalRevenue: sql<string>`COALESCE(SUM(${schema.ecommerceOrders.totalAmount}), 0)`,
+          })
+          .from(schema.ecommerceOrders)
+          .where(eq(schema.ecommerceOrders.organizationId, orgId)),
+        db
+          .select({ total: count() })
+          .from(schema.ecommerceCustomers)
+          .where(
+            and(
+              eq(schema.ecommerceCustomers.organizationId, orgId),
+              isNull(schema.ecommerceCustomers.deletedAt),
+            ),
+          ),
+      ]);
+
+      const stats = orderStats[0] ?? { totalOrders: 0, totalRevenue: "0" };
       return {
-        totalRevenue: 0,
-        totalOrders: 0,
-        totalCustomers: 0,
+        totalRevenue: Number(stats.totalRevenue),
+        totalOrders: stats.totalOrders,
+        totalCustomers: customerCount[0]?.total ?? 0,
         conversionRate: 0,
         revenueChange: 0,
         ordersChange: 0,
@@ -82,8 +97,47 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; category?: string; status?: string };
       }) => {
-        // ecommerce products table not yet in schema – return correctly-shaped stub
-        return stubList();
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [
+          eq(schema.ecommerceProducts.organizationId, orgId),
+          isNull(schema.ecommerceProducts.deletedAt),
+        ];
+
+        if (input.search) {
+          conditions.push(ilike(schema.ecommerceProducts.name, `%${input.search}%`));
+        }
+        if (input.category) {
+          conditions.push(eq(schema.ecommerceProducts.category, input.category));
+        }
+        if (input.status) {
+          conditions.push(
+            eq(
+              schema.ecommerceProducts.status,
+              input.status as "active" | "draft" | "archived",
+            ),
+          );
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceProducts)
+            .where(where)
+            .orderBy(desc(schema.ecommerceProducts.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceProducts)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -142,7 +196,29 @@ export const ecommerceRouter = {
           tags?: string[];
         };
       }) => {
-        return stubCreated(input, context.organization.id);
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [product] = await db
+          .insert(schema.ecommerceProducts)
+          .values({
+            organizationId: orgId,
+            name: input.name,
+            sku: input.sku,
+            description: input.description,
+            category: input.category,
+            price: input.price?.toString(),
+            comparePrice: input.comparePrice?.toString(),
+            costPrice: input.cost?.toString(),
+            weight: input.weight?.toString(),
+            barcode: input.barcode,
+            status: input.status,
+            inventory: input.stock,
+            tags: input.tags,
+          })
+          .returning();
+
+        return product;
       },
     ),
 
@@ -163,7 +239,22 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
-        return null;
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [product] = await db
+          .select()
+          .from(schema.ecommerceProducts)
+          .where(
+            and(
+              eq(schema.ecommerceProducts.id, input.id),
+              eq(schema.ecommerceProducts.organizationId, orgId),
+              isNull(schema.ecommerceProducts.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        return product ?? null;
       },
     ),
 
@@ -251,7 +342,41 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; search?: string };
       }) => {
-        return stubList();
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [eq(schema.ecommerceOrders.organizationId, orgId)];
+
+        if (input.status) {
+          conditions.push(
+            eq(
+              schema.ecommerceOrders.status,
+              input.status as "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded",
+            ),
+          );
+        }
+        if (input.search) {
+          conditions.push(ilike(schema.ecommerceOrders.customerEmail, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceOrders)
+            .where(where)
+            .orderBy(desc(schema.ecommerceOrders.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceOrders)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -345,7 +470,21 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
-        return null;
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [order] = await db
+          .select()
+          .from(schema.ecommerceOrders)
+          .where(
+            and(
+              eq(schema.ecommerceOrders.id, input.id),
+              eq(schema.ecommerceOrders.organizationId, orgId),
+            ),
+          )
+          .limit(1);
+
+        return order ?? null;
       },
     ),
 
@@ -405,7 +544,36 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string };
       }) => {
-        return stubList();
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [
+          eq(schema.ecommerceCustomers.organizationId, orgId),
+          isNull(schema.ecommerceCustomers.deletedAt),
+        ];
+
+        if (input.search) {
+          conditions.push(ilike(schema.ecommerceCustomers.email, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceCustomers)
+            .where(where)
+            .orderBy(desc(schema.ecommerceCustomers.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceCustomers)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -455,7 +623,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; recovered?: boolean };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -485,7 +653,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -558,7 +726,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; search?: string };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -612,7 +780,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -679,7 +847,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -735,7 +903,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 
@@ -763,7 +931,7 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return stubList();
+        return { data: [], total: 0 };
       },
     ),
 };
