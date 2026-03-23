@@ -106,10 +106,10 @@ export const monitoringRouter = {
         .limit(1);
 
       const errors = errorSnapshot[0]?.metrics as { errorCount?: number; criticalErrors?: number; uniqueErrors?: number; resolvedErrors?: number } || {
-        errorCount: Math.floor(Math.random() * 50) + 10,
-        criticalErrors: Math.floor(Math.random() * 5),
-        uniqueErrors: Math.floor(Math.random() * 30) + 5,
-        resolvedErrors: Math.floor(Math.random() * 20),
+        errorCount: 0,
+        criticalErrors: 0,
+        uniqueErrors: 0,
+        resolvedErrors: 0,
       };
 
       // Get catalog counts
@@ -232,10 +232,10 @@ export const monitoringRouter = {
       const latestMetrics = errorSnapshots[0]?.metrics as Record<string, unknown> || {};
 
       const metrics = {
-        errorCount: (latestMetrics.errorCount as number) || Math.floor(Math.random() * 50) + 10,
-        uniqueErrors: (latestMetrics.uniqueErrors as number) || Math.floor(Math.random() * 30) + 5,
-        resolvedErrors: (latestMetrics.resolvedErrors as number) || Math.floor(Math.random() * 20),
-        criticalErrors: (latestMetrics.criticalErrors as number) || Math.floor(Math.random() * 5),
+        errorCount: (latestMetrics.errorCount as number) || 0,
+        uniqueErrors: (latestMetrics.uniqueErrors as number) || 0,
+        resolvedErrors: (latestMetrics.resolvedErrors as number) || 0,
+        criticalErrors: (latestMetrics.criticalErrors as number) || 0,
         timestamp: new Date(),
       };
 
@@ -607,9 +607,9 @@ export const monitoringRouter = {
         return {
           ...entry,
           healthStatus: entry.status === "active" ? "healthy" : "degraded",
-          latency: Math.floor(Math.random() * 100) + 20,
-          uptime: 99.5 + Math.random() * 0.5,
-          errorRate: Math.random() * 0.5,
+          latency: 0,
+          uptime: 0,
+          errorRate: 0,
         };
       },
     ),

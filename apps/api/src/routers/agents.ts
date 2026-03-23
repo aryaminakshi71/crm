@@ -503,8 +503,53 @@ export const agentsRouter = {
           content: input.message,
         });
 
-        // 2. Generate assistant response (placeholder — real LLM would go here)
-        const response = `I received your message: "${input.message}". I'm processing your request for agent ${input.id}.`;
+        // 2. Load recent chat history for context
+        const history = await db
+          .select({ role: agentChatMessages.role, content: agentChatMessages.content })
+          .from(agentChatMessages)
+          .where(
+            and(
+              eq(agentChatMessages.agentId, input.id),
+              eq(agentChatMessages.sessionId, sessionId),
+              eq(agentChatMessages.organizationId, orgId),
+            ),
+          )
+          .orderBy(asc(agentChatMessages.createdAt))
+          .limit(10);
+
+        const historyMessages = history.map((h) => ({
+          role: h.role as "user" | "assistant",
+          content: h.content,
+        }));
+
+        // 3. Generate assistant response via OpenRouter
+        let response = `I processed your request: "${input.message}"`;
+        const openrouterKey = typeof process !== "undefined" ? process.env.OPENROUTER_API_KEY : undefined;
+        if (openrouterKey) {
+          try {
+            const llmRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openrouterKey}`,
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.0-flash-001",
+                messages: [
+                  { role: "system", content: `You are ${workflow.name}, an AI agent assistant for an enterprise SaaS platform. Be helpful and concise.` },
+                  ...historyMessages,
+                  { role: "user", content: input.message },
+                ],
+                max_tokens: 1024,
+              }),
+            });
+            const llmData = await llmRes.json() as any;
+            const content = llmData.choices?.[0]?.message?.content;
+            if (content) response = content;
+          } catch {
+            // Fallback to default response if LLM call fails
+          }
+        }
 
         // 3. Save assistant response
         await db.insert(agentChatMessages).values({
