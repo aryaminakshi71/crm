@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -38,7 +38,33 @@ const getOrgHeader = () => {
 
 function InvoiceDetail() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState("sent");
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to send invoice");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/invoices", id] }),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/invoices", id] }),
+  });
 
   const invoiceQuery = useQuery({
     queryKey: ["invoicing/invoices", id],
@@ -102,8 +128,8 @@ function InvoiceDetail() {
           <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />}>
             Download
           </Button>
-          <Button variant="outline" size="sm" leftIcon={<Send className="h-4 w-4" />}>
-            Send
+          <Button variant="outline" size="sm" leftIcon={<Send className="h-4 w-4" />} onClick={() => sendMutation.mutate()} disabled={sendMutation.isPending}>
+            {sendMutation.isPending ? "Sending..." : "Send"}
           </Button>
           <Button variant="primary" size="sm" leftIcon={<Edit className="h-4 w-4" />}>
             Edit

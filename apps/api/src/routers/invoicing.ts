@@ -327,6 +327,81 @@ export const invoicingRouter = {
       },
     ),
 
+  sendInvoice: orgAuthed
+    .route({
+      method: "POST",
+      path: "/invoicing/invoices/:id/send",
+      summary: "Mark invoice as sent",
+      tags: ["Invoicing"],
+    })
+    .input(z.object({ id: z.string() }))
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string };
+      }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [updated] = await db
+          .update(invoices)
+          .set({ status: "sent" })
+          .where(
+            and(
+              eq(invoices.id, input.id),
+              eq(invoices.organizationId, orgId),
+              isNull(invoices.deletedAt),
+            ),
+          )
+          .returning();
+
+        return updated ?? null;
+      },
+    ),
+
+  patchInvoice: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/invoicing/invoices/:id",
+      summary: "Patch invoice status",
+      tags: ["Invoicing"],
+    })
+    .input(z.object({ id: z.string(), status: z.string().optional() }))
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: { id: string; status?: string };
+      }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const updates: Record<string, unknown> = {};
+        if (input.status) updates.status = input.status;
+
+        const [updated] = await db
+          .update(invoices)
+          .set(updates as Parameters<typeof db.update>[0])
+          .where(
+            and(
+              eq(invoices.id, input.id),
+              eq(invoices.organizationId, orgId),
+              isNull(invoices.deletedAt),
+            ),
+          )
+          .returning();
+
+        return updated ?? null;
+      },
+    ),
+
   // ── Quotes ───────────────────────────────────────────────────────────────────
 
   listQuotes: orgAuthed
