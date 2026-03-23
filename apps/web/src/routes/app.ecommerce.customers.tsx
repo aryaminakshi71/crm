@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Users,
@@ -42,6 +42,20 @@ const MOCK_CUSTOMERS = [
 
 function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const createCustomerMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string }) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create customer");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce", "customers"] }),
+  });
 
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-customers"],
@@ -80,7 +94,17 @@ function CustomersPage() {
             {customers.length} customers / {customers.filter((c) => c.status === "active").length} active
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button
+          leftIcon={<Plus className="h-4 w-4" />}
+          loading={createCustomerMutation.isPending}
+          onClick={() => {
+            const name = window.prompt("Customer name:");
+            if (!name) return;
+            const email = window.prompt("Customer email:");
+            if (!email) return;
+            createCustomerMutation.mutate({ name, email });
+          }}
+        >
           Add Customer
         </Button>
       </div>

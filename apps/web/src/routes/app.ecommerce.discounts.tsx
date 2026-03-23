@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -41,6 +41,32 @@ const MOCK_DISCOUNTS = [
 
 function DiscountsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const createDiscountMutation = useMutation({
+    mutationFn: async (data: { code: string; type: string; value: number; minOrder: number }) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/discounts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create discount");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce", "discounts"] }),
+  });
+
+  const deleteDiscountMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/discounts/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to delete discount");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce", "discounts"] }),
+  });
 
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-discounts"],
@@ -107,7 +133,15 @@ function DiscountsPage() {
             {discounts.filter((d) => d.status === "active").length} active discounts
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button
+          leftIcon={<Plus className="h-4 w-4" />}
+          loading={createDiscountMutation.isPending}
+          onClick={() => {
+            const code = window.prompt("Discount code (e.g. SAVE10):");
+            if (!code) return;
+            createDiscountMutation.mutate({ code, type: "percentage", value: 10, minOrder: 0 });
+          }}
+        >
           Create Discount
         </Button>
       </div>
@@ -180,7 +214,13 @@ function DiscountsPage() {
                         <Button variant="ghost" size="icon" className="h-7 w-7">
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          loading={deleteDiscountMutation.isPending}
+                          onClick={() => deleteDiscountMutation.mutate(discount.id)}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>

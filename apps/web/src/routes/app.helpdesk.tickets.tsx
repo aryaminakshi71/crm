@@ -10,9 +10,12 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FormField,
+  FormModal,
   Input,
+  Textarea,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowUpDown,
@@ -24,6 +27,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { helpdeskApi } from "../lib/api";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+});
 
 export const Route = createFileRoute("/app/helpdesk/tickets")({
   component: TicketList,
@@ -45,6 +53,26 @@ function TicketList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newTicket, setNewTicket] = useState({ subject: "", description: "", priority: "medium" });
+  const queryClient = useQueryClient();
+
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: { subject: string; description: string; priority: string }) => {
+      const res = await fetch(`${API_BASE}/v1/helpdesk/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create ticket");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "tickets"] });
+      setIsCreateModalOpen(false);
+      setNewTicket({ subject: "", description: "", priority: "medium" });
+    },
+  });
 
   const { data: ticketsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["helpdesk", "tickets", statusFilter, priorityFilter, search],
@@ -126,11 +154,14 @@ function TicketList() {
           <h2 className="font-bold text-xl text-foreground">Tickets</h2>
           <p className="text-sm text-muted-foreground">Manage and respond to support requests</p>
         </div>
-        <Link to="/app/helpdesk/">
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-            New Ticket
-          </Button>
-        </Link>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          loading={createTicketMutation.isPending}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          New Ticket
+        </Button>
       </div>
 
       {/* Stats */}
@@ -169,7 +200,7 @@ function TicketList() {
           icon={<Ticket className="h-12 w-12" />}
           title="No tickets found"
           description="Adjust your filters or create a new ticket."
-          action={{ label: "Create Ticket", onClick: () => {} }}
+          action={{ label: "Create Ticket", onClick: () => setIsCreateModalOpen(true) }}
         />
       ) : (
         <Card>
@@ -222,6 +253,53 @@ function TicketList() {
           </CardContent>
         </Card>
       )}
+
+      <FormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="New Ticket"
+        submitText="Create Ticket"
+        loading={createTicketMutation.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          createTicketMutation.mutate({
+            subject: newTicket.subject,
+            description: newTicket.description,
+            priority: newTicket.priority,
+          });
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Subject" required>
+            <Input
+              value={newTicket.subject}
+              onChange={(e) => setNewTicket((prev) => ({ ...prev, subject: e.target.value }))}
+              placeholder="Brief description of the issue"
+              required
+            />
+          </FormField>
+          <FormField label="Description">
+            <Textarea
+              value={newTicket.description}
+              onChange={(e) => setNewTicket((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Provide more details..."
+              rows={4}
+            />
+          </FormField>
+          <FormField label="Priority">
+            <select
+              value={newTicket.priority}
+              onChange={(e) => setNewTicket((prev) => ({ ...prev, priority: e.target.value }))}
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </FormField>
+        </div>
+      </FormModal>
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   Select,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   DollarSign,
@@ -71,6 +71,36 @@ function InvoiceList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newInvoice, setNewInvoice] = useState({ client: "", email: "", amount: "", tax: "10" });
+  const queryClient = useQueryClient();
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (data: { client: string; clientEmail: string; amount: number; tax: number; total: number }) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/invoices`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create invoice");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoicing", "invoices"] });
+      setIsCreateModalOpen(false);
+      setNewInvoice({ client: "", email: "", amount: "", tax: "10" });
+    },
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to delete invoice");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing", "invoices"] }),
+  });
 
   const invoicesQuery = useQuery({
     queryKey: ["invoicing/invoices"],
@@ -218,9 +248,19 @@ function InvoiceList() {
         onClose={() => setIsCreateModalOpen(false)}
         title="Create Invoice"
         submitText="Create Invoice"
+        loading={createInvoiceMutation.isPending}
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          const amount = Number(newInvoice.amount);
+          const taxRate = Number(newInvoice.tax) / 100;
+          const tax = amount * taxRate;
+          createInvoiceMutation.mutate({
+            client: newInvoice.client,
+            clientEmail: newInvoice.email,
+            amount,
+            tax,
+            total: amount + tax,
+          });
         }}
       >
         <div className="space-y-4">

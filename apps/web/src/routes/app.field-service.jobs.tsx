@@ -4,6 +4,11 @@ import { api } from "@/lib/orpc";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+});
+
 export const Route = createFileRoute("/app/field-service/jobs")({
   component: FieldServiceJobs,
 });
@@ -12,6 +17,19 @@ function FieldServiceJobs() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+
+  const createJobMutation = useMutation({
+    mutationFn: async (data: { title: string; type: string; priority: string }) => {
+      const res = await fetch(`${API_BASE}/v1/field-service/jobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create job");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fieldService", "jobs"] }),
+  });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["fieldService", "jobs", statusFilter, priorityFilter],
@@ -58,8 +76,16 @@ function FieldServiceJobs() {
             Manage all service jobs and work orders
           </p>
         </div>
-        <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Create Job
+        <button
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          disabled={createJobMutation.isPending}
+          onClick={() => {
+            const title = window.prompt("Job title:");
+            if (!title) return;
+            createJobMutation.mutate({ title, type: "maintenance", priority: "medium" });
+          }}
+        >
+          {createJobMutation.isPending ? "Creating..." : "Create Job"}
         </button>
       </div>
 
