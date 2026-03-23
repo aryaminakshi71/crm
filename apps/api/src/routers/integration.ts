@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, orgAuthed, schema } from "../procedures";
 
@@ -139,9 +139,64 @@ export const integrationRouter = {
       summary: "List integration events/trigger types",
       tags: ["Integration"],
     })
-    .input(z.object({}).optional())
+    .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
     .output(z.any())
-    .handler(async () => {
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+
+      // Query workflow execution history as the source of integration events
+      const executions = await db
+        .select({
+          id: schema.workflowExecutions.id,
+          triggerEvent: schema.workflowExecutions.triggerEvent,
+          status: schema.workflowExecutions.status,
+          executedAt: schema.workflowExecutions.executedAt,
+          errorMessage: schema.workflowExecutions.errorMessage,
+          connectionId: schema.workflowExecutions.connectionId,
+        })
+        .from(schema.workflowExecutions)
+        .where(eq(schema.workflowExecutions.organizationId, context.organization.id))
+        .orderBy(desc(schema.workflowExecutions.executedAt))
+        .limit(input?.limit ?? 50);
+
+      if (executions.length > 0) {
+        return {
+          data: executions.map((e) => ({
+            id: e.id,
+            name: e.triggerEvent,
+            source: "Integration",
+            type: "trigger",
+            status: e.status,
+            firedAt: e.executedAt,
+            connectionId: e.connectionId,
+            error: e.errorMessage,
+          })),
+        };
+      }
+
+      // Fallback: derive distinct trigger types from app connections
+      const connections = await db
+        .select({
+          triggerEvent: schema.appConnections.triggerEvent,
+          sourceApp: schema.appConnections.sourceApp,
+        })
+        .from(schema.appConnections)
+        .where(eq(schema.appConnections.organizationId, context.organization.id))
+        .groupBy(schema.appConnections.triggerEvent, schema.appConnections.sourceApp);
+
+      if (connections.length > 0) {
+        return {
+          data: connections.map((c, i) => ({
+            id: `trigger-${i}`,
+            name: c.triggerEvent,
+            source: c.sourceApp,
+            type: "trigger",
+            description: `Fires when ${c.triggerEvent} occurs in ${c.sourceApp}`,
+          })),
+        };
+      }
+
+      // Static fallback when no data exists yet
       return {
         data: [
           { id: "evt-1", name: "Contact Created", source: "CRM", type: "trigger", description: "Fires when a new contact is created" },
