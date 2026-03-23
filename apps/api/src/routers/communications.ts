@@ -527,12 +527,33 @@ export const communicationsRouter = {
         context: OrgContext;
         input: { to: string[]; body: string; from?: string; scheduledAt?: string };
       }) => {
-        // Placeholder — integrate with SMS provider (Twilio etc.) when available
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const fromNumber = input.from ?? "unknown";
+        const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : null;
+
+        // Insert one SMS record per recipient with status "queued".
+        // Actual delivery requires a Twilio/SMS-provider integration.
+        const rows = await db
+          .insert(schema.commSmsMessages)
+          .values(
+            input.to.map((recipient) => ({
+              organizationId: orgId,
+              from: fromNumber,
+              to: recipient,
+              body: input.body,
+              status: "queued",
+              scheduledAt,
+            })),
+          )
+          .returning();
+
+        const firstRow = rows[0];
         return {
           success: true,
-          messageId: crypto.randomUUID(),
-          sentAt: input.scheduledAt ?? new Date().toISOString(),
-          recipientCount: input.to.length,
+          messageId: firstRow?.id ?? crypto.randomUUID(),
+          sentAt: firstRow?.createdAt?.toISOString() ?? new Date().toISOString(),
+          recipientCount: rows.length,
         };
       },
     ),
@@ -553,14 +574,37 @@ export const communicationsRouter = {
     )
     .handler(
       async ({ context, input }: { context: OrgContext; input: { id: string } }) => {
-        // Conversation and message storage is handled by the external comm platform.
-        // Return a placeholder shape so the frontend can fall back gracefully.
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [conversation] = await db
+          .select()
+          .from(schema.commConversations)
+          .where(
+            and(
+              eq(schema.commConversations.id, input.id),
+              eq(schema.commConversations.organizationId, orgId),
+              isNull(schema.commConversations.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        const messages = conversation
+          ? await db
+              .select()
+              .from(schema.commConversationMessages)
+              .where(
+                and(
+                  eq(schema.commConversationMessages.conversationId, conversation.id),
+                  eq(schema.commConversationMessages.organizationId, orgId),
+                ),
+              )
+              .orderBy(schema.commConversationMessages.createdAt)
+          : [];
+
         return {
-          conversation: {
-            id: input.id,
-            organizationId: context.organization.id,
-          },
-          messages: [],
+          conversation: conversation ?? { id: input.id, organizationId: orgId },
+          messages,
         };
       },
     ),
@@ -596,12 +640,37 @@ export const communicationsRouter = {
         context: OrgContext;
         input: { id: string; body: string };
       }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [inserted] = await db
+          .insert(schema.commConversationMessages)
+          .values({
+            organizationId: orgId,
+            conversationId: input.id,
+            role: "outbound",
+            content: input.body,
+            status: "sent",
+          })
+          .returning();
+
+        // Update the conversation's lastMessageAt timestamp
+        await db
+          .update(schema.commConversations)
+          .set({ lastMessageAt: inserted.createdAt, updatedAt: new Date() })
+          .where(
+            and(
+              eq(schema.commConversations.id, input.id),
+              eq(schema.commConversations.organizationId, orgId),
+            ),
+          );
+
         return {
-          id: crypto.randomUUID(),
-          conversationId: input.id,
+          id: inserted.id,
+          conversationId: inserted.conversationId,
           role: "outbound" as const,
-          content: input.body,
-          timestamp: new Date().toISOString(),
+          content: inserted.content,
+          timestamp: inserted.createdAt.toISOString(),
           status: "sent" as const,
         };
       },
