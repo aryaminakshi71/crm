@@ -16,6 +16,7 @@ import {
   Package,
   User,
   Clock,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { inventoryApi } from "../lib/api";
@@ -42,7 +43,7 @@ function StockAdjustmentsPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: productsData, isLoading: productsLoading } = useQuery({
+  const { data: productsData, isLoading: productsLoading, isError, refetch} = useQuery({
     queryKey: ["inventory", "products", { search: searchQuery }],
     queryFn: () => inventoryApi.products.list({ search: searchQuery || undefined, limit: 50 }),
     placeholderData: (prev) => prev,
@@ -99,6 +100,13 @@ function StockAdjustmentsPage() {
     }
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -11,6 +11,7 @@ import {
   User,
   Quote,
   Copy,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -55,7 +56,7 @@ function TranscriptionsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Transcriptions come from the speech router (/api/speech/transcriptions)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["communications", "transcriptions"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/speech/transcriptions`, {
@@ -80,6 +81,13 @@ function TranscriptionsPage() {
 
   const selectedTranscription = transcriptions.find((t) => t.id === selectedId);
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

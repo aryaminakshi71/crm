@@ -1,6 +1,8 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, LoadingSkeleton } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Zap, Plus, Play, Pause, Users } from "lucide-react";
+import { Zap, Plus, Play, Pause, Users,
+  AlertCircle
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -61,7 +63,7 @@ const MOCK_AUTOMATIONS = [
 ];
 
 function MarketingAutomationPage() {
-  const { data: campaignsData, isLoading } = useQuery({
+  const { data: campaignsData, isLoading, refetch, isError} = useQuery({
     queryKey: ["marketing", "campaigns", "automation"],
     queryFn: async () => {
       try {
@@ -85,6 +87,13 @@ function MarketingAutomationPage() {
     : "bg-gray-100 text-gray-800";
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => <LoadingSkeleton key={i} className="h-32 rounded-xl" />)}

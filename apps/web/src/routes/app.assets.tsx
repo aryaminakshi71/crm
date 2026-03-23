@@ -31,7 +31,8 @@ import {
   Sparkles,
   Trash2,
   Upload,
-  Zap,
+  Zap,,
+  AlertCircle
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -61,7 +62,7 @@ function AssetsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
+  const { data: assetsData, isLoading: isLoadingAssets, refetch, isError} = useQuery({
     queryKey: ["assets"],
     queryFn: () => assetsApi.list(),
   });
@@ -233,6 +234,13 @@ function AssetsPage() {
 
   const isLoading = isLoadingAssets || isLoadingDocuments;
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return <Loading text="Loading unified workspace..." />;
   }
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
+import { Button,
   Card,
   CardContent,
 } from "@crm/ui";
@@ -62,6 +62,13 @@ function PipelineDetail() {
     },
     retry: false,
   });
+  if (pipelineQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => pipelineQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const pipeline = pipelineQuery.data ?? MOCK_PIPELINE;
 

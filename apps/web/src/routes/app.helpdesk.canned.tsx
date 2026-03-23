@@ -13,7 +13,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageSquare, Plus, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Trash2,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { helpdeskApi } from "../lib/api";
@@ -32,7 +34,7 @@ function CannedResponsesPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "canned"],
     queryFn: () => helpdeskApi.canned.list({ page: 1, limit: 200 }),
     retry: false,
@@ -64,6 +66,13 @@ function CannedResponsesPage() {
   });
 
   if (isLoading) return <Loading text="Loading canned responses..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const responses: any[] = data?.data ?? [];
 

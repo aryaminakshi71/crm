@@ -9,7 +9,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Clock, Plug, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Plug, XCircle,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -38,7 +40,7 @@ export const Route = createFileRoute("/app/integrations/connectors/$id")({
 function ConnectorDetailPage() {
   const { id } = useParams({ from: "/app/integrations/connectors/$id" });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["integration", "connectors", id],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/integration/connectors/${id}`, {
@@ -53,6 +55,13 @@ function ConnectorDetailPage() {
   const connector = data ?? MOCK_CONNECTOR(id);
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="p-6 space-y-4">
         <LoadingSkeleton className="h-8 w-64 rounded" />

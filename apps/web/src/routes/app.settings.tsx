@@ -32,6 +32,7 @@ import {
   TrendingUp,
   User,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -168,6 +169,13 @@ function SettingsPage() {
     }
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div>
@@ -709,7 +717,7 @@ function BillingTab() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const trialDays = 14; // simulated days remaining
 
-  const { data: invoicesData } = useQuery({
+  const { data: invoicesData, isError, refetch} = useQuery({
     queryKey: ["billing", "invoices"],
     queryFn: () => nucleoApi.invoices.list({ page: 1, limit: 50 }),
   });

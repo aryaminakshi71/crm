@@ -16,6 +16,7 @@ import {
   MapPin,
   ArrowRight,
   Download,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -45,7 +46,7 @@ function SerialTrackingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const { data: serialData } = useQuery({
+  const { data: serialData, isError, refetch} = useQuery({
     queryKey: ["inventory", "serial"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/inventory/serial?page=1&limit=200`, {
@@ -89,6 +90,13 @@ function SerialTrackingPage() {
     returned: serialNumbers.filter((s: typeof MOCK_SERIAL_NUMBERS[0]) => s.status === "returned").length,
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

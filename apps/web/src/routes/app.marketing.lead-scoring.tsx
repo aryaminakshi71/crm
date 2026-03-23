@@ -1,6 +1,8 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, LoadingSkeleton } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Star, TrendingUp, Users, Target, Plus } from "lucide-react";
+import { Star, TrendingUp, Users, Target, Plus,
+  AlertCircle
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -32,7 +34,7 @@ const MOCK_STATS = {
 };
 
 function MarketingLeadScoringPage() {
-  const { data: statsData, isLoading } = useQuery({
+  const { data: statsData, isLoading, refetch, isError} = useQuery({
     queryKey: ["marketing", "stats", "lead-scoring"],
     queryFn: async () => {
       try {
@@ -51,6 +53,13 @@ function MarketingLeadScoringPage() {
   const stats = statsData ?? MOCK_STATS;
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

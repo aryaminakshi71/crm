@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Card,
+import {Button, Card,
   CardContent,
 } from "@crm/ui";
 import {
@@ -60,7 +59,7 @@ function DeploymentDetail() {
   const { id } = Route.useParams();
   const queryClient = useQueryClient();
 
-  const { data: deploymentQuery, isLoading } = useQuery({
+  const { data: deploymentQuery, isLoading, refetch, isError} = useQuery({
     queryKey: ["devops", "deployments", id],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/devops/deployments/${id}`, {
@@ -101,6 +100,13 @@ function DeploymentDetail() {
     deployment.servers ?? MOCK_DEPLOYMENT.servers;
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="space-y-6">
         <div className="h-12 rounded-lg bg-muted/30 animate-pulse" />

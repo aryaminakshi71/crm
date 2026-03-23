@@ -21,6 +21,7 @@ import {
   Search,
   Trash2,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -222,6 +223,13 @@ function TemplatesPage() {
     },
     retry: false,
   });
+  if (templatesQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => templatesQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const templates: Template[] = templatesQuery.data?.data ?? MOCK_TEMPLATES;
 

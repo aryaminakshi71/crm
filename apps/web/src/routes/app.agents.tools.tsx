@@ -28,6 +28,7 @@ import {
   Settings,
   Trash2,
   RefreshCw,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -84,7 +85,7 @@ function ToolsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   // GET /api/agents/tools — real tool definitions from the agent task API
-  const { data: apiToolsData } = useQuery({
+  const { data: apiToolsData, isError, refetch} = useQuery({
     queryKey: ["agents", "tools"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/agents/tools`, {
@@ -143,6 +144,13 @@ function ToolsPage() {
     }
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

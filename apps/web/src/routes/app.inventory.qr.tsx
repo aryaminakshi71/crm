@@ -15,6 +15,7 @@ import {
   Settings,
   RefreshCw,
   CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -44,7 +45,7 @@ function QRGeneratorPage() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
 
-  const { data: productsData, isLoading: productsLoading } = useQuery({
+  const { data: productsData, isLoading: productsLoading, isError, refetch} = useQuery({
     queryKey: ["inventory", "products", "qr"],
     queryFn: () => inventoryApi.products.list({ limit: 100 }),
     enabled: selectedType === "product",
@@ -69,6 +70,13 @@ function QRGeneratorPage() {
     setGeneratedCodes([...generatedCodes, ...allItems]);
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -46,7 +47,7 @@ const MOCK_SUPPLIERS = [
 function DropshippingPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-dropship-shipping"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/shipping?limit=100`, {
@@ -72,6 +73,13 @@ function DropshippingPage() {
     totalOrders: suppliers.reduce((sum: number, s: typeof MOCK_SUPPLIERS[0]) => sum + (s.totalOrders ?? 0), 0),
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

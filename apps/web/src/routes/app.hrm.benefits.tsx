@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -160,6 +161,13 @@ function BenefitsManagement() {
     },
     retry: false,
   });
+  if (plansQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => plansQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const enrollmentsQuery = useQuery({
     queryKey: ["hrm", "benefit-enrollments"],

@@ -10,6 +10,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { agentsApi } from "../lib/api";
@@ -49,6 +50,14 @@ function AgentChatPage() {
     queryFn: () => agentsApi.history(agentId),
     retry: false,
   });
+
+  if (historyQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => historyQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   // Seed local state from API history (once)
   useEffect(() => {

@@ -27,6 +27,7 @@ import {
   Target,
   TrendingUp,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -136,7 +137,7 @@ function HrmPerformancePage() {
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
-  const { data: reviewsData, isLoading } = useQuery({
+  const { data: reviewsData, isLoading, isError, refetch} = useQuery({
     queryKey: ["hrm-reviews"],
     queryFn: () => nucleoApi.hrm.reviews.list({ page: 1, limit: 100 }),
   });
@@ -219,6 +220,13 @@ function HrmPerformancePage() {
     });
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

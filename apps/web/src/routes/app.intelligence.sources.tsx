@@ -9,7 +9,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Database, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { Database, RefreshCw, Wifi, WifiOff,
+  AlertCircle
+} from "lucide-react";
 import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -47,7 +49,7 @@ const statusIcon = {
 function SourcesPage() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "sources"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/sources`, {
@@ -78,6 +80,13 @@ function SourcesPage() {
 
   const sources = data?.sources ?? MOCK_SOURCES.sources;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div>

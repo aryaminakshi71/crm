@@ -9,7 +9,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Database, History, Send } from "lucide-react";
+import { Database, History, Send,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -35,7 +37,7 @@ function QueriesPage() {
   const [queryText, setQueryText] = useState("");
   const [lastResult, setLastResult] = useState<any>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "queries"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/queries`, {
@@ -84,6 +86,13 @@ function QueriesPage() {
 
   const queries = data?.data ?? MOCK_QUERIES.data;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div>

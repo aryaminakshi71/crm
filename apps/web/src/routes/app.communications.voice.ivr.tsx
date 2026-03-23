@@ -18,6 +18,7 @@ import {
   ArrowDown,
   Copy,
   Download,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -63,7 +64,7 @@ function IVRBuilderPage() {
   const [ivrName, setIvrName] = useState("Main IVR");
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["communications", "ivr"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/communications/ivr`, {
@@ -100,6 +101,13 @@ function IVRBuilderPage() {
     createMutation.mutate({ name: ivrName, nodes });
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

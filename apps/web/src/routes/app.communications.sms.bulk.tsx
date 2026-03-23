@@ -12,6 +12,7 @@ import {
   Pause,
   RefreshCw,
   FileSpreadsheet,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +35,7 @@ function BulkSMSPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const { data: campaignsData, isLoading } = useQuery({
+  const { data: campaignsData, isLoading, isError, refetch} = useQuery({
     queryKey: ["communications", "campaigns"],
     queryFn: () => communicationsApi.campaigns.list({ limit: 50 }),
   });
@@ -65,6 +66,13 @@ function BulkSMSPage() {
     .filter((c: any) => c.status === "sending")
     .reduce((acc: number, c: any) => acc + ((c.recipients ?? 0) - (c.sent ?? 0)), 0);
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

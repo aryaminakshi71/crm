@@ -10,7 +10,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ExternalLink, ListOrdered, Plus } from "lucide-react";
+import { ExternalLink, ListOrdered, Plus,
+  AlertCircle
+} from "lucide-react";
 import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/queue")({
@@ -18,7 +20,7 @@ export const Route = createFileRoute("/app/helpdesk/queue")({
 });
 
 function QueuePage() {
-  const { data: queueData, isLoading } = useQuery({
+  const { data: queueData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "queue"],
     queryFn: () => helpdeskApi.queue({ page: 1, limit: 100 }),
     retry: false,
@@ -33,6 +35,13 @@ function QueuePage() {
   });
 
   if (isLoading) return <Loading text="Loading queue..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const tickets: any[] = queueData?.data ?? [];
   const stats = statsData ?? null;

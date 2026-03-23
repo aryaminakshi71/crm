@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import {
   Calendar,
   Edit,
   Trash2,
+  AlertCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/hrm/okrs")({
@@ -139,6 +141,13 @@ function OKRTracking() {
     },
     retry: false,
   });
+  if (okrsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => okrsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const companyOKRsQuery = useQuery({
     queryKey: ["hrm", "company-okrs"],

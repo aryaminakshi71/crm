@@ -1,4 +1,4 @@
-import {
+import { Button,
   Badge,
   Card,
   CardContent,
@@ -8,7 +8,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, XCircle } from "lucide-react";
+import { AlertTriangle, XCircle,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -28,7 +30,7 @@ export const Route = createFileRoute("/app/integrations/errors")({
 });
 
 function ErrorsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["integration", "runs", "errors"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/integration/runs?status=failed`, {
@@ -41,6 +43,13 @@ function ErrorsPage() {
 
   const errors = data?.data ?? MOCK_ERRORS.data;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div>

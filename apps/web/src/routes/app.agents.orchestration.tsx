@@ -36,6 +36,7 @@ import {
   RefreshCw,
   Trash2,
   Zap,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -170,7 +171,7 @@ function OrchestrationPage() {
   });
 
   // ── Fetch workflows ──────────────────────────────────────────────────────
-  const { data: workflowsData, isLoading } = useQuery({
+  const { data: workflowsData, isLoading, isError, refetch} = useQuery({
     queryKey: ["agents", "workflows"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/agents/workflows`, {
@@ -248,6 +249,13 @@ function OrchestrationPage() {
     stats?.activeWorkflows ?? workflows.filter((w) => w.status === "active").length;
   const runsToday = stats?.runsToday ?? 0;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       {/* Header */}

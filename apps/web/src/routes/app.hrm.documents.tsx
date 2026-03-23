@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import {
   CheckCircle2,
   PenTool,
   Send,
+  AlertCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/hrm/documents")({
@@ -74,6 +76,13 @@ function DocumentManagement() {
     },
     retry: false,
   });
+  if (documentsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => documentsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const signaturesQuery = useQuery({
     queryKey: ["hrm", "document-signatures"],

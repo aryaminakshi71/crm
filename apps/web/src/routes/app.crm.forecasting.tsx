@@ -1,4 +1,4 @@
-import {
+import { Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,7 +7,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { DollarSign, Target, TrendingUp } from "lucide-react";
+import { DollarSign, Target, TrendingUp,
+  AlertCircle
+} from "lucide-react";
 import { useMemo } from "react";
 import { dealsApi } from "../lib/api";
 
@@ -34,7 +36,7 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 function CrmForecastingPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["crm-deals-forecast"],
     queryFn: () => dealsApi.list({ page: 1, limit: 200 }),
   });
@@ -64,6 +66,13 @@ function CrmForecastingPage() {
     return { totalPipeline, weightedForecast, wonRevenue, activePipeline, byStage };
   }, [deals]);
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

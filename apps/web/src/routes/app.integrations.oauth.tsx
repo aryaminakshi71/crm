@@ -9,7 +9,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Key, Plus, RefreshCw } from "lucide-react";
+import { Key, Plus, RefreshCw,
+  AlertCircle
+} from "lucide-react";
 import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/app/integrations/oauth")({
 });
 
 function OAuthPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["integration", "connectors", "oauth"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/integration/connectors?type=oauth`, {
@@ -51,6 +53,13 @@ function OAuthPage() {
     toast.info(`Redirecting to ${name} OAuth...`);
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">

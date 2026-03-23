@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import {
   Plus,
   Search,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { nucleoApi } from "../lib/api";
@@ -141,7 +143,7 @@ function TrainingPrograms() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newProgram, setNewProgram] = useState({ title: "", category: "General", durationHours: "4" });
 
-  const { data: programsData, isLoading: loadingPrograms } = useQuery({
+  const { data: programsData, isLoading: loadingPrograms, isError, refetch} = useQuery({
     queryKey: ["hrm-training-programs"],
     queryFn: () => nucleoApi.hrm.training.programs.list({ page: 1, limit: 100 }),
   });
@@ -174,6 +176,13 @@ function TrainingPrograms() {
     );
   });
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -19,6 +19,7 @@ import {
   Trash2,
   User,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ function ResourcesPage() {
   });
 
   // Fetch resources
-  const { data: resourcesData, isLoading } = useQuery({
+  const { data: resourcesData, isLoading, isError, refetch} = useQuery({
     queryKey: ["nucleo-project-resources", id],
     queryFn: () => nucleoApi.projects.resources.list(id),
     enabled: !!id,
@@ -146,6 +147,13 @@ function ResourcesPage() {
     return "bg-success";
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

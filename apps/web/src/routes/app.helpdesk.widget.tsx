@@ -12,7 +12,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Code, Copy, MessageSquare, Settings } from "lucide-react";
+import { Code, Copy, MessageSquare, Settings,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { helpdeskApi } from "../lib/api";
@@ -32,7 +34,7 @@ function WidgetPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: widgetData, isLoading } = useQuery({
+  const { data: widgetData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "widget"],
     queryFn: () => helpdeskApi.widget.get(),
     retry: false,
@@ -57,6 +59,13 @@ function WidgetPage() {
   });
 
   if (isLoading) return <Loading text="Loading widget configuration..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const config = widgetData ?? null;
   const orgId = getOrgId();

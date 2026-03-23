@@ -1,5 +1,4 @@
-import {
-  Badge,
+import {Button, Badge,
   Card,
   CardContent,
   CardHeader,
@@ -8,7 +7,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { FileText,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/app/intelligence/reports/$id")({
 function ReportPage() {
   const { id } = useParams({ from: "/app/intelligence/reports/$id" });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["intelligence", "reports", id],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/reports/${id}`, {
@@ -51,6 +52,13 @@ function ReportPage() {
   const report = data ?? MOCK_REPORT(id);
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="p-6 space-y-4">
         <LoadingSkeleton className="h-8 w-64 rounded" />

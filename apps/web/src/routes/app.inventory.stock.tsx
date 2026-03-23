@@ -12,6 +12,7 @@ import {
   Download,
   Package,
   AlertTriangle,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { inventoryApi } from "../lib/api";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/app/inventory/stock")({
 function StockLevelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["inventory", "products", "stock"],
     queryFn: () => inventoryApi.products.list({ limit: 200 }),
   });
@@ -65,6 +66,13 @@ function StockLevelsPage() {
   const lowStock = allProducts.filter((i: any) => getStatus(i) === "low_stock").length;
   const outOfStock = allProducts.filter((i: any) => getStatus(i) === "out_of_stock").length;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

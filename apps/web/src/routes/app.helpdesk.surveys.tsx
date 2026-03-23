@@ -1,7 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle, EmptyState, Loading } from "@crm/ui";
+import {Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Loading } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Star } from "lucide-react";
+import { Star,
+  AlertCircle
+} from "lucide-react";
 import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/surveys")({
@@ -9,7 +11,7 @@ export const Route = createFileRoute("/app/helpdesk/surveys")({
 });
 
 function SurveysPage() {
-  const { data: surveyData, isLoading } = useQuery({
+  const { data: surveyData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "surveys"],
     queryFn: () => helpdeskApi.surveys.list({ page: 1, limit: 200 }),
     retry: false,
@@ -22,6 +24,13 @@ function SurveysPage() {
   });
 
   if (isLoading) return <Loading text="Loading surveys..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const surveys: any[] = surveyData?.data ?? [];
   const stats = statsData ?? null;

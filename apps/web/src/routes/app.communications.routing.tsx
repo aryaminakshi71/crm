@@ -10,6 +10,7 @@ import {
   Trash2,
   Users,
   Clock,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ function CallRoutingPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRule, setNewRule] = useState({ name: "", destination: "", conditions: "", priority: "1" });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["communications", "routing-rules"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/communications/routing-rules`, {
@@ -127,6 +128,13 @@ function CallRoutingPage() {
     });
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

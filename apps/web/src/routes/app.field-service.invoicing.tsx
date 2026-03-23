@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
+import { Button,
   Card,
   CardContent,
 } from "@crm/ui";
@@ -50,6 +50,13 @@ function Invoicing() {
     },
     retry: false,
   });
+  if (invoicesQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => invoicesQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const invoices = invoicesQuery.data?.data ?? MOCK_INVOICES;
 

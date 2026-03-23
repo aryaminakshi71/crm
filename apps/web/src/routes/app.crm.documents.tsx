@@ -7,7 +7,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, Upload } from "lucide-react";
+import { FileText, Upload,
+  AlertCircle
+} from "lucide-react";
 import { assetsApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/crm/documents")({
@@ -21,13 +23,20 @@ function formatSize(bytes: number) {
 }
 
 function CrmDocumentsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["crm-documents"],
     queryFn: () => assetsApi.list({ page: 1, limit: 100 }),
   });
 
   const docs = (data?.data as any[]) ?? [];
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

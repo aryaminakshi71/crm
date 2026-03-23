@@ -23,6 +23,7 @@ import {
   Download,
   TrendingDown,
   TrendingUp,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -67,6 +68,13 @@ function CashFlowStatement() {
     },
     retry: false,
   });
+  if (cashflowQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => cashflowQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const operatingCashFlow = cashflowQuery.data?.operatingCashFlow ?? 124000;
   const investingCashFlow = cashflowQuery.data?.investingCashFlow ?? -39000;

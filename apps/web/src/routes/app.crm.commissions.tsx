@@ -1,7 +1,9 @@
-import { EmptyState } from "@crm/ui";
+import { Button, EmptyState } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign } from "lucide-react";
+import { DollarSign,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -20,6 +22,14 @@ function CrmCommissionsPage() {
   });
 
   const hasData = Array.isArray(query.data?.data) && query.data.data.length > 0;
+
+  if (query.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => query.refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

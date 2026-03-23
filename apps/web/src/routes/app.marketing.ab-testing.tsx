@@ -1,6 +1,8 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, LoadingSkeleton } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FlaskConical, Plus, TrendingUp } from "lucide-react";
+import { FlaskConical, Plus, TrendingUp,
+  AlertCircle
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -50,7 +52,7 @@ const MOCK_AB_TESTS = [
 ];
 
 function MarketingAbTestingPage() {
-  const { data: campaignsData, isLoading } = useQuery({
+  const { data: campaignsData, isLoading, refetch, isError} = useQuery({
     queryKey: ["marketing", "ab-tests"],
     queryFn: async () => {
       try {
@@ -74,6 +76,13 @@ function MarketingAbTestingPage() {
     : "bg-gray-100 text-gray-800";
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => <LoadingSkeleton key={i} className="h-36 rounded-xl" />)}

@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   Clock,
   Settings,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { inventoryApi } from "../lib/api";
@@ -30,7 +31,7 @@ function AlertsPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["inventory", "alerts", { resolved: false }],
     queryFn: () => inventoryApi.alerts.list({ limit: 100, resolved: false }),
   });
@@ -90,6 +91,13 @@ function AlertsPage() {
   const expiringCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "expiring").length;
   const overstockCount = alerts.filter((a: any) => (a.alertType ?? a.type) === "overstock").length;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

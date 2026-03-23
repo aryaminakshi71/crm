@@ -16,7 +16,8 @@ import {
   Settings,
   DollarSign,
   Image,
-  Save,
+  Save,,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { inventoryApi } from "../../lib/api";
@@ -33,7 +34,7 @@ function ProductDetail() {
 
   const queryClient = useQueryClient();
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading, refetch, isError} = useQuery({
     queryKey: ["inventory", "products", id],
     queryFn: () => inventoryApi.products.get(id),
     enabled: !!id,
@@ -56,6 +57,13 @@ function ProductDetail() {
   });
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Loading product...</p>

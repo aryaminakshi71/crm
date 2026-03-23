@@ -14,7 +14,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageCircle, Plus, Pin } from "lucide-react";
+import { MessageCircle, Plus, Pin,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { helpdeskApi } from "../lib/api";
@@ -30,7 +32,7 @@ function ForumPage() {
   const [form, setForm] = useState({ title: "", body: "", tags: "" });
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "forums", statusFilter, search],
     queryFn: () =>
       helpdeskApi.forums.list({
@@ -65,6 +67,13 @@ function ForumPage() {
   });
 
   if (isLoading) return <Loading text="Loading forum..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const posts: any[] = data?.data ?? [];
 

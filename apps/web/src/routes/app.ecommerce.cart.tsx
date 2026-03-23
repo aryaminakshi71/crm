@@ -14,6 +14,7 @@ import {
   DollarSign,
   Plus,
   Trash2,
+  AlertCircle
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -100,7 +101,7 @@ function CartSettingsPage() {
   }, [cartItems]);
 
   // Load existing org settings
-  const { data: orgSettings } = useQuery({
+  const { data: orgSettings, isError, refetch} = useQuery({
     queryKey: ["org-settings"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/settings/organization`, {
@@ -192,6 +193,13 @@ function CartSettingsPage() {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

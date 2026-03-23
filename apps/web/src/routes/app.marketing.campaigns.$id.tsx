@@ -32,6 +32,7 @@ import {
   Share2,
   TrendingUp,
   Users,
+  AlertCircle
 } from "lucide-react";
 import {
   Area,
@@ -108,6 +109,13 @@ function CampaignDetail() {
     queryFn: () => marketingApi.campaigns.get(id),
     retry: false,
   });
+  if (campaignQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => campaignQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const campaign = campaignQuery.data ?? MOCK_CAMPAIGN;
 

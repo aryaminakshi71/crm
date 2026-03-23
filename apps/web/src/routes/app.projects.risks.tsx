@@ -23,6 +23,7 @@ import {
   Flag,
   Plus,
   Trash2,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -153,6 +154,13 @@ function RiskRegisterPage() {
     },
     retry: false,
   });
+  if (risksQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => risksQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const risks: Risk[] = risksQuery.data?.data ?? MOCK_RISKS;
 

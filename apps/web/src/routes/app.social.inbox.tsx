@@ -1,6 +1,8 @@
 import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Search, Heart, MessageSquare, Share2, Mail, Instagram, Twitter, Linkedin } from "lucide-react";
+import { ArrowLeft, Search, Heart, MessageSquare, Share2, Mail, Instagram, Twitter, Linkedin,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -37,7 +39,7 @@ function InboxPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "mentions"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/listening/mentions`, {
@@ -69,6 +71,13 @@ function InboxPage() {
   };
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

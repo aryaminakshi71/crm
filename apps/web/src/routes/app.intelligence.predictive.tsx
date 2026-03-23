@@ -1,4 +1,4 @@
-import {
+import { Button,
   Badge,
   Card,
   CardContent,
@@ -8,7 +8,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { Sparkles, TrendingDown, TrendingUp,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -36,7 +38,7 @@ function confidenceBadge(confidence: number): string {
 }
 
 function PredictivePage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "predictive"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/predictive`, {
@@ -49,6 +51,13 @@ function PredictivePage() {
 
   const predictive = data ?? MOCK_PREDICTIVE;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div>

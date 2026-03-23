@@ -1,4 +1,4 @@
-import {
+import { Button,
   Card,
   CardContent,
   EmptyState,
@@ -6,7 +6,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Calendar, Globe } from "lucide-react";
+import { Calendar, Globe,
+  AlertCircle
+} from "lucide-react";
 import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/marketing/events")({
@@ -15,7 +17,7 @@ export const Route = createFileRoute("/app/marketing/events")({
 
 function MarketingEventsPage() {
   // Filter campaigns by type=event or channel=event if available
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["marketing-events"],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
   });
@@ -26,6 +28,13 @@ function MarketingEventsPage() {
     (c: any) => c.type === "event" || (c.name || "").toLowerCase().includes("event"),
   );
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

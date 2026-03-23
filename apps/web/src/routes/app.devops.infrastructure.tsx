@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card, CardContent } from "@crm/ui";
+import { Button, Card, CardContent } from "@crm/ui";
 import {
   Server,
   Plus,
@@ -7,6 +7,7 @@ import {
   Settings,
   Cpu,
   HardDrive,
+  AlertCircle
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -27,7 +28,7 @@ function Infrastructure() {
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["devops", "infrastructure", typeFilter, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: "1", limit: "50" });
@@ -79,6 +80,13 @@ function Infrastructure() {
     return "bg-muted/10";
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

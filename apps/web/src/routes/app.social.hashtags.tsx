@@ -1,6 +1,8 @@
 import { Button, Card, CardContent, Badge, Input } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Hash, Search, TrendingUp, Plus, Copy } from "lucide-react";
+import { ArrowLeft, Hash, Search, TrendingUp, Plus, Copy,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -35,7 +37,7 @@ function HashtagsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Hashtags come from the social analytics/listening alerts filtered by alertType=hashtag
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "hashtags"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/listening/alerts?alertType=hashtag`, {
@@ -61,6 +63,13 @@ function HashtagsPage() {
   };
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -7,6 +8,7 @@ import {
   ChevronRight,
   Download,
   Filter,
+  AlertCircle
 } from "lucide-react";
 import { nucleoApi } from "../lib/api";
 
@@ -35,7 +37,7 @@ function LeaveCalendar() {
   const [selectedDept, setSelectedDept] = useState("All Departments");
   const [showLegend, setShowLegend] = useState(false);
 
-  const { data: leaveData } = useQuery({
+  const { data: leaveData, isError, refetch} = useQuery({
     queryKey: ["hrm-leave-requests-calendar"],
     queryFn: () => nucleoApi.hrm.leaveRequests.list({ page: 1, limit: 200 }),
   });
@@ -113,6 +115,13 @@ function LeaveCalendar() {
 
   const todayDate = { day: today.getDate(), month: today.getMonth(), year: today.getFullYear() };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Trash2,
   Zap,
+  AlertCircle
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -65,6 +66,13 @@ function CompliancePage() {
     queryFn: () =>
       nucleoApi.operations.complianceControls.list({ page: 1, limit: 200 }),
   });
+  if (controlsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => controlsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const risksQuery = useQuery({
     queryKey: ["ops-compliance-risks"],

@@ -50,7 +50,7 @@ function EmployeeProfile() {
   const [showActions, setShowActions] = useState(false);
 
   // Fetch all employees then find the one matching :id
-  const { data: employeesData, isLoading } = useQuery({
+  const { data: employeesData, isLoading, refetch, isError} = useQuery({
     queryKey: ["hrm-employees-all"],
     queryFn: () => nucleoApi.hrm.employees.list({ page: 1, limit: 200 }),
   });
@@ -69,6 +69,13 @@ function EmployeeProfile() {
   const rawEmployee = employees.find((e) => e.id === params.id) ?? employees[0];
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

@@ -7,7 +7,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, Mail, Plus } from "lucide-react";
+import { FileText, Mail, Plus,
+  AlertCircle
+} from "lucide-react";
 import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/marketing/email-builder")({
@@ -16,7 +18,7 @@ export const Route = createFileRoute("/app/marketing/email-builder")({
 
 function MarketingEmailBuilderPage() {
   // Reuse campaign list as email templates (filtered to email channel)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["marketing-email-templates"],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
   });
@@ -24,6 +26,13 @@ function MarketingEmailBuilderPage() {
   const allCampaigns = (data?.data as any[]) ?? [];
   const emailTemplates = allCampaigns.filter((c: any) => c.channel === "email");
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

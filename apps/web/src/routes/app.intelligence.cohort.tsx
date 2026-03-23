@@ -1,4 +1,4 @@
-import {
+import { Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,6 +7,7 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { AlertCircle } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -41,7 +42,7 @@ function retentionColor(value: number | null) {
 }
 
 function CohortPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "cohort"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/cohort`, {
@@ -57,6 +58,13 @@ function CohortPage() {
   const months = ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4"];
   const monthKeys = ["m0", "m1", "m2", "m3", "m4"] as const;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       <div>

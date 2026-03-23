@@ -1,7 +1,9 @@
-import { EmptyState } from "@crm/ui";
+import { Button, EmptyState } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Zap } from "lucide-react";
+import { Zap,
+  AlertCircle
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 

@@ -18,6 +18,7 @@ import {
   Package,
   Settings,
   Download,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -45,7 +46,7 @@ function PurchaseOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const { data: purchaseOrdersData } = useQuery({
+  const { data: purchaseOrdersData, isError, refetch} = useQuery({
     queryKey: ["inventory", "purchase-orders"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/inventory/purchase-orders?page=1&limit=100`, {
@@ -108,6 +109,13 @@ function PurchaseOrdersPage() {
     delivered: purchaseOrders.filter((po: typeof MOCK_PURCHASE_ORDERS[0]) => po.status === "delivered").length,
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

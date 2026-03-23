@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import {
   Users,
   ZoomIn,
   ZoomOut,
+  AlertCircle
 } from "lucide-react";
 import { nucleoApi } from "../lib/api";
 
@@ -284,7 +286,7 @@ function OrgChart() {
   const [selectedNode, setSelectedNode] = useState<OrgNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  const { data: employeesData, isLoading } = useQuery({
+  const { data: employeesData, isLoading, isError, refetch} = useQuery({
     queryKey: ["hrm-employees-org"],
     queryFn: () => nucleoApi.hrm.employees.list({ page: 1, limit: 200 }),
   });
@@ -418,6 +420,13 @@ function OrgChart() {
     );
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

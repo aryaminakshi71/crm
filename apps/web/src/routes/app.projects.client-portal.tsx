@@ -28,6 +28,7 @@ import {
   TrendingUp,
   User,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { nucleoApi } from "../lib/api";
@@ -84,7 +85,7 @@ function ClientPortalPage() {
   });
 
   // Fetch real projects from API
-  const { data: projectsData } = useQuery({
+  const { data: projectsData, isError, refetch} = useQuery({
     queryKey: ["nucleo-projects-client-portal"],
     queryFn: () => nucleoApi.projects.list({ page: 1, limit: 100 }),
   });
@@ -141,6 +142,13 @@ function ClientPortalPage() {
   const viewsThisWeek = 47;
   const commentsThisWeek = 12;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

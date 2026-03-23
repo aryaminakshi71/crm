@@ -124,7 +124,7 @@ function CandidateDetail() {
   const [showActions, setShowActions] = useState(false);
 
   // Fetch all candidates and find this one
-  const { data: candidatesData, isLoading } = useQuery({
+  const { data: candidatesData, isLoading, refetch, isError} = useQuery({
     queryKey: ["hrm-candidates"],
     queryFn: () => nucleoApi.hrm.recruitment.candidates.list({ page: 1, limit: 200 }),
   });
@@ -143,6 +143,13 @@ function CandidateDetail() {
   });
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

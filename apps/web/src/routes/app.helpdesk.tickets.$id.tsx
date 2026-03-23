@@ -11,7 +11,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { ArrowLeft, MessageSquare, Paperclip, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Paperclip, Trash2,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { helpdeskApi } from "../lib/api";
@@ -26,7 +28,7 @@ function TicketDetailPage() {
   const [isInternal, setIsInternal] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: ticket, isLoading: ticketLoading } = useQuery({
+  const { data: ticket, isLoading: ticketLoading, isError, refetch} = useQuery({
     queryKey: ["helpdesk", "ticket", id],
     queryFn: () => helpdeskApi.tickets.get(id),
   });
@@ -76,6 +78,13 @@ function TicketDetailPage() {
     );
   }
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">

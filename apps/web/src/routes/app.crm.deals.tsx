@@ -18,6 +18,7 @@ import {
   Target,
   TrendingUp,
   User,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -80,7 +81,7 @@ function DealsList() {
   const [sortBy, setSortBy] = useState<string>("value");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: dealsData, isLoading: dealsLoading } = useQuery({
+  const { data: dealsData, isLoading: dealsLoading, isError, refetch} = useQuery({
     queryKey: ["deals", { stage: stageFilter !== "all" ? stageFilter : undefined, search: searchQuery || undefined }],
     queryFn: () =>
       dealsApi.list({
@@ -173,6 +174,13 @@ function DealsList() {
     );
   }
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

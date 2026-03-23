@@ -10,6 +10,7 @@ import {
   Twitter,
   Linkedin,
   Facebook,
+  AlertCircle
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -44,7 +45,7 @@ function CalendarPage() {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const { data: postsData } = useQuery({
+  const { data: postsData, isError, refetch} = useQuery({
     queryKey: ["social", "posts", "calendar", year, month],
     queryFn: async () => {
       const startDate = new Date(year, month, 1).toISOString();
@@ -95,6 +96,13 @@ function CalendarPage() {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

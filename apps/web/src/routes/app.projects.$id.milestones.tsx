@@ -22,6 +22,7 @@ import {
   Target,
   Trash2,
   X,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -62,7 +63,7 @@ function MilestonesPage() {
   });
 
   // Fetch milestones
-  const { data: milestonesData, isLoading } = useQuery({
+  const { data: milestonesData, isLoading, isError, refetch} = useQuery({
     queryKey: ["nucleo-project-milestones", id],
     queryFn: () => nucleoApi.projects.milestones.list(id),
     enabled: !!id,
@@ -143,6 +144,13 @@ function MilestonesPage() {
     (m) => m.status === "overdue"
   );
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

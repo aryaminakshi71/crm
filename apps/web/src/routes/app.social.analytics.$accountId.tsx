@@ -14,6 +14,7 @@ import {
   Twitter,
   Linkedin,
   Facebook,
+  AlertCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/social/analytics/$accountId")({
@@ -54,6 +55,13 @@ function AccountAnalyticsPage() {
       return res.json();
     },
   });
+  if (analyticsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => analyticsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const analytics = analyticsQuery.data ?? MOCK_ANALYTICS;
 

@@ -18,6 +18,7 @@ import {
   TrendingUp,
   UserRound,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -425,6 +426,13 @@ function AnalyticsDashboard() {
     queryKey: ["analytics-deals"],
     queryFn: () => dealsApi.list({ limit: 1000 }),
   });
+  if (dealsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => dealsQuery.refetch()}>Retry</Button>
+    </div>
+  );
   const leadsQuery = useQuery({
     queryKey: ["analytics-leads"],
     queryFn: () => leadsApi.list({ limit: 1000 }),

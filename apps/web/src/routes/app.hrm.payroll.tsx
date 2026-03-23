@@ -27,6 +27,7 @@ import {
   DollarSign,
   Plus,
   Users,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -147,7 +148,7 @@ function HrmPayrollPage() {
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
-  const { data: runsData, isLoading: runsLoading } = useQuery({
+  const { data: runsData, isLoading: runsLoading, isError, refetch} = useQuery({
     queryKey: ["hrm-payroll-runs"],
     queryFn: () => nucleoApi.hrm.payroll.runs.list({ page: 1, limit: 100 }),
   });
@@ -230,6 +231,13 @@ function HrmPayrollPage() {
           .filter((r) => r.status === "completed")
           .reduce((s, r) => s + Number(r.totalNet ?? r.totalAmount ?? 0), 0);
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   Truck,
   XCircle,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -74,6 +75,13 @@ function PurchaseOrders() {
     },
     retry: false,
   });
+  if (purchaseOrdersQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => purchaseOrdersQuery.refetch()}>Retry</Button>
+    </div>
+  );
   const purchaseOrders: PurchaseOrder[] = purchaseOrdersQuery.data?.data?.length ? purchaseOrdersQuery.data.data : mockPurchaseOrders;
 
   const filteredOrders = purchaseOrders.filter((po) => {

@@ -21,6 +21,7 @@ import {
   Save,
   Settings,
   CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/ecommerce/taxes")({
@@ -36,7 +37,7 @@ const MOCK_TAX_RATES = [
 ];
 
 function TaxesPage() {
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-taxes"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/taxes?limit=100`, {
@@ -49,6 +50,13 @@ function TaxesPage() {
 
   const taxRates = apiData?.data?.length > 0 ? apiData.data : MOCK_TAX_RATES;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

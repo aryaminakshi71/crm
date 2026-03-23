@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
+import { Button,
   Card,
   CardContent,
 } from "@crm/ui";
@@ -12,6 +12,7 @@ import {
   MapPin,
   User,
   Filter,
+  AlertCircle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -52,6 +53,13 @@ function Schedule() {
     },
     retry: false,
   });
+  if (scheduleQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => scheduleQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const jobs = scheduleQuery.data?.jobs ?? MOCK_JOBS;
   const technicians = scheduleQuery.data?.technicians?.map((t: any) => t.name).filter(Boolean) ?? MOCK_TECHNICIANS;

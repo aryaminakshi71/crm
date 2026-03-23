@@ -1,6 +1,8 @@
 import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Target, Plus, Calendar, Users, TrendingUp, Play, Pause } from "lucide-react";
+import { ArrowLeft, Target, Plus, Calendar, Users, TrendingUp, Play, Pause,
+  AlertCircle
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/social/campaigns")({
@@ -34,7 +36,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
 function CampaignsPage() {
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "campaigns"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/campaigns`, {
@@ -57,6 +59,13 @@ function CampaignsPage() {
   };
 
   if (isLoading) {
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

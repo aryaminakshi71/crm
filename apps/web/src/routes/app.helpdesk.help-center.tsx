@@ -11,7 +11,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpenText, ExternalLink, Globe, Search, Settings } from "lucide-react";
+import { BookOpenText, ExternalLink, Globe, Search, Settings,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { helpdeskApi } from "../lib/api";
 
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/app/helpdesk/help-center")({
 function HelpCenterPage() {
   const [search, setSearch] = useState("");
 
-  const { data: articlesData, isLoading } = useQuery({
+  const { data: articlesData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "knowledge", "published"],
     queryFn: () =>
       helpdeskApi.knowledge.list({ page: 1, limit: 100, status: "published" }),
@@ -36,6 +38,13 @@ function HelpCenterPage() {
   });
 
   if (isLoading) return <Loading text="Loading help center..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const articles: any[] = articlesData?.data ?? [];
   const categories: any[] = categoriesData?.data ?? [];

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
+import { Button,
   Card,
   CardContent,
 } from "@crm/ui";
@@ -15,6 +15,7 @@ import {
   User,
   Settings,
   Truck,
+  AlertCircle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -49,6 +50,13 @@ function Equipment() {
     },
     retry: false,
   });
+  if (equipmentQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => equipmentQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const equipment = equipmentQuery.data?.data ?? MOCK_EQUIPMENT;
 

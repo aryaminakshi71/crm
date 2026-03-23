@@ -1,4 +1,4 @@
-import {
+import { Button,
   Card,
   CardContent,
   CardHeader,
@@ -7,7 +7,9 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3, Eye, MousePointerClick, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Eye, MousePointerClick, TrendingUp, Users,
+  AlertCircle
+} from "lucide-react";
 import { useMemo } from "react";
 import {
   Bar,
@@ -32,7 +34,7 @@ const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#6
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function MarketingAnalyticsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["marketing-analytics"],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
   });
@@ -70,6 +72,13 @@ function MarketingAnalyticsPage() {
     return { impressions, clicks, conversions, ctr, cvr, cpl, byChannel, byCampaign, active };
   }, [campaigns]);
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

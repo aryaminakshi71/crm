@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Users,
   Youtube,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -97,7 +98,7 @@ function CompetitorsPage() {
   });
 
   // ── Fetch competitors ────────────────────────────────────────────────────
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["social", "competitors"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/competitors`, {
@@ -145,6 +146,13 @@ function CompetitorsPage() {
     },
   });
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="p-6 space-y-6">
       {/* Header */}

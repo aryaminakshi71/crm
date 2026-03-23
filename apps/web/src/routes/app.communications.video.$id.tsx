@@ -16,6 +16,7 @@ import {
   Clock,
   Send,
   Loader2,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { communicationsApi } from "../lib/api";
@@ -52,6 +53,13 @@ function VideoRoomPage() {
     queryFn: () => communicationsApi.videoRooms.get(id),
     retry: false,
   });
+  if (roomQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => roomQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   // End room mutation
   const endMutation = useMutation({

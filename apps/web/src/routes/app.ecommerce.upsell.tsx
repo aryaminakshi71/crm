@@ -22,6 +22,7 @@ import {
   Settings,
   TrendingUp,
   Package,
+  AlertCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/ecommerce/upsell")({
@@ -37,7 +38,7 @@ const MOCK_UPSELL_RULES = [
 ];
 
 function UpsellPage() {
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-upsell"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/upsell?limit=100`, {
@@ -50,6 +51,13 @@ function UpsellPage() {
 
   const rules = apiData?.data?.length > 0 ? apiData.data : MOCK_UPSELL_RULES;
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}

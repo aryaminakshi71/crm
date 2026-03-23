@@ -13,7 +13,9 @@ import {
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ShieldCheck } from "lucide-react";
+import { Plus, ShieldCheck,
+  AlertCircle
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { helpdeskApi } from "../lib/api";
@@ -34,7 +36,7 @@ function SlaPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data: policiesData, isLoading } = useQuery({
+  const { data: policiesData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "sla"],
     queryFn: () => helpdeskApi.sla.list({ page: 1, limit: 50 }),
     retry: false,
@@ -65,6 +67,13 @@ function SlaPage() {
   });
 
   if (isLoading) return <Loading text="Loading SLA policies..." />;
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const policies: any[] = policiesData?.data ?? [];
   const stats = statsData ?? null;
