@@ -1717,6 +1717,25 @@ export const nucleoApi = {
         return { success: true };
       }
     },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.nucleo?.projectsGet?.({ id }),
+          "nucleo.projectsGet",
+        );
+      } catch (error) {
+        console.error("nucleoApi.projects.get error:", error);
+        // fall back to localStorage
+        try {
+          const raw = localStorage.getItem("nucleo_local_projects");
+          const all: any[] = raw ? JSON.parse(raw) : [];
+          const found = all.find((p) => p.id === id) ?? null;
+          return found ? { data: found } : null;
+        } catch {
+          return null;
+        }
+      }
+    },
     tasks: {
       list: async (projectId: string, params?: { page?: number; limit?: number }) => {
         try {

@@ -16,6 +16,7 @@ import {
   FolderKanban,
   Plus,
   Target,
+  Users,
   Zap,
 } from "lucide-react";
 import { useState } from "react";

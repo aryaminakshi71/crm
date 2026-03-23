@@ -21,3 +21,4 @@ export * from "./social-media.schema.js";
 export * from "./marketing.schema.js";
 export * from "./inventory.schema.js";
 export * from "./helpdesk.schema.js";
+export * from "./projects.schema.js";

@@ -54,7 +54,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { aiApi, nucleoApi } from "../lib/api";
 import { PriorityBadge } from "./app.projects";
 
 // ─── Route ──────────────────────────────────────────────────────────────────

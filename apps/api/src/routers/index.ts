@@ -41,6 +41,7 @@ import { socialRouter } from "./social";
 import { speechRouter } from "./speech";
 
 import { assetsRouter } from "./assets";
+import { projectsRouter } from "./projects";
 
 export const appRouter = {
   health: healthRouter,
@@ -78,6 +79,7 @@ export const appRouter = {
   ecommerce: ecommerceRouter,
   invoicing: invoicingRouter,
   speech: speechRouter,
+  projects: projectsRouter,
 };
 
 export type AppRouter = typeof appRouter;
