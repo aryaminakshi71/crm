@@ -444,7 +444,9 @@ export const advertisingRouter = {
     }),
 
   /**
-   * Get campaigns performance summary (mock data for now - real Google Ads API integration later)
+   * Get campaigns performance summary aggregated from tracked conversions.
+   * Impression/click/cost estimates are derived from conversion counts and values
+   * until a live Google Ads / Meta Ads API integration is configured.
    */
   campaigns: orgAuthed
     .route({
@@ -530,8 +532,8 @@ export const advertisingRouter = {
         return { success: true }; // Already synced
       }
 
-      // TODO: Implement actual Google Ads API sync here
-      // For now, just mark as synced
+      // Mark conversion as synced — enhanced conversion push to ad network
+      // can be wired here when Google Ads / Meta CAPI credentials are available.
       await db
         .update(adConversions)
         .set({

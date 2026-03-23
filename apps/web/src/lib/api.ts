@@ -1902,6 +1902,55 @@ export const nucleoApi = {
         }
       },
     },
+    stats: async (): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.projects?.stats?.({}),
+          "projects.stats",
+        );
+      } catch (error) {
+        console.error("nucleoApi.projects.stats error:", error);
+        return { totalProjects: 0, activeProjects: 0, completedThisMonth: 0, atRisk: 0 };
+      }
+    },
+    board: async (params?: { page?: number; limit?: number; status?: string; projectId?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.projects?.allTasks?.({
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 200,
+            status: params?.status,
+            projectId: params?.projectId,
+          }),
+          "projects.board",
+        );
+      } catch (error) {
+        console.error("nucleoApi.projects.board error:", error);
+        return { data: [], total: 0 };
+      }
+    },
+    timeline: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.projects?.timeline?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "projects.timeline",
+        );
+      } catch (error) {
+        console.error("nucleoApi.projects.timeline error:", error);
+        return { data: [] };
+      }
+    },
+    capacity: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.projects?.capacity?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "projects.capacity",
+        );
+      } catch (error) {
+        console.error("nucleoApi.projects.capacity error:", error);
+        return { data: [] };
+      }
+    },
   },
   tickets: {
     list: async (params?: {
@@ -3280,6 +3329,50 @@ export const nucleoApi = {
           console.error("nucleoApi.inventory.alerts.list error:", error);
           return { data: [], total: 0 };
         }
+      },
+    },
+  },
+  helpdesk: {
+    stats: async (): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.stats?.({}),
+          "helpdesk.stats",
+        );
+      } catch {
+        return { open: 0, pending: 0, resolved: 0, slaBreached: 0, avgResponseTimeHours: 0, satisfactionScore: 0 };
+      }
+    },
+    queue: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.queue?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "helpdesk.queue",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    ticketComments: {
+      list: async (ticketId: string, params?: { page?: number; limit?: number }): Promise<any> => {
+        try {
+          return await withRpcTimeout(
+            rpc.helpdesk?.ticketCommentsList?.({
+              id: ticketId,
+              page: params?.page ?? 1,
+              limit: params?.limit ?? 100,
+            }),
+            "helpdesk.ticketCommentsList",
+          );
+        } catch {
+          return { data: [], page: 1, limit: 100 };
+        }
+      },
+      create: async (ticketId: string, data: { body: string; isInternal?: boolean }): Promise<any> => {
+        return await withRpcTimeout(
+          rpc.helpdesk?.ticketCommentsCreate?.({ id: ticketId, ...data }),
+          "helpdesk.ticketCommentsCreate",
+        );
       },
     },
   },
