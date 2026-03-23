@@ -6,7 +6,7 @@
 
 import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Search,
@@ -25,6 +25,19 @@ import {
 import { useState } from "react";
 import { monitoringApi } from "@/lib/api";
 
+const API_BASE = "/api/v1";
+
+function getOrgHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const isDemo = localStorage.getItem("demo_mode") === "true";
+  if (isDemo) return { "x-organization-id": "demo-org" };
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.companyId) return { "x-organization-id": user.companyId };
+  } catch {}
+  return {};
+}
+
 export const Route = createFileRoute("/app/monitoring/alerts")({
   component: AlertsPage,
 });
@@ -32,12 +45,38 @@ export const Route = createFileRoute("/app/monitoring/alerts")({
 function AlertsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const queryClient = useQueryClient();
 
   // Fetch alerts from API
   const { data: alerts = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "alerts"],
     queryFn: () => monitoringApi.getAlerts(),
     refetchInterval: 60000,
+  });
+
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/monitoring/alerts/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to delete alert");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
+  });
+
+  const toggleAlertMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const res = await fetch(`${API_BASE}/monitoring/alerts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) throw new Error("Failed to update alert");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
   });
 
   if (isError) return (
@@ -227,10 +266,23 @@ function AlertsPage() {
                     <p className="text-xs text-muted-foreground">Triggered</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title={alert.enabled ? "Disable alert" : "Enable alert"}
+                      onClick={() => toggleAlertMutation.mutate({ id: alert.id, enabled: !alert.enabled })}
+                      disabled={toggleAlertMutation.isPending}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteAlertMutation.mutate(alert.id)}
+                      disabled={deleteAlertMutation.isPending}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

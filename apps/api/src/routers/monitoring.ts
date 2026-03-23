@@ -389,6 +389,10 @@ export const monitoringRouter = {
     ),
 
   // ─── Alerts ───────────────────────────────────────────────────────────────────
+  // NOTE: No dedicated monitoring_alerts table exists in the schema. Alert rules
+  // are persisted as monitoring snapshots with agent="alert". Each snapshot's
+  // `metrics` field stores the full alert rule object. A dedicated alerts table
+  // would allow richer querying (e.g. filtering by severity, enabled state).
 
   getAlerts: orgAuthed
     .route({
@@ -398,7 +402,27 @@ export const monitoringRouter = {
       tags: ["Monitoring"],
     })
     .output(z.array(z.any()))
-    .handler(async () => {
+    .handler(async ({ context }: { context: OrgContext }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      // Query alert snapshots stored in monitoring_snapshots with agent="alert"
+      const alertSnapshots = await db
+        .select()
+        .from(monitoringSnapshots)
+        .where(and(eq(monitoringSnapshots.organizationId, orgId), eq(monitoringSnapshots.agent, "alert")))
+        .orderBy(desc(monitoringSnapshots.createdAt));
+
+      if (alertSnapshots.length > 0) {
+        // Each snapshot represents one alert rule stored in its metrics field
+        return alertSnapshots.map((s) => ({
+          id: s.id,
+          ...(s.metrics as object),
+          createdAt: s.createdAt,
+        }));
+      }
+
+      // Fall back to static seed data when no alerts have been created yet
       return getAlertRules();
     }),
 
@@ -420,13 +444,31 @@ export const monitoringRouter = {
         channels: z.array(z.string()),
       }),
     )
-    .handler(async ({ input }: { input: { name: string; metric: string; condition: string; threshold: number; duration: number; severity: "info" | "warning" | "critical"; channels: string[] } }) => {
-      // In a real implementation, this would save to database
-      return {
-        id: `alert-${Date.now()}`,
+    .handler(async ({ context, input }: { context: OrgContext; input: { name: string; metric: string; condition: string; threshold: number; duration: number; severity: "info" | "warning" | "critical"; channels: string[] } }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      const alertData = {
         ...input,
         enabled: true,
-        createdAt: new Date(),
+        triggerCount: 0,
+      };
+
+      // Persist the alert rule as a monitoring snapshot with agent="alert"
+      const [snapshot] = await db
+        .insert(monitoringSnapshots)
+        .values({
+          organizationId: orgId,
+          agent: "alert",
+          metrics: alertData,
+          alerts: [],
+        })
+        .returning();
+
+      return {
+        id: snapshot.id,
+        ...alertData,
+        createdAt: snapshot.createdAt,
       };
     }),
 
