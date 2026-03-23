@@ -6,7 +6,7 @@
 
 import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   AlertCircle,
@@ -25,11 +25,29 @@ import {
 } from "lucide-react";
 import { monitoringApi } from "@/lib/api";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({ "x-org-id": localStorage.getItem("activeOrganizationId") ?? "" });
+
 export const Route = createFileRoute("/app/monitoring/_index")({
   component: MonitoringOverview,
 });
 
 function MonitoringOverview() {
+  const queryClient = useQueryClient();
+
+  const createIncidentMutation = useMutation({
+    mutationFn: async (data: { title: string; severity: string }) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/incidents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create incident");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring"] }),
+  });
+
   // Fetch dashboard data using React Query
   const { data: dashboard, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "dashboard"],

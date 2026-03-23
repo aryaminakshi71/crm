@@ -1,264 +1,324 @@
-/**
- * APM (Application Performance Monitoring)
- *
- * Application performance metrics with real API data.
- */
-
-import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Loading,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
-  TrendingUp,
-  TrendingDown,
+  AlertTriangle,
   Clock,
+  Cpu,
+  Database,
+  Plus,
   Zap,
-  Server,
-  Eye,
-  Search,
-  Filter,
-  AlertCircle,
-  CheckCircle,
-  Timer,
-  DollarSign,
-  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
-import { monitoringApi } from "@/lib/api";
+import { toast } from "sonner";
+
+const API_BASE =
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+
+function getOrgHeader(): Record<string, string> {
+  const isDemo =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo_mode") === "true";
+  const orgId = isDemo ? "demo-org" : undefined;
+  if (!orgId && typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.companyId && !user.isDemo) {
+          return { "x-organization-id": user.companyId };
+        }
+      } catch {}
+    }
+  }
+  return orgId ? { "x-organization-id": orgId } : {};
+}
 
 export const Route = createFileRoute("/app/monitoring/apm")({
-  component: APMMetrics,
+  component: MonitoringApmPage,
 });
 
-function APMMetrics() {
-  const [selectedService, setSelectedService] = useState("all");
-
-  // Fetch APM metrics from API
-  const { data: apmData, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["monitoring", "apm"],
-    queryFn: () => monitoringApi.getApmMetrics(),
-    refetchInterval: 30000,
+function MonitoringApmPage() {
+  const queryClient = useQueryClient();
+  const [isCreateTraceOpen, setIsCreateTraceOpen] = useState(false);
+  const [newTrace, setNewTrace] = useState({
+    name: "",
+    service: "",
+    operation: "",
+    duration: "",
+    tags: "",
   });
 
-  const services = apmData?.services || [];
-  const filteredServices = selectedService === "all"
-    ? services
-    : services.filter((s: any) => s.id === selectedService);
+  const { data: tracesData, isLoading: isTracesLoading } = useQuery({
+    queryKey: ["monitoring", "traces"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/traces?limit=50`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) return { items: [] };
+      return res.json();
+    },
+  });
 
-  const overallMetrics = {
-    totalRequests: apmData?.totalRequests || services.reduce((sum: number, s: any) => sum + s.throughput, 0),
-    avgP95: apmData?.avgP95 || Math.round(services.reduce((sum: number, s: any) => sum + s.p95, 0) / services.length) || 145,
-    errorRate: apmData?.errorRate?.toFixed(2) || "0.32",
-    uptime: apmData?.uptime || 99.95,
+  const { data: apmData } = useQuery({
+    queryKey: ["monitoring", "apm"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/apm`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const createTraceMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/traces`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create trace");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring", "traces"] });
+      setIsCreateTraceOpen(false);
+      setNewTrace({ name: "", service: "", operation: "", duration: "", tags: "" });
+      toast.success("Trace recorded");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to create trace"),
+  });
+
+  const traces: any[] = tracesData?.items ?? [];
+
+  const metrics = apmData ?? {
+    avgResponseTime: null,
+    errorRate: null,
+    throughput: null,
+    p99Latency: null,
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "healthy":
-        return <Badge variant="success" size="sm">Healthy</Badge>;
-      case "warning":
-        return <Badge variant="warning" size="sm">Warning</Badge>;
-      case "critical":
-        return <Badge variant="danger" size="sm">Critical</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{status}</Badge>;
-    }
-  };
+  const metricCards = [
+    {
+      label: "Avg Response Time",
+      value: metrics.avgResponseTime != null ? `${metrics.avgResponseTime}ms` : "N/A",
+      icon: Clock,
+      color: "text-blue-400",
+    },
+    {
+      label: "Error Rate",
+      value: metrics.errorRate != null ? `${metrics.errorRate}%` : "N/A",
+      icon: AlertTriangle,
+      color: "text-red-400",
+    },
+    {
+      label: "Throughput",
+      value: metrics.throughput != null ? `${metrics.throughput} rpm` : "N/A",
+      icon: Zap,
+      color: "text-green-400",
+    },
+    {
+      label: "P99 Latency",
+      value: metrics.p99Latency != null ? `${metrics.p99Latency}ms` : "N/A",
+      icon: Cpu,
+      color: "text-purple-400",
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Application Performance</h2>
-          <p className="text-sm text-muted-foreground">
-            APM metrics and service performance
+          <h1 className="text-2xl font-bold text-white">
+            Application Performance Monitoring
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Traces, errors, and performance metrics
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            {isFetching ? "Refreshing..." : "Refresh"}
-          </button>
-          <Button variant="outline" leftIcon={<Search className="h-4 w-4" />}>
-            Search Traces
-          </Button>
-          <Button leftIcon={<Zap className="h-4 w-4" />}>
-            Create Alert
-          </Button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Activity className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : overallMetrics.totalRequests.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Requests/min</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : `${overallMetrics.avgP95}ms`}</p>
-                <p className="text-xs text-muted-foreground">Avg P95 Latency</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : `${overallMetrics.errorRate}%`}</p>
-                <p className="text-xs text-muted-foreground">Error Rate</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : `${overallMetrics.uptime}%`}</p>
-                <p className="text-xs text-muted-foreground">Uptime (30d)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Service Filter */}
-      <div className="flex items-center gap-4">
-        <select
-          className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-          value={selectedService}
-          onChange={(e) => setSelectedService(e.target.value)}
+        <Button
+          onClick={() => setIsCreateTraceOpen(true)}
+          className="flex items-center gap-2"
         >
-          <option value="all">All Services</option>
-          {services.map((service: any) => (
-            <option key={service.id} value={service.id}>{service.name}</option>
-          ))}
-        </select>
+          <Plus className="h-4 w-4" />
+          Record Trace
+        </Button>
       </div>
 
-      {/* Services Table */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Service</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">P50</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">P95</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">P99</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Throughput</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Errors</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading APM metrics...</td>
-                  </tr>
-                ) : filteredServices.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No services found</td>
-                  </tr>
-                ) : (
-                  filteredServices.map((service: any) => (
-                    <tr key={service.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Server className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{service.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(service.status)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-foreground">{service.p50}ms</span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-medium ${service.p95 > 200 ? "text-red-600" : "text-foreground"}`}>
-                          {service.p95}ms
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-medium ${service.p99 > 400 ? "text-red-600" : "text-foreground"}`}>
-                          {service.p99}ms
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-foreground">{service.throughput.toLocaleString()}/m</span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-medium ${service.errors > 0.5 ? "text-red-600" : "text-green-600"}`}>
-                          {service.errors}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      {/* APM Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {metricCards.map((m) => (
+          <Card key={m.label} className="bg-zinc-900 border-zinc-800">
+            <CardContent className="p-4 flex items-center gap-3">
+              <m.icon className={`h-7 w-7 ${m.color}`} />
+              <div>
+                <div className="text-lg font-bold text-white">{m.value}</div>
+                <div className="text-xs text-zinc-400">{m.label}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Traces */}
+      <Card className="bg-zinc-900 border-zinc-800">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4" />
+            Recent Traces
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isTracesLoading ? (
+            <Loading />
+          ) : traces.length === 0 ? (
+            <EmptyState
+              icon={<Database className="h-6 w-6 text-zinc-400" />}
+              title="No traces recorded"
+              description="Traces from your services will appear here"
+            />
+          ) : (
+            <div className="space-y-2">
+              {traces.map((trace: any) => (
+                <div
+                  key={trace.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-zinc-800"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white truncate">
+                        {trace.name ?? trace.operation ?? trace.id}
+                      </p>
+                      {trace.service && (
+                        <Badge variant="outline" className="text-xs">
+                          {trace.service}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {trace.createdAt
+                        ? new Date(trace.createdAt).toLocaleString()
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    {trace.duration != null && (
+                      <span className="text-xs text-zinc-400 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {trace.duration}ms
+                      </span>
+                    )}
+                    {trace.status && (
+                      <Badge
+                        variant={trace.status === "error" ? "destructive" : "default"}
+                        className="text-xs"
+                      >
+                        {trace.status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Top Endpoints */}
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-foreground mb-4">Top Slow Endpoints</h3>
-          <div className="space-y-3">
-            {[
-              { path: "/api/v1/payments/process", method: "POST", p95: 340, calls: 12500 },
-              { path: "/api/v1/orders/search", method: "GET", p95: 280, calls: 8900 },
-              { path: "/api/v1/inventory/sync", method: "POST", p95: 220, calls: 4500 },
-              { path: "/api/v1/users/export", method: "GET", p95: 180, calls: 1200 },
-            ].map((endpoint, i) => (
-              <div key={i} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" size="sm">{endpoint.method}</Badge>
-                  <span className="font-mono text-sm text-foreground">{endpoint.path}</span>
+      {/* Record Trace Modal */}
+      {isCreateTraceOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-white mb-4">Record Trace</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Name *</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTrace.name}
+                  onChange={(e) => setNewTrace((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. GET /api/users"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Service</label>
+                  <input
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    value={newTrace.service}
+                    onChange={(e) =>
+                      setNewTrace((p) => ({ ...p, service: e.target.value }))
+                    }
+                    placeholder="api"
+                  />
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-foreground">{endpoint.p95}ms</p>
-                    <p className="text-xs text-muted-foreground">P95</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-foreground">{endpoint.calls.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">calls/d</p>
-                  </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">
+                    Duration (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    value={newTrace.duration}
+                    onChange={(e) =>
+                      setNewTrace((p) => ({ ...p, duration: e.target.value }))
+                    }
+                    placeholder="120"
+                  />
                 </div>
               </div>
-            ))}
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Operation</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTrace.operation}
+                  onChange={(e) =>
+                    setNewTrace((p) => ({ ...p, operation: e.target.value }))
+                  }
+                  placeholder="db.query"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTrace.tags}
+                  onChange={(e) => setNewTrace((p) => ({ ...p, tags: e.target.value }))}
+                  placeholder="production, slow"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                className="flex-1"
+                disabled={!newTrace.name || createTraceMutation.isPending}
+                onClick={() => createTraceMutation.mutate(newTrace)}
+              >
+                {createTraceMutation.isPending ? "Recording..." : "Record Trace"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsCreateTraceOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }

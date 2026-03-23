@@ -1,238 +1,290 @@
-/**
- * Incidents
- *
- * Incident response and management with real API data.
- */
-
-import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import {
-  Zap,
-  Search,
-  Plus,
-  AlertCircle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Loading,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  CheckCircle2,
   Clock,
-  CheckCircle,
-  ArrowRight,
-  Filter,
-  Eye,
-  Users,
+  Plus,
   RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
-import { monitoringApi } from "@/lib/api";
+import { toast } from "sonner";
+
+const API_BASE =
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+
+function getOrgHeader(): Record<string, string> {
+  const isDemo =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo_mode") === "true";
+  const orgId = isDemo ? "demo-org" : undefined;
+  if (!orgId && typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.companyId && !user.isDemo) {
+          return { "x-organization-id": user.companyId };
+        }
+      } catch {}
+    }
+  }
+  return orgId ? { "x-organization-id": orgId } : {};
+}
 
 export const Route = createFileRoute("/app/monitoring/incidents")({
-  component: IncidentsPage,
+  component: MonitoringIncidentsPage,
 });
 
-function IncidentsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-
-  // Fetch incidents from API
-  const { data: incidents = [], isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["monitoring", "incidents"],
-    queryFn: () => monitoringApi.getIncidents(),
-    refetchInterval: 30000,
+function MonitoringIncidentsPage() {
+  const queryClient = useQueryClient();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [newIncident, setNewIncident] = useState({
+    title: "",
+    severity: "medium",
+    description: "",
+    affectedServices: "",
   });
 
-  const filteredIncidents = incidents.filter((incident: any) => {
-    const matchesSearch =
-      incident.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      incident.service?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === "all" || incident.status === filterStatus;
-    return matchesSearch && matchesStatus;
+  const { data, isLoading } = useQuery({
+    queryKey: ["monitoring", "incidents", statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: "100" });
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await fetch(`${API_BASE}/v1/monitoring/incidents?${params}`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) return { items: [] };
+      return res.json();
+    },
   });
 
-  const summary = {
-    total: incidents.length,
-    active: incidents.filter((i: any) => i.status !== "resolved").length,
-    critical: incidents.filter((i: any) => i.severity === "critical" && i.status !== "resolved").length,
-    mttr: "2h 15m",
-  };
+  const createIncidentMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/incidents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create incident");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents"] });
+      setIsCreateOpen(false);
+      setNewIncident({ title: "", severity: "medium", description: "", affectedServices: "" });
+      toast.success("Incident created");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to create incident"),
+  });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "resolved":
-        return <Badge variant="success" size="sm">Resolved</Badge>;
-      case "investigating":
-        return <Badge variant="danger" size="sm">Investigating</Badge>;
-      case "monitoring":
-        return <Badge variant="warning" size="sm">Monitoring</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{status}</Badge>;
-    }
-  };
+  const resolveIncidentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/incidents/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      if (!res.ok) throw new Error("Failed to resolve incident");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents"] });
+      toast.success("Incident resolved");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to resolve incident"),
+  });
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return <Badge variant="danger" size="sm">Critical</Badge>;
-      case "high":
-        return <Badge variant="warning" size="sm">High</Badge>;
-      case "medium":
-        return <Badge variant="info" size="sm">Medium</Badge>;
-      case "low":
-        return <Badge variant="default" size="sm">Low</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{severity}</Badge>;
-    }
-  };
+  const incidents: any[] = data?.items ?? [];
 
-  const formatDate = (date: Date | string) => {
-    if (!date) return "Unknown";
-    const d = new Date(date);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const severityColors: Record<string, string> = {
+    low: "bg-blue-500/10 text-blue-400",
+    medium: "bg-yellow-500/10 text-yellow-400",
+    high: "bg-orange-500/10 text-orange-400",
+    critical: "bg-red-500/10 text-red-400",
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Incidents</h2>
-          <p className="text-sm text-muted-foreground">
-            Incident response and management
+          <h1 className="text-2xl font-bold text-white">Incidents</h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Track and manage system incidents
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Create Incident
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2">
+        {["all", "open", "investigating", "resolved"].map((s) => (
+          <Button
+            key={s}
+            variant={statusFilter === s ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(s)}
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            {isFetching ? "Refreshing..." : "Refresh"}
-          </button>
-          <Button leftIcon={<Plus className="h-4 w-4" />}>
-            Create Incident
+            {s.charAt(0).toUpperCase() + s.slice(1)}
           </Button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Zap className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : summary.total}</p>
-                <p className="text-xs text-muted-foreground">Total Incidents</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold text-red-600">{isLoading ? "..." : summary.active}</p>
-                <p className="text-xs text-muted-foreground">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Zap className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold text-red-600">{isLoading ? "..." : summary.critical}</p>
-                <p className="text-xs text-muted-foreground">Critical</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-2xl font-bold">{summary.mttr}</p>
-                <p className="text-xs text-muted-foreground">Avg MTTR</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search incidents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="investigating">Investigating</option>
-            <option value="monitoring">Monitoring</option>
-            <option value="resolved">Resolved</option>
-          </select>
-        </div>
+        ))}
       </div>
 
       {/* Incidents List */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          <div className="space-y-3 p-4">
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading incidents...</div>
-            ) : filteredIncidents.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No incidents found</div>
-            ) : (
-              filteredIncidents.map((incident: any) => (
-                <div
-                  key={incident.id}
-                  className={`flex items-center gap-4 p-4 border rounded-lg ${
-                    incident.severity === "critical" ? "border-red-200" : "border-border"
-                  }`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-semibold text-foreground">{incident.title}</p>
-                      {getSeverityBadge(incident.severity)}
-                      {getStatusBadge(incident.status)}
+      {isLoading ? (
+        <Loading />
+      ) : incidents.length === 0 ? (
+        <EmptyState
+          icon={<CheckCircle2 className="h-8 w-8 text-green-400" />}
+          title="No incidents"
+          description="All systems are operational"
+        />
+      ) : (
+        <div className="space-y-3">
+          {incidents.map((incident: any) => (
+            <Card key={incident.id} className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+                      <h3 className="text-sm font-medium text-white truncate">
+                        {incident.title}
+                      </h3>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${severityColors[incident.severity] ?? "text-zinc-400"}`}
+                      >
+                        {incident.severity}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Service: {incident.service}</span>
-                      <span>Started: {formatDate(incident.startedAt)}</span>
-                      <span>Duration: {incident.duration}</span>
+                    {incident.description && (
+                      <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                        {incident.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {incident.createdAt
+                          ? new Date(incident.createdAt).toLocaleString()
+                          : "Unknown"}
+                      </span>
+                      {incident.affectedServices && (
+                        <span>Services: {incident.affectedServices}</span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm text-foreground">{incident.assignee}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Impact: {incident.impact}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                      <Link to={`/app/monitoring/incidents/${incident.id}` as string}>
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge
+                      variant={incident.status === "resolved" ? "default" : "destructive"}
+                    >
+                      {incident.status}
+                    </Badge>
+                    {incident.status !== "resolved" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={resolveIncidentMutation.isPending}
+                        onClick={() => resolveIncidentMutation.mutate(incident.id)}
+                        className="flex items-center gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Resolve
+                      </Button>
+                    )}
                   </div>
                 </div>
-              ))
-            )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Create Incident Modal */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-white mb-4">Create Incident</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Title *</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newIncident.title}
+                  onChange={(e) => setNewIncident((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Incident title"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Severity</label>
+                <select
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newIncident.severity}
+                  onChange={(e) => setNewIncident((p) => ({ ...p, severity: e.target.value }))}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Affected Services</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newIncident.affectedServices}
+                  onChange={(e) =>
+                    setNewIncident((p) => ({ ...p, affectedServices: e.target.value }))
+                  }
+                  placeholder="e.g. API, Database"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Description</label>
+                <textarea
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white resize-none"
+                  rows={3}
+                  value={newIncident.description}
+                  onChange={(e) =>
+                    setNewIncident((p) => ({ ...p, description: e.target.value }))
+                  }
+                  placeholder="Describe what happened..."
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                className="flex-1"
+                disabled={!newIncident.title || createIncidentMutation.isPending}
+                onClick={() => createIncidentMutation.mutate(newIncident)}
+              >
+                {createIncidentMutation.isPending ? "Creating..." : "Create Incident"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }

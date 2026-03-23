@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button,
   Card,
   CardContent,
@@ -49,6 +49,33 @@ const chartTypes = [
 ];
 
 function Reports() {
+  const queryClient = useQueryClient();
+
+  const createReportMutation = useMutation({
+    mutationFn: async (data: { name: string; type: string }) => {
+      const res = await fetch(`${API_BASE}/intelligence/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create report");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] }),
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/intelligence/reports/${id}`, {
+        method: "DELETE",
+        headers: getOrgHeader(),
+      });
+      if (!res.ok) throw new Error("Failed to delete report");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] }),
+  });
+
   const agentRunsQuery = useQuery({
     queryKey: ["intelligence", "agent-runs"],
     retry: false,

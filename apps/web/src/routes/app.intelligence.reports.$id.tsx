@@ -1,126 +1,223 @@
-import {Button, Badge,
+import {
+  Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  LoadingSkeleton,
+  Loading,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useParams } from "@tanstack/react-router";
-import { FileText,
-  AlertCircle
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  Download,
+  Trash2,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
-
-const MOCK_REPORT = (id: string) => ({
-  id,
-  title: `Intelligence Report #${id}`,
-  type: "custom",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  status: "ready",
-  sections: [
-    { title: "Executive Summary", content: "Overall performance is trending positively with 12% MoM growth." },
-    { title: "Key Metrics", data: { revenue: 480000, customers: 318, churnRate: 5.8 } },
-    { title: "Recommendations", items: ["Focus on at-risk segment re-engagement", "Upsell Champions to Enterprise tier"] },
-  ],
-});
+import { toast } from "sonner";
+import { nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/intelligence/reports/$id")({
-  component: ReportPage,
+  component: IntelligenceReportDetailPage,
 });
 
-function ReportPage() {
-  const { id } = useParams({ from: "/app/intelligence/reports/$id" });
+function IntelligenceReportDetailPage() {
+  const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const { data, isLoading, refetch, isError} = useQuery({
+  const reportQuery = useQuery({
     queryKey: ["intelligence", "reports", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/reports/${id}`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return MOCK_REPORT(id);
-      return res.json();
-    },
+    queryFn: () => nucleoApi.intelligence.reports.get(id),
     enabled: !!id,
   });
 
-  const report = data ?? MOCK_REPORT(id);
+  const deleteReportMutation = useMutation({
+    mutationFn: () => nucleoApi.intelligence.reports.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] });
+      toast.success("Report deleted");
+      navigate({ to: "/app/intelligence/reports" });
+    },
+    onError: () => toast.error("Failed to delete report"),
+  });
 
-  if (isLoading) {
-  if (isError) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-      <AlertCircle className="h-8 w-8 text-destructive" />
-      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
-    </div>
-  );
+  const exportReportMutation = useMutation({
+    mutationFn: () => nucleoApi.intelligence.reports.export(id),
+    onSuccess: (data: any) => {
+      toast.success("Report exported successfully");
+      // In a real implementation this would trigger a download
+      console.info("Export result:", data);
+    },
+    onError: () => toast.error("Failed to export report"),
+  });
+
+  if (reportQuery.isLoading) {
+    return <Loading />;
+  }
+
+  const report = reportQuery.data;
+
+  if (!report) {
     return (
       <div className="p-6 space-y-4">
-        <LoadingSkeleton className="h-8 w-64 rounded" />
-        <LoadingSkeleton className="h-48 w-full rounded-lg" />
-        <LoadingSkeleton className="h-32 w-full rounded-lg" />
+        <Link to="/app/intelligence/reports">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Reports
+          </Button>
+        </Link>
+        <p className="text-muted-foreground">Report not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <FileText className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-2xl font-bold">{report.title}</h1>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            Created {new Date(report.createdAt).toLocaleString()} · Updated {new Date(report.updatedAt).toLocaleString()}
-          </p>
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <Link to="/app/intelligence/reports">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Reports
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold text-foreground">
+            Report Detail
+          </h1>
+          <Badge
+            variant={
+              report.riskBand === "high"
+                ? "destructive"
+                : report.riskBand === "low"
+                  ? "default"
+                  : "secondary"
+            }
+          >
+            {report.riskBand} risk
+          </Badge>
         </div>
-        <Badge variant="default">{report.status}</Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportReportMutation.mutate()}
+            disabled={exportReportMutation.isPending}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {exportReportMutation.isPending ? "Exporting…" : "Export"}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => deleteReportMutation.mutate()}
+            disabled={deleteReportMutation.isPending}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {deleteReportMutation.isPending ? "Deleting…" : "Delete"}
+          </Button>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {(report.sections ?? []).map((section: any, i: number) => (
-          <Card key={i}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Projected Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              ${Number(report.projectedRevenue ?? 0).toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Pipeline Amount
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              ${Number(report.pipelineAmount ?? 0).toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Win Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {Number(report.winRate ?? 0).toFixed(1)}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Avg Sales Cycle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {report.avgSalesCycleDays ?? 0} days
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Confidence
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {Number(report.confidence ?? 0).toFixed(0)}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground font-medium">
+              Created
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-semibold">
+              {report.createdAt
+                ? new Date(report.createdAt).toLocaleDateString()
+                : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {Array.isArray(report.recommendations) &&
+        report.recommendations.length > 0 && (
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">{section.title}</CardTitle>
+              <CardTitle className="text-base">Recommendations</CardTitle>
             </CardHeader>
             <CardContent>
-              {section.content && <p className="text-sm">{section.content}</p>}
-              {section.data && (
-                <div className="grid gap-3 md:grid-cols-3">
-                  {Object.entries(section.data).map(([key, val]) => (
-                    <div key={key} className="p-3 rounded-lg border text-center">
-                      <p className="text-xs text-muted-foreground capitalize mb-1">{key.replace(/([A-Z])/g, " $1")}</p>
-                      <p className="text-xl font-bold">
-                        {typeof val === "number"
-                          ? val > 1000
-                            ? `$${(val as number).toLocaleString()}`
-                            : val
-                          : String(val)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {section.items && (
-                <ul className="space-y-2">
-                  {section.items.map((item: string, j: number) => (
-                    <li key={j} className="flex items-start gap-2 text-sm">
-                      <span className="text-violet-500 mt-0.5">•</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                {report.recommendations.map((rec: string, i: number) => (
+                  <li key={i}>{rec}</li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        )}
     </div>
   );
 }

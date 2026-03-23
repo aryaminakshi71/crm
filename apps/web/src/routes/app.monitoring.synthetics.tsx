@@ -1,253 +1,307 @@
-/**
- * Synthetics
- *
- * Synthetic monitoring tests with real API data.
- */
-
-import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import {
-  Search,
-  Plus,
-  Play,
-  Pause,
-  Edit,
-  Trash2,
-  Eye,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Globe,
-  Timer,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Loading,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import {
   Activity,
-  RefreshCw,
+  CheckCircle2,
+  Clock,
+  Globe,
+  Plus,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { monitoringApi } from "@/lib/api";
+import { toast } from "sonner";
+
+const API_BASE =
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+
+function getOrgHeader(): Record<string, string> {
+  const isDemo =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo_mode") === "true";
+  const orgId = isDemo ? "demo-org" : undefined;
+  if (!orgId && typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.companyId && !user.isDemo) {
+          return { "x-organization-id": user.companyId };
+        }
+      } catch {}
+    }
+  }
+  return orgId ? { "x-organization-id": orgId } : {};
+}
 
 export const Route = createFileRoute("/app/monitoring/synthetics")({
-  component: SyntheticsPage,
+  component: MonitoringSyntheticsPage,
 });
 
-function SyntheticsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+function MonitoringSyntheticsPage() {
+  const queryClient = useQueryClient();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newTest, setNewTest] = useState({
+    name: "",
+    url: "",
+    type: "http",
+    interval: "60",
+    locations: "",
+    expectedStatus: "200",
+  });
 
-  // Fetch synthetics tests from API
-  const { data: tests = [], isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["monitoring", "synthetics"],
-    queryFn: () => monitoringApi.getSynthetics(),
-    refetchInterval: 60000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/synthetics`, {
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) return { items: [] };
+      return res.json();
+    },
   });
 
-  const filteredTests = tests.filter((test: any) => {
-    const matchesSearch = test.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      test.url?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === "all" || test.status === filterStatus;
-    return matchesSearch && matchesStatus;
+  const createTestMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/synthetics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create synthetic test");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring", "synthetics"] });
+      setIsCreateOpen(false);
+      setNewTest({
+        name: "",
+        url: "",
+        type: "http",
+        interval: "60",
+        locations: "",
+        expectedStatus: "200",
+      });
+      toast.success("Synthetic test created");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to create synthetic test"),
   });
 
-  const summary = {
-    total: tests.length,
-    passing: tests.filter((t: any) => t.status === "passing").length,
-    failing: tests.filter((t: any) => t.status === "failing").length,
-    warning: tests.filter((t: any) => t.status === "warning").length,
-  };
+  const deleteTestMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/synthetics/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed to delete synthetic test");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring", "synthetics"] });
+      toast.success("Test deleted");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to delete test"),
+  });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "passing":
-        return <Badge variant="success" size="sm">Passing</Badge>;
-      case "failing":
-        return <Badge variant="danger" size="sm">Failing</Badge>;
-      case "warning":
-        return <Badge variant="warning" size="sm">Warning</Badge>;
-      case "paused":
-        return <Badge variant="default" size="sm">Paused</Badge>;
-      default:
-        return <Badge variant="default" size="sm">{status}</Badge>;
-    }
-  };
+  const tests: any[] = data?.items ?? [];
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "passing":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "failing":
-        return <XCircle className="h-5 w-5 text-red-500" />;
-      case "warning":
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-      default:
-        return <Pause className="h-5 w-5 text-muted-foreground" />;
-    }
+  const statusIcon = (status: string) => {
+    if (status === "passing") return <CheckCircle2 className="h-4 w-4 text-green-400" />;
+    if (status === "failing") return <XCircle className="h-4 w-4 text-red-400" />;
+    return <Activity className="h-4 w-4 text-zinc-400" />;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Synthetics</h2>
-          <p className="text-sm text-muted-foreground">
-            Synthetic monitoring and uptime tests
+          <h1 className="text-2xl font-bold text-white">Synthetic Monitoring</h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Automated tests to proactively detect issues
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            {isFetching ? "Refreshing..." : "Refresh"}
-          </button>
-          <Button leftIcon={<Plus className="h-4 w-4" />}>
-            Create Test
-          </Button>
-        </div>
+        <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Create Test
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Activity className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{isLoading ? "..." : summary.total}</p>
-                <p className="text-xs text-muted-foreground">Total Tests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold text-green-600">{isLoading ? "..." : summary.passing}</p>
-                <p className="text-xs text-muted-foreground">Passing</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <XCircle className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold text-red-600">{isLoading ? "..." : summary.failing}</p>
-                <p className="text-xs text-muted-foreground">Failing</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
-              <div>
-                <p className="text-2xl font-bold text-yellow-600">{isLoading ? "..." : summary.warning}</p>
-                <p className="text-xs text-muted-foreground">Warning</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tests..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="passing">Passing</option>
-            <option value="failing">Failing</option>
-            <option value="warning">Warning</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Tests List */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {isLoading ? (
-          <div className="col-span-full text-center py-8 text-muted-foreground">Loading synthetics tests...</div>
-        ) : filteredTests.length === 0 ? (
-          <div className="col-span-full text-center py-8 text-muted-foreground">No tests found</div>
-        ) : (
-          filteredTests.map((test: any) => (
-            <Card key={test.id} className={`border-border/60 ${test.status === "failing" ? "border-red-200" : test.status === "warning" ? "border-yellow-200" : ""}`}>
+      {isLoading ? (
+        <Loading />
+      ) : tests.length === 0 ? (
+        <EmptyState
+          icon={<Globe className="h-8 w-8 text-zinc-400" />}
+          title="No synthetic tests"
+          description="Create a test to monitor your endpoints continuously"
+          action={
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create Test
+            </Button>
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {tests.map((test: any) => (
+            <Card key={test.id} className="bg-zinc-900 border-zinc-800">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${test.status === "failing" ? "bg-red-100" : test.status === "warning" ? "bg-yellow-100" : "bg-green-100"}`}>
-                      {getStatusIcon(test.status)}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{test.name}</h3>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Globe className="h-3 w-3" />
-                        {test.url}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {statusIcon(test.status)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {test.name}
                       </p>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-zinc-400">
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          {test.url}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Every {test.interval ?? 60}s
+                        </span>
+                        {test.responseTime != null && (
+                          <span>{test.responseTime}ms</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {getStatusBadge(test.status)}
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="text-lg font-bold text-foreground">{test.avgLatency}ms</p>
-                    <p className="text-xs text-muted-foreground">Avg Latency</p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="text-lg font-bold text-foreground">{test.uptime?.toFixed(2)}%</p>
-                    <p className="text-xs text-muted-foreground">Uptime</p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="text-lg font-bold text-foreground">{test.frequency}</p>
-                    <p className="text-xs text-muted-foreground">Frequency</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Last run: {test.lastRun}
-                  </span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Play className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Pause className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Edit className="h-3 w-3" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge
+                      variant={
+                        test.status === "passing"
+                          ? "default"
+                          : test.status === "failing"
+                            ? "destructive"
+                            : "outline"
+                      }
+                    >
+                      {test.status ?? "unknown"}
+                    </Badge>
+                    <span className="text-xs text-zinc-500 uppercase">{test.type}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-zinc-400 hover:text-red-400 h-7 w-7 p-0"
+                      disabled={deleteTestMutation.isPending}
+                      onClick={() => deleteTestMutation.mutate(test.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Test Modal */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-white mb-4">Create Synthetic Test</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Name *</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTest.name}
+                  onChange={(e) => setNewTest((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Homepage check"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">URL *</label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTest.url}
+                  onChange={(e) => setNewTest((p) => ({ ...p, url: e.target.value }))}
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Type</label>
+                  <select
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    value={newTest.type}
+                    onChange={(e) => setNewTest((p) => ({ ...p, type: e.target.value }))}
+                  >
+                    <option value="http">HTTP</option>
+                    <option value="browser">Browser</option>
+                    <option value="tcp">TCP</option>
+                    <option value="dns">DNS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">
+                    Interval (seconds)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    value={newTest.interval}
+                    onChange={(e) => setNewTest((p) => ({ ...p, interval: e.target.value }))}
+                    min={30}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  Expected Status Code
+                </label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTest.expectedStatus}
+                  onChange={(e) =>
+                    setNewTest((p) => ({ ...p, expectedStatus: e.target.value }))
+                  }
+                  placeholder="200"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  Locations (comma-separated)
+                </label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                  value={newTest.locations}
+                  onChange={(e) =>
+                    setNewTest((p) => ({ ...p, locations: e.target.value }))
+                  }
+                  placeholder="us-east, eu-west"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                className="flex-1"
+                disabled={!newTest.name || !newTest.url || createTestMutation.isPending}
+                onClick={() => createTestMutation.mutate(newTest)}
+              >
+                {createTestMutation.isPending ? "Creating..." : "Create Test"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

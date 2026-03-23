@@ -6,7 +6,7 @@
 
 import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Globe,
   Plus,
@@ -23,12 +23,29 @@ import {
 import { useState } from "react";
 import { monitoringApi } from "@/lib/api";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({ "x-org-id": localStorage.getItem("activeOrganizationId") ?? "" });
+
 export const Route = createFileRoute("/app/monitoring/status")({
   component: StatusPage,
 });
 
 function StatusPage() {
   const [isPublished, setIsPublished] = useState(true);
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`${API_BASE}/v1/monitoring/status/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "catalog"] }),
+  });
 
   const { data: catalogData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "catalog"],

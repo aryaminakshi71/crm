@@ -65,22 +65,7 @@ export const integrationRouter = {
         )
         .limit(1);
 
-      if (!item) {
-        return {
-          id: input.id,
-          name: "Sample Connector",
-          type: "webhook",
-          status: "connected",
-          config: { endpoint: "https://hooks.example.com/webhook", secret: "***" },
-          connectedAt: new Date().toISOString(),
-          rateLimit: { limit: 1000, remaining: 847, resetAt: new Date(Date.now() + 3600000).toISOString() },
-          recentRuns: [
-            { id: "run-1", status: "success", executedAt: new Date().toISOString(), durationMs: 124 },
-            { id: "run-2", status: "success", executedAt: new Date(Date.now() - 3600000).toISOString(), durationMs: 98 },
-            { id: "run-3", status: "failed", executedAt: new Date(Date.now() - 7200000).toISOString(), durationMs: 234, error: "Timeout" },
-          ],
-        };
-      }
+      if (!item) return null;
 
       return {
         id: item.id,
@@ -189,16 +174,7 @@ export const integrationRouter = {
         };
       }
 
-      // Static fallback when no data exists yet
-      return {
-        data: [
-          { id: "evt-1", name: "Contact Created", source: "CRM", type: "trigger", description: "Fires when a new contact is created" },
-          { id: "evt-2", name: "Deal Won", source: "CRM", type: "trigger", description: "Fires when a deal is marked as won" },
-          { id: "evt-3", name: "Invoice Paid", source: "Finance", type: "trigger", description: "Fires when an invoice payment is received" },
-          { id: "evt-4", name: "Ticket Created", source: "Helpdesk", type: "trigger", description: "Fires when a support ticket is created" },
-          { id: "evt-5", name: "Employee Onboarded", source: "HRM", type: "trigger", description: "Fires when employee onboarding is complete" },
-        ],
-      };
+      return { data: [] };
     }),
 
   runsList: orgAuthed
