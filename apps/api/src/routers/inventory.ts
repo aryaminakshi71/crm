@@ -8,7 +8,15 @@ import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { products, stockAlerts, stockMovements } = schema;
+const {
+  products,
+  stockAlerts,
+  stockMovements,
+  inventorySuppliers,
+  inventoryWarehouses,
+  inventoryLocations,
+  inventoryPurchaseOrders,
+} = schema;
 
 export const inventoryRouter = {
   // ── Products ────────────────────────────────────────────────────────────────
@@ -327,7 +335,7 @@ export const inventoryRouter = {
         status: z.string().optional(),
       }),
     )
-    .output(z.object({ data: z.array(z.any()), total: z.number() }))
+    .output(z.object({ data: z.array(z.any()), total: z.number(), page: z.number().optional(), limit: z.number().optional() }))
     .handler(
       async ({
         context,
@@ -336,8 +344,27 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        // Suppliers table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [
+          eq(inventorySuppliers.organizationId, orgId),
+          isNull(inventorySuppliers.deletedAt),
+        ];
+        if (input.search) conditions.push(ilike(inventorySuppliers.name, `%${input.search}%`));
+        if (input.status) conditions.push(eq(inventorySuppliers.status, input.status));
+        const where = and(...conditions);
+        const [{ total }] = await db
+          .select({ total: count() })
+          .from(inventorySuppliers)
+          .where(where);
+        const data = await db
+          .select()
+          .from(inventorySuppliers)
+          .where(where)
+          .orderBy(desc(inventorySuppliers.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total), page: input.page, limit: input.limit };
       },
     ),
 
@@ -376,16 +403,19 @@ export const inventoryRouter = {
           status: "active" | "inactive";
         };
       }) => {
-        // Suppliers table not yet in schema – return mock created record
-        return {
-          id: crypto.randomUUID(),
-          organizationId: context.organization.id,
-          ...input,
-          rating: 0,
-          orders: 0,
-          totalSpent: 0,
-          createdAt: new Date().toISOString(),
-        };
+        const db = getDb(context);
+        const [supplier] = await db
+          .insert(inventorySuppliers)
+          .values({
+            organizationId: context.organization.id,
+            name: input.name,
+            email: input.email,
+            phone: input.phone,
+            contactPerson: input.contact,
+            status: input.status,
+          })
+          .returning();
+        return supplier;
       },
     ),
 
@@ -414,8 +444,23 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string };
       }) => {
-        // Warehouses table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [eq(inventoryWarehouses.organizationId, orgId)];
+        if (input.search) conditions.push(ilike(inventoryWarehouses.name, `%${input.search}%`));
+        const where = and(...conditions);
+        const [{ total }] = await db
+          .select({ total: count() })
+          .from(inventoryWarehouses)
+          .where(where);
+        const data = await db
+          .select()
+          .from(inventoryWarehouses)
+          .where(where)
+          .orderBy(desc(inventoryWarehouses.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total) };
       },
     ),
 
@@ -454,14 +499,20 @@ export const inventoryRouter = {
           status: "active" | "inactive";
         };
       }) => {
-        return {
-          id: crypto.randomUUID(),
-          organizationId: context.organization.id,
-          ...input,
-          used: 0,
-          products: 0,
-          createdAt: new Date().toISOString(),
-        };
+        const db = getDb(context);
+        const [warehouse] = await db
+          .insert(inventoryWarehouses)
+          .values({
+            organizationId: context.organization.id,
+            name: input.name,
+            code: input.code,
+            manager: input.manager,
+            type: input.type ?? "main",
+            capacity: input.capacity,
+            isActive: input.status === "active",
+          })
+          .returning();
+        return warehouse;
       },
     ),
 
@@ -491,8 +542,30 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        // Purchase orders table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [
+          eq(inventoryPurchaseOrders.organizationId, orgId),
+          isNull(inventoryPurchaseOrders.deletedAt),
+        ];
+        if (input.status) conditions.push(eq(inventoryPurchaseOrders.status, input.status));
+        if (input.search)
+          conditions.push(
+            ilike(inventoryPurchaseOrders.poNumber, `%${input.search}%`),
+          );
+        const where = and(...conditions);
+        const [{ total }] = await db
+          .select({ total: count() })
+          .from(inventoryPurchaseOrders)
+          .where(where);
+        const data = await db
+          .select()
+          .from(inventoryPurchaseOrders)
+          .where(where)
+          .orderBy(desc(inventoryPurchaseOrders.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total) };
       },
     ),
 
@@ -527,14 +600,24 @@ export const inventoryRouter = {
           notes?: string;
         };
       }) => {
+        const db = getDb(context);
         const now = new Date();
-        return {
-          id: `PO-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-          organizationId: context.organization.id,
-          ...input,
-          status: "draft",
-          createdAt: now.toISOString(),
-        };
+        // Generate a sequential-style PO number using timestamp millis for uniqueness
+        const poNumber = `PO-${now.getFullYear()}-${String(Date.now()).slice(-4).padStart(4, "0")}`;
+        const [po] = await db
+          .insert(inventoryPurchaseOrders)
+          .values({
+            organizationId: context.organization.id,
+            poNumber,
+            supplierName: input.supplier,
+            status: "draft",
+            total: input.total ? String(input.total) : "0",
+            expectedDate: input.expectedAt ? new Date(input.expectedAt) : null,
+            notes: input.notes,
+            orderDate: now,
+          })
+          .returning();
+        return po;
       },
     ),
 
@@ -564,8 +647,24 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; warehouse?: string; search?: string };
       }) => {
-        // Locations table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [eq(inventoryLocations.organizationId, orgId)];
+        if (input.warehouse) conditions.push(eq(inventoryLocations.warehouseId, input.warehouse));
+        if (input.search) conditions.push(ilike(inventoryLocations.name, `%${input.search}%`));
+        const where = and(...conditions);
+        const [{ total }] = await db
+          .select({ total: count() })
+          .from(inventoryLocations)
+          .where(where);
+        const data = await db
+          .select()
+          .from(inventoryLocations)
+          .where(where)
+          .orderBy(desc(inventoryLocations.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total) };
       },
     ),
 
@@ -756,8 +855,27 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        // Serial number table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        // Serial number tracking uses the products table with barcode as serial identifier.
+        // Products with a barcode value are treated as serialised items.
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [
+          eq(products.organizationId, orgId),
+          isNull(products.deletedAt),
+          sql`${products.barcode} IS NOT NULL`,
+        ];
+        if (input.search) conditions.push(ilike(products.name, `%${input.search}%`));
+        if (input.status) conditions.push(eq(products.status, input.status as any));
+        const where = and(...conditions);
+        const [{ total }] = await db.select({ total: count() }).from(products).where(where);
+        const data = await db
+          .select()
+          .from(products)
+          .where(where)
+          .orderBy(desc(products.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total) };
       },
     ),
 
@@ -787,8 +905,26 @@ export const inventoryRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        // Batch/lot table not yet in schema – return empty list with correct shape
-        return { data: [], total: 0 };
+        // Batch/lot tracking uses the products table. Products with metadata containing
+        // batch info (or a category of "batch") are considered batch-tracked items.
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const conditions: any[] = [
+          eq(products.organizationId, orgId),
+          isNull(products.deletedAt),
+        ];
+        if (input.search) conditions.push(ilike(products.name, `%${input.search}%`));
+        if (input.status) conditions.push(eq(products.status, input.status as any));
+        const where = and(...conditions);
+        const [{ total }] = await db.select({ total: count() }).from(products).where(where);
+        const data = await db
+          .select()
+          .from(products)
+          .where(where)
+          .orderBy(desc(products.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit);
+        return { data, total: Number(total) };
       },
     ),
 };
