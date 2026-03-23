@@ -1,12 +1,26 @@
 import { EmptyState } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Zap } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 export const Route = createFileRoute("/app/crm/sequences")({
   component: CrmSequencesPage,
 });
 
 function CrmSequencesPage() {
+  const query = useQuery({
+    queryKey: ["crm/sequences"],
+    queryFn: () =>
+      fetch(`${API_BASE}/crm/sequences`, {
+        headers: { "x-org-id": localStorage.getItem("activeOrganizationId") ?? "" },
+      }).then((r) => r.json()),
+    retry: false,
+  });
+
+  const hasData = Array.isArray(query.data?.data) && query.data.data.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,11 +34,13 @@ function CrmSequencesPage() {
           Automate multi-step outreach sequences for leads.
         </p>
       </div>
-      <EmptyState
-        icon={<Zap className="h-8 w-8 text-primary/40" />}
-        title="Sequences coming soon"
-        description="Email and outreach sequences will be available in an upcoming release. Stay tuned!"
-      />
+      {!hasData && (
+        <EmptyState
+          icon={<Zap className="h-8 w-8 text-primary/40" />}
+          title="Sequences coming soon"
+          description="Email and outreach sequences will be available in an upcoming release. Stay tuned!"
+        />
+      )}
     </div>
   );
 }

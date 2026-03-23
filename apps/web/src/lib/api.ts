@@ -4628,3 +4628,164 @@ export const helpdeskApi = {
     },
   },
 };
+
+// ── eCommerce API ─────────────────────────────────────────────────────────────
+
+const API_BASE_EC = import.meta.env.VITE_API_URL ?? "/api";
+
+function getEcOrgHeader(): Record<string, string> {
+  const orgId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("activeOrganizationId") ?? ""
+      : "";
+  return { "x-org-id": orgId, "Content-Type": "application/json" };
+}
+
+async function ecFetch(path: string, opts?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE_EC}/v1${path}`, {
+      ...opts,
+      headers: { ...getEcOrgHeader(), ...(opts?.headers ?? {}) },
+    });
+    if (!res.ok) throw new Error(`EC fetch failed: ${res.status}`);
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export const ecommerceApi = {
+  stats: () => ecFetch("/ecommerce/stats"),
+
+  products: {
+    list: (params?: { page?: number; limit?: number; search?: string; category?: string; status?: string }) =>
+      ecFetch(`/ecommerce/products?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => ecFetch(`/ecommerce/products/${id}`),
+    create: (data: any) => ecFetch("/ecommerce/products", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) => ecFetch(`/ecommerce/products/${id}`, { method: "DELETE" }),
+  },
+
+  orders: {
+    list: (params?: { page?: number; limit?: number; status?: string; search?: string }) =>
+      ecFetch(`/ecommerce/orders?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => ecFetch(`/ecommerce/orders/${id}`),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  customers: {
+    list: (params?: { page?: number; limit?: number; search?: string }) =>
+      ecFetch(`/ecommerce/customers?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => ecFetch(`/ecommerce/customers/${id}`),
+  },
+
+  reviews: {
+    list: (params?: { page?: number; limit?: number; status?: string }) =>
+      ecFetch(`/ecommerce/reviews?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/reviews/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  discounts: {
+    list: () => ecFetch("/ecommerce/discounts"),
+    create: (data: any) => ecFetch("/ecommerce/discounts", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/discounts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) => ecFetch(`/ecommerce/discounts/${id}`, { method: "DELETE" }),
+  },
+
+  shipping: {
+    list: () => ecFetch("/ecommerce/shipping"),
+    create: (data: any) => ecFetch("/ecommerce/shipping", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/shipping/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  taxes: {
+    list: () => ecFetch("/ecommerce/taxes"),
+    create: (data: any) => ecFetch("/ecommerce/taxes", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => ecFetch(`/ecommerce/taxes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  abandoned: { list: () => ecFetch("/ecommerce/abandoned") },
+  wishlists: { list: () => ecFetch("/ecommerce/wishlists") },
+  upsell: { list: () => ecFetch("/ecommerce/upsell") },
+};
+
+// ── Invoicing API ─────────────────────────────────────────────────────────────
+
+const API_BASE_INV = import.meta.env.VITE_API_URL ?? "/api";
+
+function getInvOrgHeader(): Record<string, string> {
+  const orgId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("activeOrganizationId") ?? ""
+      : "";
+  return { "x-org-id": orgId, "Content-Type": "application/json" };
+}
+
+async function invFetch(path: string, opts?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE_INV}/v1${path}`, {
+      ...opts,
+      headers: { ...getInvOrgHeader(), ...(opts?.headers ?? {}) },
+    });
+    if (!res.ok) throw new Error(`INV fetch failed: ${res.status}`);
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export const invoicingApi = {
+  stats: () => invFetch("/invoicing/stats"),
+
+  invoices: {
+    list: (params?: { page?: number; limit?: number; status?: string; search?: string; clientId?: string }) =>
+      invFetch(`/invoicing/invoices?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => invFetch(`/invoicing/invoices/${id}`),
+    create: (data: any) => invFetch("/invoicing/invoices", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/invoices/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) => invFetch(`/invoicing/invoices/${id}`, { method: "DELETE" }),
+    send: (id: string) => invFetch(`/invoicing/invoices/${id}/send`, { method: "POST", body: JSON.stringify({}) }),
+  },
+
+  clients: {
+    list: (params?: { page?: number; limit?: number; search?: string }) =>
+      invFetch(`/invoicing/clients?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => invFetch(`/invoicing/clients/${id}`),
+    create: (data: any) => invFetch("/invoicing/clients", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/clients/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  payments: {
+    list: (params?: { page?: number; limit?: number; invoiceId?: string }) =>
+      invFetch(`/invoicing/payments?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    create: (data: any) => invFetch("/invoicing/payments", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  expenses: {
+    list: (params?: { page?: number; limit?: number; status?: string }) =>
+      invFetch(`/invoicing/expenses?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    create: (data: any) => invFetch("/invoicing/expenses", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/expenses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) => invFetch(`/invoicing/expenses/${id}`, { method: "DELETE" }),
+  },
+
+  quotes: {
+    list: (params?: { page?: number; limit?: number; status?: string }) =>
+      invFetch(`/invoicing/quotes?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => invFetch(`/invoicing/quotes/${id}`),
+    create: (data: any) => invFetch("/invoicing/quotes", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/quotes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    convert: (id: string) => invFetch(`/invoicing/quotes/${id}/convert`, { method: "POST", body: JSON.stringify({}) }),
+  },
+
+  templates: {
+    list: () => invFetch("/invoicing/templates"),
+    create: (data: any) => invFetch("/invoicing/templates", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/templates/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  settings: {
+    get: () => invFetch("/invoicing/settings"),
+    update: (data: any) => invFetch("/invoicing/settings", { method: "PUT", body: JSON.stringify(data) }),
+  },
+};

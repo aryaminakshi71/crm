@@ -1,8 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
 } from "@crm/ui";
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   GitBranch,
   Plus,
@@ -17,6 +19,12 @@ import {
   Settings,
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => {
+  const orgId = localStorage.getItem("activeOrganizationId");
+  return orgId ? { "x-org-id": orgId } : {};
+};
+
 export const Route = createFileRoute("/app/devops/pipelines/new")({
   component: NewPipeline,
 });
@@ -29,6 +37,34 @@ const stages = [
 ];
 
 function NewPipeline() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ name: "", repository: "", branch: "main" });
+
+  const createPipeline = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await fetch(`${API_BASE}/v1/devops/pipelines`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(`Failed to create pipeline: ${res.status}`);
+      return res.json();
+    },
+    onSuccess: (created) => {
+      const id = created?.id ?? created?.data?.id;
+      if (id) {
+        navigate({ to: "/app/devops" });
+      } else {
+        navigate({ to: "/app/devops" });
+      }
+    },
+  });
+
+  const handleSave = () => {
+    if (!form.name.trim()) return;
+    createPipeline.mutate(form);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -44,12 +80,21 @@ function NewPipeline() {
             <FileCode className="h-4 w-4" />
             Edit YAML
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <button
+            onClick={handleSave}
+            disabled={createPipeline.isPending || !form.name.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Save className="h-4 w-4" />
-            Save Pipeline
+            {createPipeline.isPending ? "Saving…" : "Save Pipeline"}
           </button>
         </div>
       </div>
+      {createPipeline.isError && (
+        <p className="text-sm text-destructive">
+          {(createPipeline.error as Error)?.message ?? "Failed to create pipeline."}
+        </p>
+      )}
 
       {/* Pipeline Builder */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -63,13 +108,19 @@ function NewPipeline() {
                   <label className="text-sm font-medium text-foreground mb-2 block">Pipeline Name</label>
                   <input
                     type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="my-awesome-pipeline"
                     className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Repository</label>
-                  <select className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm">
+                  <select
+                    value={form.repository}
+                    onChange={(e) => setForm((f) => ({ ...f, repository: e.target.value }))}
+                    className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm"
+                  >
                     <option value="">Select repository...</option>
                     <option value="frontend">github.com/nucleo/frontend</option>
                     <option value="backend">github.com/nucleo/backend</option>
@@ -78,7 +129,11 @@ function NewPipeline() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Default Branch</label>
-                  <select className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm">
+                  <select
+                    value={form.branch}
+                    onChange={(e) => setForm((f) => ({ ...f, branch: e.target.value }))}
+                    className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm"
+                  >
                     <option value="main">main</option>
                     <option value="develop">develop</option>
                     <option value="staging">staging</option>
