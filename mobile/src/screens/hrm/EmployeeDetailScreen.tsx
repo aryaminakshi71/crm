@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { api } from '../../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
@@ -10,19 +18,24 @@ type EmployeeDetailScreenProps = {
 
 export default function EmployeeDetailScreen({ navigation, route }: EmployeeDetailScreenProps) {
   const { employeeId } = route.params;
+  const [employee, setEmployee] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const employee = {
-    id: employeeId,
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah@company.com',
-    phone: '+1 555-0100',
-    department: 'Engineering',
-    position: 'Senior Developer',
-    status: 'active',
-    startDate: '2022-03-15',
-    manager: 'David Miller',
-  };
+  useEffect(() => {
+    const loadEmployee = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.getEmployee(employeeId);
+        setEmployee(data ?? null);
+      } catch (err) {
+        setError('Failed to load employee');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployee();
+  }, [employeeId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -40,11 +53,29 @@ export default function EmployeeDetailScreen({ navigation, route }: EmployeeDeta
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+      </View>
+    );
+  }
+
+  if (error || !employee) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'Employee not found.'}</Text>
+      </View>
+    );
+  }
+
+  const initials = `${(employee.firstName ?? '')[0] ?? ''}${(employee.lastName ?? '')[0] ?? ''}`;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>SJ</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.name}>{employee.firstName} {employee.lastName}</Text>
         <Text style={styles.position}>{employee.position}</Text>
@@ -56,7 +87,7 @@ export default function EmployeeDetailScreen({ navigation, route }: EmployeeDeta
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
         <View style={styles.card}>
-          <InfoRow label="Email" value={employee.email} />
+          <InfoRow label="Email" value={employee.email ?? '—'} />
           <InfoRow label="Phone" value={employee.phone || 'Not provided'} />
         </View>
       </View>
@@ -64,10 +95,10 @@ export default function EmployeeDetailScreen({ navigation, route }: EmployeeDeta
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Work Information</Text>
         <View style={styles.card}>
-          <InfoRow label="Department" value={employee.department} />
-          <InfoRow label="Position" value={employee.position} />
+          <InfoRow label="Department" value={employee.department ?? '—'} />
+          <InfoRow label="Position" value={employee.position ?? '—'} />
           <InfoRow label="Manager" value={employee.manager || 'Not assigned'} />
-          <InfoRow label="Start Date" value={employee.startDate} />
+          <InfoRow label="Start Date" value={employee.startDate ?? '—'} />
         </View>
       </View>
 
@@ -93,6 +124,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#8B5CF6',

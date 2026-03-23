@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { api } from '../../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
@@ -10,19 +18,24 @@ type ProjectDetailScreenProps = {
 
 export default function ProjectDetailScreen({ navigation, route }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
+  const [project, setProject] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const project = {
-    id: projectId,
-    name: 'Website Redesign',
-    description: 'Complete overhaul of company website with modern design and improved UX',
-    status: 'active',
-    progress: 75,
-    startDate: '2024-01-15',
-    endDate: '2024-04-15',
-    teamSize: 5,
-    budget: 50000,
-    spent: 35000,
-  };
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.getProject(projectId);
+        setProject(data ?? null);
+      } catch (err) {
+        setError('Failed to load project');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProject();
+  }, [projectId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -32,6 +45,26 @@ export default function ProjectDetailScreen({ navigation, route }: ProjectDetail
       default: return '#6B7280';
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'Project not found.'}</Text>
+      </View>
+    );
+  }
+
+  const progress = project.progress ?? 0;
+  const budget = project.budget ?? 0;
+  const spent = project.spent ?? 0;
 
   return (
     <ScrollView style={styles.container}>
@@ -45,15 +78,15 @@ export default function ProjectDetailScreen({ navigation, route }: ProjectDetail
       <View style={styles.progressCard}>
         <Text style={styles.sectionTitle}>Progress</Text>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${project.progress}%` }]} />
+          <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.progressText}>{project.progress}% Complete</Text>
+        <Text style={styles.progressText}>{progress}% Complete</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Description</Text>
         <View style={styles.card}>
-          <Text style={styles.description}>{project.description}</Text>
+          <Text style={styles.description}>{project.description ?? 'No description provided.'}</Text>
         </View>
       </View>
 
@@ -62,46 +95,46 @@ export default function ProjectDetailScreen({ navigation, route }: ProjectDetail
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Start Date</Text>
-            <Text style={styles.infoValue}>{project.startDate}</Text>
+            <Text style={styles.infoValue}>{project.startDate ?? '—'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>End Date</Text>
-            <Text style={styles.infoValue}>{project.endDate}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Duration</Text>
-            <Text style={styles.infoValue}>3 months</Text>
+            <Text style={styles.infoValue}>{project.endDate ?? 'TBD'}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Budget</Text>
-        <View style={styles.card}>
-          <View style={styles.budgetRow}>
-            <View>
-              <Text style={styles.budgetLabel}>Total Budget</Text>
-              <Text style={styles.budgetValue}>${project.budget.toLocaleString()}</Text>
+      {budget > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Budget</Text>
+          <View style={styles.card}>
+            <View style={styles.budgetRow}>
+              <View>
+                <Text style={styles.budgetLabel}>Total Budget</Text>
+                <Text style={styles.budgetValue}>${budget.toLocaleString()}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.budgetLabel}>Spent</Text>
+                <Text style={styles.budgetValue}>${spent.toLocaleString()}</Text>
+              </View>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.budgetLabel}>Spent</Text>
-              <Text style={styles.budgetValue}>${project.spent.toLocaleString()}</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${Math.min((spent / budget) * 100, 100)}%`, backgroundColor: '#F59E0B' }]} />
             </View>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(project.spent / project.budget) * 100}%`, backgroundColor: '#F59E0B' }]} />
           </View>
         </View>
-      </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Team</Text>
-        <View style={styles.card}>
-          <View style={styles.teamRow}>
-            <Text style={styles.teamSize}>👥 {project.teamSize} team members</Text>
+      {project.teamSize != null ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Team</Text>
+          <View style={styles.card}>
+            <View style={styles.teamRow}>
+              <Text style={styles.teamSize}>👥 {project.teamSize} team members</Text>
+            </View>
           </View>
         </View>
-      </View>
+      ) : null}
 
       <TouchableOpacity
         style={styles.tasksButton}
@@ -117,6 +150,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',

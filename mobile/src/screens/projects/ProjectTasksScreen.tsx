@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { Task } from '../../types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -19,18 +21,29 @@ type ProjectTasksScreenProps = {
 export default function ProjectTasksScreen({ navigation, route }: ProjectTasksScreenProps) {
   const { projectId } = route.params;
 
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', projectId: projectId, title: 'Design homepage mockup', description: 'Create new homepage design', status: 'done', priority: 'high', assignee: 'Sarah J.', dueDate: '2024-03-01' },
-    { id: '2', projectId: projectId, title: 'Implement user authentication', description: 'Set up login/signup flow', status: 'in_progress', priority: 'high', assignee: 'Mike C.', dueDate: '2024-03-10' },
-    { id: '3', projectId: projectId, title: 'Create database schema', description: 'Design and implement DB', status: 'done', priority: 'medium', assignee: 'David M.', dueDate: '2024-02-28' },
-    { id: '4', projectId: projectId, title: 'Build API endpoints', description: 'Create REST API', status: 'in_progress', priority: 'high', assignee: 'Emily D.', dueDate: '2024-03-15' },
-    { id: '5', projectId: projectId, title: 'Write unit tests', description: 'Test coverage for core features', status: 'todo', priority: 'medium', assignee: 'James W.', dueDate: '2024-03-20' },
-    { id: '6', projectId: projectId, title: 'Deploy to staging', description: 'Set up CI/CD pipeline', status: 'todo', priority: 'low', assignee: 'David M.', dueDate: '2024-03-25' },
-    { id: '7', projectId: projectId, title: 'User acceptance testing', description: 'QA and bug fixes', status: 'todo', priority: 'high', assignee: 'Lisa B.', dueDate: '2024-04-01' },
-  ]);
-
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getProjectTasks(projectId);
+      setTasks(data ?? []);
+    } catch (err) {
+      setError('Failed to load tasks');
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
 
@@ -40,7 +53,15 @@ export default function ProjectTasksScreen({ navigation, route }: ProjectTasksSc
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getProjectTasks(projectId);
+      setTasks(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load tasks');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getPriorityColor = (priority: string) => {
@@ -84,6 +105,14 @@ export default function ProjectTasksScreen({ navigation, route }: ProjectTasksSc
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.filterBar}>
@@ -121,6 +150,11 @@ export default function ProjectTasksScreen({ navigation, route }: ProjectTasksSc
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{error ?? 'No tasks found'}</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -129,6 +163,12 @@ export default function ProjectTasksScreen({ navigation, route }: ProjectTasksSc
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   filterBar: {
@@ -158,6 +198,14 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   taskCard: {
     backgroundColor: '#fff',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { Lead } from '../../types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -16,15 +18,29 @@ type LeadsListScreenProps = {
 };
 
 export default function LeadsListScreen({ navigation }: LeadsListScreenProps) {
-  const [leads, setLeads] = useState<Lead[]>([
-    { id: '1', name: 'Tech Startup Inc', email: 'contact@techstartup.com', phone: '+1 555-0001', company: 'Tech Startup Inc', status: 'new', source: 'Website', value: 50000, createdAt: '2024-03-01' },
-    { id: '2', name: 'Global Solutions', email: 'info@globalsolutions.com', phone: '+1 555-0002', company: 'Global Solutions', status: 'contacted', source: 'Referral', value: 75000, createdAt: '2024-02-28' },
-    { id: '3', name: 'Innovation Labs', email: 'team@innovationlabs.io', phone: '+1 555-0003', company: 'Innovation Labs', status: 'qualified', source: 'LinkedIn', value: 100000, createdAt: '2024-02-25' },
-    { id: '4', name: 'Digital Dynamics', email: 'hello@digitaldynamics.co', phone: '+1 555-0004', company: 'Digital Dynamics', status: 'new', source: 'Advertisement', value: 35000, createdAt: '2024-03-05' },
-    { id: '5', name: 'Enterprise Corp', email: 'sales@enterprise-corp.com', phone: '+1 555-0005', company: 'Enterprise Corp', status: 'converted', source: 'Trade Show', value: 150000, createdAt: '2024-02-15' },
-  ]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadLeads();
+  }, []);
+
+  const loadLeads = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getLeads();
+      setLeads(data ?? []);
+    } catch (err) {
+      setError('Failed to load leads');
+      setLeads([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredLeads = searchQuery
     ? leads.filter(l =>
@@ -35,7 +51,15 @@ export default function LeadsListScreen({ navigation }: LeadsListScreenProps) {
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getLeads();
+      setLeads(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load leads');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -85,6 +109,14 @@ export default function LeadsListScreen({ navigation }: LeadsListScreenProps) {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
@@ -106,7 +138,7 @@ export default function LeadsListScreen({ navigation }: LeadsListScreenProps) {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No leads found</Text>
+            <Text style={styles.emptyText}>{error ?? 'No leads found'}</Text>
           </View>
         }
       />
@@ -129,6 +161,12 @@ export default function LeadsListScreen({ navigation }: LeadsListScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   searchContainer: {

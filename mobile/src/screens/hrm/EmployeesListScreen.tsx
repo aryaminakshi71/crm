@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { Employee } from '../../types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -16,18 +18,29 @@ type EmployeesListScreenProps = {
 };
 
 export default function EmployeesListScreen({ navigation }: EmployeesListScreenProps) {
-  const [employees, setEmployees] = useState<Employee[]>([
-    { id: '1', firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@company.com', department: 'Engineering', position: 'Senior Developer', status: 'active' },
-    { id: '2', firstName: 'Mike', lastName: 'Chen', email: 'mike@company.com', department: 'Sales', position: 'Sales Manager', status: 'active' },
-    { id: '3', firstName: 'Emily', lastName: 'Davis', email: 'emily@company.com', department: 'Marketing', position: 'Marketing Lead', status: 'active' },
-    { id: '4', firstName: 'James', lastName: 'Wilson', email: 'james@company.com', department: 'HR', position: 'HR Manager', status: 'on_leave' },
-    { id: '5', firstName: 'Lisa', lastName: 'Brown', email: 'lisa@company.com', department: 'Finance', position: 'Finance Analyst', status: 'active' },
-    { id: '6', firstName: 'David', lastName: 'Miller', email: 'david@company.com', department: 'Engineering', position: 'DevOps Engineer', status: 'active' },
-    { id: '7', firstName: 'Anna', lastName: 'Taylor', email: 'anna@company.com', department: 'Design', position: 'UI/UX Designer', status: 'inactive' },
-    { id: '8', firstName: 'Robert', lastName: 'Anderson', email: 'robert@company.com', department: 'Operations', position: 'Operations Manager', status: 'active' },
-  ]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const loadEmployees = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getEmployees();
+      setEmployees(data ?? []);
+    } catch (err) {
+      setError('Failed to load employees');
+      setEmployees([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredEmployees = searchQuery
     ? employees.filter(e =>
@@ -42,7 +55,15 @@ export default function EmployeesListScreen({ navigation }: EmployeesListScreenP
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getEmployees();
+      setEmployees(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load employees');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -74,6 +95,14 @@ export default function EmployeesListScreen({ navigation }: EmployeesListScreenP
       </View>
     </TouchableOpacity>
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -116,6 +145,11 @@ export default function EmployeesListScreen({ navigation }: EmployeesListScreenP
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{error ?? 'No employees found'}</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -124,6 +158,12 @@ export default function EmployeesListScreen({ navigation }: EmployeesListScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   summary: {
@@ -174,6 +214,14 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     paddingTop: 0,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   employeeCard: {
     backgroundColor: '#fff',

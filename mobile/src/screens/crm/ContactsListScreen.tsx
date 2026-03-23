@@ -44,24 +44,11 @@ export default function ContactsListScreen({ navigation }: ContactsListScreenPro
   async function fetchContacts() {
     try {
       const data = await api.getContacts();
-      setContacts(data);
-      setFilteredContacts(data);
+      setContacts(data ?? []);
+      setFilteredContacts(data ?? []);
     } catch (error) {
-      // Mock data for demo
-      setContacts([
-        { id: '1', firstName: 'John', lastName: 'Doe', email: 'john@example.com', company: 'Acme Inc', status: 'customer', createdAt: '2024-01-15' },
-        { id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', company: 'Tech Corp', status: 'lead', createdAt: '2024-01-20' },
-        { id: '3', firstName: 'Bob', lastName: 'Wilson', email: 'bob@example.com', company: 'Global Ltd', status: 'active', createdAt: '2024-02-01' },
-        { id: '4', firstName: 'Alice', lastName: 'Brown', email: 'alice@example.com', company: 'StartUp Inc', status: 'customer', createdAt: '2024-02-10' },
-        { id: '5', firstName: 'Charlie', lastName: 'Davis', email: 'charlie@example.com', company: 'Big Corp', status: 'lead', createdAt: '2024-02-15' },
-      ]);
-      setFilteredContacts([
-        { id: '1', firstName: 'John', lastName: 'Doe', email: 'john@example.com', company: 'Acme Inc', status: 'customer', createdAt: '2024-01-15' },
-        { id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', company: 'Tech Corp', status: 'lead', createdAt: '2024-01-20' },
-        { id: '3', firstName: 'Bob', lastName: 'Wilson', email: 'bob@example.com', company: 'Global Ltd', status: 'active', createdAt: '2024-02-01' },
-        { id: '4', firstName: 'Alice', lastName: 'Brown', email: 'alice@example.com', company: 'StartUp Inc', status: 'customer', createdAt: '2024-02-10' },
-        { id: '5', firstName: 'Charlie', lastName: 'Davis', email: 'charlie@example.com', company: 'Big Corp', status: 'lead', createdAt: '2024-02-15' },
-      ]);
+      setContacts([]);
+      setFilteredContacts([]);
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { Deal } from '../../types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -16,15 +18,29 @@ type DealsListScreenProps = {
 };
 
 export default function DealsListScreen({ navigation }: DealsListScreenProps) {
-  const [deals, setDeals] = useState<Deal[]>([
-    { id: '1', name: 'Enterprise License', value: 150000, stage: 'negotiation', contactName: 'John Doe', closeDate: '2024-03-15', createdAt: '2024-02-01' },
-    { id: '2', name: 'Startup Plan', value: 25000, stage: 'proposal', contactName: 'Jane Smith', closeDate: '2024-03-20', createdAt: '2024-02-15' },
-    { id: '3', name: 'Annual Subscription', value: 75000, stage: 'closed_won', contactName: 'Bob Wilson', closeDate: '2024-02-28', createdAt: '2024-01-20' },
-    { id: '4', name: 'Add-on Services', value: 15000, stage: 'prospecting', contactName: 'Alice Brown', createdAt: '2024-03-05' },
-    { id: '5', name: 'Premium Package', value: 200000, stage: 'proposal', contactName: 'Charlie Davis', closeDate: '2024-04-01', createdAt: '2024-02-10' },
-  ]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadDeals();
+  }, []);
+
+  const loadDeals = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getDeals();
+      setDeals(data ?? []);
+    } catch (err) {
+      setError('Failed to load deals');
+      setDeals([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredDeals = searchQuery
     ? deals.filter(d =>
@@ -38,7 +54,15 @@ export default function DealsListScreen({ navigation }: DealsListScreenProps) {
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getDeals();
+      setDeals(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load deals');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getStageColor = (stage: string) => {
@@ -77,6 +101,14 @@ export default function DealsListScreen({ navigation }: DealsListScreenProps) {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.summary}>
@@ -107,6 +139,11 @@ export default function DealsListScreen({ navigation }: DealsListScreenProps) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{error ?? 'No deals found'}</Text>
+          </View>
+        }
       />
 
       <View style={styles.tabs}>
@@ -127,6 +164,12 @@ export default function DealsListScreen({ navigation }: DealsListScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   summary: {
@@ -217,6 +260,14 @@ const styles = StyleSheet.create({
   closeDate: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   tabs: {
     flexDirection: 'row',

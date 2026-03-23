@@ -30,17 +30,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       const data = await api.getDashboardStats();
       setStats(data);
     } catch (error) {
-      // Use mock data for demo
-      setStats({
-        totalContacts: 156,
-        totalLeads: 42,
-        totalDeals: 28,
-        dealsValue: 285000,
-        totalProjects: 12,
-        activeProjects: 8,
-        totalEmployees: 45,
-        pendingLeaveRequests: 5,
-      });
+      setStats(null);
     }
   }
 

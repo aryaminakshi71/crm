@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { Project } from '../../types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -15,21 +17,42 @@ type ProjectsListScreenProps = {
 };
 
 export default function ProjectsListScreen({ navigation }: ProjectsListScreenProps) {
-  const [projects, setProjects] = useState<Project[]>([
-    { id: '1', name: 'Website Redesign', description: 'Complete overhaul of company website', status: 'active', progress: 75, startDate: '2024-01-15', endDate: '2024-04-15', teamSize: 5 },
-    { id: '2', name: 'Mobile App Launch', description: 'Launch iOS and Android apps', status: 'active', progress: 45, startDate: '2024-02-01', endDate: '2024-06-30', teamSize: 8 },
-    { id: '3', name: 'Marketing Campaign', description: 'Q2 marketing initiative', status: 'active', progress: 30, startDate: '2024-03-01', endDate: '2024-05-31', teamSize: 4 },
-    { id: '4', name: 'Infrastructure Upgrade', description: 'Cloud migration project', status: 'on_hold', progress: 60, startDate: '2024-01-01', endDate: '2024-03-31', teamSize: 6 },
-    { id: '5', name: 'Data Analytics Platform', description: 'Build internal analytics dashboard', status: 'completed', progress: 100, startDate: '2023-11-01', endDate: '2024-02-28', teamSize: 4 },
-    { id: '6', name: 'Security Audit', description: 'Annual security compliance check', status: 'active', progress: 90, startDate: '2024-02-15', endDate: '2024-03-20', teamSize: 3 },
-  ]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getProjects();
+      setProjects(data ?? []);
+    } catch (err) {
+      setError('Failed to load projects');
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const activeCount = projects.filter(p => p.status === 'active').length;
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getProjects();
+      setProjects(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load projects');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -58,9 +81,9 @@ export default function ProjectsListScreen({ navigation }: ProjectsListScreenPro
 
       <View style={styles.progressSection}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${item.progress}%` }]} />
+          <View style={[styles.progressFill, { width: `${item.progress ?? 0}%` }]} />
         </View>
-        <Text style={styles.progressText}>{item.progress}%</Text>
+        <Text style={styles.progressText}>{item.progress ?? 0}%</Text>
       </View>
 
       <View style={styles.projectMeta}>
@@ -76,6 +99,14 @@ export default function ProjectsListScreen({ navigation }: ProjectsListScreenPro
       </TouchableOpacity>
     </TouchableOpacity>
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -104,6 +135,11 @@ export default function ProjectsListScreen({ navigation }: ProjectsListScreenPro
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{error ?? 'No projects found'}</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -112,6 +148,12 @@ export default function ProjectsListScreen({ navigation }: ProjectsListScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   summary: {
@@ -137,6 +179,14 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   projectCard: {
     backgroundColor: '#fff',

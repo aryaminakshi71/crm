@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,48 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { api } from '../../services/api';
 import { LeaveRequest } from '../../types';
 
 export default function LeaveRequestsScreen() {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
-    { id: '1', employeeId: '4', employeeName: 'James Wilson', type: 'vacation', startDate: '2024-03-10', endDate: '2024-03-15', status: 'approved', reason: 'Family vacation' },
-    { id: '2', employeeId: '7', employeeName: 'Anna Taylor', type: 'sick', startDate: '2024-03-18', endDate: '2024-03-19', status: 'pending', reason: 'Medical appointment' },
-    { id: '3', employeeId: '2', employeeName: 'Mike Chen', type: 'personal', startDate: '2024-03-25', endDate: '2024-03-25', status: 'pending', reason: 'Personal matter' },
-    { id: '4', employeeId: '5', employeeName: 'Lisa Brown', type: 'vacation', startDate: '2024-04-01', endDate: '2024-04-10', status: 'pending', reason: 'Holiday trip' },
-    { id: '5', employeeId: '8', employeeName: 'Robert Anderson', type: 'sick', startDate: '2024-03-05', endDate: '2024-03-07', status: 'rejected', reason: 'Doctor advised rest' },
-  ]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadLeaveRequests();
+  }, []);
+
+  const loadLeaveRequests = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.getLeaveRequests();
+      setLeaveRequests(data ?? []);
+    } catch (err) {
+      setError('Failed to load leave requests');
+      setLeaveRequests([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const pendingCount = leaveRequests.filter(r => r.status === 'pending').length;
 
   async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const data = await api.getLeaveRequests();
+      setLeaveRequests(data ?? []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load leave requests');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -75,6 +99,14 @@ export default function LeaveRequestsScreen() {
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.summary}>
@@ -102,6 +134,11 @@ export default function LeaveRequestsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{error ?? 'No leave requests found'}</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -110,6 +147,12 @@ export default function LeaveRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
   summary: {
@@ -135,6 +178,14 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   requestCard: {
     backgroundColor: '#fff',

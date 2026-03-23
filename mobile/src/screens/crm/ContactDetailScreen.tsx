@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { api } from '../../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
@@ -10,20 +18,24 @@ type ContactDetailScreenProps = {
 
 export default function ContactDetailScreen({ navigation, route }: ContactDetailScreenProps) {
   const { contactId } = route.params;
+  const [contact, setContact] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock contact data
-  const contact = {
-    id: contactId,
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-    phone: '+1 555-0123',
-    company: 'Acme Inc',
-    status: 'customer',
-    createdAt: '2024-01-15',
-    notes: 'Key decision maker. Interested in enterprise plan.',
-    address: '123 Business St, San Francisco, CA 94102',
-  };
+  useEffect(() => {
+    const loadContact = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.getContact(contactId);
+        setContact(data ?? null);
+      } catch (err) {
+        setError('Failed to load contact');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadContact();
+  }, [contactId]);
 
   const InfoRow = ({ label, value }: { label: string; value: string }) => (
     <View style={styles.infoRow}>
@@ -32,11 +44,29 @@ export default function ContactDetailScreen({ navigation, route }: ContactDetail
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error || !contact) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'Contact not found.'}</Text>
+      </View>
+    );
+  }
+
+  const initials = `${(contact.firstName ?? '')[0] ?? ''}${(contact.lastName ?? '')[0] ?? ''}`;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JD</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.name}>{contact.firstName} {contact.lastName}</Text>
         <View style={styles.statusBadge}>
@@ -47,20 +77,22 @@ export default function ContactDetailScreen({ navigation, route }: ContactDetail
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
         <View style={styles.card}>
-          <InfoRow label="Email" value={contact.email} />
+          <InfoRow label="Email" value={contact.email ?? '—'} />
           <InfoRow label="Phone" value={contact.phone || 'Not provided'} />
           <InfoRow label="Company" value={contact.company || 'Not provided'} />
           <InfoRow label="Address" value={contact.address || 'Not provided'} />
-          <InfoRow label="Created" value={contact.createdAt} />
+          <InfoRow label="Created" value={contact.createdAt ?? '—'} />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
-        <View style={styles.card}>
-          <Text style={styles.notes}>{contact.notes}</Text>
+      {contact.notes ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notes</Text>
+          <View style={styles.card}>
+            <Text style={styles.notes}>{contact.notes}</Text>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton}>
@@ -84,6 +116,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',

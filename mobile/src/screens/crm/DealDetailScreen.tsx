@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { api } from '../../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
@@ -10,18 +18,24 @@ type DealDetailScreenProps = {
 
 export default function DealDetailScreen({ navigation, route }: DealDetailScreenProps) {
   const { dealId } = route.params;
+  const [deal, setDeal] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const deal = {
-    id: dealId,
-    name: 'Enterprise License',
-    value: 150000,
-    stage: 'negotiation',
-    contactName: 'John Doe',
-    contactEmail: 'john@example.com',
-    closeDate: '2024-03-15',
-    createdAt: '2024-02-01',
-    description: 'Annual enterprise license for 100 users with premium support.',
-  };
+  useEffect(() => {
+    const loadDeal = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.getDeal(dealId);
+        setDeal(data ?? null);
+      } catch (err) {
+        setError('Failed to load deal');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadDeal();
+  }, [dealId]);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -36,6 +50,22 @@ export default function DealDetailScreen({ navigation, route }: DealDetailScreen
 
   const formatStage = (stage: string) => stage.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error || !deal) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'Deal not found.'}</Text>
+      </View>
+    );
+  }
+
   const stages = ['prospecting', 'proposal', 'negotiation', 'closed_won'];
   const currentStageIndex = stages.indexOf(deal.stage);
 
@@ -43,7 +73,7 @@ export default function DealDetailScreen({ navigation, route }: DealDetailScreen
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.dealName}>{deal.name}</Text>
-        <Text style={styles.dealValue}>${deal.value.toLocaleString()}</Text>
+        <Text style={styles.dealValue}>${Number(deal.value).toLocaleString()}</Text>
         <View style={[styles.stageBadge, { backgroundColor: getStageColor(deal.stage) }]}>
           <Text style={styles.stageText}>{formatStage(deal.stage)}</Text>
         </View>
@@ -71,31 +101,37 @@ export default function DealDetailScreen({ navigation, route }: DealDetailScreen
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Deal Information</Text>
         <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Contact</Text>
-            <Text style={styles.infoValue}>{deal.contactName}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{deal.contactEmail}</Text>
-          </View>
+          {deal.contactName ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Contact</Text>
+              <Text style={styles.infoValue}>{deal.contactName}</Text>
+            </View>
+          ) : null}
+          {deal.contactEmail ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{deal.contactEmail}</Text>
+            </View>
+          ) : null}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Close Date</Text>
             <Text style={styles.infoValue}>{deal.closeDate || 'Not set'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Created</Text>
-            <Text style={styles.infoValue}>{deal.createdAt}</Text>
+            <Text style={styles.infoValue}>{deal.createdAt ?? '—'}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Description</Text>
-        <View style={styles.card}>
-          <Text style={styles.description}>{deal.description}</Text>
+      {deal.description ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Description</Text>
+          <View style={styles.card}>
+            <Text style={styles.description}>{deal.description}</Text>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton}>
@@ -119,6 +155,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',
