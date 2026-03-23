@@ -16,7 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Edit,
@@ -62,6 +62,32 @@ function TaxConfiguration() {
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTax, setNewTax] = useState({ name: "", rate: "", type: "sales", region: "" });
+  const queryClient = useQueryClient();
+
+  const createTaxRateMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/tax-rates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/taxes"] }),
+  });
+
+  const deleteTaxRateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/tax-rates/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/taxes"] }),
+  });
 
   const taxesQuery = useQuery({
     queryKey: ["invoicing/taxes"],
@@ -153,7 +179,7 @@ function TaxConfiguration() {
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => deleteTaxRateMutation.mutate(tax.id)} disabled={deleteTaxRateMutation.isPending}>
                         <Trash2 className="h-4 w-4 text-rose-400" />
                       </Button>
                     </div>
@@ -206,7 +232,10 @@ function TaxConfiguration() {
         submitText="Add Rate"
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          createTaxRateMutation.mutate(
+            { name: newTax.name, rate: Number(newTax.rate), type: newTax.type, region: newTax.region },
+            { onSuccess: () => { setIsCreateModalOpen(false); setNewTax({ name: "", rate: "", type: "sales", region: "" }); } }
+          );
         }}
       >
         <div className="space-y-4">

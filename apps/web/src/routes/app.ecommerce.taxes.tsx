@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -37,6 +37,33 @@ const MOCK_TAX_RATES = [
 ];
 
 function TaxesPage() {
+  const queryClient = useQueryClient();
+
+  const createTaxMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/taxes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-taxes"] }),
+  });
+
+  const deleteTaxMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/taxes/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-taxes"] }),
+  });
+
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-taxes"],
     queryFn: async () => {
@@ -67,7 +94,7 @@ function TaxesPage() {
             Configure tax rates and settings
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => createTaxMutation.mutate({ name: "New Tax", rate: 0, region: "" })} disabled={createTaxMutation.isPending}>
           Add Tax Rate
         </Button>
       </div>
@@ -128,7 +155,7 @@ function TaxesPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteTaxMutation.mutate(rate.id)} disabled={deleteTaxMutation.isPending}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

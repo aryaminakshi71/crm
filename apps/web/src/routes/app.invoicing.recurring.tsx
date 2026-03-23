@@ -14,7 +14,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Calendar,
@@ -63,6 +63,33 @@ const mockRecurring: RecurringInvoice[] = [
 function RecurringInvoices() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const queryClient = useQueryClient();
+
+  const createRecurringMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/recurring`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/recurring"] }),
+  });
+
+  const updateRecurringMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/recurring/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/recurring"] }),
+  });
 
   const recurringQuery = useQuery({
     queryKey: ["invoicing/recurring"],
@@ -121,7 +148,7 @@ function RecurringInvoices() {
           <h2 className="font-bold text-xl text-foreground">Recurring Invoices</h2>
           <p className="text-sm text-muted-foreground">Automate your billing with recurring schedules</p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => createRecurringMutation.mutate({ client: "New Client", description: "Monthly Service", amount: 0, frequency: "monthly" })} disabled={createRecurringMutation.isPending}>
           New Recurring
         </Button>
       </div>
@@ -175,11 +202,11 @@ function RecurringInvoices() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       {item.status === "active" ? (
-                        <Button variant="ghost" size="sm" leftIcon={<Pause className="h-4 w-4" />}>
+                        <Button variant="ghost" size="sm" leftIcon={<Pause className="h-4 w-4" />} onClick={() => updateRecurringMutation.mutate({ id: item.id, status: "paused" })} disabled={updateRecurringMutation.isPending}>
                           Pause
                         </Button>
                       ) : item.status === "paused" ? (
-                        <Button variant="ghost" size="sm" leftIcon={<Play className="h-4 w-4" />}>
+                        <Button variant="ghost" size="sm" leftIcon={<Play className="h-4 w-4" />} onClick={() => updateRecurringMutation.mutate({ id: item.id, status: "active" })} disabled={updateRecurringMutation.isPending}>
                           Resume
                         </Button>
                       ) : null}

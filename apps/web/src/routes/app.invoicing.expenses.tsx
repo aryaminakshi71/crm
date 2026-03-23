@@ -14,7 +14,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -85,6 +85,32 @@ function ExpenseManagement() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const queryClient = useQueryClient();
+
+  const createExpenseMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/expenses"] }),
+  });
+
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/expenses/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/expenses"] }),
+  });
 
   const expensesQuery = useQuery({
     queryKey: ["invoicing/expenses"],
@@ -125,7 +151,7 @@ function ExpenseManagement() {
           <h2 className="font-bold text-xl text-foreground">Expenses</h2>
           <p className="text-sm text-muted-foreground">Track and categorize business expenses</p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => createExpenseMutation.mutate({ description: "New Expense", category: "Operations", amount: 0, vendor: "", date: new Date().toISOString().split("T")[0] })} disabled={createExpenseMutation.isPending}>
           Add Expense
         </Button>
       </div>

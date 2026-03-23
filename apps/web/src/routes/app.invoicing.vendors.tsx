@@ -16,7 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -66,6 +66,32 @@ function VendorManagement() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const createVendorMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/vendors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/vendors"] }),
+  });
+
+  const deleteVendorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/vendors/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/vendors"] }),
+  });
 
   const vendorsQuery = useQuery({
     queryKey: ["invoicing/vendors"],
@@ -188,8 +214,8 @@ function VendorManagement() {
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" onClick={() => deleteVendorMutation.mutate(vendor.id)} disabled={deleteVendorMutation.isPending}>
+                        <Trash2 className="h-4 w-4 text-rose-400" />
                       </Button>
                     </div>
                   </td>
@@ -207,18 +233,23 @@ function VendorManagement() {
         submitText="Add Vendor"
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          const form = e.currentTarget as HTMLFormElement;
+          const formData = new FormData(form);
+          createVendorMutation.mutate(
+            { name: formData.get("name"), email: formData.get("email"), phone: formData.get("phone"), category: formData.get("category") },
+            { onSuccess: () => setIsCreateModalOpen(false) }
+          );
         }}
       >
         <div className="space-y-4">
           <FormField label="Vendor Name" required>
-            <Input placeholder="Enter vendor name" required />
+            <Input name="name" placeholder="Enter vendor name" required />
           </FormField>
           <FormField label="Email" required>
-            <Input type="email" placeholder="vendor@example.com" required />
+            <Input name="email" type="email" placeholder="vendor@example.com" required />
           </FormField>
           <FormField label="Phone">
-            <Input placeholder="+1 (555) 000-0000" />
+            <Input name="phone" placeholder="+1 (555) 000-0000" />
           </FormField>
           <FormField label="Category">
             <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">

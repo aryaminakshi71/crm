@@ -17,7 +17,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -65,6 +65,32 @@ function QuoteBuilder() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const createQuoteMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/quotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/quotes"] }),
+  });
+
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/quotes/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/quotes"] }),
+  });
 
   const quotesQuery = useQuery({
     queryKey: ["invoicing/quotes"],
@@ -207,21 +233,26 @@ function QuoteBuilder() {
         submitText="Create Quote"
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          const form = e.currentTarget as HTMLFormElement;
+          const formData = new FormData(form);
+          createQuoteMutation.mutate(
+            { client: formData.get("client"), clientEmail: formData.get("clientEmail"), amount: Number(formData.get("amount")), validDays: Number(formData.get("validDays") ?? 30) },
+            { onSuccess: () => setIsCreateModalOpen(false) }
+          );
         }}
       >
         <div className="space-y-4">
           <FormField label="Client Name" required>
-            <Input placeholder="Enter client name" required />
+            <Input name="client" placeholder="Enter client name" required />
           </FormField>
           <FormField label="Client Email" required>
-            <Input type="email" placeholder="client@example.com" required />
+            <Input name="clientEmail" type="email" placeholder="client@example.com" required />
           </FormField>
           <FormField label="Quote Amount" required>
-            <Input type="number" placeholder="0.00" required />
+            <Input name="amount" type="number" placeholder="0.00" required />
           </FormField>
           <FormField label="Valid For (days)">
-            <Input type="number" defaultValue="30" />
+            <Input name="validDays" type="number" defaultValue="30" />
           </FormField>
         </div>
       </FormModal>

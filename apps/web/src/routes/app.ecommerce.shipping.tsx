@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -37,6 +37,33 @@ const MOCK_SHIPPING_RATES = [
 ];
 
 function ShippingPage() {
+  const queryClient = useQueryClient();
+
+  const createShippingMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/shipping`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-shipping"] }),
+  });
+
+  const deleteShippingMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/shipping/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-shipping"] }),
+  });
+
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-shipping"],
     queryFn: async () => {
@@ -76,7 +103,7 @@ function ShippingPage() {
             Configure shipping carriers and rates
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => createShippingMutation.mutate({ name: "New Rate", carrier: "", rate: 0 })} disabled={createShippingMutation.isPending}>
           Add Shipping Rate
         </Button>
       </div>
@@ -136,7 +163,7 @@ function ShippingPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteShippingMutation.mutate(rate.id)} disabled={deleteShippingMutation.isPending}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

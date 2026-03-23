@@ -16,7 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle,
@@ -66,6 +66,32 @@ function PurchaseOrders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const createPOMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/purchase-orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/purchase-orders"] }),
+  });
+
+  const deletePOMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/purchase-orders/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/purchase-orders"] }),
+  });
 
   const purchaseOrdersQuery = useQuery({
     queryKey: ["invoicing/purchase-orders"],
@@ -202,6 +228,11 @@ function PurchaseOrders() {
                       <Button variant="ghost" size="sm">
                         <FileText className="h-4 w-4" />
                       </Button>
+                      {(po.status === "draft" || po.status === "cancelled") && (
+                        <Button variant="ghost" size="sm" onClick={() => deletePOMutation.mutate(po.id)} disabled={deletePOMutation.isPending}>
+                          <XCircle className="h-4 w-4 text-rose-400" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -218,12 +249,17 @@ function PurchaseOrders() {
         submitText="Create PO"
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          const form = e.currentTarget as HTMLFormElement;
+          const formData = new FormData(form);
+          createPOMutation.mutate(
+            { vendor: formData.get("vendor"), expectedDelivery: formData.get("expectedDelivery"), notes: formData.get("notes") },
+            { onSuccess: () => setIsCreateModalOpen(false) }
+          );
         }}
       >
         <div className="space-y-4">
           <FormField label="Vendor" required>
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            <select name="vendor" className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
               <option>Select vendor</option>
               <option>AWS</option>
               <option>Google Cloud</option>
@@ -232,10 +268,11 @@ function PurchaseOrders() {
             </select>
           </FormField>
           <FormField label="Expected Delivery Date" required>
-            <Input type="date" required />
+            <Input name="expectedDelivery" type="date" required />
           </FormField>
           <FormField label="Notes">
             <textarea
+              name="notes"
               className="min-h-[80px] w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
               placeholder="Add any notes or special instructions..."
             />

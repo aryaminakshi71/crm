@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -36,6 +36,20 @@ export const Route = createFileRoute("/app/ecommerce/store")({
 function StoreCustomizerPage() {
   const [activeTab, setActiveTab] = useState<"general" | "appearance" | "header" | "footer">("general");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const queryClient = useQueryClient();
+
+  const updateStoreMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/store`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-stats-store"] }),
+  });
 
   const { data: statsData, isError, refetch} = useQuery({
     queryKey: ["ecommerce-stats-store"],
@@ -81,7 +95,7 @@ function StoreCustomizerPage() {
           <Button variant="outline" leftIcon={<Eye className="h-4 w-4" />}>
             Preview
           </Button>
-          <Button leftIcon={<Save className="h-4 w-4" />}>
+          <Button leftIcon={<Save className="h-4 w-4" />} onClick={() => updateStoreMutation.mutate(storeSettings)} disabled={updateStoreMutation.isPending}>
             Save Changes
           </Button>
         </div>

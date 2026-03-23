@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -78,6 +78,20 @@ const MOCK_ORDER = {
 
 function OrderDetailPage() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async (data: { status: string }) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-order", id] }),
+  });
 
   const { data: orderData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-order", id],
@@ -121,6 +135,9 @@ function OrderDetailPage() {
           </Button>
           <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>
             Invoice
+          </Button>
+          <Button variant="outline" onClick={() => updateOrderStatusMutation.mutate({ status: "shipped" })} disabled={updateOrderStatusMutation.isPending}>
+            Mark Shipped
           </Button>
         </div>
       </div>

@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -46,6 +46,32 @@ const MOCK_SUPPLIERS = [
 
 function DropshippingPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const createDropshipMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/dropship`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-dropship-shipping"] }),
+  });
+
+  const deleteDropshipMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/dropship/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-dropship-shipping"] }),
+  });
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-dropship-shipping"],
@@ -90,7 +116,7 @@ function DropshippingPage() {
             Manage dropshipping suppliers and product sourcing
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => createDropshipMutation.mutate({ name: "New Supplier", email: "", country: "" })} disabled={createDropshipMutation.isPending}>
           Add Supplier
         </Button>
       </div>
@@ -215,7 +241,7 @@ function DropshippingPage() {
                   <Button variant="ghost" size="icon" className="h-7 w-7">
                     <Edit className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteDropshipMutation.mutate(supplier.id)} disabled={deleteDropshipMutation.isPending}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>

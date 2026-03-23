@@ -16,7 +16,7 @@ import {
   Input,
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Calculator,
@@ -87,6 +87,32 @@ function ChartOfAccounts() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const createAccountMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/accounts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/accounts"] }),
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/v1/invoicing/accounts/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/accounts"] }),
+  });
 
   const accountsQuery = useQuery({
     queryKey: ["invoicing/accounts"],
@@ -208,7 +234,7 @@ function ChartOfAccounts() {
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => deleteAccountMutation.mutate(account.id)} disabled={deleteAccountMutation.isPending}>
                         <Trash2 className="h-4 w-4 text-rose-400" />
                       </Button>
                     </div>
@@ -227,18 +253,23 @@ function ChartOfAccounts() {
         submitText="Add Account"
         onSubmit={(e) => {
           e.preventDefault();
-          setIsCreateModalOpen(false);
+          const form = e.currentTarget as HTMLFormElement;
+          const formData = new FormData(form);
+          createAccountMutation.mutate(
+            { code: formData.get("code"), name: formData.get("name"), type: formData.get("type"), subtype: formData.get("subtype") },
+            { onSuccess: () => setIsCreateModalOpen(false) }
+          );
         }}
       >
         <div className="space-y-4">
           <FormField label="Account Code" required>
-            <Input placeholder="e.g., 5000" required />
+            <Input name="code" placeholder="e.g., 5000" required />
           </FormField>
           <FormField label="Account Name" required>
-            <Input placeholder="e.g., Marketing Expenses" required />
+            <Input name="name" placeholder="e.g., Marketing Expenses" required />
           </FormField>
           <FormField label="Account Type" required>
-            <select className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            <select name="type" className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
               <option value="asset">Asset</option>
               <option value="liability">Liability</option>
               <option value="equity">Equity</option>
@@ -247,7 +278,7 @@ function ChartOfAccounts() {
             </select>
           </FormField>
           <FormField label="Subtype">
-            <Input placeholder="e.g., Operating Expense" />
+            <Input name="subtype" placeholder="e.g., Operating Expense" />
           </FormField>
         </div>
       </FormModal>

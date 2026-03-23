@@ -6,7 +6,7 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => {
@@ -38,6 +38,33 @@ const MOCK_UPSELL_RULES = [
 ];
 
 function UpsellPage() {
+  const queryClient = useQueryClient();
+
+  const createUpsellMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/upsell`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-upsell"] }),
+  });
+
+  const deleteUpsellMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(`${API_BASE}/v1/ecommerce/upsell/${id}`, {
+        method: "DELETE",
+        headers: { ...getOrgHeader() },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-upsell"] }),
+  });
+
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-upsell"],
     queryFn: async () => {
@@ -68,7 +95,7 @@ function UpsellPage() {
             Configure product recommendations and bundles
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => createUpsellMutation.mutate({ name: "New Rule", trigger: "", products: [], discount: 0 })} disabled={createUpsellMutation.isPending}>
           Create Rule
         </Button>
       </div>
@@ -135,7 +162,7 @@ function UpsellPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteUpsellMutation.mutate(rule.id)} disabled={deleteUpsellMutation.isPending}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
