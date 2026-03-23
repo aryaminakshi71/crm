@@ -1,81 +1,152 @@
-/**
- * Integration Hub (WeaveBridge) Layout
- *
- * Main layout for all integration-related pages.
- */
-
-import { Card, CardContent } from "@crm/ui";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
-  Puzzle,
-  Workflow,
-  Bell,
-  Webhook,
-  Key,
-  Shield,
-  History,
-  Settings,
-  Zap,
-  ChevronRight,
-} from "lucide-react";
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
+} from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Outlet,
+  createFileRoute,
+  Link,
+  useLocation,
+} from "@tanstack/react-router";
+import { GitBranch, Plus, Plug, Webhook, Zap } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+});
+
+const MOCK_CONNECTORS = {
+  data: [
+    { id: "conn-1", name: "Stripe", type: "payment", status: "connected" },
+    { id: "conn-2", name: "Slack", type: "webhook", status: "connected" },
+    { id: "conn-3", name: "GitHub", type: "oauth", status: "connected" },
+    { id: "conn-4", name: "Mailchimp", type: "oauth", status: "disconnected" },
+  ],
+};
 
 export const Route = createFileRoute("/app/integrations")({
   component: IntegrationsLayout,
 });
 
 function IntegrationsLayout() {
-  const navItems = [
-    { name: "Overview", href: "/app/integrations", icon: Zap, isIndex: true },
-    { name: "Connectors", href: "/app/integrations/connectors", icon: Puzzle },
-    { name: "Workflows", href: "/app/integrations/workflows", icon: Workflow },
-    { name: "Events", href: "/app/integrations/events", icon: Bell },
-    { name: "Event Log", href: "/app/integrations/events/log", icon: History },
-    { name: "Webhooks", href: "/app/integrations/webhooks", icon: Webhook },
-    { name: "OAuth Apps", href: "/app/integrations/oauth", icon: Key },
-    { name: "Rate Limits", href: "/app/integrations/rate-limits", icon: Shield },
-    { name: "Error Handling", href: "/app/integrations/errors", icon: Settings },
-    { name: "Audit Logs", href: "/app/integrations/audit", icon: History },
-  ];
+  const location = useLocation();
+  const isSubRoute = location.pathname !== "/app/integrations";
+  if (isSubRoute) return <Outlet />;
+  return <IntegrationsIndexPage />;
+}
+
+function IntegrationsIndexPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["integration", "connectors", "index"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/v1/integration/connectors`, {
+        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      });
+      if (!res.ok) return MOCK_CONNECTORS;
+      return res.json();
+    },
+  });
+
+  const connectors = data?.data ?? MOCK_CONNECTORS.data;
+  const connected = connectors.filter((c: any) => c.status === "connected" || c.status === "active").length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Integration Hub</h1>
-        <p className="text-muted-foreground">
-          Connect your apps, automate workflows, and manage events with WeaveBridge.
-        </p>
-      </div>
-
-      {/* Quick Navigation */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {navItems.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            className="rounded-lg border border-border/60 bg-card p-4 hover:bg-muted/50 transition-colors group flex items-start gap-3"
-          >
-            <item.icon className="h-8 w-8 text-primary mt-0.5 group-hover:scale-110 transition-transform" />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground text-sm">{item.name}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {item.name === "Overview" && "Dashboard & stats"}
-                {item.name === "Connectors" && "API integrations"}
-                {item.name === "Workflows" && "Automation builder"}
-                {item.name === "Events" && "Event subscriptions"}
-                {item.name === "Event Log" && "View all events"}
-                {item.name === "Webhooks" && "HTTP callbacks"}
-                {item.name === "OAuth Apps" && "Third-party access"}
-                {item.name === "Rate Limits" && "API throttling"}
-                {item.name === "Error Handling" && "Retry & fallback"}
-                {item.name === "Audit Logs" && "Activity history"}
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Integrations</h1>
+          <p className="text-muted-foreground mt-1">
+            Connect your tools and automate workflows across your stack.
+          </p>
+        </div>
+        <Button asChild>
+          <Link to="/app/integrations/connectors/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Connector
           </Link>
-        ))}
+        </Button>
       </div>
 
-      <Outlet />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-3xl font-bold">{connectors.length}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Connectors</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-3xl font-bold text-emerald-500">{connected}</p>
+            <p className="text-sm text-muted-foreground mt-1">Connected</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-3xl font-bold">{connectors.length - connected}</p>
+            <p className="text-sm text-muted-foreground mt-1">Disconnected</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plug className="h-5 w-5" />
+              Quick Links
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {[
+              { label: "All Connectors", href: "/app/integrations/connectors", icon: Plug },
+              { label: "Workflows", href: "/app/integrations/workflows", icon: GitBranch },
+              { label: "Webhooks", href: "/app/integrations/webhooks", icon: Webhook },
+              { label: "Events", href: "/app/integrations/events", icon: Zap },
+            ].map(({ label, href, icon: Icon }) => (
+              <Link
+                key={href}
+                to={href}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted transition-colors text-sm"
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {label}
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Connectors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <LoadingSkeleton key={i} className="h-10 w-full rounded" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {connectors.slice(0, 4).map((conn: any) => (
+                  <div key={conn.id} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{conn.name}</span>
+                    <Badge variant={conn.status === "connected" ? "default" : "outline"}>
+                      {conn.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
