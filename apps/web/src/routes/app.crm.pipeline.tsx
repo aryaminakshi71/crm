@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  AlertCircle,
   DollarSign,
   GripVertical,
   Plus,
@@ -148,7 +149,7 @@ function CrmPipelinePage() {
 
   // ─── Query ─────────────────────────────────────────────────────────────────
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["crm-deals-pipeline"],
     queryFn: () => dealsApi.list({ page: 1, limit: 200 }),
   });
@@ -219,6 +220,14 @@ function CrmPipelinePage() {
   });
 
   // ─── Render ────────────────────────────────────────────────────────────────
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -15,6 +15,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
   Banknote,
@@ -100,6 +101,14 @@ function FinanceOverview() {
   });
 
   const stats = statsQuery.data;
+
+  if (statsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => statsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

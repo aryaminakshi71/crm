@@ -72,7 +72,7 @@ function CrmContactsPage() {
 
   // ─── Query ─────────────────────────────────────────────────────────────────
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["crm-contacts", search],
     queryFn: () => contactsApi.list({ page: 1, limit: 200, search: search.trim() || undefined }),
   });
@@ -133,6 +133,10 @@ function CrmContactsPage() {
   });
 
   // ─── Render ────────────────────────────────────────────────────────────────
+
+  if (isError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => refetch()}>Retry</Button>} />
+  );
 
   return (
     <div className="space-y-6">

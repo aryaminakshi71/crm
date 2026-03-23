@@ -1,7 +1,9 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Calendar,
   Plus,
   Search,
@@ -51,7 +53,7 @@ function LeaveManagement() {
   const [showActions, setShowActions] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
 
-  const { data: queryData, isLoading } = useQuery({
+  const { data: queryData, isLoading, isError, refetch } = useQuery({
     queryKey: ["hrm-leave-requests"],
     queryFn: () => hrmApi.leaveRequests.list({ limit: 100 }),
     retry: false,
@@ -99,6 +101,14 @@ function LeaveManagement() {
       </div>
     );
   }
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const leaveRequestsList = rawData.map((lr: any) => ({
     id: lr.id,

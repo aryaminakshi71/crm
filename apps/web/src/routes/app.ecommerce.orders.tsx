@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ShoppingBag,
   Search,
   Filter,
@@ -45,7 +46,7 @@ function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const { data: apiData, isLoading } = useQuery({
+  const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-orders", filterStatus],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: "100" });
@@ -110,6 +111,14 @@ function OrdersPage() {
     shipped: orders.filter((o) => o.status === "shipped").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
   };
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

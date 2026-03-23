@@ -62,7 +62,7 @@ function AgentsIndexPage() {
   const queryClient = useQueryClient();
 
   // Fetch agents from real API
-  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+  const { data: agentsData, isLoading: agentsLoading, isError: agentsError, refetch: agentsRefetch } = useQuery({
     queryKey: ["agents", "list"],
     queryFn: async () => {
       const res = await fetch("/api/agents", { headers: { "Content-Type": "application/json" } });
@@ -244,6 +244,10 @@ function AgentsIndexPage() {
       </div>
     );
   }
+
+  if (agentsError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => agentsRefetch()}>Retry</Button>} />
+  );
 
   return (
     <div className="space-y-6">

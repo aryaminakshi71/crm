@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Package,
   Search,
   Plus,
@@ -40,7 +41,7 @@ function ProductsPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["inventory", "products", { search: searchQuery, category: filterCategory, status: filterStatus }],
     queryFn: () =>
       inventoryApi.products.list({
@@ -76,6 +77,14 @@ function ProductsPage() {
     if (product.currentStock <= product.minStockLevel) return "low_stock";
     return product.status ?? "active";
   };
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,7 @@ import {
 } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  AlertCircle,
   BarChart3,
   Calendar,
   CheckCircle,
@@ -474,6 +475,14 @@ function MarketingDashboard() {
   const handleCampaignCreated = (c: Campaign) => {
     setLocalCampaigns((prev) => [c, ...prev]);
   };
+
+  if (campaignsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => campaignsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

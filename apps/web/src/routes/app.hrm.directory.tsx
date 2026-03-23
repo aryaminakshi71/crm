@@ -1,7 +1,9 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Search,
   Filter,
   Grid3X3,
@@ -194,7 +196,7 @@ function EmployeeDirectory() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: queryData, isLoading } = useQuery({
+  const { data: queryData, isLoading, isError, refetch } = useQuery({
     queryKey: ["hrm-employees-directory"],
     queryFn: () => hrmApi.employees.list({ limit: 100 }),
     retry: false,
@@ -228,6 +230,14 @@ function EmployeeDirectory() {
       </div>
     );
   }
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   const apiEmployees = (queryData as any)?.data ?? [];
   const employeesList = apiEmployees.length > 0 ? apiEmployees.map((emp: any) => ({

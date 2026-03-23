@@ -1,3 +1,4 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -125,6 +126,12 @@ function HrmDashboard() {
     leaveQuery.isLoading ||
     reviewsQuery.isLoading;
 
+  const isError =
+    summaryQuery.isError ||
+    employeesQuery.isError ||
+    leaveQuery.isError ||
+    reviewsQuery.isError;
+
   const summary = (summaryQuery.data as any) ?? MOCK_SUMMARY;
 
   const stats = [
@@ -244,6 +251,14 @@ function HrmDashboard() {
       </div>
     );
   }
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => { summaryQuery.refetch(); employeesQuery.refetch(); leaveQuery.refetch(); reviewsQuery.refetch(); }}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

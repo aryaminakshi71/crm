@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  AlertCircle,
   Calendar,
   CheckSquare,
   Clock,
@@ -79,7 +80,7 @@ function KanbanBoardPage() {
   const [quickAddColumn, setQuickAddColumn] = useState<Task["status"] | null>(null);
 
   // Get all projects
-  const { data: projectsData } = useQuery({
+  const { data: projectsData, isError: projectsError, refetch: projectsRefetch } = useQuery({
     queryKey: ["nucleo-projects"],
     queryFn: () => nucleoApi.projects.list({ page: 1, limit: 100 }),
   });
@@ -169,6 +170,14 @@ function KanbanBoardPage() {
   const getColumnTasks = (status: Task["status"]) => {
     return filteredTasks.filter((t) => t.status === status);
   };
+
+  if (projectsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => projectsRefetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

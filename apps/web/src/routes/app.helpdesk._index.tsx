@@ -87,7 +87,7 @@ function HelpdeskIndexPage() {
     retry: false,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["nucleo-tickets", statusFilter, queueFilter],
     queryFn: () =>
       nucleoApi.tickets.list({
@@ -305,6 +305,10 @@ function HelpdeskIndexPage() {
   if (isLoading || isQueueLoading || isCommentsLoading) {
     return <Loading text="Loading helpdesk..." />;
   }
+
+  if (isError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => refetch()}>Retry</Button>} />
+  );
 
   return (
     <div className="space-y-6">

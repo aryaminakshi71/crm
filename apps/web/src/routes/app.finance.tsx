@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
+  AlertCircle,
   ArrowUpRight,
   CreditCard,
   DollarSign,
@@ -308,6 +309,18 @@ function FinancePage() {
   ) {
     return <Loading text="Loading finance workspace..." />;
   }
+
+  if (
+    invoicesQuery.isError ||
+    summaryQuery.isError ||
+    transactionsQuery.isError
+  ) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => { invoicesQuery.refetch(); summaryQuery.refetch(); transactionsQuery.refetch(); }}>Retry</Button>
+    </div>
+  );
 
   const invoiceRevenue = invoices.reduce(
     (sum: number, inv: any) => sum + Number(inv.total || 0),

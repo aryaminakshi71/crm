@@ -75,7 +75,7 @@ function MarketingCampaignsPage() {
 
   // ─── Query ─────────────────────────────────────────────────────────────────
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["marketing-campaigns", channelFilter, statusFilter],
     queryFn: () => nucleoApi.campaigns.list({ page: 1, limit: 100 }),
   });
@@ -147,6 +147,10 @@ function MarketingCampaignsPage() {
   });
 
   // ─── Render ────────────────────────────────────────────────────────────────
+
+  if (isError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => refetch()}>Retry</Button>} />
+  );
 
   return (
     <div className="space-y-6">

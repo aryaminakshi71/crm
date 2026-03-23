@@ -33,7 +33,7 @@ function KnowledgeBasePage() {
   });
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["helpdesk", "knowledge", statusFilter],
     queryFn: () =>
       helpdeskApi.knowledge.list({
@@ -80,6 +80,10 @@ function KnowledgeBasePage() {
   });
 
   if (isLoading) return <Loading text="Loading knowledge base..." />;
+
+  if (isError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => refetch()}>Retry</Button>} />
+  );
 
   const articles: any[] = data?.data ?? [];
   const categories: any[] = categoriesData?.data ?? [];

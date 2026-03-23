@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -8,7 +9,7 @@ import {
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertOctagon, DollarSign, Users } from "lucide-react";
+import { AlertCircle, AlertOctagon, DollarSign, Users } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
@@ -44,7 +45,7 @@ function riskLabel(prob: number) {
 }
 
 function ChurnPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "churn"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/v1/intelligence/churn`, {
@@ -56,6 +57,14 @@ function ChurnPage() {
   });
 
   const churn = data ?? MOCK_CHURN;
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-6">

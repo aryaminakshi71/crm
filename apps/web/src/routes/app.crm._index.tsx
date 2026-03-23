@@ -80,7 +80,7 @@ function CrmOverview() {
   });
 
   // Fetch dashboard stats from real API
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+  const { data: dashboardStats, isLoading: statsLoading, isError: statsError, refetch: statsRefetch } = useQuery({
     queryKey: ["dashboard", "stats"],
     queryFn: () => dashboardApi.getStats(),
   });
@@ -176,6 +176,14 @@ function CrmOverview() {
       </div>
     );
   }
+
+  if (statsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => statsRefetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

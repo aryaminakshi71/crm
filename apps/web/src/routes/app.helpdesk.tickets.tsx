@@ -46,7 +46,7 @@ function TicketList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
-  const { data: ticketsData, isLoading } = useQuery({
+  const { data: ticketsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["helpdesk", "tickets", statusFilter, priorityFilter, search],
     queryFn: () =>
       helpdeskApi.tickets.list({
@@ -89,6 +89,10 @@ function TicketList() {
       </div>
     );
   }
+
+  if (isError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => refetch()}>Retry</Button>} />
+  );
 
   const openCount = allTickets.filter((t) => t.status === "open").length;
   const pendingCount = allTickets.filter((t) => t.status === "pending").length;

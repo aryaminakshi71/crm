@@ -59,7 +59,7 @@ export const Route = createFileRoute("/app/projects/_index")({
 function ProjectsIndexPage() {
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["nucleo-projects"],
     queryFn: () => nucleoApi.projects.list({ page: 1, limit: 100 }),
   });
@@ -69,6 +69,14 @@ function ProjectsIndexPage() {
   const activeProjects = projects.filter((p: any) => p.status === "active");
   const completedProjects = projects.filter((p: any) => p.status === "completed");
   const planningProjects = projects.filter((p: any) => p.status === "planning");
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,9 @@
+import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   UserPlus,
   Plus,
   Search,
@@ -53,19 +55,20 @@ function RecruitmentPipeline() {
   const [viewMode, setViewMode] = useState<"pipeline" | "jobs" | "candidates">("pipeline");
   const [search, setSearch] = useState("");
 
-  const { data: requisitionsData, isLoading: isRequisitionsLoading } = useQuery({
+  const { data: requisitionsData, isLoading: isRequisitionsLoading, isError: isRequisitionsError, refetch: refetchRequisitions } = useQuery({
     queryKey: ["hrm-recruitment-requisitions"],
     queryFn: () => hrmApi.recruitment.requisitions.list({ limit: 50 }),
     retry: false,
   });
 
-  const { data: candidatesData, isLoading: isCandidatesLoading } = useQuery({
+  const { data: candidatesData, isLoading: isCandidatesLoading, isError: isCandidatesError, refetch: refetchCandidates } = useQuery({
     queryKey: ["hrm-recruitment-candidates"],
     queryFn: () => hrmApi.recruitment.candidates.list({ limit: 100 }),
     retry: false,
   });
 
   const isLoading = isRequisitionsLoading || isCandidatesLoading;
+  const isError = isRequisitionsError || isCandidatesError;
 
   const requisitions = (requisitionsData as any)?.data ?? defaultJobs;
   const candidatesList = (candidatesData as any)?.data ?? defaultCandidates;
@@ -93,6 +96,14 @@ function RecruitmentPipeline() {
       </div>
     );
   }
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => { refetchRequisitions(); refetchCandidates(); }}>Retry</Button>
+    </div>
+  );
 
   const jobs = requisitions.map((j: any) => ({
     id: j.id,

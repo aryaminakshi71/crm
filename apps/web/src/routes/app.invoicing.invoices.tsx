@@ -20,6 +20,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   DollarSign,
   Download,
   FileText,
@@ -80,6 +81,14 @@ function InvoiceList() {
     retry: false,
   });
   const invoices: Invoice[] = invoicesQuery.data?.data?.length ? invoicesQuery.data.data : mockInvoices;
+
+  if (invoicesQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => invoicesQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const filteredInvoices = invoices.filter((invoice) => {
     if (statusFilter !== "all" && invoice.status !== statusFilter) return false;

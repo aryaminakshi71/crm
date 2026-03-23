@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Store,
   ShoppingBag,
   DollarSign,
@@ -70,7 +71,7 @@ const MOCK_RECENT_ORDERS = [
 ];
 
 function EcommerceDashboard() {
-  const { data: statsData, isLoading: statsLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: statsRefetch } = useQuery({
     queryKey: ["ecommerce-stats"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/ecommerce/stats`, {
@@ -133,6 +134,14 @@ function EcommerceDashboard() {
     { id: "4", name: "Mountain Bike", sales: 15, revenue: 8999.85, trend: "up" },
     { id: "5", name: "Winter Jacket", sales: 28, revenue: 4199.72, trend: "up" },
   ];
+
+  if (statsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => statsRefetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

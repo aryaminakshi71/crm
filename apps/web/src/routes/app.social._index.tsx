@@ -1,7 +1,8 @@
-import { Card, CardContent, Badge } from "@crm/ui";
+import { Button, Card, CardContent, Badge } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Share2,
   Users,
   BarChart3,
@@ -47,7 +48,7 @@ const QUICK_ACTIONS = [
 ];
 
 function SocialDashboard() {
-  const { data: postsData } = useQuery({
+  const { data: postsData, isError: postsError, refetch: postsRefetch } = useQuery({
     queryKey: ["social", "posts"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/social/posts?limit=10`, {
@@ -88,6 +89,14 @@ function SocialDashboard() {
         color: "bg-primary",
       }))
     : MOCK_PLATFORMS;
+
+  if (postsError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => postsRefetch()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

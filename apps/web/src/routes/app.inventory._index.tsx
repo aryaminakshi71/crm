@@ -169,7 +169,7 @@ function InventoryPage() {
     queryFn: () => nucleoApi.inventory.stats(),
   });
 
-  const { data: productsData, isLoading: productsLoading } = useQuery({
+  const { data: productsData, isLoading: productsLoading, isError: productsError, refetch: productsRefetch } = useQuery({
     queryKey: ["inventory", "products", search],
     queryFn: () =>
       nucleoApi.inventory.products.list({
@@ -229,6 +229,10 @@ function InventoryPage() {
     { id: "alerts", label: "Alerts", icon: AlertTriangle },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
   ];
+
+  if (productsError) return (
+    <EmptyState variant="error" title="Something went wrong" description="Failed to load data. Please try again." action={<Button onClick={() => productsRefetch()}>Retry</Button>} />
+  );
 
   return (
     <div className="flex flex-col gap-6 p-6">
