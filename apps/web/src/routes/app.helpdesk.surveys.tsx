@@ -1,59 +1,30 @@
-import { Card, CardContent, CardHeader, CardTitle, EmptyState } from "@crm/ui";
+import { Card, CardContent, CardHeader, CardTitle, EmptyState, Loading } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Star } from "lucide-react";
-import { nucleoApi } from "../lib/api";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/surveys")({
   component: SurveysPage,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.companyId) return { "x-organization-id": user.companyId };
-    } catch {}
-  }
-  return {};
-}
-
-async function fetchSurveys() {
-  const res = await fetch(`${API_BASE}/v1/helpdesk/surveys`, {
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("No survey endpoint");
-  return res.json();
-}
-
 function SurveysPage() {
-  // Fetch closed tickets to derive satisfaction proxy data
-  const { data: ticketsData } = useQuery({
-    queryKey: ["nucleo-tickets", "closed", "all"],
-    queryFn: () =>
-      nucleoApi.tickets.list({ page: 1, limit: 500, status: "closed" }),
-  });
-
-  // Attempt to fetch survey endpoint — expected to 404 for now
-  const { data: surveyData, error: surveyError } = useQuery({
+  const { data: surveyData, isLoading } = useQuery({
     queryKey: ["helpdesk", "surveys"],
-    queryFn: fetchSurveys,
+    queryFn: () => helpdeskApi.surveys.list({ page: 1, limit: 200 }),
     retry: false,
   });
 
-  const closedTickets: any[] = ticketsData?.data ?? [];
-  const surveys: any[] = surveyData?.data ?? [];
-  const hasRealSurveys = !surveyError && surveys.length > 0;
+  const { data: statsData } = useQuery({
+    queryKey: ["helpdesk", "stats"],
+    queryFn: () => helpdeskApi.stats(),
+    retry: false,
+  });
 
-  // Derive simple stats from closed tickets as proxy
-  const totalClosed = closedTickets.length;
-  const highPriorityClosed = closedTickets.filter(
-    (t: any) => t.priority === "high",
-  ).length;
+  if (isLoading) return <Loading text="Loading surveys..." />;
+
+  const surveys: any[] = surveyData?.data ?? [];
+  const stats = statsData ?? null;
 
   return (
     <div className="space-y-6">
@@ -66,26 +37,99 @@ function SurveysPage() {
         </p>
       </div>
 
-      {hasRealSurveys ? (
-        <div className="space-y-4">
+      {stats && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Resolved Tickets
+              </p>
+              <p className="text-3xl font-black text-emerald-400 mt-1">
+                {stats.resolved ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Avg Satisfaction
+              </p>
+              <p className="text-3xl font-black text-warning mt-1 flex items-center gap-1">
+                <Star className="h-6 w-6 fill-current" />
+                {stats.satisfactionScore > 0 ? stats.satisfactionScore : "—"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Survey Responses
+              </p>
+              <p className="text-3xl font-black text-foreground mt-1">
+                {surveys.length}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {surveys.length === 0 ? (
+        <>
+          <EmptyState
+            icon={<Star className="h-12 w-12" />}
+            title="No survey data yet"
+            description="Customer satisfaction surveys will appear here once tickets are resolved and customers respond."
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">About CSAT Surveys</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Customer satisfaction (CSAT) surveys are sent to customers when
+                their tickets are resolved.
+              </p>
+              <p>
+                Once customers respond, ratings and comments will appear here
+                along with satisfaction trends over time.
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <div className="space-y-3">
           {surveys.map((survey: any) => (
             <Card key={survey.id}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">
-                      {survey.title || `Survey #${survey.id.slice(-4)}`}
+                      {survey.ticketId
+                        ? `Ticket #${survey.ticketId.slice(-6).toUpperCase()}`
+                        : `Survey #${survey.id.slice(-4).toUpperCase()}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {survey.createdAt
                         ? new Date(survey.createdAt).toLocaleString()
                         : "-"}
                     </p>
+                    {survey.comment && (
+                      <p className="text-sm text-foreground mt-1 italic">
+                        "{survey.comment}"
+                      </p>
+                    )}
                   </div>
-                  {survey.score != null && (
+                  {survey.rating != null && (
                     <div className="flex items-center gap-1 text-warning">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="font-semibold">{survey.score}/5</span>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${i < survey.rating ? "fill-current" : "opacity-30"}`}
+                        />
+                      ))}
+                      <span className="ml-1 font-semibold text-foreground">
+                        {survey.rating}/5
+                      </span>
                     </div>
                   )}
                 </div>
@@ -93,65 +137,6 @@ function SurveysPage() {
             </Card>
           ))}
         </div>
-      ) : (
-        <>
-          {totalClosed > 0 && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Resolved Tickets
-                  </p>
-                  <p className="text-3xl font-black text-emerald-400 mt-1">
-                    {totalClosed}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Critical Resolved
-                  </p>
-                  <p className="text-3xl font-black text-foreground mt-1">
-                    {highPriorityClosed}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Survey Response Rate
-                  </p>
-                  <p className="text-3xl font-black text-muted-foreground mt-1">
-                    —
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          <EmptyState
-            icon={<Star className="h-12 w-12" />}
-            title="No survey data yet"
-            description="Customer satisfaction surveys will appear here once the survey endpoint is configured. Surveys are sent automatically after tickets are resolved."
-          />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Coming Soon</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>
-                Customer satisfaction (CSAT) surveys are automatically sent to
-                customers when their tickets are resolved.
-              </p>
-              <p>
-                Once configured, you will see ratings, comments, and satisfaction
-                trends here.
-              </p>
-            </CardContent>
-          </Card>
-        </>
       )}
     </div>
   );

@@ -20,6 +20,7 @@ import { devopsRouter } from "./devops";
 import { enterpriseRouter } from "./enterprise";
 import { fieldServiceRouter } from "./field-service";
 import { healthRouter } from "./health";
+import { helpdeskRouter } from "./helpdesk";
 import { hrmRouter } from "./hrm";
 import { intelligenceRouter } from "./intelligence";
 import { integrationRouter } from "./integration";
@@ -52,6 +53,7 @@ export const appRouter = {
   modules: modulesRouter,
   nucleo: nucleoWorkspaceRouter,
   hrm: hrmRouter,
+  helpdesk: helpdeskRouter,
   enterprise: enterpriseRouter,
   intelligence: intelligenceRouter,
   operations: operationsRouter,

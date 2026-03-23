@@ -16,93 +16,49 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/canned")({
   component: CannedResponsesPage,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.companyId) return { "x-organization-id": user.companyId };
-    } catch {}
-  }
-  return {};
-}
-
-async function fetchCannedResponses() {
-  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses`, {
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("Not found");
-  return res.json();
-}
-
-async function createCannedResponse(data: {
-  title: string;
-  shortcut: string;
-  message: string;
-  category?: string;
-}) {
-  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...getOrgHeader() },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to create");
-  return res.json();
-}
-
-async function deleteCannedResponse(id: string) {
-  const res = await fetch(`${API_BASE}/v1/nucleo/canned-responses/${id}`, {
-    method: "DELETE",
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("Failed to delete");
-  return res.json();
-}
-
 function CannedResponsesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [form, setForm] = useState({
-    title: "",
+    name: "",
     shortcut: "",
-    message: "",
+    body: "",
     category: "General",
   });
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["helpdesk", "canned-responses"],
-    queryFn: fetchCannedResponses,
+  const { data, isLoading } = useQuery({
+    queryKey: ["helpdesk", "canned"],
+    queryFn: () => helpdeskApi.canned.list({ page: 1, limit: 200 }),
     retry: false,
   });
 
   const createMutation = useMutation({
-    mutationFn: createCannedResponse,
+    mutationFn: (payload: {
+      name: string;
+      shortcut?: string;
+      body: string;
+      category?: string;
+    }) => helpdeskApi.canned.create(payload),
     onSuccess: () => {
       toast.success("Canned response created");
-      queryClient.invalidateQueries({
-        queryKey: ["helpdesk", "canned-responses"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "canned"] });
       setIsCreateOpen(false);
-      setForm({ title: "", shortcut: "", message: "", category: "General" });
+      setForm({ name: "", shortcut: "", body: "", category: "General" });
     },
     onError: () => toast.error("Failed to create canned response"),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteCannedResponse,
+    mutationFn: (id: string) => helpdeskApi.canned.delete(id),
     onSuccess: () => {
       toast.success("Canned response deleted");
-      queryClient.invalidateQueries({
-        queryKey: ["helpdesk", "canned-responses"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "canned"] });
     },
     onError: () => toast.error("Failed to delete canned response"),
   });
@@ -110,7 +66,6 @@ function CannedResponsesPage() {
   if (isLoading) return <Loading text="Loading canned responses..." />;
 
   const responses: any[] = data?.data ?? [];
-  const hasEndpoint = !error;
 
   return (
     <div className="space-y-6">
@@ -123,22 +78,24 @@ function CannedResponsesPage() {
             Pre-written replies for common support questions.
           </p>
         </div>
-        {hasEndpoint && (
-          <Button
-            variant="primary"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => setIsCreateOpen(true)}
-          >
-            New Response
-          </Button>
-        )}
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsCreateOpen(true)}
+        >
+          New Response
+        </Button>
       </div>
 
-      {!hasEndpoint || responses.length === 0 ? (
+      {responses.length === 0 ? (
         <EmptyState
           icon={<MessageSquare className="h-12 w-12" />}
           title="No canned responses yet"
-          description="Canned responses let agents reply faster to common questions. This feature is coming soon."
+          description="Canned responses let agents reply faster to common questions."
+          action={{
+            label: "Create Response",
+            onClick: () => setIsCreateOpen(true),
+          }}
         />
       ) : (
         <div className="space-y-3">
@@ -147,7 +104,7 @@ function CannedResponsesPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <CardTitle className="text-sm">{resp.title}</CardTitle>
+                    <CardTitle className="text-sm">{resp.name}</CardTitle>
                     {resp.shortcut && (
                       <p className="text-xs text-muted-foreground">
                         Shortcut:{" "}
@@ -174,7 +131,7 @@ function CannedResponsesPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{resp.message}</p>
+                <p className="text-sm text-muted-foreground">{resp.body}</p>
               </CardContent>
             </Card>
           ))}
@@ -189,24 +146,24 @@ function CannedResponsesPage() {
         loading={createMutation.isPending}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!form.title.trim() || !form.message.trim()) {
-            toast.error("Title and message are required");
+          if (!form.name.trim() || !form.body.trim()) {
+            toast.error("Name and body are required");
             return;
           }
           createMutation.mutate({
-            title: form.title.trim(),
-            shortcut: form.shortcut.trim(),
-            message: form.message.trim(),
+            name: form.name.trim(),
+            shortcut: form.shortcut.trim() || undefined,
+            body: form.body.trim(),
             category: form.category,
           });
         }}
       >
         <div className="space-y-4">
-          <FormField label="Title" required>
+          <FormField label="Name" required>
             <Input
-              value={form.title}
+              value={form.name}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
+                setForm((prev) => ({ ...prev, name: e.target.value }))
               }
               placeholder="Password reset instructions"
             />
@@ -229,11 +186,11 @@ function CannedResponsesPage() {
               placeholder="General"
             />
           </FormField>
-          <FormField label="Message" required>
+          <FormField label="Body" required>
             <Textarea
-              value={form.message}
+              value={form.body}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, message: e.target.value }))
+                setForm((prev) => ({ ...prev, body: e.target.value }))
               }
               placeholder="Hi, here are the steps to reset your password..."
               rows={5}

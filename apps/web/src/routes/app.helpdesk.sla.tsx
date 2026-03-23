@@ -1,188 +1,189 @@
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
-import { nucleoApi } from "../lib/api";
+import { Plus, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/sla")({
   component: SlaPage,
 });
 
-// Static SLA policy definitions (SLA policies are config, not DB rows)
-const STATIC_SLA_POLICIES = [
-  {
-    id: "sla-high",
-    name: "Critical",
-    priority: "high",
-    firstResponseHours: 1,
-    resolutionHours: 4,
-    description: "For urgent issues affecting production or all users.",
-    color: "text-destructive",
-  },
-  {
-    id: "sla-medium",
-    name: "Standard",
-    priority: "medium",
+function SlaPage() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
     firstResponseHours: 4,
     resolutionHours: 24,
-    description: "For general support requests with moderate impact.",
-    color: "text-warning",
-  },
-  {
-    id: "sla-low",
-    name: "Low Priority",
-    priority: "low",
-    firstResponseHours: 24,
-    resolutionHours: 72,
-    description: "For minor issues, questions, and feature requests.",
-    color: "text-muted-foreground",
-  },
-];
+    businessHoursOnly: false,
+    isDefault: false,
+  });
+  const queryClient = useQueryClient();
 
-function SlaPage() {
-  // Fetch live tickets to compute SLA compliance from real data
-  const { data } = useQuery({
-    queryKey: ["nucleo-tickets", "all", "all"],
-    queryFn: () => nucleoApi.tickets.list({ page: 1, limit: 500 }),
+  const { data: policiesData, isLoading } = useQuery({
+    queryKey: ["helpdesk", "sla"],
+    queryFn: () => helpdeskApi.sla.list({ page: 1, limit: 50 }),
+    retry: false,
   });
 
-  const tickets: any[] = data?.data ?? [];
-
-  // Compute per-priority stats from real ticket data
-  const stats = STATIC_SLA_POLICIES.map((policy) => {
-    const priorityTickets = tickets.filter(
-      (t: any) => t.priority === policy.priority,
-    );
-    const closed = priorityTickets.filter((t: any) => t.status === "closed");
-    const open = priorityTickets.filter((t: any) => t.status !== "closed");
-
-    // Estimate breached: open tickets older than resolutionHours
-    const nowMs = Date.now();
-    const breached = open.filter((t: any) => {
-      if (!t.createdAt) return false;
-      const ageHours =
-        (nowMs - new Date(t.createdAt).getTime()) / 1000 / 3600;
-      return ageHours > policy.resolutionHours;
-    });
-
-    const compliance =
-      priorityTickets.length > 0
-        ? Math.round(
-            ((priorityTickets.length - breached.length) /
-              priorityTickets.length) *
-              100,
-          )
-        : 100;
-
-    return {
-      ...policy,
-      total: priorityTickets.length,
-      open: open.length,
-      closed: closed.length,
-      breached: breached.length,
-      compliance,
-    };
+  const { data: statsData } = useQuery({
+    queryKey: ["helpdesk", "stats"],
+    queryFn: () => helpdeskApi.stats(),
+    retry: false,
   });
 
-  const overallTickets = tickets.length;
-  const allBreached = stats.reduce((sum, s) => sum + s.breached, 0);
+  const createMutation = useMutation({
+    mutationFn: (data: typeof form) => helpdeskApi.sla.create(data),
+    onSuccess: () => {
+      toast.success("SLA policy created");
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "sla"] });
+      setIsCreateOpen(false);
+      setForm({
+        name: "",
+        priority: "medium",
+        firstResponseHours: 4,
+        resolutionHours: 24,
+        businessHoursOnly: false,
+        isDefault: false,
+      });
+    },
+    onError: () => toast.error("Failed to create SLA policy"),
+  });
+
+  if (isLoading) return <Loading text="Loading SLA policies..." />;
+
+  const policies: any[] = policiesData?.data ?? [];
+  const stats = statsData ?? null;
+
   const overallCompliance =
-    overallTickets > 0
-      ? Math.round(((overallTickets - allBreached) / overallTickets) * 100)
+    stats?.slaBreached != null && stats?.open != null
+      ? Math.max(
+          0,
+          Math.round(
+            ((stats.open + stats.pending + stats.resolved - stats.slaBreached) /
+              Math.max(1, stats.open + stats.pending + stats.resolved)) *
+              100,
+          ),
+        )
       : 100;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-bold text-2xl text-foreground">SLA Policies</h1>
-        <p className="text-muted-foreground">
-          Service level agreement targets by ticket priority, computed from live
-          ticket data.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-bold text-2xl text-foreground">SLA Policies</h1>
+          <p className="text-muted-foreground">
+            Service level agreement targets by ticket priority.
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsCreateOpen(true)}
+        >
+          New Policy
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Overall Compliance
-            </p>
-            <p className="text-3xl font-black text-emerald-400 mt-1">
-              {overallCompliance}%
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {overallTickets} total tickets
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Breached
-            </p>
-            <p className="text-3xl font-black text-destructive mt-1">
-              {allBreached}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              tickets past SLA target
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Open Tickets
-            </p>
-            <p className="text-3xl font-black text-foreground mt-1">
-              {tickets.filter((t: any) => t.status !== "closed").length}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              across all priorities
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {stats && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Overall Compliance
+              </p>
+              <p className="text-3xl font-black text-emerald-400 mt-1">
+                {overallCompliance}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                based on open + pending + resolved tickets
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                SLA Breached
+              </p>
+              <p className="text-3xl font-black text-destructive mt-1">
+                {stats.slaBreached ?? 0}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                tickets past SLA target
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Avg First Response
+              </p>
+              <p className="text-3xl font-black text-foreground mt-1">
+                {stats.avgResponseTimeHours ?? 0}h
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                average across all tickets
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-      {stats.length === 0 ? (
+      {policies.length === 0 ? (
         <EmptyState
           icon={<ShieldCheck className="h-12 w-12" />}
-          title="No SLA data"
-          description="SLA compliance will appear once tickets are created."
+          title="No SLA policies yet"
+          description="Create SLA policies to set response and resolution time targets by priority."
+          action={{
+            label: "Create Policy",
+            onClick: () => setIsCreateOpen(true),
+          }}
         />
       ) : (
         <div className="space-y-4">
-          {stats.map((policy) => (
+          {policies.map((policy: any) => (
             <Card key={policy.id}>
               <CardHeader className="pb-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">{policy.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {policy.description}
+                    <p className="text-sm text-muted-foreground capitalize">
+                      Priority: {policy.priority}
+                      {policy.businessHoursOnly
+                        ? " · Business hours only"
+                        : " · 24/7"}
+                      {policy.isDefault && " · Default"}
                     </p>
                   </div>
                   <Badge
                     variant={
-                      policy.compliance >= 90
-                        ? "success"
-                        : policy.compliance >= 70
+                      policy.priority === "urgent" || policy.priority === "high"
+                        ? "danger"
+                        : policy.priority === "medium"
                           ? "warning"
-                          : "destructive"
+                          : "outline"
                     }
                   >
-                    {policy.compliance}% compliant
+                    {policy.priority}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">
                       First Response
@@ -197,26 +198,6 @@ function SlaPage() {
                       {policy.resolutionHours}h target
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tickets</p>
-                    <p className="font-semibold text-foreground">
-                      {policy.total} total ({policy.open} open)
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Breached</p>
-                    <p
-                      className={`font-semibold ${policy.breached > 0 ? "text-destructive" : "text-emerald-400"}`}
-                    >
-                      {policy.breached}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 h-2 w-full rounded-full bg-muted/30">
-                  <div
-                    className={`h-full rounded-full transition-all ${policy.compliance >= 90 ? "bg-emerald-400" : policy.compliance >= 70 ? "bg-warning" : "bg-destructive"}`}
-                    style={{ width: `${policy.compliance}%` }}
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -235,11 +216,126 @@ function SlaPage() {
             still open.
           </p>
           <p>
-            To customize SLA policies, contact your administrator or configure
-            them in your organization settings.
+            Business hours only policies only count time during configured
+            working hours when calculating SLA compliance.
           </p>
         </CardContent>
       </Card>
+
+      <FormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create SLA Policy"
+        submitText="Create Policy"
+        loading={createMutation.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!form.name.trim()) {
+            toast.error("Policy name is required");
+            return;
+          }
+          createMutation.mutate(form);
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Policy Name" required>
+            <Input
+              value={form.name}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, name: e.target.value }))
+              }
+              placeholder="Critical Response"
+            />
+          </FormField>
+          <FormField label="Priority">
+            <select
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={form.priority}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  priority: e.target.value as typeof form.priority,
+                }))
+              }
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="First Response (hours)">
+              <Input
+                type="number"
+                min={1}
+                value={form.firstResponseHours}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    firstResponseHours: Number(e.target.value),
+                  }))
+                }
+              />
+            </FormField>
+            <FormField label="Resolution (hours)">
+              <Input
+                type="number"
+                min={1}
+                value={form.resolutionHours}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    resolutionHours: Number(e.target.value),
+                  }))
+                }
+              />
+            </FormField>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="business-hours"
+                checked={form.businessHoursOnly}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    businessHoursOnly: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4"
+              />
+              <label
+                htmlFor="business-hours"
+                className="text-sm text-foreground cursor-pointer"
+              >
+                Business hours only
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is-default"
+                checked={form.isDefault}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isDefault: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4"
+              />
+              <label
+                htmlFor="is-default"
+                className="text-sm text-foreground cursor-pointer"
+              >
+                Set as default
+              </label>
+            </div>
+          </div>
+        </div>
+      </FormModal>
     </div>
   );
 }

@@ -1,153 +1,257 @@
-import { Card, CardContent, CardHeader, CardTitle, EmptyState } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Loading,
+  Textarea,
+} from "@crm/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Plus, Pin } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/forum")({
   component: ForumPage,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.companyId) return { "x-organization-id": user.companyId };
-    } catch {}
-  }
-  return {};
-}
-
-async function fetchForumCategories() {
-  const res = await fetch(`${API_BASE}/v1/helpdesk/forum/categories`, {
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("No forum endpoint");
-  return res.json();
-}
-
-async function fetchForumThreads() {
-  const res = await fetch(`${API_BASE}/v1/helpdesk/forum/threads?trending=true`, {
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("No forum endpoint");
-  return res.json();
-}
-
 function ForumPage() {
-  const { data: categoriesData, error: categoriesError } = useQuery({
-    queryKey: ["helpdesk", "forum", "categories"],
-    queryFn: fetchForumCategories,
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({ title: "", body: "", tags: "" });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["helpdesk", "forums", statusFilter, search],
+    queryFn: () =>
+      helpdeskApi.forums.list({
+        page: 1,
+        limit: 100,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: search.trim() || undefined,
+      }),
     retry: false,
   });
 
-  const { data: threadsData, error: threadsError } = useQuery({
-    queryKey: ["helpdesk", "forum", "threads", "trending"],
-    queryFn: fetchForumThreads,
-    retry: false,
+  const createMutation = useMutation({
+    mutationFn: (payload: { title: string; body: string; tags?: string[] }) =>
+      helpdeskApi.forums.create(payload),
+    onSuccess: () => {
+      toast.success("Forum post created");
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "forums"] });
+      setIsCreateOpen(false);
+      setForm({ title: "", body: "", tags: "" });
+    },
+    onError: () => toast.error("Failed to create forum post"),
   });
 
-  const categories: any[] = categoriesData?.data ?? [];
-  const threads: any[] = threadsData?.data ?? [];
-  const hasData =
-    !categoriesError && !threadsError && (categories.length > 0 || threads.length > 0);
+  const updateMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      helpdeskApi.forums.update(id, { status }),
+    onSuccess: () => {
+      toast.success("Post updated");
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "forums"] });
+    },
+    onError: () => toast.error("Failed to update post"),
+  });
+
+  if (isLoading) return <Loading text="Loading forum..." />;
+
+  const posts: any[] = data?.data ?? [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-bold text-2xl text-foreground">Community Forum</h1>
-        <p className="text-muted-foreground">
-          Discussion boards, trending threads, and community Q&amp;A.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-bold text-2xl text-foreground">Community Forum</h1>
+          <p className="text-muted-foreground">
+            Discussion boards, trending threads, and community Q&amp;A.
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsCreateOpen(true)}
+        >
+          New Post
+        </Button>
       </div>
 
-      {hasData ? (
-        <>
-          {categories.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="font-semibold text-foreground">Categories</h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {categories.map((cat: any) => (
-                  <Card key={cat.id}>
-                    <CardContent className="p-4">
-                      <p className="font-medium text-foreground">{cat.name}</p>
-                      {cat.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {cat.description}
-                        </p>
-                      )}
-                      {cat.threadCount != null && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {cat.threadCount} threads
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+      <div className="flex flex-wrap gap-3">
+        <Input
+          className="w-64"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search posts..."
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
+          <option value="all">All statuses</option>
+          <option value="open">Open</option>
+          <option value="answered">Answered</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
 
-          {threads.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="font-semibold text-foreground">Trending Threads</h2>
-              <div className="space-y-3">
-                {threads.map((thread: any) => (
-                  <Card key={thread.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {thread.title}
-                          </p>
-                          {thread.category && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {thread.category}
-                            </p>
-                          )}
-                        </div>
-                        {thread.replyCount != null && (
-                          <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                            <MessageCircle className="h-3 w-3" />
-                            {thread.replyCount}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
+      {posts.length === 0 ? (
         <>
           <EmptyState
             icon={<MessageCircle className="h-12 w-12" />}
-            title="Forum coming soon"
-            description="The community forum feature is not yet configured. Once enabled, customers can post questions, share tips, and browse trending discussions."
+            title="No forum posts yet"
+            description="Create the first discussion post to get community conversations started."
+            action={{
+              label: "New Post",
+              onClick: () => setIsCreateOpen(true),
+            }}
           />
-
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Planned Forum Features</CardTitle>
+              <CardTitle className="text-sm">Forum Features</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
-                The forum module will include: discussion categories, threaded
-                replies, upvoting, tagging, and moderation tools.
+                The forum module includes: discussion threads, status tracking
+                (open/answered/closed), pinning, tagging, and view counts.
               </p>
               <p>
                 Community-answered questions can also be promoted to knowledge
-                base articles automatically.
+                base articles.
               </p>
             </CardContent>
           </Card>
         </>
+      ) : (
+        <div className="space-y-3">
+          {posts.map((post: any) => (
+            <Card key={post.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {post.isPinned && (
+                        <Pin className="h-3 w-3 text-primary flex-shrink-0" />
+                      )}
+                      <p className="font-medium text-foreground">
+                        {post.title}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {post.body}
+                    </p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <MessageCircle className="h-3 w-3" />
+                        {post.replies} replies
+                      </span>
+                      <span>{post.views} views</span>
+                      <span>
+                        {post.createdAt
+                          ? new Date(post.createdAt).toLocaleDateString()
+                          : "-"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge
+                      variant={
+                        post.status === "answered"
+                          ? "success"
+                          : post.status === "closed"
+                            ? "outline"
+                            : "primary"
+                      }
+                      className="text-[10px]"
+                    >
+                      {post.status}
+                    </Badge>
+                    <select
+                      className="h-7 rounded border border-border bg-card text-[10px] px-1"
+                      value={post.status}
+                      onChange={(e) =>
+                        updateMutation.mutate({
+                          id: post.id,
+                          status: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="open">Open</option>
+                      <option value="answered">Answered</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
+
+      <FormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Forum Post"
+        submitText="Create Post"
+        loading={createMutation.isPending}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!form.title.trim() || !form.body.trim()) {
+            toast.error("Title and body are required");
+            return;
+          }
+          const tags = form.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+          createMutation.mutate({
+            title: form.title.trim(),
+            body: form.body.trim(),
+            tags: tags.length > 0 ? tags : undefined,
+          });
+        }}
+      >
+        <div className="space-y-4">
+          <FormField label="Title" required>
+            <Input
+              value={form.title}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, title: e.target.value }))
+              }
+              placeholder="How do I integrate the API?"
+            />
+          </FormField>
+          <FormField label="Body" required>
+            <Textarea
+              rows={5}
+              value={form.body}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, body: e.target.value }))
+              }
+              placeholder="Share your question or start a discussion..."
+            />
+          </FormField>
+          <FormField label="Tags (comma-separated)">
+            <Input
+              value={form.tags}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, tags: e.target.value }))
+              }
+              placeholder="api, integration, help"
+            />
+          </FormField>
+        </div>
+      </FormModal>
     </div>
   );
 }

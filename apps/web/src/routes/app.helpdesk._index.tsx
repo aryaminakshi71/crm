@@ -39,7 +39,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, helpdeskApi, nucleoApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/")({
   component: HelpdeskIndexPage,
@@ -80,6 +80,12 @@ function HelpdeskIndexPage() {
     rationale: string[];
   } | null>(null);
   const queryClient = useQueryClient();
+
+  const { data: hdStats } = useQuery({
+    queryKey: ["helpdesk", "stats"],
+    queryFn: () => helpdeskApi.stats(),
+    retry: false,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["nucleo-tickets", statusFilter, queueFilter],

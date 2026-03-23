@@ -6,66 +6,77 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
+  Input,
   Loading,
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Globe, Settings } from "lucide-react";
+import { BookOpenText, ExternalLink, Globe, Search, Settings } from "lucide-react";
+import { useState } from "react";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/help-center")({
   component: HelpCenterPage,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.companyId) return { "x-organization-id": user.companyId };
-    } catch {}
-  }
-  return {};
-}
-
-async function fetchOrgSettings() {
-  const res = await fetch(`${API_BASE}/v1/settings/organization`, {
-    headers: { ...getOrgHeader() },
-  });
-  if (!res.ok) throw new Error("No settings endpoint");
-  return res.json();
-}
-
 function HelpCenterPage() {
-  const { data: settingsData, isLoading, error } = useQuery({
-    queryKey: ["settings", "organization"],
-    queryFn: fetchOrgSettings,
+  const [search, setSearch] = useState("");
+
+  const { data: articlesData, isLoading } = useQuery({
+    queryKey: ["helpdesk", "knowledge", "published"],
+    queryFn: () =>
+      helpdeskApi.knowledge.list({ page: 1, limit: 100, status: "published" }),
     retry: false,
   });
 
-  if (isLoading) return <Loading text="Loading help center settings..." />;
+  const { data: categoriesData } = useQuery({
+    queryKey: ["helpdesk", "knowledge-categories"],
+    queryFn: () => helpdeskApi.knowledgeCategories.list({ page: 1, limit: 100 }),
+    retry: false,
+  });
 
-  const settings = settingsData ?? null;
+  if (isLoading) return <Loading text="Loading help center..." />;
+
+  const articles: any[] = articlesData?.data ?? [];
+  const categories: any[] = categoriesData?.data ?? [];
+
+  const filtered = articles.filter((a: any) => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      a.title?.toLowerCase().includes(s) || a.body?.toLowerCase().includes(s)
+    );
+  });
+
+  // Group articles by category
+  const byCategory: Record<string, any[]> = {};
+  for (const article of filtered) {
+    const key = article.categoryId ?? "uncategorized";
+    if (!byCategory[key]) byCategory[key] = [];
+    byCategory[key].push(article);
+  }
+
+  const getCategoryName = (id: string) => {
+    if (id === "uncategorized") return "General";
+    return categories.find((c: any) => c.id === id)?.name ?? "General";
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-bold text-2xl text-foreground">Help Center</h1>
         <p className="text-muted-foreground">
-          Configure your public-facing help center and customer portal settings.
+          Public-facing knowledge base — published articles visible to customers.
         </p>
       </div>
 
-      {error || !settings ? (
+      {articles.length === 0 ? (
         <>
           <EmptyState
             icon={<Globe className="h-12 w-12" />}
-            title="Help Center not configured"
-            description="The help center settings endpoint is not yet available. Contact your administrator to configure the public help center."
+            title="No published articles"
+            description="Publish knowledge base articles to populate the help center. Go to Knowledge Base to create and publish articles."
           />
-
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">Help Center Features</CardTitle>
@@ -102,82 +113,82 @@ function HelpCenterPage() {
                     key={feature.title}
                     className="rounded-lg border border-border p-3"
                   >
-                    <p className="font-medium text-foreground">{feature.title}</p>
+                    <p className="font-medium text-foreground">
+                      {feature.title}
+                    </p>
                     <p className="text-xs mt-1">{feature.desc}</p>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Help Center Status</CardTitle>
-                <Badge
-                  variant={settings.helpCenterEnabled ? "success" : "outline"}
-                >
-                  {settings.helpCenterEnabled ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {settings.helpCenterUrl && (
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Public URL</p>
-                    <p className="font-medium text-foreground">
-                      {settings.helpCenterUrl}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    leftIcon={<ExternalLink className="h-3 w-3" />}
-                    onClick={() =>
-                      window.open(settings.helpCenterUrl, "_blank")
-                    }
-                  >
-                    Open
-                  </Button>
-                </div>
-              )}
-              {settings.orgName && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Organization</p>
-                  <p className="font-medium text-foreground">
-                    {settings.orgName}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Configuration</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              <p>
-                Advanced help center configuration options are available in
-                Organization Settings.
-              </p>
               <Button
                 variant="outline"
                 size="sm"
                 leftIcon={<Settings className="h-4 w-4" />}
-                className="mt-3"
                 onClick={() => {
-                  window.location.href = "/app/settings";
+                  window.location.href = "/app/helpdesk/knowledge";
                 }}
               >
-                Go to Settings
+                Go to Knowledge Base
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search help articles..."
+              />
+            </div>
+            <Badge variant="outline">
+              {filtered.length} article{filtered.length !== 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          {Object.entries(byCategory).map(([categoryId, categoryArticles]) => (
+            <div key={categoryId} className="space-y-3">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <BookOpenText className="h-4 w-4 text-muted-foreground" />
+                {getCategoryName(categoryId)}
+              </h2>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {categoryArticles.map((article: any) => (
+                  <Card key={article.id} className="hover:border-primary/40 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {article.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {article.body?.slice(0, 120)}
+                            {article.body?.length > 120 ? "…" : ""}
+                          </p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span>{article.views ?? 0} views</span>
+                            {article.publishedAt && (
+                              <span>
+                                {new Date(
+                                  article.publishedAt,
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
       )}
     </div>
   );

@@ -6,121 +6,65 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
-  FormField,
-  FormModal,
-  Input,
   Loading,
 } from "@crm/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { ListOrdered, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ExternalLink, ListOrdered, Plus } from "lucide-react";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/queue")({
   component: QueuePage,
 });
 
 function QueuePage() {
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [counterDrafts, setCounterDrafts] = useState<Record<string, string>>(
-    {},
-  );
-  const [form, setForm] = useState({ serviceType: "general", ticketId: "" });
-  const queryClient = useQueryClient();
-
-  const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
-    queryKey: ["nucleo-tickets", "all", "all"],
-    queryFn: () => nucleoApi.tickets.list({ page: 1, limit: 200 }),
+  const { data: queueData, isLoading } = useQuery({
+    queryKey: ["helpdesk", "queue"],
+    queryFn: () => helpdeskApi.queue({ page: 1, limit: 100 }),
+    retry: false,
+    // Refresh every 30 seconds since queue changes frequently
+    refetchInterval: 30_000,
   });
 
-  const { data: queueData, isLoading: queueLoading } = useQuery({
-    queryKey: ["nucleo-queue", statusFilter],
-    queryFn: () =>
-      nucleoApi.queue.list({
-        page: 1,
-        limit: 200,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-      }),
+  const { data: statsData } = useQuery({
+    queryKey: ["helpdesk", "stats"],
+    queryFn: () => helpdeskApi.stats(),
+    retry: false,
   });
 
-  const createMutation = useMutation({
-    mutationFn: (payload: { serviceType: string; ticketId?: string }) =>
-      nucleoApi.queue.create(payload),
-    onSuccess: () => {
-      toast.success("Queue token created");
-      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
-      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
-      setIsCreateOpen(false);
-      setForm({ serviceType: "general", ticketId: "" });
-    },
-    onError: (error: Error) =>
-      toast.error(error.message || "Failed to create queue token"),
-  });
+  if (isLoading) return <Loading text="Loading queue..." />;
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({
-      id,
-      status,
-      counter,
-    }: {
-      id: string;
-      status: string;
-      counter?: string;
-    }) => nucleoApi.queue.updateStatus(id, status, counter),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
-      queryClient.invalidateQueries({ queryKey: ["nucleo-summary"] });
-    },
-    onError: (error: Error) =>
-      toast.error(error.message || "Failed to update queue token"),
-  });
+  const tickets: any[] = queueData?.data ?? [];
+  const stats = statsData ?? null;
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => nucleoApi.queue.delete(id),
-    onSuccess: () => {
-      toast.success("Queue token deleted");
-      queryClient.invalidateQueries({ queryKey: ["nucleo-queue"] });
-    },
-    onError: () => toast.error("Failed to delete queue token"),
-  });
+  const urgentCount = tickets.filter((t: any) => t.priority === "urgent").length;
+  const highCount = tickets.filter((t: any) => t.priority === "high").length;
 
-  if (queueLoading || ticketsLoading) return <Loading text="Loading queue..." />;
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "text-destructive";
+      case "high":
+        return "text-orange-400";
+      case "medium":
+        return "text-warning";
+      default:
+        return "text-muted-foreground";
+    }
+  };
 
-  const queueTokens: any[] = queueData?.data ?? [];
-  const tickets: any[] = ticketsData?.data ?? [];
-
-  // Unassigned tickets = open and not in any queue token
-  const tokenTicketIds = new Set(
-    queueTokens.map((t: any) => t.ticketId).filter(Boolean),
-  );
-  const unassignedTickets = tickets.filter(
-    (t: any) => t.status !== "closed" && !tokenTicketIds.has(t.id),
-  );
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return queueTokens;
-    const s = search.toLowerCase();
-    return queueTokens.filter(
-      (t: any) =>
-        String(t.tokenNumber || "").includes(s) ||
-        String(t.serviceType || "").toLowerCase().includes(s) ||
-        String(t.counter || "").toLowerCase().includes(s),
-    );
-  }, [queueTokens, search]);
-
-  const waitingCount = queueTokens.filter(
-    (t: any) => t.status === "waiting",
-  ).length;
-  const calledCount = queueTokens.filter(
-    (t: any) => t.status === "called",
-  ).length;
-  const completedCount = queueTokens.filter(
-    (t: any) => t.status === "completed",
-  ).length;
+  const getPriorityVariant = (priority: string): any => {
+    switch (priority) {
+      case "urgent":
+        return "danger";
+      case "high":
+        return "warning";
+      case "medium":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -128,258 +72,148 @@ function QueuePage() {
         <div>
           <h1 className="font-bold text-2xl text-foreground">Queue</h1>
           <p className="text-muted-foreground">
-            Manage live service queue tokens and track agent availability.
+            Priority-ordered tickets awaiting agent assignment.
           </p>
         </div>
-        <Button
-          variant="primary"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={() => setIsCreateOpen(true)}
-        >
-          New Token
-        </Button>
+        <Link to="/app/helpdesk/">
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+          >
+            New Ticket
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
-              Waiting
+              In Queue
             </p>
             <p className="text-3xl font-black text-foreground mt-1">
-              {waitingCount}
+              {tickets.length}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
-              Called
+              Urgent
             </p>
-            <p className="text-3xl font-black text-primary mt-1">
-              {calledCount}
+            <p className="text-3xl font-black text-destructive mt-1">
+              {urgentCount}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
-              Completed
+              High Priority
             </p>
-            <p className="text-3xl font-black text-emerald-400 mt-1">
-              {completedCount}
+            <p className="text-3xl font-black text-orange-400 mt-1">
+              {highCount}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
+              SLA Breached
+            </p>
+            <p className="text-3xl font-black text-destructive mt-1">
+              {stats?.slaBreached ?? 0}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {unassignedTickets.length > 0 && (
+      {tickets.length === 0 ? (
+        <EmptyState
+          icon={<ListOrdered className="h-12 w-12" />}
+          title="Queue is empty"
+          description="No open or pending tickets awaiting assignment. Great work!"
+          action={{
+            label: "Create Ticket",
+            onClick: () => {},
+          }}
+        />
+      ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">
-              Unassigned Open Tickets ({unassignedTickets.length})
-            </CardTitle>
+            <CardTitle>Priority Queue</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Ordered by priority (urgent → high → medium → low) then age.
+            </p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {unassignedTickets.slice(0, 10).map((ticket: any) => (
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {tickets.map((ticket: any, index: number) => (
                 <div
                   key={ticket.id}
-                  className="flex items-center justify-between rounded-md border border-border p-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
                 >
-                  <div>
-                    <span className="font-medium">{ticket.subject}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      [{ticket.queue}]
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-muted-foreground w-6 text-center">
+                      {index + 1}
                     </span>
+                    <div
+                      className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                        ticket.priority === "urgent"
+                          ? "bg-destructive animate-pulse"
+                          : ticket.priority === "high"
+                            ? "bg-orange-400"
+                            : ticket.priority === "medium"
+                              ? "bg-warning"
+                              : "bg-muted-foreground"
+                      }`}
+                    />
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {ticket.subject}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                        {ticket.contactName && (
+                          <span>{ticket.contactName}</span>
+                        )}
+                        {ticket.contactEmail && (
+                          <span>· {ticket.contactEmail}</span>
+                        )}
+                        <span>
+                          · {ticket.createdAt
+                            ? new Date(ticket.createdAt).toLocaleString()
+                            : "-"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <Badge
-                    variant={
-                      ticket.priority === "high"
-                        ? "destructive"
-                        : ticket.priority === "medium"
-                          ? "warning"
-                          : "outline"
-                    }
-                    className="text-[10px]"
-                  >
-                    {ticket.priority}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={getPriorityVariant(ticket.priority)}
+                      className="text-[10px]"
+                    >
+                      {ticket.priority}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      {ticket.status}
+                    </Badge>
+                    {ticket.slaBreached && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        SLA
+                      </Badge>
+                    )}
+                    <Link to={`/app/helpdesk/tickets/${ticket.id}` as string}>
+                      <Button size="sm" variant="ghost" className="h-7 px-2">
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Queue Tokens</CardTitle>
-            <div className="flex items-center gap-2">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tokens..."
-                className="w-48"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm"
-              >
-                <option value="all">All statuses</option>
-                <option value="waiting">Waiting</option>
-                <option value="called">Called</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filtered.length === 0 ? (
-            <EmptyState
-              icon={<ListOrdered className="h-12 w-12" />}
-              title="No queue tokens"
-              description="Create a token to begin queue operations."
-              action={{
-                label: "New Token",
-                onClick: () => setIsCreateOpen(true),
-              }}
-            />
-          ) : (
-            <div className="space-y-3">
-              {filtered.map((token: any) => {
-                const nextStatus =
-                  token.status === "waiting"
-                    ? "called"
-                    : token.status === "called"
-                      ? "completed"
-                      : "waiting";
-                const actionLabel =
-                  token.status === "waiting"
-                    ? "Call"
-                    : token.status === "called"
-                      ? "Complete"
-                      : "Reopen";
-
-                return (
-                  <div
-                    key={token.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground text-sm">
-                        Token #{token.tokenNumber} — {token.serviceType}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {token.createdAt
-                          ? new Date(token.createdAt).toLocaleTimeString()
-                          : "-"}
-                        {token.counter && ` · Counter: ${token.counter}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          token.status === "completed"
-                            ? "success"
-                            : token.status === "called"
-                              ? "primary"
-                              : "outline"
-                        }
-                      >
-                        {token.status}
-                      </Badge>
-                      <Input
-                        className="w-36"
-                        value={counterDrafts[token.id] ?? token.counter ?? ""}
-                        onChange={(e) =>
-                          setCounterDrafts((prev) => ({
-                            ...prev,
-                            [token.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Desk-1"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: token.id,
-                            status: nextStatus,
-                            counter:
-                              nextStatus === "called"
-                                ? counterDrafts[token.id] ||
-                                  token.counter ||
-                                  "Desk-1"
-                                : token.counter || undefined,
-                          })
-                        }
-                        loading={updateStatusMutation.isPending}
-                      >
-                        {actionLabel}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        leftIcon={<Trash2 className="h-4 w-4" />}
-                        onClick={() => deleteMutation.mutate(token.id)}
-                        loading={deleteMutation.isPending}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <FormModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Create Queue Token"
-        submitText="Create Token"
-        loading={createMutation.isPending}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const serviceType = form.serviceType.trim();
-          if (!serviceType) {
-            toast.error("Service type is required");
-            return;
-          }
-          createMutation.mutate({
-            serviceType,
-            ticketId: form.ticketId.trim() || undefined,
-          });
-        }}
-      >
-        <div className="space-y-4">
-          <FormField label="Service Type" required>
-            <Input
-              value={form.serviceType}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, serviceType: e.target.value }))
-              }
-              placeholder="general"
-              required
-            />
-          </FormField>
-          <FormField label="Related Ticket ID">
-            <Input
-              value={form.ticketId}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, ticketId: e.target.value }))
-              }
-              placeholder="Optional ticket UUID"
-            />
-          </FormField>
-        </div>
-      </FormModal>
     </div>
   );
 }

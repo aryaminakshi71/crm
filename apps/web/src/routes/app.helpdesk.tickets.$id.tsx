@@ -14,7 +14,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { ArrowLeft, MessageSquare, Paperclip, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/tickets/$id")({
   component: TicketDetailPage,
@@ -23,62 +23,47 @@ export const Route = createFileRoute("/app/helpdesk/tickets/$id")({
 function TicketDetailPage() {
   const { id } = useParams({ from: "/app/helpdesk/tickets/$id" });
   const [commentDraft, setCommentDraft] = useState("");
+  const [isInternal, setIsInternal] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch all tickets and find the one matching :id
-  const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
-    queryKey: ["nucleo-tickets", "all", "all"],
-    queryFn: () => nucleoApi.tickets.list({ page: 1, limit: 500 }),
+  const { data: ticket, isLoading: ticketLoading } = useQuery({
+    queryKey: ["helpdesk", "ticket", id],
+    queryFn: () => helpdeskApi.tickets.get(id),
   });
 
-  // Fetch comments for this ticket
   const { data: commentsData, isLoading: commentsLoading } = useQuery({
-    queryKey: ["ops-ticket-comments", id],
-    queryFn: () =>
-      nucleoApi.operations.ticketComments.list({
-        page: 1,
-        limit: 200,
-        ticketId: id,
-      }),
+    queryKey: ["helpdesk", "ticket-comments", id],
+    queryFn: () => helpdeskApi.ticketComments.list(id, { page: 1, limit: 200 }),
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: (status: string) =>
-      nucleoApi.tickets.updateStatus(id, status),
+  const updateMutation = useMutation({
+    mutationFn: (data: Record<string, any>) =>
+      helpdeskApi.tickets.update(id, data),
     onSuccess: () => {
-      toast.success("Ticket status updated");
-      queryClient.invalidateQueries({ queryKey: ["nucleo-tickets"] });
+      toast.success("Ticket updated");
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "tickets"] });
     },
-    onError: () => toast.error("Failed to update status"),
+    onError: () => toast.error("Failed to update ticket"),
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: (message: string) =>
-      nucleoApi.operations.ticketComments.create({ ticketId: id, message }),
+    mutationFn: (data: { body: string; isInternal: boolean }) =>
+      helpdeskApi.ticketComments.create(id, data),
     onSuccess: () => {
       toast.success("Comment added");
       setCommentDraft("");
-      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["helpdesk", "ticket-comments", id],
+      });
     },
     onError: () => toast.error("Failed to add comment"),
   });
 
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) =>
-      nucleoApi.operations.ticketComments.delete(commentId),
-    onSuccess: () => {
-      toast.success("Comment deleted");
-      queryClient.invalidateQueries({ queryKey: ["ops-ticket-comments", id] });
-    },
-    onError: () => toast.error("Failed to delete comment"),
-  });
-
-  if (ticketsLoading || commentsLoading) {
+  if (ticketLoading || commentsLoading) {
     return <Loading text="Loading ticket..." />;
   }
 
-  const tickets: any[] = ticketsData?.data ?? [];
-  const ticket = tickets.find((t: any) => t.id === id);
   const comments: any[] = commentsData?.data ?? [];
 
   if (!ticket) {
@@ -107,7 +92,7 @@ function TicketDetailPage() {
             {ticket.subject}
           </h1>
           <p className="text-muted-foreground text-sm">
-            #{ticket.id.slice(-8).toUpperCase()} · {ticket.queue}
+            #{ticket.id.slice(-8).toUpperCase()} · {ticket.source ?? "web"}
           </p>
         </div>
       </div>
@@ -133,7 +118,7 @@ function TicketDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">
-                  Timeline / Comments ({comments.length})
+                  Comments ({comments.length})
                 </CardTitle>
               </div>
             </CardHeader>
@@ -154,73 +139,83 @@ function TicketDetailPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            {comment.isInternal ? (
-                              <Badge variant="outline" className="text-[10px]">
-                                Internal
-                              </Badge>
-                            ) : (
-                              <Badge variant="primary" className="text-[10px]">
-                                Reply
-                              </Badge>
-                            )}
+                            <Badge
+                              variant={
+                                comment.isInternal ? "outline" : "primary"
+                              }
+                              className="text-[10px]"
+                            >
+                              {comment.isInternal ? "Internal" : "Reply"}
+                            </Badge>
                             <span className="text-xs text-muted-foreground">
                               {comment.createdAt
-                                ? new Date(
-                                    comment.createdAt,
-                                  ).toLocaleString()
+                                ? new Date(comment.createdAt).toLocaleString()
                                 : "-"}
                             </span>
                           </div>
                           <p className="text-sm text-foreground">
-                            {comment.message}
+                            {comment.body}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          leftIcon={<Trash2 className="h-3 w-3" />}
-                          onClick={() =>
-                            deleteCommentMutation.mutate(comment.id)
-                          }
-                          loading={deleteCommentMutation.isPending}
-                          className="h-7 px-2 text-xs"
-                        >
-                          Delete
-                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="flex items-center gap-2 pt-2 border-t border-border">
-                <Input
-                  value={commentDraft}
-                  onChange={(e) => setCommentDraft(e.target.value)}
-                  placeholder="Add internal note or reply..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
+              <div className="space-y-2 pt-2 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="internal-note"
+                    checked={isInternal}
+                    onChange={(e) => setIsInternal(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <label
+                    htmlFor="internal-note"
+                    className="text-xs text-muted-foreground cursor-pointer"
+                  >
+                    Internal note (not visible to customer)
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value)}
+                    placeholder={
+                      isInternal
+                        ? "Add internal note..."
+                        : "Add reply to customer..."
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        const msg = commentDraft.trim();
+                        if (msg)
+                          addCommentMutation.mutate({
+                            body: msg,
+                            isInternal,
+                          });
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
                       const msg = commentDraft.trim();
-                      if (msg) addCommentMutation.mutate(msg);
-                    }
-                  }}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const msg = commentDraft.trim();
-                    if (!msg) {
-                      toast.error("Comment is required");
-                      return;
-                    }
-                    addCommentMutation.mutate(msg);
-                  }}
-                  loading={addCommentMutation.isPending}
-                >
-                  Add
-                </Button>
+                      if (!msg) {
+                        toast.error("Comment is required");
+                        return;
+                      }
+                      addCommentMutation.mutate({ body: msg, isInternal });
+                    }}
+                    loading={addCommentMutation.isPending}
+                  >
+                    Add
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -253,11 +248,12 @@ function TicketDetailPage() {
                   className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-sm"
                   value={ticket.status}
                   onChange={(e) =>
-                    updateStatusMutation.mutate(e.target.value)
+                    updateMutation.mutate({ status: e.target.value })
                   }
                 >
                   <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
+                  <option value="pending">Pending</option>
+                  <option value="resolved">Resolved</option>
                   <option value="closed">Closed</option>
                 </select>
               </div>
@@ -265,23 +261,51 @@ function TicketDetailPage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
                   Priority
                 </p>
-                <Badge
-                  variant={
-                    ticket.priority === "high"
-                      ? "destructive"
-                      : ticket.priority === "medium"
-                        ? "warning"
-                        : "outline"
+                <select
+                  className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-sm"
+                  value={ticket.priority}
+                  onChange={(e) =>
+                    updateMutation.mutate({ priority: e.target.value })
                   }
                 >
-                  {ticket.priority}
-                </Badge>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
               </div>
+              {ticket.category && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Category
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {ticket.category}
+                  </p>
+                </div>
+              )}
+              {ticket.contactName && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Contact
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {ticket.contactName}
+                  </p>
+                  {ticket.contactEmail && (
+                    <p className="text-xs text-muted-foreground">
+                      {ticket.contactEmail}
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-                  Queue
+                  Source
                 </p>
-                <p className="font-medium text-foreground">{ticket.queue}</p>
+                <Badge variant="outline" className="text-[10px] capitalize">
+                  {ticket.source ?? "web"}
+                </Badge>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
@@ -293,6 +317,26 @@ function TicketDetailPage() {
                     : "-"}
                 </p>
               </div>
+              {ticket.firstResponseAt && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    First Response
+                  </p>
+                  <p className="text-foreground">
+                    {new Date(ticket.firstResponseAt).toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {ticket.resolvedAt && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Resolved
+                  </p>
+                  <p className="text-foreground">
+                    {new Date(ticket.resolvedAt).toLocaleString()}
+                  </p>
+                </div>
+              )}
               {ticket.closedAt && (
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
@@ -300,6 +344,23 @@ function TicketDetailPage() {
                   </p>
                   <p className="text-foreground">
                     {new Date(ticket.closedAt).toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {ticket.slaBreached && (
+                <div>
+                  <Badge variant="destructive" className="text-[10px]">
+                    SLA Breached
+                  </Badge>
+                </div>
+              )}
+              {ticket.satisfaction && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Satisfaction
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {ticket.satisfaction}/5
                   </p>
                 </div>
               )}

@@ -9,8 +9,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   EmptyState,
   Input,
 } from "@crm/ui";
@@ -25,7 +23,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useState } from "react";
-import { nucleoApi } from "../lib/api";
+import { helpdeskApi } from "../lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/tickets")({
   component: TicketList,
@@ -36,54 +34,43 @@ type TicketRow = {
   subject: string;
   status: "open" | "pending" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
-  channel: "email" | "chat" | "phone" | "portal";
-  requester: string;
-  assignedTo: string;
+  source: string;
+  contactName: string;
+  assigneeId: string | null;
   createdAt: string;
   updatedAt: string;
 };
-
-const MOCK_TICKETS: TicketRow[] = [
-  { id: "TKT-001", subject: "Cannot login to dashboard after password reset", status: "open", priority: "high", channel: "email", requester: "Sarah Chen", assignedTo: "John Doe", createdAt: "2 hours ago", updatedAt: "1 hour ago" },
-  { id: "TKT-002", subject: "Billing inquiry - overcharged for subscription", status: "pending", priority: "medium", channel: "chat", requester: "Michael Roberts", assignedTo: "Jane Smith", createdAt: "4 hours ago", updatedAt: "2 hours ago" },
-  { id: "TKT-003", subject: "Feature request: Dark mode support", status: "resolved", priority: "low", channel: "portal", requester: "Emily Watson", assignedTo: "John Doe", createdAt: "1 day ago", updatedAt: "5 hours ago" },
-  { id: "TKT-004", subject: "API integration not working properly", status: "open", priority: "urgent", channel: "phone", requester: "David Kim", assignedTo: "Unassigned", createdAt: "3 hours ago", updatedAt: "3 hours ago" },
-  { id: "TKT-005", subject: "How to export data to CSV?", status: "resolved", priority: "low", channel: "chat", requester: "Jessica Brown", assignedTo: "Mike Wilson", createdAt: "2 days ago", updatedAt: "1 day ago" },
-  { id: "TKT-006", subject: "Account upgrade request - Enterprise plan", status: "pending", priority: "high", channel: "email", requester: "Robert Taylor", assignedTo: "Jane Smith", createdAt: "1 day ago", updatedAt: "12 hours ago" },
-  { id: "TKT-007", subject: "Bug report: Charts not loading in Firefox", status: "open", priority: "high", channel: "portal", requester: "Lisa Anderson", assignedTo: "John Doe", createdAt: "5 hours ago", updatedAt: "4 hours ago" },
-  { id: "TKT-008", subject: "Request for custom integration", status: "closed", priority: "medium", channel: "email", requester: "James Martinez", assignedTo: "Mike Wilson", createdAt: "1 week ago", updatedAt: "3 days ago" },
-];
 
 function TicketList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [channelFilter, setChannelFilter] = useState<string>("all");
 
   const { data: ticketsData, isLoading } = useQuery({
-    queryKey: ["helpdesk-tickets-list", statusFilter],
+    queryKey: ["helpdesk", "tickets", statusFilter, priorityFilter, search],
     queryFn: () =>
-      nucleoApi.tickets.list({
+      helpdeskApi.tickets.list({
         page: 1,
         limit: 100,
         status: statusFilter !== "all" ? statusFilter : undefined,
+        priority: priorityFilter !== "all" ? priorityFilter : undefined,
+        search: search.trim() || undefined,
       }),
     retry: false,
   });
 
-  const rawTickets: any[] = ticketsData?.data ?? MOCK_TICKETS;
+  const rawTickets: any[] = ticketsData?.data ?? [];
 
-  // Normalise API tickets to the TicketRow shape expected by this UI
   const allTickets: TicketRow[] = rawTickets.map((t: any) => ({
-    id: t.id ?? t.ticketNumber ?? "—",
-    subject: t.subject ?? t.title ?? "No subject",
-    status: (t.status as TicketRow["status"]) ?? "open",
-    priority: (t.priority as TicketRow["priority"]) ?? "medium",
-    channel: (t.channel ?? t.source ?? "email") as TicketRow["channel"],
-    requester: t.requester ?? t.customerName ?? t.contactName ?? "Customer",
-    assignedTo: t.assignedTo ?? t.assigneeName ?? "Unassigned",
-    createdAt: t.createdAt ? new Date(t.createdAt).toLocaleString() : (t.createdAt ?? "—"),
-    updatedAt: t.updatedAt ? new Date(t.updatedAt).toLocaleString() : (t.updatedAt ?? "—"),
+    id: t.id,
+    subject: t.subject ?? "No subject",
+    status: t.status ?? "open",
+    priority: t.priority ?? "medium",
+    source: t.source ?? "web",
+    contactName: t.contactName ?? t.contactEmail ?? "Customer",
+    assigneeId: t.assigneeId ?? null,
+    createdAt: t.createdAt ? new Date(t.createdAt).toLocaleString() : "—",
+    updatedAt: t.updatedAt ? new Date(t.updatedAt).toLocaleString() : "—",
   }));
 
   if (isLoading) {
@@ -102,14 +89,6 @@ function TicketList() {
       </div>
     );
   }
-
-  const filteredTickets = allTickets.filter((ticket) => {
-    if (statusFilter !== "all" && ticket.status !== statusFilter) return false;
-    if (priorityFilter !== "all" && ticket.priority !== priorityFilter) return false;
-    if (channelFilter !== "all" && ticket.channel !== channelFilter) return false;
-    if (!search.trim()) return true;
-    return ticket.subject.toLowerCase().includes(search.toLowerCase()) || ticket.id.toLowerCase().includes(search.toLowerCase());
-  });
 
   const openCount = allTickets.filter((t) => t.status === "open").length;
   const pendingCount = allTickets.filter((t) => t.status === "pending").length;
@@ -143,9 +122,11 @@ function TicketList() {
           <h2 className="font-bold text-xl text-foreground">Tickets</h2>
           <p className="text-sm text-muted-foreground">Manage and respond to support requests</p>
         </div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-          New Ticket
-        </Button>
+        <Link to="/app/helpdesk/">
+          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+            New Ticket
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -153,7 +134,7 @@ function TicketList() {
         <StatCard title="Open" value={String(openCount)} icon="danger" />
         <StatCard title="Pending" value={String(pendingCount)} icon="warning" />
         <StatCard title="Resolved" value={String(resolvedCount)} icon="success" />
-        <StatCard title="Avg First Response" value="2.4 hrs" icon="primary" />
+        <StatCard title="Total" value={String(allTickets.length)} icon="primary" />
       </div>
 
       {/* Filters */}
@@ -176,17 +157,10 @@ function TicketList() {
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
-        <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="flex h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm">
-          <option value="all">All Channels</option>
-          <option value="email">Email</option>
-          <option value="chat">Chat</option>
-          <option value="phone">Phone</option>
-          <option value="portal">Portal</option>
-        </select>
       </div>
 
       {/* Ticket List */}
-      {filteredTickets.length === 0 ? (
+      {allTickets.length === 0 ? (
         <EmptyState
           icon={<Ticket className="h-12 w-12" />}
           title="No tickets found"
@@ -208,19 +182,18 @@ function TicketList() {
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Subject</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Status</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Priority</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Channel</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Requester</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Assigned To</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Source</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Contact</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Created</th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground"></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.map((ticket) => (
+                {allTickets.map((ticket) => (
                   <tr key={ticket.id} className="border-b border-border hover:bg-muted/50 cursor-pointer">
                     <td className="px-4 py-3 text-sm font-medium">
-                      <Link to={`/app/helpdesk/tickets/${ticket.id}` as string} className="text-primary hover:underline">
-                        {ticket.id}
+                      <Link to={`/app/helpdesk/tickets/${ticket.id}` as string} className="text-primary hover:underline font-mono text-xs">
+                        #{ticket.id.slice(-8).toUpperCase()}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -230,9 +203,8 @@ function TicketList() {
                     </td>
                     <td className="px-4 py-3">{getStatusBadge(ticket.status)}</td>
                     <td className="px-4 py-3">{getPriorityBadge(ticket.priority)}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground capitalize">{ticket.channel}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{ticket.requester}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{ticket.assignedTo}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground capitalize">{ticket.source}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{ticket.contactName}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{ticket.createdAt}</td>
                     <td className="px-4 py-3">
                       <Button variant="ghost" size="sm">
@@ -251,12 +223,6 @@ function TicketList() {
 }
 
 function StatCard({ title, value, icon }: { title: string; value: string; icon: "danger" | "warning" | "success" | "primary" }) {
-  const colors = {
-    danger: "text-rose-400 bg-rose-500/10",
-    warning: "text-amber-400 bg-amber-500/10",
-    success: "text-emerald-400 bg-emerald-500/10",
-    primary: "text-primary bg-primary/10",
-  };
   return (
     <Card className="border-border/60">
       <CardContent className="p-4">

@@ -4277,3 +4277,335 @@ export const inventoryApi = {
     },
   },
 };
+
+// ── Helpdesk API ─────────────────────────────────────────────────────────────
+
+const API_BASE_HD = import.meta.env.VITE_API_URL ?? "/api";
+
+function getHdOrgHeader(): Record<string, string> {
+  const orgId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("activeOrganizationId") ?? ""
+      : "";
+  return { "x-org-id": orgId, "Content-Type": "application/json" };
+}
+
+async function hdFetch(path: string, opts?: RequestInit): Promise<any> {
+  const res = await fetch(`${API_BASE_HD}/v1${path}`, {
+    ...opts,
+    headers: { ...getHdOrgHeader(), ...(opts?.headers ?? {}) },
+  });
+  if (!res.ok) throw new Error(`HD fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export const helpdeskApi = {
+  stats: async (): Promise<any> => {
+    try {
+      return await withRpcTimeout(
+        rpc.helpdesk?.stats?.({}),
+        "helpdesk.stats",
+      );
+    } catch {
+      return { open: 0, pending: 0, resolved: 0, slaBreached: 0, avgResponseTimeHours: 0, satisfactionScore: 0 };
+    }
+  },
+
+  tickets: {
+    list: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      priority?: string;
+      search?: string;
+    }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.ticketsList?.({
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 50,
+            status: params?.status,
+            priority: params?.priority,
+            search: params?.search,
+          }),
+          "helpdesk.ticketsList",
+        );
+      } catch {
+        return { data: [], total: 0, page: 1, limit: 50 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.ticketsGet?.({ id }),
+          "helpdesk.ticketsGet",
+        );
+      } catch {
+        return null;
+      }
+    },
+    create: async (data: {
+      subject: string;
+      description?: string;
+      status?: string;
+      priority?: string;
+      category?: string;
+      assigneeId?: string;
+      contactEmail?: string;
+      contactName?: string;
+      tags?: string[];
+      source?: string;
+    }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.ticketsCreate?.(data),
+        "helpdesk.ticketsCreate",
+      );
+    },
+    update: async (id: string, data: Record<string, any>): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.ticketsUpdate?.({ id, ...data }),
+        "helpdesk.ticketsUpdate",
+      );
+    },
+    delete: async (id: string): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.ticketsDelete?.({ id }),
+        "helpdesk.ticketsDelete",
+      );
+    },
+  },
+
+  ticketComments: {
+    list: async (ticketId: string, params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.ticketCommentsList?.({
+            id: ticketId,
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 100,
+          }),
+          "helpdesk.ticketCommentsList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 100 };
+      }
+    },
+    create: async (ticketId: string, data: { body: string; isInternal?: boolean }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.ticketCommentsCreate?.({ id: ticketId, ...data }),
+        "helpdesk.ticketCommentsCreate",
+      );
+    },
+  },
+
+  queue: async (params?: { page?: number; limit?: number }): Promise<any> => {
+    try {
+      return await withRpcTimeout(
+        rpc.helpdesk?.queue?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+        "helpdesk.queue",
+      );
+    } catch {
+      return { data: [], page: 1, limit: 50 };
+    }
+  },
+
+  knowledge: {
+    list: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      categoryId?: string;
+      search?: string;
+    }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.knowledgeList?.({
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 50,
+            status: params?.status,
+            categoryId: params?.categoryId,
+            search: params?.search,
+          }),
+          "helpdesk.knowledgeList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.knowledgeGet?.({ id }),
+          "helpdesk.knowledgeGet",
+        );
+      } catch {
+        return null;
+      }
+    },
+    create: async (data: { title: string; body: string; slug?: string; categoryId?: string; status?: string }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.knowledgeCreate?.(data),
+        "helpdesk.knowledgeCreate",
+      );
+    },
+    update: async (id: string, data: Record<string, any>): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.knowledgeUpdate?.({ id, ...data }),
+        "helpdesk.knowledgeUpdate",
+      );
+    },
+    delete: async (id: string): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.knowledgeDelete?.({ id }),
+        "helpdesk.knowledgeDelete",
+      );
+    },
+  },
+
+  knowledgeCategories: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.knowledgeCategoriesList?.({ page: params?.page ?? 1, limit: params?.limit ?? 100 }),
+          "helpdesk.knowledgeCategoriesList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 100 };
+      }
+    },
+    create: async (data: { name: string; slug?: string; parentId?: string; sortOrder?: number }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.knowledgeCategoriesCreate?.(data),
+        "helpdesk.knowledgeCategoriesCreate",
+      );
+    },
+  },
+
+  sla: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.slaList?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "helpdesk.slaList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    create: async (data: {
+      name: string;
+      priority: string;
+      firstResponseHours?: number;
+      resolutionHours?: number;
+      businessHoursOnly?: boolean;
+      isDefault?: boolean;
+    }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.slaCreate?.(data),
+        "helpdesk.slaCreate",
+      );
+    },
+    update: async (id: string, data: Record<string, any>): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.slaUpdate?.({ id, ...data }),
+        "helpdesk.slaUpdate",
+      );
+    },
+  },
+
+  canned: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.cannedList?.({ page: params?.page ?? 1, limit: params?.limit ?? 100 }),
+          "helpdesk.cannedList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 100 };
+      }
+    },
+    create: async (data: { name: string; category?: string; body: string; shortcut?: string }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.cannedCreate?.(data),
+        "helpdesk.cannedCreate",
+      );
+    },
+    update: async (id: string, data: Record<string, any>): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.cannedUpdate?.({ id, ...data }),
+        "helpdesk.cannedUpdate",
+      );
+    },
+    delete: async (id: string): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.cannedDelete?.({ id }),
+        "helpdesk.cannedDelete",
+      );
+    },
+  },
+
+  surveys: {
+    list: async (params?: { page?: number; limit?: number }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.surveysList?.({ page: params?.page ?? 1, limit: params?.limit ?? 50 }),
+          "helpdesk.surveysList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    create: async (data: { ticketId?: string; rating: number; comment?: string }): Promise<any> => {
+      return await withRpcTimeout(
+        rpc.helpdesk?.surveysCreate?.(data),
+        "helpdesk.surveysCreate",
+      );
+    },
+  },
+
+  forums: {
+    list: async (params?: { page?: number; limit?: number; status?: string; search?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.helpdesk?.forumsList?.({ page: params?.page ?? 1, limit: params?.limit ?? 50, status: params?.status, search: params?.search }),
+          "helpdesk.forumsList",
+        );
+      } catch {
+        return { data: [], page: 1, limit: 50 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(rpc.helpdesk?.forumsGet?.({ id }), "helpdesk.forumsGet");
+      } catch {
+        return null;
+      }
+    },
+    create: async (data: { title: string; body: string; tags?: string[]; isPinned?: boolean }): Promise<any> => {
+      return await withRpcTimeout(rpc.helpdesk?.forumsCreate?.(data), "helpdesk.forumsCreate");
+    },
+    update: async (id: string, data: Record<string, any>): Promise<any> => {
+      return await withRpcTimeout(rpc.helpdesk?.forumsUpdate?.({ id, ...data }), "helpdesk.forumsUpdate");
+    },
+  },
+
+  widget: {
+    get: async (): Promise<any> => {
+      try {
+        return await withRpcTimeout(rpc.helpdesk?.widgetGet?.({}), "helpdesk.widgetGet");
+      } catch {
+        return null;
+      }
+    },
+    update: async (data: {
+      name?: string;
+      color?: string;
+      position?: "bottom-right" | "bottom-left";
+      greeting?: string;
+      isActive?: boolean;
+      allowedDomains?: string[];
+    }): Promise<any> => {
+      return await withRpcTimeout(rpc.helpdesk?.widgetUpdate?.(data), "helpdesk.widgetUpdate");
+    },
+  },
+};
