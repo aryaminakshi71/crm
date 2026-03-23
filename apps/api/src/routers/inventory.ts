@@ -67,7 +67,7 @@ export const inventoryRouter = {
         ];
         if (input.search) conditions.push(ilike(products.name, `%${input.search}%`));
         if (input.category) conditions.push(eq(products.category, input.category));
-        if (input.status) conditions.push(eq(products.status, input.status as any));
+        if (input.status) conditions.push(eq(products.status, input.status as "active" | "inactive" | "discontinued"));
         const where = and(...conditions);
         const [{ total }] = await db
           .select({ total: count() })
@@ -865,7 +865,7 @@ export const inventoryRouter = {
           sql`${products.barcode} IS NOT NULL`,
         ];
         if (input.search) conditions.push(ilike(products.name, `%${input.search}%`));
-        if (input.status) conditions.push(eq(products.status, input.status as any));
+        if (input.status) conditions.push(eq(products.status, input.status as "active" | "inactive" | "discontinued"));
         const where = and(...conditions);
         const [{ total }] = await db.select({ total: count() }).from(products).where(where);
         const data = await db
@@ -914,7 +914,7 @@ export const inventoryRouter = {
           isNull(products.deletedAt),
         ];
         if (input.search) conditions.push(ilike(products.name, `%${input.search}%`));
-        if (input.status) conditions.push(eq(products.status, input.status as any));
+        if (input.status) conditions.push(eq(products.status, input.status as "active" | "inactive" | "discontinued"));
         const where = and(...conditions);
         const [{ total }] = await db.select({ total: count() }).from(products).where(where);
         const data = await db

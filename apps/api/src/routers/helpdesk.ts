@@ -40,13 +40,13 @@ export const helpdeskRouter = {
 
       if (input.status?.trim()) {
         conditions.push(
-          eq(schema.helpdeskTickets.status, input.status as any),
+          eq(schema.helpdeskTickets.status, input.status as "open" | "pending" | "resolved" | "closed"),
         );
       }
 
       if (input.priority?.trim()) {
         conditions.push(
-          eq(schema.helpdeskTickets.priority, input.priority as any),
+          eq(schema.helpdeskTickets.priority, input.priority as "low" | "medium" | "high" | "urgent"),
         );
       }
 
@@ -461,7 +461,7 @@ export const helpdeskRouter = {
 
       if (input.status?.trim()) {
         conditions.push(
-          eq(schema.helpdeskKnowledgeArticles.status, input.status as any),
+          eq(schema.helpdeskKnowledgeArticles.status, input.status as "draft" | "published" | "archived"),
         );
       }
 
@@ -1030,7 +1030,7 @@ export const helpdeskRouter = {
 
       if (input.status?.trim()) {
         conditions.push(
-          eq(schema.helpdeskForums.status, input.status as any),
+          eq(schema.helpdeskForums.status, input.status as "open" | "closed" | "archived"),
         );
       }
 

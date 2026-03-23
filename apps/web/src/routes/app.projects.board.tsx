@@ -76,6 +76,7 @@ function KanbanBoardPage() {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<Task["status"] | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [quickAddColumn, setQuickAddColumn] = useState<Task["status"] | null>(null);
 
   // Get all projects
   const { data: projectsData } = useQuery({
@@ -241,7 +242,7 @@ function KanbanBoardPage() {
                   size="sm"
                   variant="ghost"
                   className="h-7 w-7 p-0"
-                  onClick={() => {}}
+                  onClick={() => setQuickAddColumn(quickAddColumn === col.id ? null : col.id)}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -277,6 +278,7 @@ function KanbanBoardPage() {
               <QuickAddTask
                 status={col.id}
                 projectId={selectedProject?.id}
+                forceOpen={quickAddColumn === col.id}
                 onAdd={(title) => {
                   if (!selectedProject) return;
                   createTaskMut.mutate({
@@ -284,7 +286,9 @@ function KanbanBoardPage() {
                     status: col.id,
                     priority: "medium",
                   });
+                  setQuickAddColumn(null);
                 }}
+                onCancel={() => setQuickAddColumn(null)}
               />
             </div>
           </div>
@@ -449,13 +453,19 @@ function QuickAddTask({
   status,
   projectId,
   onAdd,
+  forceOpen,
+  onCancel,
 }: {
   status: Task["status"];
   projectId?: string;
   onAdd: (title: string) => void;
+  forceOpen?: boolean;
+  onCancel?: () => void;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
+
+  const open = isAdding || !!forceOpen;
 
   const handleSubmit = () => {
     if (title.trim()) {
@@ -465,7 +475,13 @@ function QuickAddTask({
     }
   };
 
-  if (!isAdding) {
+  const handleCancel = () => {
+    setTitle("");
+    setIsAdding(false);
+    onCancel?.();
+  };
+
+  if (!open) {
     return (
       <Button
         variant="ghost"
@@ -488,7 +504,7 @@ function QuickAddTask({
         autoFocus
         onKeyDown={(e) => {
           if (e.key === "Enter") handleSubmit();
-          if (e.key === "Escape") setIsAdding(false);
+          if (e.key === "Escape") handleCancel();
         }}
       />
       <div className="flex gap-2">
@@ -498,10 +514,7 @@ function QuickAddTask({
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => {
-            setTitle("");
-            setIsAdding(false);
-          }}
+          onClick={handleCancel}
         >
           Cancel
         </Button>

@@ -5,9 +5,10 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, LoadingSkeleton } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, dealsApi } from "@/lib/api";
+import { toast } from "sonner";
 import {
   Activity,
   ArrowRight,
@@ -51,6 +52,32 @@ export const Route = createFileRoute("/app/crm/_index")({
 
 function CrmOverview() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Mutation: create a new deal
+  const createDealMutation = useMutation({
+    mutationFn: (data: { name: string; value: number; stage?: string; notes?: string }) =>
+      dealsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      toast.success("Deal created successfully");
+      navigate({ to: "/app/crm/deals" });
+    },
+    onError: () => toast.error("Failed to create deal"),
+  });
+
+  // Mutation: update deal stage
+  const updateDealMutation = useMutation({
+    mutationFn: ({ id, stage }: { id: string; stage: string }) =>
+      dealsApi.update(id, { stage }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      toast.success("Deal stage updated");
+    },
+    onError: () => toast.error("Failed to update deal stage"),
+  });
 
   // Fetch dashboard stats from real API
   const { data: dashboardStats, isLoading: statsLoading } = useQuery({
@@ -458,10 +485,22 @@ function CrmOverview() {
         <Button
           variant="outline"
           className="h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate({ to: "/app/crm/deals", search: { action: "create" } })}
+          disabled={createDealMutation.isPending}
+          onClick={() => {
+            const name = prompt("Deal name:");
+            const valueStr = prompt("Deal value ($):");
+            if (name && valueStr) {
+              const value = parseFloat(valueStr);
+              if (!isNaN(value)) {
+                createDealMutation.mutate({ name, value, stage: "lead" });
+              }
+            }
+          }}
         >
           <Briefcase className="h-5 w-5" />
-          <span className="text-sm font-medium">Create Deal</span>
+          <span className="text-sm font-medium">
+            {createDealMutation.isPending ? "Creating..." : "Create Deal"}
+          </span>
         </Button>
         <Button
           variant="outline"

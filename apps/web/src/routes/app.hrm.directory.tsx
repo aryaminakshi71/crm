@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Filter,
@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { hrmApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/hrm/directory")({
   component: EmployeeDirectory,
@@ -186,6 +187,7 @@ const departments = ["All Departments", "Engineering", "Design", "Product", "Sal
 const statuses = ["All Status", "Active", "On Leave", "Remote"];
 
 function EmployeeDirectory() {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
@@ -196,6 +198,16 @@ function EmployeeDirectory() {
     queryKey: ["hrm-employees-directory"],
     queryFn: () => hrmApi.employees.list({ limit: 100 }),
     retry: false,
+  });
+
+  const createEmployeeMutation = useMutation({
+    mutationFn: (data: { firstName: string; lastName: string; email: string; department?: string; jobTitle?: string }) =>
+      hrmApi.employees.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hrm-employees-directory"] });
+      toast.success("Employee added successfully");
+    },
+    onError: () => toast.error("Failed to add employee"),
   });
 
   if (isLoading) {
@@ -261,9 +273,22 @@ function EmployeeDirectory() {
             <Download className="h-4 w-4" />
             Export
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <button
+            disabled={createEmployeeMutation.isPending}
+            onClick={() => {
+              const firstName = prompt("First name:");
+              const lastName = prompt("Last name:");
+              const email = prompt("Work email:");
+              if (firstName && lastName && email) {
+                const department = prompt("Department (optional):") || undefined;
+                const jobTitle = prompt("Job title (optional):") || undefined;
+                createEmployeeMutation.mutate({ firstName, lastName, email, department, jobTitle });
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          >
             <UserPlus className="h-4 w-4" />
-            Add Employee
+            {createEmployeeMutation.isPending ? "Adding..." : "Add Employee"}
           </button>
         </div>
       </div>

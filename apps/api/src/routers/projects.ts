@@ -26,30 +26,38 @@ export const projectsRouter = {
     .handler(async ({ context }) => {
       const db = getDb(context);
       const orgId = context.organization.id;
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const [totalRow] = await db
-        .select({ count: sql<number>`count(*)` })
+      const allProjects = await db
+        .select()
         .from(schema.projects)
         .where(and(eq(schema.projects.organizationId, orgId), isNull(schema.projects.deletedAt)));
 
-      const [activeRow] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(schema.projects)
-        .where(
-          and(
-            eq(schema.projects.organizationId, orgId),
-            eq(schema.projects.status, "active"),
-            isNull(schema.projects.deletedAt),
-          ),
-        );
+      const totalProjects = allProjects.length;
+      const activeProjects = allProjects.filter((p) => p.status === "active").length;
+      const completedThisMonth = allProjects.filter(
+        (p) => p.status === "completed" && p.updatedAt >= firstOfMonth,
+      ).length;
+      const atRisk = allProjects.filter(
+        (p) => p.status === "active" && p.dueDate && new Date(p.dueDate) < now,
+      ).length;
+
+      // Aggregate budget/spent from time entries as a proxy for spend
+      const [timeResult] = await db
+        .select({ totalHours: sql<string>`COALESCE(SUM(CAST(${schema.projectTimeEntries.hours} AS NUMERIC)), 0)` })
+        .from(schema.projectTimeEntries)
+        .where(eq(schema.projectTimeEntries.organizationId, orgId));
+
+      const totalSpent = Number(timeResult?.totalHours ?? 0);
 
       return {
-        totalProjects: Number(totalRow?.count ?? 0),
-        activeProjects: Number(activeRow?.count ?? 0),
-        completedThisMonth: 0,
-        atRisk: 0,
+        totalProjects,
+        activeProjects,
+        completedThisMonth,
+        atRisk,
         totalBudget: 0,
-        totalSpent: 0,
+        totalSpent,
       };
     }),
 
@@ -367,7 +375,7 @@ export const projectsRouter = {
           priority: input.priority ?? "medium",
           dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
           ownerId: input.ownerId,
-          customerId: input.customerId as any,
+          customerId: input.customerId ?? null,
         })
         .returning();
 
@@ -413,7 +421,7 @@ export const projectsRouter = {
       const members = await db
         .select()
         .from(schema.projectResources)
-        .where(eq(schema.projectResources.projectId, input.id as any));
+        .where(eq(schema.projectResources.projectId, input.id));
 
       return { data: { ...project, taskCount: Number(taskCount), members } };
     }),
@@ -791,7 +799,7 @@ export const projectsRouter = {
           projectId: input.id,
           name: input.name,
           goal: input.goal,
-          status: (input.status as any) ?? "planning",
+          status: (input.status as "planning" | "active" | "completed") ?? "planning",
           startDate: input.startDate ?? undefined,
           endDate: input.endDate ?? undefined,
           velocity: input.velocity,
@@ -822,7 +830,7 @@ export const projectsRouter = {
         .where(
           and(
             eq(schema.projectResources.organizationId, orgId),
-            eq(schema.projectResources.projectId, input.id as any),
+            eq(schema.projectResources.projectId, input.id),
           ),
         );
 
@@ -854,7 +862,7 @@ export const projectsRouter = {
         .insert(schema.projectResources)
         .values({
           organizationId: orgId,
-          projectId: input.id as any,
+          projectId: input.id,
           userId: input.userId,
           name: input.name,
           role: input.role,
@@ -999,9 +1007,9 @@ export const projectsRouter = {
           projectId: input.id,
           title: input.title,
           description: input.description,
-          impact: (input.impact as any) ?? "medium",
-          probability: (input.probability as any) ?? "medium",
-          status: (input.status as any) ?? "identified",
+          impact: (input.impact as "low" | "medium" | "high" | "critical") ?? "medium",
+          probability: (input.probability as "low" | "medium" | "high") ?? "medium",
+          status: (input.status as "identified" | "mitigating" | "resolved" | "accepted") ?? "identified",
           mitigation: input.mitigation,
           owner: input.owner,
           dueDate: input.dueDate ?? undefined,
