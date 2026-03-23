@@ -16,17 +16,6 @@ type TicketsListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_TICKETS: Ticket[] = [
-  { id: '1', title: 'Cannot login to dashboard', description: 'User reports 403 error on login', status: 'open', priority: 'urgent', assignee: 'Sarah Chen', slaMinutes: 45, createdAt: '2026-03-22T08:00:00Z' },
-  { id: '2', title: 'Invoice PDF not generating', description: 'PDF export fails for invoices over $10k', status: 'in_progress', priority: 'high', assignee: 'Mike Torres', slaMinutes: 120, createdAt: '2026-03-21T14:30:00Z' },
-  { id: '3', title: 'Slow page load on reports', description: 'Reports page takes >10s to load', status: 'in_progress', priority: 'medium', assignee: 'Sarah Chen', slaMinutes: 240, createdAt: '2026-03-21T10:00:00Z' },
-  { id: '4', title: 'Email notifications not sent', description: 'Welcome emails not delivering', status: 'open', priority: 'high', assignee: undefined, slaMinutes: 90, createdAt: '2026-03-22T06:15:00Z' },
-  { id: '5', title: 'Data export format wrong', description: 'CSV missing header row', status: 'resolved', priority: 'low', assignee: 'James Park', slaMinutes: 480, createdAt: '2026-03-20T09:00:00Z' },
-  { id: '6', title: 'Mobile app crashes on Android', description: 'Crash on startup for Android 12', status: 'open', priority: 'urgent', assignee: 'Mike Torres', slaMinutes: 30, createdAt: '2026-03-22T09:45:00Z' },
-  { id: '7', title: 'Calendar sync broken', description: 'Google Calendar integration not syncing', status: 'closed', priority: 'medium', assignee: 'James Park', slaMinutes: 0, createdAt: '2026-03-19T11:00:00Z' },
-  { id: '8', title: 'Wrong currency displayed', description: 'USD shown instead of EUR for EU accounts', status: 'in_progress', priority: 'high', assignee: 'Sarah Chen', slaMinutes: 180, createdAt: '2026-03-22T07:30:00Z' },
-];
-
 const STATUS_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'closed'] as const;
 
 export default function TicketsListScreen({ navigation }: TicketsListScreenProps) {
@@ -61,8 +50,8 @@ export default function TicketsListScreen({ navigation }: TicketsListScreenProps
       setTickets(data);
       setFilteredTickets(data);
     } catch (error) {
-      setTickets(MOCK_TICKETS);
-      setFilteredTickets(MOCK_TICKETS);
+      setTickets([]);
+      setFilteredTickets([]);
     }
   }
 

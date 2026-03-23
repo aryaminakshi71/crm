@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,36 +6,37 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Ticket } from '../../types';
+import { api } from '../../services/api';
 
 type TicketDetailScreenProps = {
   navigation: NativeStackNavigationProp<any>;
   route: RouteProp<{ params: { ticketId: string } }, 'params'>;
 };
 
-const MOCK_ACTIVITY = [
-  { id: '1', actor: 'Sarah Chen', action: 'changed status to In Progress', time: '2026-03-22T09:00:00Z' },
-  { id: '2', actor: 'Mike Torres', action: 'added a comment: "Reproduced the issue on staging."', time: '2026-03-22T08:30:00Z' },
-  { id: '3', actor: 'System', action: 'ticket created and assigned to Sarah Chen', time: '2026-03-22T08:00:00Z' },
-];
-
-const MOCK_TICKET: Ticket = {
-  id: '1',
-  title: 'Cannot login to dashboard',
-  description: 'User reports a 403 Forbidden error when attempting to login to the admin dashboard. Affects multiple accounts. Investigated and found a misconfigured CORS policy after a recent deployment.',
-  status: 'in_progress',
-  priority: 'urgent',
-  assignee: 'Sarah Chen',
-  slaMinutes: 45,
-  createdAt: '2026-03-22T08:00:00Z',
-};
-
 export default function TicketDetailScreen({ navigation, route }: TicketDetailScreenProps) {
   const { ticketId } = route.params;
-  const [ticket, setTicket] = useState<Ticket>(MOCK_TICKET);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTicket();
+  }, []);
+
+  async function fetchTicket() {
+    try {
+      const data = await api.getTicket(ticketId);
+      setTicket(data);
+    } catch (error) {
+      Alert.alert('Error', 'Could not load ticket details.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,18 +66,36 @@ export default function TicketDetailScreen({ navigation, route }: TicketDetailSc
   );
 
   const handleResolve = () => {
-    setTicket(prev => ({ ...prev, status: 'resolved' }));
+    if (!ticket) return;
+    setTicket(prev => prev ? { ...prev, status: 'resolved' } : prev);
     Alert.alert('Ticket Resolved', 'The ticket has been marked as resolved.');
   };
 
   const handleEscalate = () => {
-    setTicket(prev => ({ ...prev, priority: 'urgent' }));
+    if (!ticket) return;
+    setTicket(prev => prev ? { ...prev, priority: 'urgent' } : prev);
     Alert.alert('Ticket Escalated', 'The ticket has been escalated.');
   };
 
   const handleReply = () => {
     Alert.alert('Reply', 'Reply editor would open here.');
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Ticket not found.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -114,24 +133,6 @@ export default function TicketDetailScreen({ navigation, route }: TicketDetailSc
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Activity Log</Text>
-        <View style={styles.card}>
-          {MOCK_ACTIVITY.map((activity, index) => (
-            <View key={activity.id} style={[styles.activityItem, index < MOCK_ACTIVITY.length - 1 && styles.activityBorder]}>
-              <View style={styles.activityDot} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityText}>
-                  <Text style={styles.activityActor}>{activity.actor}</Text>
-                  {' '}{activity.action}
-                </Text>
-                <Text style={styles.activityTime}>{new Date(activity.time).toLocaleString()}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
@@ -158,6 +159,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',
@@ -232,39 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 22,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-  },
-  activityBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4F46E5',
-    marginTop: 5,
-    marginRight: 10,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityText: {
-    fontSize: 13,
-    color: '#374151',
-    lineHeight: 18,
-  },
-  activityActor: {
-    fontWeight: '600',
-    color: '#111827',
-  },
-  activityTime: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    marginTop: 3,
   },
   actionButtons: {
     flexDirection: 'row',

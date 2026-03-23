@@ -16,15 +16,6 @@ type InvoicesListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_INVOICES: Invoice[] = [
-  { id: '1', number: 'INV-2026-001', clientName: 'Acme Corporation', amount: 12500.00, status: 'paid', dueDate: '2026-03-15', createdAt: '2026-02-15' },
-  { id: '2', number: 'INV-2026-002', clientName: 'TechStart Inc', amount: 4200.00, status: 'sent', dueDate: '2026-04-01', createdAt: '2026-03-01' },
-  { id: '3', number: 'INV-2026-003', clientName: 'Global Ventures', amount: 8750.50, status: 'overdue', dueDate: '2026-03-10', createdAt: '2026-02-10' },
-  { id: '4', number: 'INV-2026-004', clientName: 'Blue Ocean Ltd', amount: 3300.00, status: 'draft', dueDate: '2026-04-15', createdAt: '2026-03-20' },
-  { id: '5', number: 'INV-2026-005', clientName: 'Pinnacle Group', amount: 22000.00, status: 'paid', dueDate: '2026-03-01', createdAt: '2026-02-01' },
-  { id: '6', number: 'INV-2026-006', clientName: 'Sunrise Media', amount: 1650.75, status: 'sent', dueDate: '2026-04-10', createdAt: '2026-03-10' },
-];
-
 const STATUS_TABS = ['all', 'draft', 'sent', 'paid', 'overdue'] as const;
 
 export default function InvoicesListScreen({ navigation }: InvoicesListScreenProps) {
@@ -59,8 +50,8 @@ export default function InvoicesListScreen({ navigation }: InvoicesListScreenPro
       setInvoices(data);
       setFilteredInvoices(data);
     } catch (error) {
-      setInvoices(MOCK_INVOICES);
-      setFilteredInvoices(MOCK_INVOICES);
+      setInvoices([]);
+      setFilteredInvoices([]);
     }
   }
 

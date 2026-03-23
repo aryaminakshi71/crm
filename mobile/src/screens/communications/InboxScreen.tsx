@@ -15,15 +15,6 @@ type InboxScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-  { id: '1', contactName: 'Maria Garcia', lastMessage: 'Thanks for the update! Let me know when it\'s ready.', time: '09:42', unreadCount: 2, channel: 'sms' },
-  { id: '2', contactName: 'James Park', lastMessage: 'Missed call — 2 minutes', time: '09:15', unreadCount: 1, channel: 'voice' },
-  { id: '3', contactName: 'Acme Corp Support', lastMessage: 'Your ticket #1042 has been updated.', time: 'Yesterday', unreadCount: 0, channel: 'chat' },
-  { id: '4', contactName: 'Thomas Hughes', lastMessage: 'Can we reschedule to 3pm?', time: 'Yesterday', unreadCount: 3, channel: 'sms' },
-  { id: '5', contactName: 'Emily Watson', lastMessage: 'Invoice paid — confirmation #9812', time: 'Mon', unreadCount: 0, channel: 'sms' },
-  { id: '6', contactName: 'Robert Martinez', lastMessage: 'Missed call', time: 'Mon', unreadCount: 1, channel: 'voice' },
-];
-
 const CHANNEL_TABS = ['All', 'SMS', 'Voice'] as const;
 
 const CHANNEL_ICONS: Record<string, string> = {
@@ -46,7 +37,7 @@ export default function InboxScreen({ navigation }: InboxScreenProps) {
       const data = await api.getConversations();
       setConversations(data);
     } catch (error) {
-      setConversations(MOCK_CONVERSATIONS);
+      setConversations([]);
     }
   }
 

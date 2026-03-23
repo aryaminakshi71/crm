@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,27 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Campaign } from '../../types';
+import { api } from '../../services/api';
 
 type CampaignDetailScreenProps = {
   navigation: NativeStackNavigationProp<any>;
   route: RouteProp<{ params: { campaignId: string } }, 'params'>;
-};
-
-const MOCK_CAMPAIGN: Campaign & { unsubscribes: number; subject?: string; audience?: string } = {
-  id: '1',
-  name: 'Q1 Product Launch',
-  channel: 'Email',
-  status: 'active',
-  sentCount: 15420,
-  openRate: 38.5,
-  clickRate: 12.3,
-  unsubscribes: 45,
-  subject: 'Introducing Nucleo One v2.0 — Your All-in-One Platform',
-  audience: 'All Subscribers (15,420)',
 };
 
 const CHANNEL_COLORS: Record<string, string> = {
@@ -38,6 +27,23 @@ const CHANNEL_COLORS: Record<string, string> = {
 
 export default function CampaignDetailScreen({ navigation, route }: CampaignDetailScreenProps) {
   const { campaignId } = route.params;
+  const [campaign, setCampaign] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCampaign();
+  }, []);
+
+  async function fetchCampaign() {
+    try {
+      const data = await api.getCampaign(campaignId);
+      setCampaign(data);
+    } catch (error) {
+      Alert.alert('Error', 'Could not load campaign details.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -53,70 +59,105 @@ export default function CampaignDetailScreen({ navigation, route }: CampaignDeta
     <View style={styles.metricRow}>
       <Text style={styles.metricLabel}>{label}</Text>
       <View style={styles.metricBarContainer}>
-        <View style={[styles.metricBarFill, { width: `${Math.min((value / max) * 100, 100)}%`, backgroundColor: color }]} />
+        <View style={[styles.metricBarFill, { width: `${Math.min((value / max) * 100, 100)}%` as any, backgroundColor: color }]} />
       </View>
       <Text style={[styles.metricValue, { color }]}>{value}%</Text>
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (!campaign) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Campaign not found.</Text>
+      </View>
+    );
+  }
+
+  const openRate = campaign.openRate ?? 0;
+  const clickRate = campaign.clickRate ?? 0;
+  const sentCount = campaign.sentCount ?? 0;
+  const unsubscribes = campaign.unsubscribes ?? 0;
+  const channel = campaign.channel ?? 'Email';
+  const status = campaign.status ?? 'draft';
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerBadges}>
-          <View style={[styles.channelBadge, { backgroundColor: CHANNEL_COLORS[MOCK_CAMPAIGN.channel] || '#6B7280' }]}>
-            <Text style={styles.badgeText}>{MOCK_CAMPAIGN.channel}</Text>
+          <View style={[styles.channelBadge, { backgroundColor: CHANNEL_COLORS[channel] || '#6B7280' }]}>
+            <Text style={styles.badgeText}>{channel}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(MOCK_CAMPAIGN.status) }]}>
-            <Text style={styles.badgeText}>{MOCK_CAMPAIGN.status.toUpperCase()}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
+            <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
           </View>
         </View>
-        <Text style={styles.campaignName}>{MOCK_CAMPAIGN.name}</Text>
-        <Text style={styles.sentCount}>{MOCK_CAMPAIGN.sentCount.toLocaleString()} recipients</Text>
+        <Text style={styles.campaignName}>{campaign.name}</Text>
+        <Text style={styles.sentCount}>{sentCount.toLocaleString()} recipients</Text>
       </View>
 
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#10B981' }]}>{MOCK_CAMPAIGN.openRate}%</Text>
+          <Text style={[styles.statNumber, { color: '#10B981' }]}>{openRate}%</Text>
           <Text style={styles.statLabel}>Open Rate</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#4F46E5' }]}>{MOCK_CAMPAIGN.clickRate}%</Text>
+          <Text style={[styles.statNumber, { color: '#4F46E5' }]}>{clickRate}%</Text>
           <Text style={styles.statLabel}>Click Rate</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#EF4444' }]}>{MOCK_CAMPAIGN.unsubscribes}</Text>
+          <Text style={[styles.statNumber, { color: '#EF4444' }]}>{unsubscribes}</Text>
           <Text style={styles.statLabel}>Unsubscribes</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: '#F59E0B' }]}>
-            {(MOCK_CAMPAIGN.sentCount * 0.05).toFixed(0)}
+            {sentCount > 0 ? (sentCount * 0.05).toFixed(0) : '0'}
           </Text>
           <Text style={styles.statLabel}>Bounced</Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Performance Metrics</Text>
-        <View style={styles.card}>
-          <MetricBar label="Open Rate" value={MOCK_CAMPAIGN.openRate} max={100} color="#10B981" />
-          <MetricBar label="Click Rate" value={MOCK_CAMPAIGN.clickRate} max={100} color="#4F46E5" />
-          <MetricBar label="Unsubscribe Rate" value={Number(((MOCK_CAMPAIGN.unsubscribes / MOCK_CAMPAIGN.sentCount) * 100).toFixed(2))} max={5} color="#EF4444" />
-          <MetricBar label="Bounce Rate" value={5.0} max={20} color="#F59E0B" />
+      {sentCount > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Performance Metrics</Text>
+          <View style={styles.card}>
+            <MetricBar label="Open Rate" value={openRate} max={100} color="#10B981" />
+            <MetricBar label="Click Rate" value={clickRate} max={100} color="#4F46E5" />
+            {unsubscribes > 0 && (
+              <MetricBar
+                label="Unsub Rate"
+                value={Number(((unsubscribes / sentCount) * 100).toFixed(2))}
+                max={5}
+                color="#EF4444"
+              />
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
-      {MOCK_CAMPAIGN.subject && (
+      {(campaign.subject || campaign.audience) && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Campaign Info</Text>
           <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Subject</Text>
-              <Text style={styles.infoValue}>{MOCK_CAMPAIGN.subject}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Audience</Text>
-              <Text style={styles.infoValue}>{MOCK_CAMPAIGN.audience}</Text>
-            </View>
+            {campaign.subject ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Subject</Text>
+                <Text style={styles.infoValue}>{campaign.subject}</Text>
+              </View>
+            ) : null}
+            {campaign.audience ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Audience</Text>
+                <Text style={styles.infoValue}>{campaign.audience}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       )}
@@ -149,6 +190,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',

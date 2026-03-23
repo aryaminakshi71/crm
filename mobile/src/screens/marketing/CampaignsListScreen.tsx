@@ -15,14 +15,6 @@ type CampaignsListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_CAMPAIGNS: Campaign[] = [
-  { id: '1', name: 'Q1 Product Launch', channel: 'Email', status: 'active', sentCount: 15420, openRate: 38.5, clickRate: 12.3 },
-  { id: '2', name: 'Spring Sale Flash', channel: 'SMS', status: 'completed', sentCount: 8900, openRate: 92.1, clickRate: 28.7 },
-  { id: '3', name: 'LinkedIn Thought Leadership', channel: 'Social', status: 'active', sentCount: 3200, openRate: 45.0, clickRate: 8.9 },
-  { id: '4', name: 'Re-engagement Series', channel: 'Email', status: 'paused', sentCount: 5500, openRate: 22.4, clickRate: 4.1 },
-  { id: '5', name: 'New Feature Announcement', channel: 'Email', status: 'draft', sentCount: 0, openRate: 0, clickRate: 0 },
-];
-
 const CHANNEL_COLORS: Record<string, string> = {
   Email: '#4F46E5',
   SMS: '#10B981',
@@ -43,7 +35,7 @@ export default function CampaignsListScreen({ navigation }: CampaignsListScreenP
       const data = await api.getCampaigns();
       setCampaigns(data);
     } catch (error) {
-      setCampaigns(MOCK_CAMPAIGNS);
+      setCampaigns([]);
     }
   }
 

@@ -16,15 +16,6 @@ type PostsCalendarScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_POSTS: SocialPost[] = [
-  { id: '1', platform: 'LinkedIn', content: 'Excited to announce Nucleo One v2.0 is live! The all-in-one platform for modern businesses. Check out what\'s new in the link below. #ProductLaunch #SaaS', scheduledAt: '2026-03-22T10:00:00Z', status: 'scheduled' },
-  { id: '2', platform: 'Twitter', content: '🚀 Nucleo One v2.0 is here. New AI Agents, Field Service module, and so much more. Try it free → nucleo.one #NucleoOne', scheduledAt: '2026-03-22T10:05:00Z', status: 'scheduled' },
-  { id: '3', platform: 'Instagram', content: 'Introducing AI-powered workflows that actually work for your business. Swipe to see what\'s new in Nucleo One v2.0 ✨', scheduledAt: '2026-03-22T11:00:00Z', status: 'scheduled' },
-  { id: '4', platform: 'Facebook', content: 'Big news! We\'ve launched Nucleo One v2.0 with 8 new modules including Helpdesk, Finance, and AI Agents. Your team will love it.', scheduledAt: '2026-03-21T09:00:00Z', status: 'published' },
-  { id: '5', platform: 'LinkedIn', content: 'Behind the scenes: How our engineering team built AI Agents for enterprise workflows in under 6 months.', scheduledAt: '2026-03-20T14:00:00Z', status: 'published' },
-  { id: '6', platform: 'Twitter', content: 'Weekly tip: Use Nucleo One\'s HRM module to streamline your entire employee lifecycle from hire to retire. #HRtech', scheduledAt: '2026-03-19T08:00:00Z', status: 'failed' },
-];
-
 const PLATFORM_COLORS: Record<string, string> = {
   Twitter: '#1DA1F2',
   LinkedIn: '#0A66C2',
@@ -52,7 +43,7 @@ export default function PostsCalendarScreen({ navigation }: PostsCalendarScreenP
       const data = await api.getSocialPosts();
       setPosts(data);
     } catch (error) {
-      setPosts(MOCK_POSTS);
+      setPosts([]);
     }
   }
 

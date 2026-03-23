@@ -15,13 +15,6 @@ type AgentsListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_AGENTS: Agent[] = [
-  { id: '1', name: 'Customer Support Agent', description: 'Handles tier-1 support tickets, answers FAQs, and routes complex issues to humans.', status: 'active', lastRun: '2026-03-22T09:45:00Z', runsCount: 1482 },
-  { id: '2', name: 'Lead Qualifier', description: 'Evaluates inbound leads, scores based on ICP criteria, and schedules demos.', status: 'active', lastRun: '2026-03-22T08:30:00Z', runsCount: 347 },
-  { id: '3', name: 'Invoice Reminder Bot', description: 'Sends automated payment reminders for overdue invoices via email and SMS.', status: 'paused', lastRun: '2026-03-20T16:00:00Z', runsCount: 89 },
-  { id: '4', name: 'Social Media Scheduler', description: 'Auto-publishes approved content to connected social platforms on schedule.', status: 'error', lastRun: '2026-03-21T12:00:00Z', runsCount: 203 },
-];
-
 export default function AgentsListScreen({ navigation }: AgentsListScreenProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,7 +28,7 @@ export default function AgentsListScreen({ navigation }: AgentsListScreenProps) 
       const data = await api.getAgents();
       setAgents(data);
     } catch (error) {
-      setAgents(MOCK_AGENTS);
+      setAgents([]);
     }
   }
 

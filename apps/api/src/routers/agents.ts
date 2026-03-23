@@ -4,12 +4,12 @@
  * Agent workflow management operations.
  */
 
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-const { agentWorkflows } = schema;
+const { agentWorkflows, agentChatMessages } = schema;
 
 const workflowStepSchema = z.object({
   id: z.string(),
@@ -392,7 +392,7 @@ export const agentsRouter = {
       summary: "Get agent chat history",
       tags: ["Agents"],
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string(), sessionId: z.string().optional() }))
     .output(
       z.object({
         messages: z.array(
@@ -411,11 +411,34 @@ export const agentsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { id: string };
+        input: { id: string; sessionId?: string };
       }) => {
-        // Chat history is session-scoped; persistent storage is not yet implemented.
-        // Return an empty list so the frontend manages local state.
-        return { messages: [] };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions: ReturnType<typeof eq>[] = [
+          eq(agentChatMessages.agentId, input.id) as any,
+          eq(agentChatMessages.organizationId, orgId) as any,
+        ];
+        if (input.sessionId) {
+          conditions.push(eq(agentChatMessages.sessionId, input.sessionId) as any);
+        }
+
+        const rows = await db
+          .select()
+          .from(agentChatMessages)
+          .where(and(...conditions))
+          .orderBy(asc(agentChatMessages.createdAt))
+          .limit(50);
+
+        return {
+          messages: rows.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            timestamp: m.createdAt.toISOString(),
+          })),
+        };
       },
     ),
 
@@ -433,6 +456,7 @@ export const agentsRouter = {
       z.object({
         id: z.string(),
         message: z.string().min(1),
+        sessionId: z.string().optional(),
       }),
     )
     .output(
@@ -447,9 +471,11 @@ export const agentsRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { id: string; message: string };
+        input: { id: string; message: string; sessionId?: string };
       }) => {
         const db = getDb(context);
+        const orgId = context.organization.id;
+        const sessionId = input.sessionId ?? "default";
 
         // Verify the workflow/agent exists and belongs to this org
         const [workflow] = await db
@@ -458,7 +484,7 @@ export const agentsRouter = {
           .where(
             and(
               eq(agentWorkflows.id, input.id),
-              eq(agentWorkflows.organizationId, context.organization.id),
+              eq(agentWorkflows.organizationId, orgId),
               isNull(agentWorkflows.deletedAt),
             ),
           )
@@ -468,8 +494,26 @@ export const agentsRouter = {
           throw new Error("Agent not found");
         }
 
-        // Placeholder LLM response — replace with real model call when available
-        const response = `I received your message: "${input.message}". As agent "${workflow.name}", I'm processing your request. Real AI integration is coming soon.`;
+        // 1. Save user message
+        await db.insert(agentChatMessages).values({
+          organizationId: orgId,
+          agentId: input.id,
+          sessionId,
+          role: "user",
+          content: input.message,
+        });
+
+        // 2. Generate assistant response (placeholder — real LLM would go here)
+        const response = `I received your message: "${input.message}". I'm processing your request for agent ${input.id}.`;
+
+        // 3. Save assistant response
+        await db.insert(agentChatMessages).values({
+          organizationId: orgId,
+          agentId: input.id,
+          sessionId,
+          role: "assistant",
+          content: response,
+        });
 
         return {
           message: response,

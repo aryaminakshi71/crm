@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,38 +6,36 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import { api } from '../../services/api';
 
 type InvoiceDetailScreenProps = {
   navigation: NativeStackNavigationProp<any>;
   route: RouteProp<{ params: { invoiceId: string } }, 'params'>;
 };
 
-const MOCK_LINE_ITEMS = [
-  { id: '1', description: 'Platform License (Annual)', quantity: 1, unitPrice: 8000.00, total: 8000.00 },
-  { id: '2', description: 'Implementation Services', quantity: 20, unitPrice: 150.00, total: 3000.00 },
-  { id: '3', description: 'Priority Support Package', quantity: 1, unitPrice: 1500.00, total: 1500.00 },
-];
-
-const MOCK_INVOICE = {
-  id: '1',
-  number: 'INV-2026-001',
-  clientName: 'Acme Corporation',
-  clientEmail: 'billing@acme.com',
-  clientAddress: '100 Enterprise Ave, New York, NY 10001',
-  amount: 12500.00,
-  subtotal: 12500.00,
-  tax: 0,
-  status: 'sent',
-  dueDate: '2026-04-01',
-  createdAt: '2026-03-01',
-  notes: 'Payment due within 30 days. Wire transfer preferred.',
-};
-
 export default function InvoiceDetailScreen({ navigation, route }: InvoiceDetailScreenProps) {
   const { invoiceId } = route.params;
+  const [invoice, setInvoice] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInvoice();
+  }, []);
+
+  async function fetchInvoice() {
+    try {
+      const data = await api.getInvoice(invoiceId);
+      setInvoice(data);
+    } catch (error) {
+      Alert.alert('Error', 'Could not load invoice details.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -56,60 +54,84 @@ export default function InvoiceDetailScreen({ navigation, route }: InvoiceDetail
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Invoice not found.</Text>
+      </View>
+    );
+  }
+
+  const lineItems: any[] = invoice.lineItems ?? invoice.items ?? [];
+  const amount = invoice.amount ?? invoice.total ?? 0;
+  const status = invoice.status ?? 'draft';
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.invoiceNumber}>{MOCK_INVOICE.number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(MOCK_INVOICE.status) }]}>
-          <Text style={styles.statusText}>{MOCK_INVOICE.status.toUpperCase()}</Text>
+        <Text style={styles.invoiceNumber}>{invoice.number ?? invoice.invoiceNumber ?? `INV-${invoiceId}`}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
+          <Text style={styles.statusText}>{status.toUpperCase()}</Text>
         </View>
         <Text style={styles.amount}>
-          ${MOCK_INVOICE.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
         </Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Client Information</Text>
         <View style={styles.card}>
-          <InfoRow label="Client" value={MOCK_INVOICE.clientName} />
-          <InfoRow label="Email" value={MOCK_INVOICE.clientEmail} />
-          <InfoRow label="Address" value={MOCK_INVOICE.clientAddress} />
-          <InfoRow label="Invoice Date" value={MOCK_INVOICE.createdAt} />
-          <InfoRow label="Due Date" value={MOCK_INVOICE.dueDate} />
+          <InfoRow label="Client" value={invoice.clientName ?? invoice.client ?? '—'} />
+          {invoice.clientEmail ? <InfoRow label="Email" value={invoice.clientEmail} /> : null}
+          {invoice.clientAddress ? <InfoRow label="Address" value={invoice.clientAddress} /> : null}
+          {invoice.createdAt ? <InfoRow label="Invoice Date" value={new Date(invoice.createdAt).toLocaleDateString()} /> : null}
+          {invoice.dueDate ? <InfoRow label="Due Date" value={invoice.dueDate} /> : null}
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Line Items</Text>
-        <View style={styles.card}>
-          <View style={styles.lineItemHeader}>
-            <Text style={[styles.lineItemCol, { flex: 2 }]}>Description</Text>
-            <Text style={styles.lineItemCol}>Qty</Text>
-            <Text style={styles.lineItemCol}>Price</Text>
-            <Text style={[styles.lineItemCol, { textAlign: 'right' }]}>Total</Text>
-          </View>
-          {MOCK_LINE_ITEMS.map((item, index) => (
-            <View key={item.id} style={[styles.lineItemRow, index < MOCK_LINE_ITEMS.length - 1 && styles.lineItemBorder]}>
-              <Text style={[styles.lineItemText, { flex: 2 }]}>{item.description}</Text>
-              <Text style={styles.lineItemText}>{item.quantity}</Text>
-              <Text style={styles.lineItemText}>${item.unitPrice.toFixed(2)}</Text>
-              <Text style={[styles.lineItemText, { textAlign: 'right', fontWeight: '600' }]}>${item.total.toFixed(2)}</Text>
+      {lineItems.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Line Items</Text>
+          <View style={styles.card}>
+            <View style={styles.lineItemHeader}>
+              <Text style={[styles.lineItemCol, { flex: 2 }]}>Description</Text>
+              <Text style={styles.lineItemCol}>Qty</Text>
+              <Text style={styles.lineItemCol}>Price</Text>
+              <Text style={[styles.lineItemCol, { textAlign: 'right' }]}>Total</Text>
             </View>
-          ))}
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>
-              ${MOCK_INVOICE.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </Text>
+            {lineItems.map((item: any, index: number) => (
+              <View key={item.id ?? index} style={[styles.lineItemRow, index < lineItems.length - 1 && styles.lineItemBorder]}>
+                <Text style={[styles.lineItemText, { flex: 2 }]}>{item.description}</Text>
+                <Text style={styles.lineItemText}>{item.quantity}</Text>
+                <Text style={styles.lineItemText}>${Number(item.unitPrice ?? item.price ?? 0).toFixed(2)}</Text>
+                <Text style={[styles.lineItemText, { textAlign: 'right', fontWeight: '600' }]}>
+                  ${Number(item.total ?? item.amount ?? 0).toFixed(2)}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalAmount}>
+                ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
-      {MOCK_INVOICE.notes ? (
+      {invoice.notes ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notes</Text>
           <View style={styles.card}>
-            <Text style={styles.notes}>{MOCK_INVOICE.notes}</Text>
+            <Text style={styles.notes}>{invoice.notes}</Text>
           </View>
         </View>
       ) : null}
@@ -142,6 +164,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',

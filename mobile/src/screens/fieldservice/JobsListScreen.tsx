@@ -16,15 +16,6 @@ type JobsListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_JOBS: FieldJob[] = [
-  { id: '1', jobNumber: 'JOB-001', customerName: 'Robert Martinez', address: '45 Oak Street, Austin, TX 78701', scheduledTime: '2026-03-22T09:00:00Z', status: 'in_progress', notes: 'HVAC unit replacement' },
-  { id: '2', jobNumber: 'JOB-002', customerName: 'Emily Watson', address: '120 Maple Ave, Austin, TX 78702', scheduledTime: '2026-03-22T11:30:00Z', status: 'en_route', notes: 'Plumbing leak repair' },
-  { id: '3', jobNumber: 'JOB-003', customerName: 'David Kim', address: '78 Pine Road, Cedar Park, TX 78613', scheduledTime: '2026-03-22T14:00:00Z', status: 'scheduled', notes: 'Annual maintenance check' },
-  { id: '4', jobNumber: 'JOB-004', customerName: 'Sandra Lee', address: '200 Cedar Blvd, Round Rock, TX 78664', scheduledTime: '2026-03-22T16:00:00Z', status: 'scheduled', notes: 'Electrical panel upgrade' },
-  { id: '5', jobNumber: 'JOB-005', customerName: 'Thomas Hughes', address: '55 Elm Street, Georgetown, TX 78626', scheduledTime: '2026-03-21T10:00:00Z', status: 'completed', notes: 'Roof inspection and minor repair' },
-  { id: '6', jobNumber: 'JOB-006', customerName: 'Lisa Chen', address: '330 Birch Lane, Pflugerville, TX 78660', scheduledTime: '2026-03-21T15:00:00Z', status: 'completed', notes: 'Water heater installation' },
-];
-
 export default function JobsListScreen({ navigation }: JobsListScreenProps) {
   const [jobs, setJobs] = useState<FieldJob[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<FieldJob[]>([]);
@@ -56,8 +47,8 @@ export default function JobsListScreen({ navigation }: JobsListScreenProps) {
       setJobs(data);
       setFilteredJobs(data);
     } catch (error) {
-      setJobs(MOCK_JOBS);
-      setFilteredJobs(MOCK_JOBS);
+      setJobs([]);
+      setFilteredJobs([]);
     }
   }
 

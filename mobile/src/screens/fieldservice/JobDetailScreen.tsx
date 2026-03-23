@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,35 +6,37 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { FieldJob } from '../../types';
+import { api } from '../../services/api';
 
 type JobDetailScreenProps = {
   navigation: NativeStackNavigationProp<any>;
   route: RouteProp<{ params: { jobId: string } }, 'params'>;
 };
 
-const MOCK_PARTS = [
-  { id: '1', name: 'HVAC Filter 16x20', quantity: 2, status: 'available' },
-  { id: '2', name: 'Refrigerant R-410A (1lb)', quantity: 1, status: 'requested' },
-  { id: '3', name: 'Capacitor 45+5 MFD', quantity: 1, status: 'available' },
-];
-
-const MOCK_JOB: FieldJob = {
-  id: '1',
-  jobNumber: 'JOB-001',
-  customerName: 'Robert Martinez',
-  address: '45 Oak Street, Austin, TX 78701',
-  scheduledTime: '2026-03-22T09:00:00Z',
-  status: 'in_progress',
-  notes: 'HVAC unit replacement. Customer reports unit is making loud noise and not cooling properly. Check refrigerant levels and inspect compressor.',
-};
-
 export default function JobDetailScreen({ navigation, route }: JobDetailScreenProps) {
   const { jobId } = route.params;
-  const [job, setJob] = useState<FieldJob>(MOCK_JOB);
+  const [job, setJob] = useState<FieldJob | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchJob();
+  }, []);
+
+  async function fetchJob() {
+    try {
+      const data = await api.getJob(jobId);
+      setJob(data);
+    } catch (error) {
+      Alert.alert('Error', 'Could not load job details.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -54,18 +56,36 @@ export default function JobDetailScreen({ navigation, route }: JobDetailScreenPr
   );
 
   const handleStartJob = () => {
-    setJob(prev => ({ ...prev, status: 'in_progress' }));
+    if (!job) return;
+    setJob(prev => prev ? { ...prev, status: 'in_progress' } : prev);
     Alert.alert('Job Started', 'Job status updated to In Progress.');
   };
 
   const handleCompleteJob = () => {
-    setJob(prev => ({ ...prev, status: 'completed' }));
+    if (!job) return;
+    setJob(prev => prev ? { ...prev, status: 'completed' } : prev);
     Alert.alert('Job Completed', 'Job has been marked as completed.');
   };
 
   const handleRequestParts = () => {
     Alert.alert('Request Parts', 'Parts request submitted to warehouse.');
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (!job) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Job not found.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -97,32 +117,14 @@ export default function JobDetailScreen({ navigation, route }: JobDetailScreenPr
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
-        <View style={styles.card}>
-          <Text style={styles.notes}>{job.notes || 'No notes provided.'}</Text>
+      {job.notes ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notes</Text>
+          <View style={styles.card}>
+            <Text style={styles.notes}>{job.notes}</Text>
+          </View>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Parts Needed</Text>
-        <View style={styles.card}>
-          {MOCK_PARTS.map((part, index) => (
-            <View key={part.id} style={[styles.partRow, index < MOCK_PARTS.length - 1 && styles.partBorder]}>
-              <View style={styles.partLeft}>
-                <Text style={styles.partName}>{part.name}</Text>
-                <Text style={styles.partQty}>Qty: {part.quantity}</Text>
-              </View>
-              <View style={[
-                styles.partStatus,
-                { backgroundColor: part.status === 'available' ? '#10B981' : '#F59E0B' }
-              ]}>
-                <Text style={styles.partStatusText}>{part.status.toUpperCase()}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Documentation</Text>
@@ -172,6 +174,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  errorText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
   header: {
     backgroundColor: '#4F46E5',
@@ -253,39 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 22,
-  },
-  partRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  partBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  partLeft: {
-    flex: 1,
-  },
-  partName: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  partQty: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  partStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  partStatusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
   },
   docButtons: {
     flexDirection: 'row',

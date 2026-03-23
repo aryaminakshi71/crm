@@ -226,15 +226,72 @@ class ApiService {
     return response.data;
   }
 
+  async getAgentChatHistory(agentId: string, sessionId?: string): Promise<any> {
+    const params = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
+    const response = await this.request<any>(`/agents/${agentId}/history${params}`);
+    return response.data;
+  }
+
+  async sendAgentMessage(agentId: string, message: string, sessionId?: string): Promise<any> {
+    const response = await this.request<any>(`/agents/${agentId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message, sessionId }),
+    });
+    return response.data;
+  }
+
   // Communications
   async getConversations(): Promise<any[]> {
     const response = await this.request<any[]>('/communications/conversations');
     return response.data;
   }
 
+  async getConversationMessages(conversationId: string): Promise<any[]> {
+    const response = await this.request<any[]>(`/communications/conversations/${conversationId}/messages`);
+    return response.data;
+  }
+
+  async sendConversationMessage(conversationId: string, text: string): Promise<any> {
+    const response = await this.request<any>(`/communications/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+    return response.data;
+  }
+
   // Social
   async getSocialPosts(): Promise<any[]> {
     const response = await this.request<any[]>('/social/posts');
+    return response.data;
+  }
+
+  // Field Service - Job detail
+  async getJob(id: string): Promise<any> {
+    const response = await this.request<any>(`/field-service/jobs/${id}`);
+    return response.data;
+  }
+
+  // Finance - Invoice detail
+  async getInvoice(id: string): Promise<any> {
+    const response = await this.request<any>(`/finance/invoices/${id}`);
+    return response.data;
+  }
+
+  // Helpdesk - Ticket detail
+  async getTicket(id: string): Promise<any> {
+    const response = await this.request<any>(`/helpdesk/tickets/${id}`);
+    return response.data;
+  }
+
+  // Inventory - Product detail
+  async getProduct(id: string): Promise<any> {
+    const response = await this.request<any>(`/inventory/products/${id}`);
+    return response.data;
+  }
+
+  // Marketing - Campaign detail
+  async getCampaign(id: string): Promise<any> {
+    const response = await this.request<any>(`/marketing/campaigns/${id}`);
     return response.data;
   }
 }

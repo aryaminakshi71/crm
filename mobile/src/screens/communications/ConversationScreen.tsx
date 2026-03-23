@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import { api } from '../../services/api';
 
 type ConversationScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -24,21 +25,33 @@ interface Message {
   time: string;
 }
 
-const MOCK_MESSAGES: Message[] = [
-  { id: '1', text: 'Hi Maria, following up on your support request. Are you still experiencing the login issue?', sender: 'me', time: '09:30' },
-  { id: '2', text: 'Yes, I am. It\'s been happening since yesterday afternoon.', sender: 'them', time: '09:32' },
-  { id: '3', text: 'I\'ve escalated this to our engineering team. They\'re investigating now.', sender: 'me', time: '09:35' },
-  { id: '4', text: 'Thanks for the update! Let me know when it\'s ready.', sender: 'them', time: '09:42' },
-  { id: '5', text: 'Will do! We\'ll have a fix deployed within the hour.', sender: 'me', time: '09:43' },
-];
-
 export default function ConversationScreen({ navigation, route }: ConversationScreenProps) {
   const { conversationId, contactName } = route.params;
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
-  const sendMessage = () => {
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  async function loadMessages() {
+    try {
+      const data = await api.getConversationMessages(conversationId);
+      const mapped: Message[] = (data ?? []).map((m: any) => ({
+        id: m.id ?? String(Math.random()),
+        text: m.text ?? m.body ?? m.content ?? '',
+        sender: m.sender === 'me' || m.direction === 'outbound' ? 'me' : 'them',
+        time: m.time ?? (m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''),
+      }));
+      setMessages(mapped);
+    } catch (error) {
+      // API not yet implemented — start with empty thread
+      setMessages([]);
+    }
+  }
+
+  const sendMessage = async () => {
     const text = inputText.trim();
     if (!text) return;
 
@@ -51,6 +64,12 @@ export default function ConversationScreen({ navigation, route }: ConversationSc
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      await api.sendConversationMessage(conversationId, text);
+    } catch (error) {
+      // Message shown optimistically; ignore send error for now
+    }
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
@@ -78,6 +97,11 @@ export default function ConversationScreen({ navigation, route }: ConversationSc
         keyExtractor={item => item.id}
         contentContainerStyle={styles.messageList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>No messages yet. Start the conversation.</Text>
+          </View>
+        }
       />
 
       <View style={styles.inputBar}>
@@ -112,6 +136,15 @@ const styles = StyleSheet.create({
   messageList: {
     padding: 16,
     paddingBottom: 8,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'center',
   },
   messageRow: {
     flexDirection: 'row',

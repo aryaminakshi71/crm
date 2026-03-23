@@ -27,16 +27,9 @@ export const integrationRouter = {
         )
         .orderBy(desc(schema.integrationAccounts.createdAt));
 
-      // Stub fallback with well-shaped data
+      // Return empty array when no connectors exist — let the frontend show EmptyState
       if (items.length === 0) {
-        const stubs = [
-          { id: "conn-1", name: "Stripe", type: "payment", status: "connected", connectedAt: new Date().toISOString(), rateLimit: { limit: 1000, remaining: 847, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-          { id: "conn-2", name: "Slack", type: "webhook", status: "connected", connectedAt: new Date().toISOString(), rateLimit: { limit: 500, remaining: 498, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-          { id: "conn-3", name: "GitHub", type: "oauth", status: "connected", connectedAt: new Date().toISOString(), rateLimit: { limit: 5000, remaining: 4960, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-          { id: "conn-4", name: "Mailchimp", type: "oauth", status: "disconnected", connectedAt: null, rateLimit: null },
-          { id: "conn-5", name: "PagerDuty Webhook", type: "webhook", status: "active", connectedAt: new Date().toISOString(), rateLimit: { limit: 200, remaining: 199, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-        ].filter((c) => !input?.type || c.type === input.type);
-        return { data: stubs };
+        return { data: [] };
       }
 
       return {
@@ -233,15 +226,9 @@ export const integrationRouter = {
         .orderBy(desc(schema.workflowExecutions.executedAt))
         .limit(100);
 
+      // Return empty array when no runs exist — let the frontend show EmptyState
       if (items.length === 0) {
-        const stubs = [
-          { id: "r-1", connector: "Stripe", event: "payment.succeeded", status: "success", executedAt: new Date().toISOString(), durationMs: 142 },
-          { id: "r-2", connector: "Slack", event: "deal.won", status: "success", executedAt: new Date(Date.now() - 900000).toISOString(), durationMs: 87 },
-          { id: "r-3", connector: "GitHub", event: "ticket.created", status: "failed", executedAt: new Date(Date.now() - 3600000).toISOString(), durationMs: 5000, error: "Connection timeout" },
-          { id: "r-4", connector: "Mailchimp", event: "contact.created", status: "success", executedAt: new Date(Date.now() - 7200000).toISOString(), durationMs: 234 },
-          { id: "r-5", connector: "Stripe", event: "invoice.paid", status: "failed", executedAt: new Date(Date.now() - 86400000).toISOString(), durationMs: 3000, error: "Rate limit exceeded" },
-        ].filter((r) => !input?.status || r.status === input.status);
-        return { data: stubs };
+        return { data: [] };
       }
 
       return {
@@ -272,14 +259,9 @@ export const integrationRouter = {
         .where(eq(schema.appConnections.organizationId, context.organization.id))
         .orderBy(desc(schema.appConnections.createdAt));
 
+      // Return empty array when no workflows exist — let the frontend show EmptyState
       if (items.length === 0) {
-        return {
-          data: [
-            { id: "wf-1", name: "New Lead → Slack Notify", sourceApp: "crm", targetApp: "slack", triggerEvent: "lead.created", actionType: "send_message", isActive: true, lastRun: new Date().toISOString(), runCount: 42 },
-            { id: "wf-2", name: "Deal Won → Invoice Create", sourceApp: "crm", targetApp: "finance", triggerEvent: "deal.won", actionType: "create_invoice", isActive: true, lastRun: new Date(Date.now() - 3600000).toISOString(), runCount: 18 },
-            { id: "wf-3", name: "Ticket Created → Assign Agent", sourceApp: "helpdesk", targetApp: "hrm", triggerEvent: "ticket.created", actionType: "assign_agent", isActive: false, lastRun: null, runCount: 0 },
-          ],
-        };
+        return { data: [] };
       }
 
       return {

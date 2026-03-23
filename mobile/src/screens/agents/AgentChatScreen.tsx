@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import { api } from '../../services/api';
 
 type AgentChatScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -24,43 +25,40 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: '1',
-    text: 'Hello! I\'m your Customer Support Agent. How can I help you today?',
-    sender: 'agent',
-    timestamp: new Date('2026-03-22T09:00:00Z'),
-  },
-  {
-    id: '2',
-    text: 'Can you pull up the latest open tickets?',
-    sender: 'user',
-    timestamp: new Date('2026-03-22T09:01:00Z'),
-  },
-  {
-    id: '3',
-    text: 'Sure! You currently have 4 open tickets: 2 urgent, 1 high priority, and 1 medium. The most critical is "Mobile app crashes on Android" (JOB-006, assigned to Mike Torres). Would you like me to escalate any of these?',
-    sender: 'agent',
-    timestamp: new Date('2026-03-22T09:01:10Z'),
-  },
-];
-
-const AGENT_RESPONSES = [
-  'I\'m looking into that for you now...',
-  'Based on the data available, here\'s what I found: the issue appears to be related to the recent deployment.',
-  'I\'ve updated the status and notified the relevant team members.',
-  'That task has been completed. Is there anything else I can help with?',
-  'I\'m analyzing the patterns in your data. This may take a moment.',
-];
-
 export default function AgentChatScreen({ navigation, route }: AgentChatScreenProps) {
   const { agentId, agentName } = route.params;
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  // Use a stable session ID per screen mount (agent + timestamp)
+  const sessionId = useRef(`${agentId}-${Date.now()}`).current;
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
 
-  const sendMessage = () => {
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  async function loadHistory() {
+    try {
+      const data = await api.getAgentChatHistory(agentId, sessionId);
+      const history: ChatMessage[] = (data.messages ?? []).map((m: any) => ({
+        id: m.id,
+        text: m.content,
+        sender: m.role === 'user' ? 'user' : 'agent',
+        timestamp: new Date(m.timestamp),
+      }));
+      setMessages(history);
+    } catch (error) {
+      // Start with empty history if fetch fails — user can still chat
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const sendMessage = async () => {
     const text = inputText.trim();
     if (!text) return;
 
@@ -75,18 +73,26 @@ export default function AgentChatScreen({ navigation, route }: AgentChatScreenPr
     setInputText('');
     setIsTyping(true);
 
-    // Simulate agent response
-    setTimeout(() => {
-      const response = AGENT_RESPONSES[Math.floor(Math.random() * AGENT_RESPONSES.length)];
+    try {
+      const data = await api.sendAgentMessage(agentId, text, sessionId);
       const agentMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        text: response,
+        text: data.message,
+        sender: 'agent',
+        timestamp: new Date(data.timestamp),
+      };
+      setMessages(prev => [...prev, agentMessage]);
+    } catch (error) {
+      const errMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'Sorry, I could not process your request. Please try again.',
         sender: 'agent',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, agentMessage]);
+      setMessages(prev => [...prev, errMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1200);
+    }
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
@@ -108,6 +114,14 @@ export default function AgentChatScreen({ navigation, route }: AgentChatScreenPr
     );
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading chat history...</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -126,6 +140,11 @@ export default function AgentChatScreen({ navigation, route }: AgentChatScreenPr
         keyExtractor={item => item.id}
         contentContainerStyle={styles.messageList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Text style={styles.emptyChatText}>Start a conversation with {agentName || 'the agent'}.</Text>
+          </View>
+        }
         ListFooterComponent={
           isTyping ? (
             <View style={styles.messageRow}>
@@ -152,9 +171,9 @@ export default function AgentChatScreen({ navigation, route }: AgentChatScreenPr
           onSubmitEditing={sendMessage}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, (!inputText.trim() || isTyping) && styles.sendBtnDisabled]}
           onPress={sendMessage}
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || isTyping}
         >
           <Text style={styles.sendBtnText}>Send</Text>
         </TouchableOpacity>
@@ -167,6 +186,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    color: '#6B7280',
+    fontSize: 15,
   },
   agentBanner: {
     flexDirection: 'row',
@@ -192,6 +221,15 @@ const styles = StyleSheet.create({
   messageList: {
     padding: 16,
     paddingBottom: 8,
+  },
+  emptyChat: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyChatText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'center',
   },
   messageRow: {
     flexDirection: 'row',

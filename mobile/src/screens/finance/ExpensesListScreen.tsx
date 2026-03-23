@@ -16,17 +16,6 @@ type ExpensesListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_EXPENSES: Expense[] = [
-  { id: '1', description: 'Team lunch - Q1 kickoff', amount: 245.50, category: 'Meals', date: '2026-03-20', status: 'approved' },
-  { id: '2', description: 'AWS cloud services', amount: 1820.00, category: 'Software', date: '2026-03-19', status: 'approved' },
-  { id: '3', description: 'Conference travel - San Francisco', amount: 780.00, category: 'Travel', date: '2026-03-18', status: 'pending' },
-  { id: '4', description: 'Office supplies', amount: 92.30, category: 'Office', date: '2026-03-17', status: 'pending' },
-  { id: '5', description: 'Client dinner - Acme Corp', amount: 310.00, category: 'Meals', date: '2026-03-15', status: 'approved' },
-  { id: '6', description: 'Training course - React Native', amount: 499.00, category: 'Education', date: '2026-03-10', status: 'rejected' },
-  { id: '7', description: 'Hotel - Chicago Summit', amount: 420.00, category: 'Travel', date: '2026-03-05', status: 'pending' },
-  { id: '8', description: 'Figma license renewal', amount: 144.00, category: 'Software', date: '2026-03-01', status: 'approved' },
-];
-
 const CATEGORY_COLORS: Record<string, string> = {
   Meals: '#F59E0B',
   Software: '#4F46E5',
@@ -48,7 +37,7 @@ export default function ExpensesListScreen({ navigation }: ExpensesListScreenPro
       const data = await api.getExpenses();
       setExpenses(data);
     } catch (error) {
-      setExpenses(MOCK_EXPENSES);
+      setExpenses([]);
     }
   }
 

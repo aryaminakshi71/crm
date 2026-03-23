@@ -10,6 +10,31 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations } from "./auth.schema.js";
 
+// Agent Chat Messages table — persists chat history per agent session
+export const agentChatMessages = pgTable(
+  "agent_chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id").notNull(),
+    agentId: uuid("agent_id").notNull(), // references agent workflow id
+    sessionId: text("session_id").notNull(), // client-provided session identifier
+    role: text("role").notNull(), // "user" | "assistant"
+    content: text("content").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentSessionIdx: index("idx_agent_chat_messages_agent_session").on(
+      table.agentId,
+      table.sessionId,
+      table.createdAt,
+    ),
+    orgIdx: index("idx_agent_chat_messages_org").on(table.organizationId),
+  }),
+);
+
 // Agent Workflows table
 export const agentWorkflows = pgTable(
   "agent_workflows",

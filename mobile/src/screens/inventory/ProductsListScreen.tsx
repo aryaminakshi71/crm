@@ -16,17 +16,6 @@ type ProductsListScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: '1', name: 'Wireless Keyboard Pro', sku: 'WKB-001', category: 'Electronics', price: 89.99, stock: 142, status: 'in_stock' },
-  { id: '2', name: 'USB-C Hub 7-in-1', sku: 'UCH-007', category: 'Electronics', price: 49.99, stock: 7, status: 'low_stock' },
-  { id: '3', name: 'Standing Desk Mat', sku: 'SDM-002', category: 'Office Furniture', price: 35.00, stock: 0, status: 'out_of_stock' },
-  { id: '4', name: 'Ergonomic Mouse', sku: 'EMO-003', category: 'Electronics', price: 65.00, stock: 88, status: 'in_stock' },
-  { id: '5', name: 'Monitor Arm Dual', sku: 'MAD-004', category: 'Office Furniture', price: 120.00, stock: 5, status: 'low_stock' },
-  { id: '6', name: 'Noise Cancelling Headset', sku: 'NCH-005', category: 'Electronics', price: 199.99, stock: 34, status: 'in_stock' },
-  { id: '7', name: 'Cable Management Kit', sku: 'CMK-006', category: 'Accessories', price: 18.50, stock: 210, status: 'in_stock' },
-  { id: '8', name: 'Webcam 4K Ultra', sku: 'WC4K-008', category: 'Electronics', price: 149.00, stock: 3, status: 'low_stock' },
-];
-
 export default function ProductsListScreen({ navigation }: ProductsListScreenProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -58,8 +47,8 @@ export default function ProductsListScreen({ navigation }: ProductsListScreenPro
       setProducts(data);
       setFilteredProducts(data);
     } catch (error) {
-      setProducts(MOCK_PRODUCTS);
-      setFilteredProducts(MOCK_PRODUCTS);
+      setProducts([]);
+      setFilteredProducts([]);
     }
   }
 
