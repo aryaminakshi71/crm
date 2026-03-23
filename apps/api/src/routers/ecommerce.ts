@@ -10,18 +10,6 @@ import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function stubCreated(input: object, orgId: string) {
-  return {
-    id: crypto.randomUUID(),
-    organizationId: orgId,
-    ...input,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-}
-
 // ── Router ───────────────────────────────────────────────────────────────────
 
 export const ecommerceRouter = {
@@ -288,10 +276,45 @@ export const ecommerceRouter = {
         input,
       }: {
         context: OrgContext;
-        input: { id: string; [key: string]: unknown };
+        input: {
+          id: string;
+          name?: string;
+          description?: string;
+          shortDescription?: string;
+          price?: number;
+          comparePrice?: number;
+          cost?: number;
+          stock?: number;
+          status?: "active" | "draft" | "archived";
+          weight?: number;
+          dimensions?: string;
+          tags?: string[];
+        };
       }) => {
-        const { id, ...rest } = input;
-        return { id, organizationId: context.organization.id, ...rest, updatedAt: new Date().toISOString() };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const { id, price, comparePrice, cost, stock, weight, ...rest } = input;
+
+        const [updated] = await db
+          .update(schema.ecommerceProducts)
+          .set({
+            ...rest,
+            ...(price !== undefined ? { price: price.toString() } : {}),
+            ...(comparePrice !== undefined ? { comparePrice: comparePrice.toString() } : {}),
+            ...(cost !== undefined ? { costPrice: cost.toString() } : {}),
+            ...(stock !== undefined ? { inventory: stock } : {}),
+            ...(weight !== undefined ? { weight: weight.toString() } : {}),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(schema.ecommerceProducts.id, id),
+              eq(schema.ecommerceProducts.organizationId, orgId),
+            ),
+          )
+          .returning();
+
+        return updated ?? null;
       },
     ),
 
@@ -312,6 +335,19 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        await db
+          .update(schema.ecommerceProducts)
+          .set({ deletedAt: new Date() })
+          .where(
+            and(
+              eq(schema.ecommerceProducts.id, input.id),
+              eq(schema.ecommerceProducts.organizationId, orgId),
+            ),
+          );
+
         return { success: true };
       },
     ),
@@ -428,28 +464,41 @@ export const ecommerceRouter = {
         input: {
           customer: { name: string; email: string; phone?: string };
           items: { productId: string; name: string; sku?: string; price: number; quantity: number }[];
-          shippingAddress?: object;
+          shippingAddress?: { line1: string; line2?: string; city: string; state: string; zip: string; country: string };
           shippingMethod?: string;
           discountCode?: string;
           notes?: string;
         };
       }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
         const now = new Date();
         const orderNumber = `ORD-${now.getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
         const subtotal = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
-        return {
-          id: crypto.randomUUID(),
-          orderNumber,
-          organizationId: context.organization.id,
-          status: "pending",
-          customer: input.customer,
-          items: input.items,
-          subtotal,
-          shippingCost: 9.99,
-          tax: +(subtotal * 0.08).toFixed(2),
-          total: +(subtotal + 9.99 + subtotal * 0.08).toFixed(2),
-          createdAt: now.toISOString(),
-        };
+        const shippingCost = 9.99;
+        const taxAmount = +(subtotal * 0.08).toFixed(2);
+        const totalAmount = +(subtotal + shippingCost + taxAmount).toFixed(2);
+
+        const [order] = await db
+          .insert(schema.ecommerceOrders)
+          .values({
+            organizationId: orgId,
+            orderNumber,
+            customerName: input.customer.name,
+            customerEmail: input.customer.email,
+            status: "pending",
+            paymentStatus: "unpaid",
+            subtotal: subtotal.toString(),
+            shippingAmount: shippingCost.toString(),
+            taxAmount: taxAmount.toString(),
+            totalAmount: totalAmount.toString(),
+            shippingAddress: input.shippingAddress as Record<string, unknown> | undefined,
+            notes: input.notes,
+          })
+          .returning();
+
+        return order;
       },
     ),
 
@@ -514,8 +563,29 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string; status?: string; trackingNumber?: string; notes?: string };
       }) => {
-        const { id, ...rest } = input;
-        return { id, organizationId: context.organization.id, ...rest, updatedAt: new Date().toISOString() };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+        const { id, status, trackingNumber, notes } = input;
+
+        const setFields: Record<string, unknown> = { updatedAt: new Date() };
+        if (status) setFields.status = status;
+        if (trackingNumber !== undefined) setFields.trackingNumber = trackingNumber;
+        if (notes !== undefined) setFields.notes = notes;
+        if (status === "shipped") setFields.shippedAt = new Date();
+        if (status === "delivered") setFields.deliveredAt = new Date();
+
+        const [updated] = await db
+          .update(schema.ecommerceOrders)
+          .set(setFields)
+          .where(
+            and(
+              eq(schema.ecommerceOrders.id, id),
+              eq(schema.ecommerceOrders.organizationId, orgId),
+            ),
+          )
+          .returning();
+
+        return updated ?? null;
       },
     ),
 
@@ -594,7 +664,75 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string };
       }) => {
-        return null;
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [customer] = await db
+          .select()
+          .from(schema.ecommerceCustomers)
+          .where(
+            and(
+              eq(schema.ecommerceCustomers.id, input.id),
+              eq(schema.ecommerceCustomers.organizationId, orgId),
+              isNull(schema.ecommerceCustomers.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        return customer ?? null;
+      },
+    ),
+
+  createCustomer: orgAuthed
+    .route({
+      method: "POST",
+      path: "/ecommerce/customers",
+      summary: "Create eCommerce customer",
+      tags: ["eCommerce"],
+    })
+    .input(
+      z.object({
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        notes: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(
+      async ({
+        context,
+        input,
+      }: {
+        context: OrgContext;
+        input: {
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          phone?: string;
+          notes?: string;
+          tags?: string[];
+        };
+      }) => {
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [customer] = await db
+          .insert(schema.ecommerceCustomers)
+          .values({
+            organizationId: orgId,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            notes: input.notes,
+            tags: input.tags,
+          })
+          .returning();
+
+        return customer;
       },
     ),
 
@@ -623,7 +761,34 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; recovered?: boolean };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        // recovered carts have status 'converted', non-recovered are 'abandoned'
+        const statusFilter = input.recovered === true ? "converted" : "abandoned";
+        const conditions = [
+          eq(schema.ecommerceCarts.organizationId, orgId),
+          eq(schema.ecommerceCarts.status, statusFilter as "active" | "abandoned" | "converted"),
+        ];
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceCarts)
+            .where(where)
+            .orderBy(desc(schema.ecommerceCarts.abandonedAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceCarts)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -653,7 +818,40 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; search?: string; status?: string };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [eq(schema.ecommerceDiscounts.organizationId, orgId)];
+
+        // filter by isActive when status is provided
+        if (input.status === "active") {
+          conditions.push(eq(schema.ecommerceDiscounts.isActive, true));
+        } else if (input.status === "disabled" || input.status === "inactive") {
+          conditions.push(eq(schema.ecommerceDiscounts.isActive, false));
+        }
+
+        if (input.search) {
+          conditions.push(ilike(schema.ecommerceDiscounts.code, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceDiscounts)
+            .where(where)
+            .orderBy(desc(schema.ecommerceDiscounts.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceDiscounts)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -668,7 +866,7 @@ export const ecommerceRouter = {
       z.object({
         code: z.string().min(1).max(50),
         name: z.string().min(1).max(255),
-        type: z.enum(["percentage", "fixed", "shipping"]),
+        type: z.enum(["percentage", "fixed", "free_shipping"]),
         value: z.number().min(0),
         minOrder: z.number().default(0),
         maxDiscount: z.number().optional(),
@@ -687,7 +885,7 @@ export const ecommerceRouter = {
         input: {
           code: string;
           name: string;
-          type: "percentage" | "fixed" | "shipping";
+          type: "percentage" | "fixed" | "free_shipping";
           value: number;
           minOrder: number;
           maxDiscount?: number;
@@ -696,7 +894,24 @@ export const ecommerceRouter = {
           status: "active" | "disabled";
         };
       }) => {
-        return stubCreated({ ...input, usage: 0 }, context.organization.id);
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [discount] = await db
+          .insert(schema.ecommerceDiscounts)
+          .values({
+            organizationId: orgId,
+            code: input.code,
+            type: input.type,
+            value: input.value.toString(),
+            minOrderAmount: input.minOrder.toString(),
+            maxUses: input.limit,
+            expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+            isActive: input.status === "active",
+          })
+          .returning();
+
+        return discount;
       },
     ),
 
@@ -726,7 +941,41 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number; status?: string; search?: string };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const conditions = [eq(schema.ecommerceReviews.organizationId, orgId)];
+
+        if (input.status) {
+          conditions.push(
+            eq(
+              schema.ecommerceReviews.status,
+              input.status as "pending" | "approved" | "rejected",
+            ),
+          );
+        }
+        if (input.search) {
+          conditions.push(ilike(schema.ecommerceReviews.customerName, `%${input.search}%`));
+        }
+
+        const where = and(...conditions);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceReviews)
+            .where(where)
+            .orderBy(desc(schema.ecommerceReviews.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceReviews)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -752,7 +1001,21 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { id: string; status: "approved" | "rejected" | "pending" };
       }) => {
-        return { id: input.id, status: input.status, updatedAt: new Date().toISOString() };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [updated] = await db
+          .update(schema.ecommerceReviews)
+          .set({ status: input.status })
+          .where(
+            and(
+              eq(schema.ecommerceReviews.id, input.id),
+              eq(schema.ecommerceReviews.organizationId, orgId),
+            ),
+          )
+          .returning();
+
+        return updated ?? { id: input.id, status: input.status };
       },
     ),
 
@@ -780,7 +1043,27 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const where = eq(schema.ecommerceShippingMethods.organizationId, orgId);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceShippingMethods)
+            .where(where)
+            .orderBy(desc(schema.ecommerceShippingMethods.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceShippingMethods)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -819,7 +1102,26 @@ export const ecommerceRouter = {
           enabled: boolean;
         };
       }) => {
-        return stubCreated(input, context.organization.id);
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        // parse days string like "2-5" to an integer (take first number)
+        const estimatedDays = input.days ? parseInt(input.days.split("-")[0], 10) || null : null;
+
+        const [method] = await db
+          .insert(schema.ecommerceShippingMethods)
+          .values({
+            organizationId: orgId,
+            name: input.name,
+            carrier: input.carrier,
+            estimatedDays: estimatedDays ?? undefined,
+            price: input.rate.toString(),
+            freeThreshold: input.minOrder > 0 ? input.minOrder.toString() : undefined,
+            isActive: input.enabled,
+          })
+          .returning();
+
+        return method;
       },
     ),
 
@@ -847,7 +1149,27 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const where = eq(schema.ecommerceTaxRules.organizationId, orgId);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceTaxRules)
+            .where(where)
+            .orderBy(desc(schema.ecommerceTaxRules.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceTaxRules)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -875,7 +1197,21 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { name: string; rate: number; region?: string; enabled: boolean };
       }) => {
-        return stubCreated(input, context.organization.id);
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const [tax] = await db
+          .insert(schema.ecommerceTaxRules)
+          .values({
+            organizationId: orgId,
+            name: input.name,
+            rate: input.rate.toString(),
+            country: input.region,
+            isActive: input.enabled,
+          })
+          .returning();
+
+        return tax;
       },
     ),
 
@@ -903,7 +1239,27 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        const where = eq(schema.ecommerceWishlists.organizationId, orgId);
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceWishlists)
+            .where(where)
+            .orderBy(desc(schema.ecommerceWishlists.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceWishlists)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 
@@ -931,7 +1287,33 @@ export const ecommerceRouter = {
         context: OrgContext;
         input: { page: number; limit: number };
       }) => {
-        return { data: [], total: 0 };
+        const db = getDb(context);
+        const orgId = context.organization.id;
+
+        // Derive upsell candidates from active products with high inventory
+        const where = and(
+          eq(schema.ecommerceProducts.organizationId, orgId),
+          eq(schema.ecommerceProducts.status, "active"),
+          isNull(schema.ecommerceProducts.deletedAt),
+        );
+
+        const offset = (input.page - 1) * input.limit;
+
+        const [data, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(schema.ecommerceProducts)
+            .where(where)
+            .orderBy(desc(schema.ecommerceProducts.inventory))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ total: count() })
+            .from(schema.ecommerceProducts)
+            .where(where),
+        ]);
+
+        return { data, total };
       },
     ),
 };
