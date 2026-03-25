@@ -32,7 +32,7 @@ import { toast } from "sonner";
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 // ─── Route ──────────────────────────────────────────────────────────────────
@@ -56,73 +56,6 @@ type Risk = {
   createdAt: string;
   updatedAt: string;
 };
-
-const MOCK_RISKS: Risk[] = [
-  {
-    id: "r1",
-    title: "Scope Creep",
-    description: "Additional features being added beyond original scope",
-    category: "scope",
-    probability: "high",
-    impact: "high",
-    status: "mitigating",
-    owner: "Sarah Chen",
-    mitigation: "Weekly scope reviews and change control process",
-    createdAt: "2024-01-10",
-    updatedAt: "2024-01-15",
-  },
-  {
-    id: "r2",
-    title: "Resource Availability",
-    description: "Key developer on vacation for 2 weeks",
-    category: "resource",
-    probability: "medium",
-    impact: "high",
-    status: "identified",
-    owner: "Mike Johnson",
-    mitigation: "Cross-training team members",
-    createdAt: "2024-01-12",
-    updatedAt: "2024-01-12",
-  },
-  {
-    id: "r3",
-    title: "Third-party API Changes",
-    description: "External API may change breaking our integration",
-    category: "technical",
-    probability: "low",
-    impact: "high",
-    status: "mitigating",
-    owner: "Emily Davis",
-    mitigation: "Implementing adapter pattern for external dependencies",
-    createdAt: "2024-01-08",
-    updatedAt: "2024-01-14",
-  },
-  {
-    id: "r4",
-    title: "Budget Overrun",
-    description: "Infrastructure costs higher than anticipated",
-    category: "budget",
-    probability: "medium",
-    impact: "medium",
-    status: "accepted",
-    owner: "Alex Kim",
-    createdAt: "2024-01-05",
-    updatedAt: "2024-01-10",
-  },
-  {
-    id: "r5",
-    title: "Regulatory Changes",
-    description: "New data privacy regulations may affect product",
-    category: "external",
-    probability: "low",
-    impact: "medium",
-    status: "identified",
-    owner: "Jordan Lee",
-    mitigation: "Monitoring regulatory developments",
-    createdAt: "2024-01-15",
-    updatedAt: "2024-01-15",
-  },
-];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -152,6 +85,7 @@ function RiskRegisterPage() {
       if (!res.ok) throw new Error("Failed to fetch risks");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
   if (risksQuery.isError) return (
@@ -162,7 +96,7 @@ function RiskRegisterPage() {
     </div>
   );
 
-  const risks: Risk[] = risksQuery.data?.data ?? MOCK_RISKS;
+  const risks: Risk[] = (risksQuery as any).data?.data ?? [];
 
   // Filter and sort risks
   const filteredRisks = risks

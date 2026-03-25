@@ -37,7 +37,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ function TimeTrackingPage() {
     enabled: !!id,
   });
 
-  const projectTasks = (tasksData?.data ?? []) as any[];
+  const projectTasks = ((tasksData as any)?.data ?? []) as any[];
 
   // No time-tracking API — show empty local entries
   const timeEntries: TimeEntry[] = [];

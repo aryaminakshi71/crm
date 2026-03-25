@@ -19,7 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { inventoryApi } from "../lib/api";
+import { inventoryApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/inventory/alerts")({
   component: AlertsPage,
@@ -33,7 +33,7 @@ function AlertsPage() {
 
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["inventory", "alerts", { resolved: false }],
-    queryFn: () => inventoryApi.alerts.list({ limit: 100, resolved: false }),
+    queryFn: () => inventoryApi.alerts.list({ limit: 100 }),
   });
 
   const resolveMutation = useMutation({

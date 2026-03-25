@@ -16,17 +16,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/sms/bulk")({
   component: BulkSMSPage,
 });
-
-const MOCK_CAMPAIGNS = [
-  { id: "1", name: "Spring Sale Announcement", recipients: 1500, sent: 1456, failed: 12, status: "completed", created: "Mar 15, 2024" },
-  { id: "2", name: "New Product Launch", recipients: 2300, sent: 890, failed: 5, status: "sending", created: "Mar 18, 2024" },
-  { id: "3", name: "Customer Survey", recipients: 5000, sent: 0, failed: 0, status: "draft", created: "Mar 19, 2024" },
-];
 
 function BulkSMSPage() {
   const navigate = useNavigate();
@@ -38,10 +32,11 @@ function BulkSMSPage() {
   const { data: campaignsData, isLoading, isError, refetch} = useQuery({
     queryKey: ["communications", "campaigns"],
     queryFn: () => communicationsApi.campaigns.list({ limit: 50 }),
+    placeholderData: (prev) => prev,
   });
 
-  const campaigns: typeof MOCK_CAMPAIGNS =
-    campaignsData?.data ?? (Array.isArray(campaignsData) ? campaignsData : null) ?? MOCK_CAMPAIGNS;
+  const campaigns: any[] =
+    campaignsData?.data ?? (Array.isArray(campaignsData) ? campaignsData : null) ?? [];
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];

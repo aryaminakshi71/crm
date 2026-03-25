@@ -15,22 +15,7 @@ import { ArrowLeft, CheckCircle2, Clock, Plug, XCircle,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
-
-const MOCK_CONNECTOR = (id: string) => ({
-  id,
-  name: "Sample Connector",
-  type: "webhook",
-  status: "connected",
-  config: { endpoint: "https://hooks.example.com/webhook" },
-  connectedAt: new Date().toISOString(),
-  rateLimit: { limit: 1000, remaining: 847, resetAt: new Date(Date.now() + 3600000).toISOString() },
-  recentRuns: [
-    { id: "run-1", status: "success", executedAt: new Date().toISOString(), durationMs: 124 },
-    { id: "run-2", status: "success", executedAt: new Date(Date.now() - 3600000).toISOString(), durationMs: 98 },
-    { id: "run-3", status: "failed", executedAt: new Date(Date.now() - 7200000).toISOString(), durationMs: 234, error: "Timeout" },
-  ],
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 export const Route = createFileRoute("/app/integrations/connectors/$id")({
@@ -46,20 +31,21 @@ function ConnectorDetailPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors/${id}`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_CONNECTOR(id);
+      if (!res.ok) return {};
       return res.json();
     },
+    placeholderData: (prev) => prev,
     enabled: !!id,
   });
 
-  const connector = data ?? MOCK_CONNECTOR(id);
+  const connector = (data as any) ?? {};
 
   if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -81,12 +67,12 @@ function ConnectorDetailPage() {
             <Plug className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{connector.name}</h1>
-            <p className="text-sm text-muted-foreground capitalize">{connector.type}</p>
+            <h1 className="text-xl font-bold">{(connector as any).name}</h1>
+            <p className="text-sm text-muted-foreground capitalize">{(connector as any).type}</p>
           </div>
         </div>
-        <Badge variant={connector.status === "connected" ? "default" : "secondary"} className="ml-auto">
-          {connector.status}
+        <Badge variant={(connector as any).status === "connected" ? "default" : "secondary"} className="ml-auto">
+          {(connector as any).status}
         </Badge>
       </div>
 
@@ -96,13 +82,13 @@ function ConnectorDetailPage() {
             <CardTitle>Configuration</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {connector.connectedAt && (
+            {(connector as any).connectedAt && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Connected At</span>
-                <span>{new Date(connector.connectedAt).toLocaleString()}</span>
+                <span>{new Date((connector as any).connectedAt).toLocaleString()}</span>
               </div>
             )}
-            {connector.config && Object.entries(connector.config).map(([k, v]) => (
+            {(connector as any).config && Object.entries((connector as any).config).map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm">
                 <span className="text-muted-foreground capitalize">{k}</span>
                 <span className="font-mono text-xs">{String(v)}</span>
@@ -111,7 +97,7 @@ function ConnectorDetailPage() {
           </CardContent>
         </Card>
 
-        {connector.rateLimit && (
+        {(connector as any).rateLimit && (
           <Card>
             <CardHeader>
               <CardTitle>Rate Limits</CardTitle>
@@ -119,35 +105,35 @@ function ConnectorDetailPage() {
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Limit</span>
-                <span className="font-semibold">{connector.rateLimit.limit}/hour</span>
+                <span className="font-semibold">{(connector as any).rateLimit.limit}/hour</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Remaining</span>
-                <span className="font-semibold">{connector.rateLimit.remaining}</span>
+                <span className="font-semibold">{(connector as any).rateLimit.remaining}</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-violet-500 rounded-full"
-                  style={{ width: `${(connector.rateLimit.remaining / connector.rateLimit.limit) * 100}%` }}
+                  style={{ width: `${((connector as any).rateLimit.remaining / (connector as any).rateLimit.limit) * 100}%` }}
                 />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Resets: {new Date(connector.rateLimit.resetAt).toLocaleTimeString()}</span>
-                <span>{Math.round((connector.rateLimit.remaining / connector.rateLimit.limit) * 100)}% remaining</span>
+                <span>Resets: {new Date((connector as any).rateLimit.resetAt).toLocaleTimeString()}</span>
+                <span>{Math.round(((connector as any).rateLimit.remaining / (connector as any).rateLimit.limit) * 100)}% remaining</span>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {connector.recentRuns?.length > 0 && (
+      {(connector as any).recentRuns?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Recent Runs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {connector.recentRuns.map((run: any) => (
+              {(connector as any).recentRuns.map((run: any) => (
                 <div key={run.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex items-center gap-2">
                     {run.status === "success"

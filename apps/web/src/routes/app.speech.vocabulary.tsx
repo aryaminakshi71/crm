@@ -7,7 +7,7 @@ import {
   Edit,
   Trash2,
   MessageSquare,
-  Star,,
+  Star,
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -18,9 +18,9 @@ export const Route = createFileRoute("/app/speech/vocabulary")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface VocabularyWord {
@@ -29,15 +29,6 @@ interface VocabularyWord {
   type: "company" | "technical" | "name" | "slang";
   occurrences: number;
 }
-
-const MOCK_VOCABULARY: VocabularyWord[] = [
-  { id: "v1", word: "Nucleo One", type: "company", occurrences: 45 },
-  { id: "v2", word: "API", type: "technical", occurrences: 120 },
-  { id: "v3", word: "SaaS", type: "technical", occurrences: 89 },
-  { id: "v4", word: "John", type: "name", occurrences: 34 },
-  { id: "v5", word: "webhook", type: "technical", occurrences: 67 },
-  { id: "v6", word: "ROI", type: "technical", occurrences: 23 },
-];
 
 function VocabularyPage() {
   const navigate = useNavigate();
@@ -52,9 +43,10 @@ function VocabularyPage() {
       if (!res.ok) throw new Error("Failed to fetch vocabulary");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const vocab: VocabularyWord[] = data?.data ?? MOCK_VOCABULARY;
+  const vocab: VocabularyWord[] = (data as any)?.data ?? [];
 
   const filteredVocab = vocab.filter((v) =>
     (v.word ?? "").toLowerCase().includes(searchQuery.toLowerCase())
@@ -69,7 +61,6 @@ function VocabularyPage() {
     }
   };
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -77,12 +68,11 @@ function VocabularyPage() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

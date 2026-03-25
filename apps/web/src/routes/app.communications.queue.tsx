@@ -13,7 +13,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LayoutList, Mic, MessageSquare, MessageCircle, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/queue")({
   component: CommQueuePage,
@@ -76,9 +76,10 @@ function CommQueuePage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["communications", "queues"],
     queryFn: () => communicationsApi.queues.list({ page: 1, limit: 100 }),
+    placeholderData: (prev) => prev,
   });
 
-  const queues: any[] = data?.data ?? MOCK_QUEUES;
+  const queues: any[] = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -176,12 +177,12 @@ function CommQueuePage() {
 
       {/* Create modal */}
       <FormModal
-        open={isModalOpen}
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="New Routing Queue"
         onSubmit={() => createMutation.mutate(form)}
-        isSubmitting={createMutation.isPending}
-        submitLabel="Create Queue"
+        isLoading={createMutation.isPending}
+        submitText="Create Queue"
       >
         <FormField label="Queue name" required>
           <Input

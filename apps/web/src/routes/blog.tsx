@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { Badge, Button } from "@crm/ui";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { blogPosts } from "../lib/blog-content";
+import { blogPosts } from "@/lib/blog-content";
 
 export const Route = createFileRoute("/blog")({
   head: () => {

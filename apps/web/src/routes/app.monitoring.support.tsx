@@ -52,7 +52,7 @@ function SupportMetrics() {
   type ResponseTimePoint = { hour: string; avgResponse: number; firstResponse: number };
   type TicketVolumePoint = { day: string; open: number; resolved: number };
 
-  const responseTimeData: ResponseTimePoint[] = data?.responseTimeData || [
+  const responseTimeData: ResponseTimePoint[] = (data as any)?.responseTimeData || [
     { hour: "00:00", avgResponse: 45, firstResponse: 12 },
     { hour: "04:00", avgResponse: 52, firstResponse: 15 },
     { hour: "08:00", avgResponse: 38, firstResponse: 8 },
@@ -61,7 +61,7 @@ function SupportMetrics() {
     { hour: "20:00", avgResponse: 48, firstResponse: 11 },
   ];
 
-  const ticketVolumeData: TicketVolumePoint[] = data?.ticketVolumeData || [
+  const ticketVolumeData: TicketVolumePoint[] = (data as any)?.ticketVolumeData || [
     { day: "Mon", open: 45, resolved: 52 },
     { day: "Tue", open: 52, resolved: 48 },
     { day: "Wed", open: 38, resolved: 55 },
@@ -71,7 +71,7 @@ function SupportMetrics() {
     { day: "Sun", open: 12, resolved: 15 },
   ];
 
-  const satisfactionData: SatisfactionPoint[] = data?.satisfactionData || [
+  const satisfactionData: SatisfactionPoint[] = (data as any)?.satisfactionData || [
     { label: "Very Satisfied", value: 45, color: "#34d399" },
     { label: "Satisfied", value: 32, color: "#22d3ee" },
     { label: "Neutral", value: 15, color: "#fbbf24" },
@@ -79,10 +79,10 @@ function SupportMetrics() {
   ];
 
   const metricCards = [
-    { title: "Open Tickets", value: data?.openTickets || "...", change: data?.openTicketsChange || "-12%", trend: "down", icon: Ticket },
-    { title: "Avg Response Time", value: data?.avgResponseTime || "...", change: data?.avgResponseTimeChange || "-25%", trend: "down", icon: Clock },
-    { title: "CSAT Score", value: data?.csatScore || "...", change: data?.csatChange || "+8%", trend: "up", icon: Smile },
-    { title: "Resolution Rate", value: data?.resolutionRate || "...", change: data?.resolutionChange || "+3%", trend: "up", icon: ThumbsUp },
+    { title: "Open Tickets", value: data?.openTickets || "...", change: (data as any)?.openTicketsChange || "-12%", trend: "down", icon: Ticket },
+    { title: "Avg Response Time", value: data?.avgResponseTime || "...", change: (data as any)?.avgResponseTimeChange || "-25%", trend: "down", icon: Clock },
+    { title: "CSAT Score", value: (data as any)?.csatScore || "...", change: (data as any)?.csatChange || "+8%", trend: "up", icon: Smile },
+    { title: "Resolution Rate", value: (data as any)?.resolutionRate || "...", change: (data as any)?.resolutionChange || "+3%", trend: "up", icon: ThumbsUp },
   ];
 
   return (

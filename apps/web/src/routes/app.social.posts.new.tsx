@@ -25,7 +25,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 const PLATFORMS = [

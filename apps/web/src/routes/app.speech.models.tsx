@@ -5,7 +5,7 @@ import {
   Brain,
   CheckCircle,
   Settings,
-  Zap,,
+  Zap,
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -16,9 +16,9 @@ export const Route = createFileRoute("/app/speech/models")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Model {
@@ -29,13 +29,6 @@ interface Model {
   speed: "fast" | "balanced" | "accurate";
   enabled: boolean;
 }
-
-const MOCK_MODELS: Model[] = [
-  { id: "m1", name: "Avaan Base v3", language: "English", accuracy: 92, speed: "fast", enabled: true },
-  { id: "m2", name: "Avaan Pro v2", language: "English", accuracy: 96, speed: "balanced", enabled: true },
-  { id: "m3", name: "Avaan Premium v1", language: "English", accuracy: 99, speed: "accurate", enabled: false },
-  { id: "m4", name: "Avaan Multilingual v2", language: "Multi", accuracy: 94, speed: "balanced", enabled: false },
-];
 
 function ModelsPage() {
   const navigate = useNavigate();
@@ -50,9 +43,10 @@ function ModelsPage() {
       if (!res.ok) throw new Error("Failed to fetch models");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const models: Model[] = data?.data ?? MOCK_MODELS;
+  const models: Model[] = (data as any)?.data ?? [];
 
   const getSpeedColor = (speed: Model["speed"]) => {
     switch (speed) {
@@ -62,7 +56,6 @@ function ModelsPage() {
     }
   };
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -70,12 +63,11 @@ function ModelsPage() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

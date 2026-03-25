@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Tabs, TabsContent, TabsList, TabsTrigger, Progress } from "@crm/ui";
+import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Input, Tabs, TabsContent, TabsList, TabsTrigger, Progress, Loading } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Building2,
   Users,
@@ -132,7 +133,30 @@ function AdminOrganizationsPage() {
   const [filterPlan, setFilterPlan] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const filteredOrgs = organizations.filter((org) => {
+  const { data: orgsData, isLoading } = useQuery({
+    queryKey: ["admin-organizations"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/organizations");
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const { data: billingStats } = useQuery({
+    queryKey: ["admin-billing-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/billing/stats");
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Fall back to mock data if API not ready
+  const liveOrgs = (orgsData as any)?.data ?? organizations;
+  const totalMRR = liveOrgs.reduce((sum: number, o: any) => sum + o.mrr, 0);
+  const liveMRR = (billingStats as any)?.mrr ?? totalMRR;
+
+  const filteredOrgs = liveOrgs.filter((org: any) => {
     const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       org.slug.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || org.status === filterStatus;
@@ -154,12 +178,11 @@ function AdminOrganizationsPage() {
     enterprise: "bg-amber-100 text-amber-800",
   };
 
-  // Stats
-  const totalMRR = organizations.reduce((sum, o) => sum + o.mrr, 0);
-  const activeCount = organizations.filter((o) => o.status === "active").length;
-  const trialCount = organizations.filter((o) => o.status === "trialing").length;
-  const pastDueCount = organizations.filter((o) => o.status === "past_due").length;
-  const totalUsers = organizations.reduce((sum, o) => sum + o.users, 0);
+  // Stats derived from live data
+  const activeCount = liveOrgs.filter((o: any) => o.status === "active").length;
+  const trialCount = liveOrgs.filter((o: any) => o.status === "trialing").length;
+  const pastDueCount = liveOrgs.filter((o: any) => o.status === "past_due").length;
+  const totalUsers = liveOrgs.reduce((sum: number, o: any) => sum + o.users, 0);
 
   return (
     <div className="space-y-6">
@@ -170,8 +193,9 @@ function AdminOrganizationsPage() {
             <Building2 className="h-7 w-7" />
             Organizations
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Manage all {organizations.length} organizations and their subscriptions
+          <p className="text-muted-foreground text-sm flex items-center gap-2">
+            Manage all {liveOrgs.length} organizations and their subscriptions
+            {isLoading && <Loading size="sm" />}
           </p>
         </div>
         <Button variant="primary" size="sm">
@@ -184,7 +208,7 @@ function AdminOrganizationsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
           <CardContent className="p-4">
-            <p className="text-2xl font-black text-primary">${totalMRR.toLocaleString()}</p>
+            <p className="text-2xl font-black text-primary">${liveMRR.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Monthly Revenue</p>
           </CardContent>
         </Card>
@@ -214,7 +238,7 @@ function AdminOrganizationsPage() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-black">{organizations.length}</p>
+            <p className="text-2xl font-black">{liveOrgs.length}</p>
             <p className="text-xs text-muted-foreground">Organizations</p>
           </CardContent>
         </Card>
@@ -281,7 +305,7 @@ function AdminOrganizationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrgs.map((org) => {
+                  {filteredOrgs.map((org: any) => {
                     const StatusIcon = statusConfig[org.status]?.icon || Clock;
                     return (
                       <TableRow key={org.id}>
@@ -303,7 +327,7 @@ function AdminOrganizationsPage() {
                         <TableCell>{org.users}</TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
-                            {org.modules.slice(0, 3).map((mod) => {
+                            {org.modules.slice(0, 3).map((mod: any) => {
                               const Icon = moduleIcons[mod] || Layers;
                               return (
                                 <div
@@ -353,8 +377,8 @@ function AdminOrganizationsPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {Object.entries(moduleIcons).map(([key, Icon]) => {
-                  const subscribers = organizations.filter((o) => o.modules.includes(key)).length;
-                  const percentage = Math.round((subscribers / organizations.length) * 100);
+                  const subscribers = liveOrgs.filter((o: any) => o.modules?.includes(key)).length;
+                  const percentage = liveOrgs.length > 0 ? Math.round((subscribers / liveOrgs.length) * 100) : 0;
                   return (
                     <div key={key} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
@@ -366,7 +390,7 @@ function AdminOrganizationsPage() {
                       </div>
                       <Progress value={percentage} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-2">
-                        {subscribers} of {organizations.length} organizations
+                        {subscribers} of {liveOrgs.length} organizations
                       </p>
                     </div>
                   );
@@ -386,9 +410,9 @@ function AdminOrganizationsPage() {
               <CardContent>
                 <div className="space-y-4">
                   {["enterprise", "business", "growth", "starter"].map((plan) => {
-                    const orgs = organizations.filter((o) => o.plan === plan);
-                    const revenue = orgs.reduce((sum, o) => sum + o.mrr, 0);
-                    const percentage = Math.round((revenue / totalMRR) * 100);
+                    const orgs = liveOrgs.filter((o: any) => o.plan === plan);
+                    const revenue = orgs.reduce((sum: number, o: any) => sum + o.mrr, 0);
+                    const percentage = liveMRR > 0 ? Math.round((revenue / liveMRR) * 100) : 0;
                     return (
                       <div key={plan} className="space-y-1">
                         <div className="flex justify-between text-sm">
@@ -410,7 +434,7 @@ function AdminOrganizationsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {organizations.slice(0, 4).map((org) => (
+                  {liveOrgs.slice(0, 4).map((org: any) => (
                     <div key={org.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                       <div>
                         <p className="font-medium">{org.name}</p>

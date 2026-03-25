@@ -22,18 +22,10 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const MOCK_POSTS_ON_CALENDAR = [
-  { id: "p1", day: 15, platform: "instagram", time: "10:00 AM", title: "Product launch post" },
-  { id: "p2", day: 16, platform: "twitter", time: "2:00 PM", title: "Poll about features" },
-  { id: "p3", day: 18, platform: "linkedin", time: "9:00 AM", title: "Job opening announcement" },
-  { id: "p4", day: 20, platform: "instagram", time: "11:00 AM", title: "Behind the scenes" },
-  { id: "p5", day: 22, platform: "facebook", time: "3:00 PM", title: "Customer testimonial" },
-];
 
 function CalendarPage() {
   const navigate = useNavigate();
@@ -59,10 +51,11 @@ function CalendarPage() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const calendarPosts = useMemo(() => {
-    const data: any[] = postsData?.data ?? [];
+    const data: any[] = (postsData as any)?.data ?? [];
     if (data.length > 0) {
       return data.map((p: any) => ({
         id: p.id,
@@ -72,7 +65,7 @@ function CalendarPage() {
         title: p.content?.substring(0, 40) ?? "Post",
       }));
     }
-    return MOCK_POSTS_ON_CALENDAR;
+    return [];
   }, [postsData]);
 
   const getPlatformIcon = (platform: string) => {

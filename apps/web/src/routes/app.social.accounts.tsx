@@ -23,9 +23,9 @@ export const Route = createFileRoute("/app/social/accounts")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Account {
@@ -58,6 +58,7 @@ function AccountsPage() {
       if (!res.ok) throw new Error("Failed to fetch accounts");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const disconnectMutation = useMutation({
@@ -82,7 +83,7 @@ function AccountsPage() {
     </div>
   );
 
-  const accounts: Account[] = data?.data ?? MOCK_ACCOUNTS;
+  const accounts: Account[] = (data as any)?.data ?? [];
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -140,7 +141,7 @@ function AccountsPage() {
                     {getPlatformIcon(account.platform)}
                   </div>
                   <div>
-                    <h3 className="font-semibold">{account.name ?? account.displayName ?? account.platform}</h3>
+                    <h3 className="font-semibold">{account.name ?? (account as any).displayName ?? account.platform}</h3>
                     <p className="text-sm text-muted-foreground">{account.username}</p>
                   </div>
                 </div>
@@ -148,7 +149,7 @@ function AccountsPage() {
               </div>
 
               <div className="flex items-center justify-between text-sm mb-4">
-                <span className="text-muted-foreground">{(account.followers ?? account.profileData?.followers ?? 0).toLocaleString()} followers</span>
+                <span className="text-muted-foreground">{(account.followers ?? (account as any).profileData?.followers ?? 0).toLocaleString()} followers</span>
                 <span className="text-muted-foreground">Synced {account.lastSync ?? "recently"}</span>
               </div>
 

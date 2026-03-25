@@ -53,7 +53,7 @@ function PerformancePage() {
   type EndpointPoint = { endpoint: string; p95: number; errorRate: number; requests: string };
   type ServicePoint = { name: string; status: string; latency: number; requests: string };
 
-  const latencyData: LatencyPoint[] = data?.latencyData || [
+  const latencyData: LatencyPoint[] = (data as any)?.latencyData || [
     { time: "00:00", p50: 45, p95: 120, p99: 245 },
     { time: "04:00", p50: 42, p95: 115, p99: 230 },
     { time: "08:00", p50: 52, p95: 145, p99: 310 },
@@ -62,7 +62,7 @@ function PerformancePage() {
     { time: "20:00", p50: 58, p95: 175, p99: 365 },
   ];
 
-  const errorData: ErrorPoint[] = data?.errorData || [
+  const errorData: ErrorPoint[] = (data as any)?.errorData || [
     { time: "00:00", errors: 12, warnings: 45 },
     { time: "04:00", errors: 8, warnings: 32 },
     { time: "08:00", errors: 25, warnings: 78 },
@@ -71,7 +71,7 @@ function PerformancePage() {
     { time: "20:00", errors: 22, warnings: 67 },
   ];
 
-  const endpointData: EndpointPoint[] = data?.endpointData || [
+  const endpointData: EndpointPoint[] = (data as any)?.endpointData || [
     { endpoint: "/api/users", p95: 145, errorRate: 0.2, requests: "12.5K" },
     { endpoint: "/api/orders", p95: 230, errorRate: 0.5, requests: "8.3K" },
     { endpoint: "/api/products", p95: 95, errorRate: 0.1, requests: "15.2K" },
@@ -79,7 +79,7 @@ function PerformancePage() {
     { endpoint: "/api/payments", p95: 420, errorRate: 0.8, requests: "2.1K" },
   ];
 
-  const serviceHealth: ServicePoint[] = data?.serviceHealth || [
+  const serviceHealth: ServicePoint[] = (data as any)?.serviceHealth || [
     { name: "API Gateway", status: "healthy", latency: 45, requests: "45.2K" },
     { name: "Auth Service", status: "healthy", latency: 85, requests: "12.8K" },
     { name: "User Service", status: "degraded", latency: 180, requests: "8.5K" },

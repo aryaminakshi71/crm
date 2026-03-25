@@ -100,7 +100,7 @@ function MonitoringApmPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to create trace"),
   });
 
-  const traces: any[] = tracesData?.items ?? [];
+  const traces: any[] = (tracesData as any)?.items ?? [];
 
   const metrics = apmData ?? {
     avgResponseTime: null,
@@ -112,25 +112,25 @@ function MonitoringApmPage() {
   const metricCards = [
     {
       label: "Avg Response Time",
-      value: metrics.avgResponseTime != null ? `${metrics.avgResponseTime}ms` : "N/A",
+      value: (metrics as any).avgResponseTime != null ? `${(metrics as any).avgResponseTime}ms` : "N/A",
       icon: Clock,
       color: "text-blue-400",
     },
     {
       label: "Error Rate",
-      value: metrics.errorRate != null ? `${metrics.errorRate}%` : "N/A",
+      value: (metrics as any).errorRate != null ? `${(metrics as any).errorRate}%` : "N/A",
       icon: AlertTriangle,
       color: "text-red-400",
     },
     {
       label: "Throughput",
-      value: metrics.throughput != null ? `${metrics.throughput} rpm` : "N/A",
+      value: (metrics as any).throughput != null ? `${(metrics as any).throughput} rpm` : "N/A",
       icon: Zap,
       color: "text-green-400",
     },
     {
       label: "P99 Latency",
-      value: metrics.p99Latency != null ? `${metrics.p99Latency}ms` : "N/A",
+      value: (metrics as any).p99Latency != null ? `${(metrics as any).p99Latency}ms` : "N/A",
       icon: Cpu,
       color: "text-purple-400",
     },
@@ -221,7 +221,7 @@ function MonitoringApmPage() {
                     )}
                     {trace.status && (
                       <Badge
-                        variant={trace.status === "error" ? "destructive" : "default"}
+                        variant={trace.status === "error" ? "danger" : "default"}
                         className="text-xs"
                       >
                         {trace.status}

@@ -14,7 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/sms/conversation/$id")({
   component: ConversationPage,
@@ -27,15 +27,6 @@ interface Message {
   timestamp: string;
   status: "delivered" | "sent" | "failed";
 }
-
-const MOCK_MESSAGES: Message[] = [
-  { id: "1", role: "inbound", content: "Hi, I wanted to check on my order status. Order #12345", timestamp: "10:23 AM", status: "delivered" },
-  { id: "2", role: "outbound", content: "Hi! Thanks for reaching out. Let me check that for you right away.", timestamp: "10:24 AM", status: "delivered" },
-  { id: "3", role: "outbound", content: "Your order is currently being processed and should ship within 24 hours. You'll receive a tracking number via email once it ships.", timestamp: "10:25 AM", status: "delivered" },
-  { id: "4", role: "inbound", content: "Great, thank you! Do you offer expedited shipping?", timestamp: "10:28 AM", status: "delivered" },
-  { id: "5", role: "outbound", content: "Yes, we do offer expedited shipping. The options are:\n- Standard (3-5 days): $5.99\n- Express (1-2 days): $12.99\n- Overnight: $24.99\n\nWould you like me to upgrade your shipping?", timestamp: "10:30 AM", status: "delivered" },
-  { id: "6", role: "inbound", content: "Yes, please upgrade to Express shipping. My email is john@example.com", timestamp: "10:32 AM", status: "delivered" },
-];
 
 function ConversationPage() {
   const { id } = Route.useParams();
@@ -50,15 +41,15 @@ function ConversationPage() {
     queryKey: ["communications", "conversation", id],
     queryFn: () => communicationsApi.conversationMessages.get(id),
     retry: false,
+    placeholderData: (prev) => prev,
   });
 
-  // Seed local messages from API; fall back to MOCK_MESSAGES
+  // Seed local messages from API
   useEffect(() => {
     if (conversationQuery.data) {
       const apiMessages: any[] = conversationQuery.data.messages ?? [];
-      if (apiMessages.length > 0) {
-        setLocalMessages(
-          apiMessages.map((m: any) => ({
+      setLocalMessages(
+        apiMessages.map((m: any) => ({
             id: m.id ?? crypto.randomUUID(),
             role: m.role ?? "outbound",
             content: m.content ?? m.body ?? "",
@@ -68,14 +59,8 @@ function ConversationPage() {
             status: (m.status as Message["status"]) ?? "delivered",
           }))
         );
-      } else {
-        // Empty from API — use mock for demo
-        setLocalMessages(MOCK_MESSAGES);
-      }
-    } else if (conversationQuery.isError) {
-      setLocalMessages(MOCK_MESSAGES);
     }
-  }, [conversationQuery.data, conversationQuery.isError]);
+  }, [conversationQuery.data]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

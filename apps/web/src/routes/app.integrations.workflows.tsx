@@ -16,7 +16,7 @@ import { AlertCircle, ArrowRight, GitBranch, Plus } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const MOCK_WORKFLOWS = {
@@ -47,9 +47,10 @@ function WorkflowsListPage() {
       const res = await fetch(`${API_BASE}/v1/integration/workflows`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_WORKFLOWS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -60,7 +61,7 @@ function WorkflowsListPage() {
     </div>
   );
 
-  const workflows = data?.data ?? MOCK_WORKFLOWS.data;
+  const workflows = (data as any)?.data ?? [];
 
   return (
     <div className="p-6 space-y-6">

@@ -37,9 +37,9 @@ export const Route = createFileRoute("/app/invoicing/vendors")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type Vendor = {
@@ -53,14 +53,7 @@ type Vendor = {
   status: "active" | "inactive";
 };
 
-const mockVendors: Vendor[] = [
-  { id: "1", name: "AWS", email: "billing@aws.amazon.com", phone: "+1-800-555-0101", category: "Cloud Services", totalPaid: 45000, pendingPayments: 2500, status: "active" },
-  { id: "2", name: "Staples", email: "orders@staples.com", phone: "+1-800-555-0102", category: "Office Supplies", totalPaid: 8500, pendingPayments: 450, status: "active" },
-  { id: "3", name: "Google Cloud", email: "invoices@google.com", phone: "+1-800-555-0103", category: "Cloud Services", totalPaid: 32000, pendingPayments: 3200, status: "active" },
-  { id: "4", name: "Slack Technologies", email: "billing@slack.com", phone: "+1-800-555-0104", category: "Software", totalPaid: 12000, pendingPayments: 1000, status: "active" },
-  { id: "5", name: "United Airlines", email: "travel@ua.com", phone: "+1-800-555-0105", category: "Travel", totalPaid: 15600, pendingPayments: 0, status: "active" },
-  { id: "6", name: "Local Restaurant", email: "orders@localresto.com", phone: "+1-555-0106", category: "Meals", totalPaid: 2340, pendingPayments: 0, status: "inactive" },
-];
+const EMPTY_VENDORS: any[] = [];
 
 function VendorManagement() {
   const [search, setSearch] = useState("");
@@ -100,6 +93,7 @@ function VendorManagement() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (vendorsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -109,7 +103,7 @@ function VendorManagement() {
     </div>
   );
 
-  const vendors: Vendor[] = vendorsQuery.data?.data?.length ? vendorsQuery.data.data : mockVendors;
+  const vendors: any[] = (vendorsQuery as any)?.data?.data ?? [];
 
   const filteredVendors = vendors.filter((vendor) => {
     if (categoryFilter !== "all" && vendor.category !== categoryFilter) return false;

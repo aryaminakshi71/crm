@@ -5,7 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   History,
   Mail,
   MapPin,
+  MessageSquare,
   Phone,
   Plus,
   Trash2,
@@ -24,51 +25,109 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
-import { contactsApi } from "../lib/api";
+import { toast } from "sonner";
+import { contactsApi } from "@/lib/api";
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function authorInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export const Route = createFileRoute("/app/crm/contacts/$id")({
   component: ContactDetail,
 });
 
-const MOCK_CONTACT = {
-  id: "",
-  firstName: "John",
-  lastName: "Smith",
-  email: "john.smith@acmecorp.com",
-  phone: "+1 (555) 123-4567",
-  company: "Acme Corporation",
-  jobTitle: "VP of Engineering",
-  location: "San Francisco, CA",
-  website: "acmecorp.com",
-  status: "active" as const,
-  createdAt: "2023-06-15",
-  lastActivity: "2024-03-15",
-  dealsCount: 3,
-  totalValue: 245000,
-  tags: ["enterprise", "decision-maker", "technical"],
-  notes: "Key decision maker for enterprise deals.",
-  deals: [
-    { id: "1", name: "Enterprise SaaS License", value: 125000, stage: "Negotiation" },
-    { id: "2", name: "Cloud Migration Project", value: 89000, stage: "Proposal" },
-  ],
-  activities: [
-    { id: "1", type: "email", title: "Email sent: Follow-up on proposal", date: "2024-03-15", user: "Sales Team" },
-    { id: "2", type: "call", title: "Discovery call completed (45 min)", date: "2024-03-12", user: "Sarah Chen" },
-  ],
-};
-
 function ContactDetail() {
   const navigate = useNavigate();
   const { id } = Route.useParams();
+  const [noteContent, setNoteContent] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const queryClient = useQueryClient();
 
   const { data: apiContact, isLoading, isError } = useQuery({
     queryKey: ["contacts", id],
     queryFn: () => contactsApi.get(id),
+    placeholderData: (prev) => prev,
     retry: false,
     enabled: !!id,
   });
 
-  const raw = apiContact ?? (isError ? { ...MOCK_CONTACT, id } : null);
+  const { data: notesData } = useQuery({
+    queryKey: ["contacts", id, "notes"],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/crm/contacts/${id}/notes`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+      });
+      if (!res.ok) throw new Error("notes unavailable");
+      return res.json() as Promise<{ data: any[] }>;
+    },
+    placeholderData: (prev) => prev,
+    retry: false,
+    enabled: !!id,
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/v1/crm/contacts/${id}/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to add note");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Note added");
+      setNoteContent("");
+      queryClient.invalidateQueries({ queryKey: ["contacts", id, "notes"] });
+    },
+    onError: () => toast.error("Failed to add note"),
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const res = await fetch(`/api/v1/crm/contacts/${id}/notes/${noteId}`, {
+        method: "DELETE",
+        headers: {
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to delete note");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Note deleted");
+      queryClient.invalidateQueries({ queryKey: ["contacts", id, "notes"] });
+    },
+    onError: () => toast.error("Failed to delete note"),
+  });
+
+  const contactNotes: any[] =
+    (notesData as any)?.data ?? [];
+
+  const raw = (apiContact as any) ?? null;
 
   if (isLoading) {
     return (
@@ -106,23 +165,23 @@ function ContactDetail() {
 
   const contact = {
     id: raw?.id ?? id,
-    firstName: raw?.firstName ?? MOCK_CONTACT.firstName,
-    lastName: raw?.lastName ?? MOCK_CONTACT.lastName,
-    email: raw?.email ?? MOCK_CONTACT.email,
-    phone: raw?.phone ?? MOCK_CONTACT.phone,
-    company: raw?.companyName ?? raw?.company ?? MOCK_CONTACT.company,
-    jobTitle: raw?.jobTitle ?? MOCK_CONTACT.jobTitle,
-    location: raw?.location ?? MOCK_CONTACT.location,
-    website: raw?.website ?? MOCK_CONTACT.website,
+    firstName: raw?.firstName ?? "",
+    lastName: raw?.lastName ?? "",
+    email: raw?.email ?? "",
+    phone: raw?.phone ?? "",
+    company: raw?.companyName ?? raw?.company ?? "",
+    jobTitle: raw?.jobTitle ?? "",
+    location: raw?.location ?? "",
+    website: raw?.website ?? "",
     status: (raw?.status ?? "active") as "active" | "inactive",
-    createdAt: raw?.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_CONTACT.createdAt,
-    lastActivity: raw?.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_CONTACT.lastActivity,
-    dealsCount: raw?.dealsCount ?? MOCK_CONTACT.dealsCount,
-    totalValue: raw?.totalValue ?? MOCK_CONTACT.totalValue,
-    tags: raw?.tags ?? MOCK_CONTACT.tags,
-    notes: raw?.notes ?? MOCK_CONTACT.notes,
-    deals: raw?.deals ?? MOCK_CONTACT.deals,
-    activities: raw?.activities ?? MOCK_CONTACT.activities,
+    createdAt: raw?.createdAt ? String(raw.createdAt).slice(0, 10) : "",
+    lastActivity: raw?.updatedAt ? String(raw.updatedAt).slice(0, 10) : "",
+    dealsCount: raw?.dealsCount ?? 0,
+    totalValue: raw?.totalValue ?? 0,
+    tags: raw?.tags ?? [],
+    notes: raw?.notes ?? "",
+    deals: raw?.deals ?? [],
+    activities: raw?.activities ?? [],
   };
 
   const activityIcons = {
@@ -242,7 +301,7 @@ function ContactDetail() {
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs text-muted-foreground mb-2">Tags</p>
                 <div className="flex flex-wrap gap-2">
-                  {contact.tags.map((tag) => (
+                  {contact.tags.map((tag: any) => (
                     <Badge key={tag} variant="secondary">
                       {tag}
                     </Badge>
@@ -275,7 +334,7 @@ function ContactDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {contact.deals.map((deal) => (
+                {contact.deals.map((deal: any) => (
                   <Link
                     key={deal.id}
                     to={`/app/crm/deals/${deal.id}` as string}
@@ -301,7 +360,7 @@ function ContactDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {contact.activities.map((activity, index) => (
+                {contact.activities.map((activity: any, index: any) => (
                   <div key={activity.id} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className="rounded-full bg-muted p-2">
@@ -324,6 +383,129 @@ function ContactDetail() {
                 <History className="h-4 w-4 mr-2" />
                 View All Activity
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Notes Section */}
+          <Card className="border-border/60">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Notes
+                {contactNotes.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    ({contactNotes.length})
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add note composer */}
+              <div className="space-y-2">
+                <textarea
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  placeholder="Add a note about this contact..."
+                  rows={3}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    disabled={!noteContent.trim() || addNoteMutation.isPending}
+                    onClick={() => {
+                      const content = noteContent.trim();
+                      if (content) addNoteMutation.mutate(content);
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    {addNoteMutation.isPending ? "Saving..." : "Add Note"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Notes list */}
+              {contactNotes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No notes yet. Add one above.
+                </p>
+              ) : (
+                <div className="space-y-3 border-t border-border pt-4">
+                  {contactNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="flex gap-3 p-3 rounded-lg border border-border bg-muted/20"
+                    >
+                      {/* Author initials circle */}
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-primary">
+                          {authorInitials(note.author)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {editingNoteId === note.id ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              rows={2}
+                              className="w-full rounded border border-border bg-background px-2 py-1 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingNoteId(null)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  toast.info("Edit saved locally");
+                                  setEditingNoteId(null);
+                                }}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="text-xs font-medium text-foreground">
+                                {note.author}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">
+                                  {timeAgo(note.createdAt)}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setEditingNoteId(note.id);
+                                    setEditingContent(note.content);
+                                  }}
+                                  className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                  title="Edit note"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => deleteNoteMutation.mutate(note.id)}
+                                  className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+                                  title="Delete note"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-sm text-foreground">{note.content}</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

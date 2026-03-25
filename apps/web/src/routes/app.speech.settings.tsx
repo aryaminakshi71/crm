@@ -19,7 +19,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 const DEFAULT_MODELS = [
@@ -54,8 +54,8 @@ function SettingsPage() {
     },
   });
 
-  const models = modelsData?.data?.length
-    ? modelsData.data.map((m: any) => ({ id: m.id ?? m.modelId, name: m.name ?? m.displayName ?? m.id }))
+  const models = (modelsData as any)?.data?.length
+    ? (modelsData as any).data.map((m: any) => ({ id: m.id ?? m.modelId, name: m.name ?? m.displayName ?? m.id }))
     : DEFAULT_MODELS;
 
   const handleSave = () => {

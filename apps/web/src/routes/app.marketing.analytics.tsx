@@ -21,7 +21,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 

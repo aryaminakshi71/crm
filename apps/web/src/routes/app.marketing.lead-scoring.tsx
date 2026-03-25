@@ -6,9 +6,9 @@ import { Star, TrendingUp, Users, Target, Plus,
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/marketing/lead-scoring")({
@@ -48,16 +48,17 @@ function MarketingLeadScoringPage() {
         return null;
       }
     },
+    placeholderData: (prev) => prev,
   });
 
-  const stats = statsData ?? MOCK_STATS;
+  const stats = statsData ?? {};
 
   if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -100,7 +101,7 @@ function MarketingLeadScoringPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Leads</p>
-              <p className="text-xl font-bold">{(stats.totalLeads ?? 0).toLocaleString()}</p>
+              <p className="text-xl font-bold">{((stats as any).totalLeads ?? 0).toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -111,7 +112,7 @@ function MarketingLeadScoringPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Hot Leads</p>
-              <p className="text-xl font-bold text-red-600">{(stats.hotLeads ?? 0).toLocaleString()}</p>
+              <p className="text-xl font-bold text-red-600">{((stats as any).hotLeads ?? 0).toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -122,7 +123,7 @@ function MarketingLeadScoringPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Warm Leads</p>
-              <p className="text-xl font-bold text-yellow-600">{(stats.warmLeads ?? 0).toLocaleString()}</p>
+              <p className="text-xl font-bold text-yellow-600">{((stats as any).warmLeads ?? 0).toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -133,7 +134,7 @@ function MarketingLeadScoringPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Avg Score</p>
-              <p className="text-xl font-bold text-blue-600">{stats.avgScore ?? 0}</p>
+              <p className="text-xl font-bold text-blue-600">{(stats as any).avgScore ?? 0}</p>
             </div>
           </CardContent>
         </Card>

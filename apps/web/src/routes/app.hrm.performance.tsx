@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/performance")({
   component: HrmPerformancePage,
@@ -108,7 +108,7 @@ const RATING_LABEL: Record<string, string> = {
 
 const STATUS_VARIANT: Record<
   string,
-  "default" | "outline" | "warning" | "success" | "destructive"
+  "default" | "outline" | "warning" | "success" | "danger"
 > = {
   completed: "success",
   in_review: "warning",
@@ -140,9 +140,10 @@ function HrmPerformancePage() {
   const { data: reviewsData, isLoading, isError, refetch} = useQuery({
     queryKey: ["hrm-reviews"],
     queryFn: () => nucleoApi.hrm.reviews.list({ page: 1, limit: 100 }),
+    placeholderData: (prev) => prev,
   });
 
-  const reviews: any[] = reviewsData?.data ?? MOCK_REVIEWS;
+  const reviews: any[] = reviewsData?.data ?? [];
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
@@ -295,7 +296,7 @@ function HrmPerformancePage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <LoadingSkeleton rows={4} />
+            <div className="space-y-2">{Array.from({length:4}).map((_,i)=><div key={i} className="h-10 bg-muted animate-pulse rounded" />)}</div>
           ) : reviews.length === 0 ? (
             <EmptyState
               icon={<Star className="w-8 h-8" />}
@@ -421,7 +422,7 @@ function HrmPerformancePage() {
         onClose={() => setIsModalOpen(false)}
         title="New Performance Review"
         onSubmit={handleCreateReview}
-        isSubmitting={createReview.isPending}
+        isLoading={createReview.isPending}
       >
         <FormField label="Review Cycle" required>
           <Input

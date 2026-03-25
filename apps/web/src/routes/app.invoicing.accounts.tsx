@@ -34,9 +34,9 @@ export const Route = createFileRoute("/app/invoicing/accounts")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type Account = {
@@ -49,31 +49,7 @@ type Account = {
   status: "active" | "inactive";
 };
 
-const mockAccounts: Account[] = [
-  // Assets
-  { id: "1", code: "1000", name: "Cash", type: "asset", subtype: "Current Asset", balance: 125000, status: "active" },
-  { id: "2", code: "1100", name: "Accounts Receivable", type: "asset", subtype: "Current Asset", balance: 89400, status: "active" },
-  { id: "3", code: "1200", name: "Inventory", type: "asset", subtype: "Current Asset", balance: 45000, status: "active" },
-  { id: "4", code: "1500", name: "Property & Equipment", type: "asset", subtype: "Fixed Asset", balance: 180000, status: "active" },
-  { id: "5", code: "1600", name: "Accumulated Depreciation", type: "asset", subtype: "Fixed Asset", balance: -45000, status: "active" },
-  // Liabilities
-  { id: "6", code: "2000", name: "Accounts Payable", type: "liability", subtype: "Current Liability", balance: 35000, status: "active" },
-  { id: "7", code: "2100", name: "Accrued Expenses", type: "liability", subtype: "Current Liability", balance: 18000, status: "active" },
-  { id: "8", code: "2200", name: "Deferred Revenue", type: "liability", subtype: "Current Liability", balance: 42000, status: "active" },
-  { id: "9", code: "2500", name: "Long-term Debt", type: "liability", subtype: "Long-term Liability", balance: 120000, status: "active" },
-  // Equity
-  { id: "10", code: "3000", name: "Common Stock", type: "equity", subtype: "Equity", balance: 100000, status: "active" },
-  { id: "11", code: "3100", name: "Retained Earnings", type: "equity", subtype: "Equity", balance: 76400, status: "active" },
-  // Revenue
-  { id: "12", code: "4000", name: "Product Sales", type: "revenue", subtype: "Revenue", balance: 180000, status: "active" },
-  { id: "13", code: "4100", name: "Service Revenue", type: "revenue", subtype: "Revenue", balance: 95000, status: "active" },
-  { id: "14", code: "4200", name: "Subscription Revenue", type: "revenue", subtype: "Revenue", balance: 45000, status: "active" },
-  // Expenses
-  { id: "15", code: "5000", name: "Cost of Goods Sold", type: "expense", subtype: "Expense", balance: 72000, status: "active" },
-  { id: "16", code: "5100", name: "Salaries & Wages", type: "expense", subtype: "Expense", balance: 120000, status: "active" },
-  { id: "17", code: "5200", name: "Marketing & Advertising", type: "expense", subtype: "Expense", balance: 36000, status: "active" },
-  { id: "18", code: "5300", name: "Rent & Utilities", type: "expense", subtype: "Expense", balance: 24000, status: "active" },
-];
+const EMPTY_ACCOUNTS: any[] = [];
 
 const accountTypes = [
   { type: "asset", label: "Assets", color: "text-primary" },
@@ -121,6 +97,7 @@ function ChartOfAccounts() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (accountsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -129,7 +106,7 @@ function ChartOfAccounts() {
       <Button variant="outline" size="sm" onClick={() => accountsQuery.refetch()}>Retry</Button>
     </div>
   );
-  const accounts: Account[] = accountsQuery.data?.data?.length ? accountsQuery.data.data : mockAccounts;
+  const accounts: any[] = (accountsQuery as any)?.data?.data ?? [];
 
   const filteredAccounts = accounts.filter((account) => {
     if (typeFilter !== "all" && account.type !== typeFilter) return false;

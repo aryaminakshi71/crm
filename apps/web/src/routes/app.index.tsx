@@ -19,14 +19,17 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
+  FileText,
   FolderKanban,
   Gauge,
+  Handshake,
   Headphones,
   History,
   LifeBuoy,
   Mail,
   Megaphone,
   PieChart,
+  Plus,
   Receipt,
   Scale,
   Settings,
@@ -34,12 +37,14 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  UserPlus,
   UserRoundCog,
   Users,
   X,
   Zap,
+  RefreshCw,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   Area,
@@ -50,7 +55,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { dealsApi, leadsApi, nucleoApi } from "../lib/api";
+import { dealsApi, leadsApi, nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/")({
   component: DashboardPage,
@@ -667,6 +672,241 @@ function RoleSelector({ current, onChange }: { current: string; onChange: (role:
   );
 }
 
+// ─── Recent Activity Feed ─────────────────────────────────────────────────────
+
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const ACTIVITY_MOCK = [
+  {
+    id: "1",
+    type: "contact",
+    action: "created contact",
+    subject: "Acme Corp",
+    user: "Sarah K.",
+    time: new Date(Date.now() - 2 * 60000).toISOString(),
+    color: "bg-blue-500",
+    href: "/app/crm",
+  },
+  {
+    id: "2",
+    type: "invoice",
+    action: "sent invoice",
+    subject: "#INV-1042",
+    user: "Mike R.",
+    time: new Date(Date.now() - 15 * 60000).toISOString(),
+    color: "bg-green-500",
+    href: "/app/invoicing",
+  },
+  {
+    id: "3",
+    type: "ticket",
+    action: "resolved ticket",
+    subject: "Login issue",
+    user: "Alex P.",
+    time: new Date(Date.now() - 45 * 60000).toISOString(),
+    color: "bg-purple-500",
+    href: "/app/helpdesk",
+  },
+  {
+    id: "4",
+    type: "deal",
+    action: "won deal",
+    subject: "Enterprise Plan",
+    user: "Jordan L.",
+    time: new Date(Date.now() - 2 * 3600000).toISOString(),
+    color: "bg-yellow-500",
+    href: "/app/crm",
+  },
+  {
+    id: "5",
+    type: "lead",
+    action: "qualified lead",
+    subject: "TechStart Inc",
+    user: "Casey M.",
+    time: new Date(Date.now() - 4 * 3600000).toISOString(),
+    color: "bg-orange-500",
+    href: "/app/crm",
+  },
+  {
+    id: "6",
+    type: "project",
+    action: "completed task",
+    subject: "API Integration",
+    user: "Riley T.",
+    time: new Date(Date.now() - 6 * 3600000).toISOString(),
+    color: "bg-pink-500",
+    href: "/app/projects",
+  },
+];
+
+function RecentActivityFeed() {
+  // Force re-render every minute so timeAgo values stay fresh
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceUpdate((n) => n + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const activityQuery = useQuery({
+    queryKey: ["activities-recent"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/activities/recent?limit=10");
+      if (!res.ok) throw new Error("Not found");
+      return res.json() as Promise<typeof ACTIVITY_MOCK>;
+    },
+    retry: false,
+    refetchInterval: 30000,
+  });
+
+  const items =
+    activityQuery.isSuccess && Array.isArray(activityQuery.data) && activityQuery.data.length > 0
+      ? activityQuery.data.slice(0, 10)
+      : ACTIVITY_MOCK;
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" /> Recent Activity
+          </CardTitle>
+          <button
+            type="button"
+            onClick={() => activityQuery.refetch()}
+            disabled={activityQuery.isFetching}
+            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Refresh activity"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${activityQuery.isFetching ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-0 divide-y divide-border/50">
+        {items.map((item) => {
+          const initials = item.user
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+          return (
+            <Link key={item.id} to={item.href}>
+              <div className="flex items-center gap-3 py-2.5 px-1 rounded-lg hover:bg-muted/40 transition-colors group cursor-pointer">
+                {/* Colored avatar circle */}
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold ${item.color}`}
+                >
+                  {initials}
+                </div>
+                {/* Description */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-foreground leading-tight group-hover:text-primary transition-colors">
+                    <span className="font-semibold">{item.user}</span>{" "}
+                    {item.action}{" "}
+                    <span className="font-semibold">{item.subject}</span>
+                  </p>
+                </div>
+                {/* Time */}
+                <span className="shrink-0 text-[10px] text-muted-foreground whitespace-nowrap">
+                  {timeAgo(item.time)}
+                </span>
+                <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+              </div>
+            </Link>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Quick Actions ─────────────────────────────────────────────────────────────
+
+const QUICK_ACTIONS = [
+  {
+    label: "New Contact",
+    icon: UserPlus,
+    href: "/app/crm/contacts",
+    color: "text-blue-500",
+    bg: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20",
+  },
+  {
+    label: "New Invoice",
+    icon: FileText,
+    href: "/app/invoicing",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20",
+  },
+  {
+    label: "New Ticket",
+    icon: Headphones,
+    href: "/app/helpdesk",
+    color: "text-orange-500",
+    bg: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20",
+  },
+  {
+    label: "New Lead",
+    icon: Mail,
+    href: "/app/crm",
+    color: "text-indigo-500",
+    bg: "bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/20",
+  },
+  {
+    label: "New Project",
+    icon: FolderKanban,
+    href: "/app/projects",
+    color: "text-violet-500",
+    bg: "bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20",
+  },
+  {
+    label: "New Deal",
+    icon: Handshake,
+    href: "/app/crm/pipeline",
+    color: "text-cyan-500",
+    bg: "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20",
+  },
+];
+
+function QuickActionsWidget() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" /> Quick Actions
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {QUICK_ACTIONS.map((action) => (
+            <Link key={action.label} to={action.href}>
+              <div
+                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all cursor-pointer ${action.bg}`}
+              >
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg bg-background/60`}
+                >
+                  <action.icon className={`h-5 w-5 ${action.color}`} />
+                </div>
+                <span className="text-xs font-semibold text-foreground text-center leading-tight">
+                  {action.label}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function DashboardPage() {
@@ -928,70 +1168,8 @@ function DashboardPage() {
     completed: allProjects.filter((p: any) => p.status === "completed").length,
   };
 
-  // Recent activity
+  // `now` used in New Leads watchlist filter below
   const now = new Date();
-  const recent = [
-    ...tickets.map((t: any) => ({
-      id: `t-${t.id}`,
-      time: t.createdAt,
-      label: "Ticket",
-      text: t.subject,
-      href: "/app/helpdesk",
-      color: "bg-orange-400/15 text-orange-400",
-    })),
-    ...invoices.map((i: any) => ({
-      id: `i-${i.id}`,
-      time: i.createdAt,
-      label: "Invoice",
-      text: `${i.invoiceNumber} · ${i.status}`,
-      href: "/app/invoicing",
-      color: "bg-emerald-400/15 text-emerald-400",
-    })),
-    ...allProjects.map((p: any) => ({
-      id: `p-${p.id}`,
-      time: p.createdAt,
-      label: "Project",
-      text: `${p.name} · ${p.status}`,
-      href: "/app/projects",
-      color: "bg-violet-400/15 text-violet-400",
-    })),
-    ...campaigns.map((c: any) => ({
-      id: `c-${c.id}`,
-      time: c.createdAt,
-      label: "Campaign",
-      text: `${c.name} · ${c.status}`,
-      href: "/app/marketing",
-      color: "bg-pink-400/15 text-pink-400",
-    })),
-    ...deals.map((d: any) => ({
-      id: `d-${d.id}`,
-      time: d.createdAt,
-      label: "Pipeline",
-      text: `${d.name} · $${d.value?.toLocaleString()}`,
-      href: "/app/crm",
-      color: "bg-cyan-400/15 text-cyan-400",
-    })),
-    ...leads.map((l: any) => ({
-      id: `l-${l.id}`,
-      time: l.createdAt,
-      label: "Lead",
-      text: `${l.firstName} ${l.lastName} · ${l.source || "Lead"}`,
-      href: "/app/crm",
-      color: "bg-indigo-400/15 text-indigo-400",
-    })),
-  ]
-
-    .filter((item) => item.time)
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 8);
-
-  function timeAgo(iso: string) {
-    const diff = (now.getTime() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  }
 
   return (
     <div className="space-y-6">
@@ -1461,49 +1639,11 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Recent Activity Feed</CardTitle>
-            <span className="text-muted-foreground text-xs">
-              {recent.length} recent events
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recent.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-muted-foreground text-sm">
-                No recent activity. Start by creating a project, ticket, or
-                campaign.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-              {recent.map((item) => (
-                <Link key={item.id} to={item.href}>
-                  <div className="group flex flex-col gap-1 rounded-lg border border-border p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.color}`}
-                      >
-                        {item.label}
-                      </span>
-                      <span className="text-muted-foreground text-[10px]">
-                        {timeAgo(item.time)}
-                      </span>
-                    </div>
-                    <p className="text-foreground text-xs font-medium line-clamp-1 group-hover:text-primary transition-colors">
-                      {item.text}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Recent Activity Feed + Quick Actions */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentActivityFeed />
+        <QuickActionsWidget />
+      </div>
     </div>
   );
 }

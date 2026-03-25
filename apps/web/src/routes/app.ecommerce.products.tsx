@@ -25,25 +25,14 @@ import {
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/ecommerce/products")({
   component: ProductsPage,
 });
-
-const MOCK_PRODUCTS = [
-  { id: "prod1", name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, comparePrice: 599.99, stock: 124, status: "active", sales: 45, image: null },
-  { id: "prod2", name: "Laptop 15\" Pro", sku: "ELEC-LAP-15", price: 999.99, comparePrice: 1199.99, stock: 89, status: "active", sales: 32, image: null },
-  { id: "prod3", name: "3-Seater Sofa", sku: "HOME-SOF-3S", price: 999.00, comparePrice: null, stock: 45, status: "active", sales: 18, image: null },
-  { id: "prod4", name: "Mountain Bike", sku: "SPORT-BIKE-MTN", price: 599.99, comparePrice: 699.99, stock: 23, status: "draft", sales: 15, image: null },
-  { id: "prod5", name: "Winter Jacket Black", sku: "APPA-JKT-WIN-B", price: 149.99, comparePrice: 179.99, stock: 156, status: "active", sales: 28, image: null },
-  { id: "prod6", name: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", price: 249.99, comparePrice: null, stock: 8, status: "low_stock", sales: 42, image: null },
-  { id: "prod7", name: "LED Desk Lamp", sku: "HOME-LAMP-LED", price: 79.99, comparePrice: null, stock: 0, status: "out_of_stock", sales: 89, image: null },
-  { id: "prod8", name: "SPF 50 Sunscreen", sku: "BEAU-SKR-SPF50", price: 24.99, comparePrice: 29.99, stock: 234, status: "active", sales: 156, image: null },
-];
 
 function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,11 +51,12 @@ function ProductsPage() {
       if (!res.ok) throw new Error("Failed to fetch products");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const products = apiData?.data?.length > 0 ? apiData.data : MOCK_PRODUCTS;
+  const products = (apiData as any)?.data ?? [];
 
-  const filteredProducts = products.filter((product: typeof MOCK_PRODUCTS[0]) => {
+  const filteredProducts = products.filter((product: any) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.sku ?? "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -157,7 +147,7 @@ function ProductsPage() {
       {/* Products Grid */}
       {viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((product) => (
+          {filteredProducts.map((product: any) => (
             <Card key={product.id} className="border-border/60 hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center">
@@ -202,7 +192,7 @@ function ProductsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredProducts.map((product) => (
+          {filteredProducts.map((product: any) => (
             <Card key={product.id} className="border-border/60">
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">

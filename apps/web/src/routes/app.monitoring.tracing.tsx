@@ -4,7 +4,17 @@
  * Distributed tracing viewer with real API data.
  */
 
-import { Card, CardContent, Badge, Button, Input } from "@crm/ui";
+import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Input } from "@crm/ui";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ZAxis,
+} from "recharts";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -132,6 +142,63 @@ function TracingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Latency Scatter Plot */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold">Trace Latency Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={180}>
+            <ScatterChart>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="time"
+                name="Time (min ago)"
+                tick={{ fontSize: 11 }}
+                label={{ value: "Minutes ago", position: "insideBottom", offset: -5, style: { fontSize: 11 } }}
+              />
+              <YAxis
+                dataKey="duration"
+                name="Duration"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => `${v}ms`}
+              />
+              <ZAxis dataKey="spans" range={[30, 120]} name="Spans" />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                formatter={(v: number, name: string) =>
+                  name === "Duration" ? [`${v}ms`, name] : [v, name]
+                }
+              />
+              <Scatter
+                name="OK traces"
+                data={[
+                  { time: 2, duration: 45, spans: 8 },
+                  { time: 5, duration: 120, spans: 12 },
+                  { time: 8, duration: 67, spans: 6 },
+                  { time: 12, duration: 89, spans: 9 },
+                  { time: 15, duration: 234, spans: 15 },
+                  { time: 18, duration: 56, spans: 7 },
+                  { time: 22, duration: 178, spans: 11 },
+                  { time: 25, duration: 92, spans: 8 },
+                ]}
+                fill="#6366f1"
+                opacity={0.7}
+              />
+              <Scatter
+                name="Error traces"
+                data={[
+                  { time: 7, duration: 512, spans: 18 },
+                  { time: 19, duration: 890, spans: 22 },
+                ]}
+                fill="#f43f5e"
+                opacity={0.9}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Search */}
       <div className="relative max-w-md">

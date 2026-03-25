@@ -21,6 +21,7 @@ function AdminBillingPage() {
       return res.json();
     },
     enabled: !!session?.user,
+    placeholderData: (prev) => prev,
   });
 
   const { data: subscriptionsData } = useQuery({
@@ -33,6 +34,7 @@ function AdminBillingPage() {
       return res.json();
     },
     enabled: !!session?.user,
+    placeholderData: (prev) => prev,
   });
 
   // Admin guard
@@ -55,30 +57,18 @@ function AdminBillingPage() {
     );
   }
 
-  const rawStats = billingStatsData?.stats ?? null;
+  const rawStats = (billingStatsData as any)?.stats ?? null;
   const stats = {
-    totalOrganizations: rawStats?.totalOrganizations ?? 156,
-    activeSubscriptions: rawStats?.activeSubscriptions ?? 142,
-    pastDueSubscriptions: rawStats?.pastDueSubscriptions ?? 8,
-    trialingSubscriptions: rawStats?.trialingSubscriptions ?? 12,
-    mrr: rawStats?.monthlyRecurringRevenue ?? 45680,
-    arr: rawStats?.annualRecurringRevenue ?? 548160,
+    totalOrganizations: rawStats?.totalOrganizations ?? 0,
+    activeSubscriptions: rawStats?.activeSubscriptions ?? 0,
+    pastDueSubscriptions: rawStats?.pastDueSubscriptions ?? 0,
+    trialingSubscriptions: rawStats?.trialingSubscriptions ?? 0,
+    mrr: rawStats?.monthlyRecurringRevenue ?? 0,
+    arr: rawStats?.annualRecurringRevenue ?? 0,
   };
 
-  const MOCK_ORGANIZATIONS = [
-    { id: "1", name: "Acme Corp", plan: "enterprise", status: "active", users: 45, mrr: 2200, dueDate: "2026-03-25" },
-    { id: "2", name: "TechStart Inc", plan: "growth", status: "active", users: 12, mrr: 348, dueDate: "2026-03-25" },
-    { id: "3", name: "Global Solutions", plan: "business", status: "past_due", users: 28, mrr: 1372, dueDate: "2026-03-05" },
-    { id: "4", name: "Startup Labs", plan: "starter", status: "trialing", users: 3, mrr: 0, dueDate: "2026-03-20" },
-    { id: "5", name: "Enterprise Co", plan: "enterprise", status: "active", users: 120, mrr: 5880, dueDate: "2026-03-25" },
-    { id: "6", name: "Digital Agency", plan: "growth", status: "active", users: 18, mrr: 522, dueDate: "2026-03-25" },
-    { id: "7", name: "Cloud Systems", plan: "business", status: "active", users: 35, mrr: 1715, dueDate: "2026-03-25" },
-    { id: "8", name: "DataTech", plan: "starter", status: "canceled", users: 2, mrr: 0, dueDate: "-" },
-  ];
-
-  const apiSubscriptions = subscriptionsData?.subscriptions ?? [];
-  const organizations = apiSubscriptions.length > 0
-    ? apiSubscriptions.map((row: any) => ({
+  const apiSubscriptions = (subscriptionsData as any)?.subscriptions ?? [];
+  const organizations = apiSubscriptions.map((row: any) => ({
         id: row.subscription?.id ?? row.organization?.id ?? String(Math.random()),
         name: row.organization?.name ?? "Unknown",
         plan: row.plan?.key ?? "starter",
@@ -99,8 +89,7 @@ function AdminBillingPage() {
         dueDate: row.subscription?.currentPeriodEnd
           ? new Date(row.subscription.currentPeriodEnd).toLocaleDateString()
           : "-",
-      }))
-    : MOCK_ORGANIZATIONS;
+      }));
 
   const modules = [
     { key: "crm", name: "CRM", subscribers: 156, revenue: 46800 },
@@ -193,7 +182,7 @@ function AdminBillingPage() {
           <CardContent>
             <div className="space-y-3">
               {Object.entries(planColors).map(([plan, color]) => {
-                const count = organizations.filter(o => o.plan === plan).length;
+                const count = organizations.filter((o: any) => o.plan === plan).length;
                 const pct = Math.round((count / organizations.length) * 100);
                 return (
                   <div key={plan} className="space-y-1">
@@ -258,7 +247,7 @@ function AdminBillingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {organizations.map((org) => {
+              {organizations.map((org: any) => {
                 const StatusIcon = statusConfig[org.status]?.icon || Clock;
                 return (
                   <TableRow key={org.id}>

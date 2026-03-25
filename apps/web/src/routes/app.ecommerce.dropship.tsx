@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   Truck,
@@ -35,14 +35,6 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/ecommerce/dropship")({
   component: DropshippingPage,
 });
-
-const MOCK_SUPPLIERS = [
-  { id: 1, name: "TechSupply Co", email: "orders@techsupply.com", phone: "+1 555-0101", country: "United States", productCount: 45, totalOrders: 1234, rating: 4.8, status: "active", leadTime: "2-3 days", shippingCost: 5.99 },
-  { id: 2, name: "HomeGoods Direct", email: "dropship@homegoods.com", phone: "+1 555-0102", country: "China", productCount: 128, totalOrders: 3456, rating: 4.5, status: "active", leadTime: "7-14 days", shippingCost: 0 },
-  { id: 3, name: "Fashion Forward", email: " wholesale@fashionforward.com", phone: "+1 555-0103", country: "United States", productCount: 89, totalOrders: 876, rating: 4.6, status: "active", leadTime: "3-5 days", shippingCost: 4.99 },
-  { id: 4, name: "SportGear Ltd", email: "orders@sportgear.co.uk", phone: "+44 555-0104", country: "United Kingdom", productCount: 67, totalOrders: 543, rating: 4.3, status: "active", leadTime: "5-7 days", shippingCost: 7.99 },
-  { id: 5, name: "Budget Electronics", email: "support@budgetelec.com", phone: "+86 555-0105", country: "China", productCount: 234, totalOrders: 2100, rating: 3.9, status: "inactive", leadTime: "10-14 days", shippingCost: 0 },
-];
 
 function DropshippingPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,21 +74,22 @@ function DropshippingPage() {
       if (!res.ok) throw new Error("Failed to fetch suppliers");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const suppliers = apiData?.data?.length > 0 ? apiData.data : MOCK_SUPPLIERS;
+  const suppliers = (apiData as any)?.data ?? [];
 
   const filteredSuppliers = suppliers.filter(
-    (s: typeof MOCK_SUPPLIERS[0]) =>
+    (s: any) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.country.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const summary = {
     totalSuppliers: suppliers.length,
-    activeSuppliers: suppliers.filter((s: typeof MOCK_SUPPLIERS[0]) => s.status === "active").length,
-    totalProducts: suppliers.reduce((sum: number, s: typeof MOCK_SUPPLIERS[0]) => sum + (s.productCount ?? 0), 0),
-    totalOrders: suppliers.reduce((sum: number, s: typeof MOCK_SUPPLIERS[0]) => sum + (s.totalOrders ?? 0), 0),
+    activeSuppliers: suppliers.filter((s: any) => s.status === "active").length,
+    totalProducts: suppliers.reduce((sum: number, s: any) => sum + (s.productCount ?? 0), 0),
+    totalOrders: suppliers.reduce((sum: number, s: any) => sum + (s.totalOrders ?? 0), 0),
   };
 
   if (isError) return (
@@ -182,7 +175,7 @@ function DropshippingPage() {
 
       {/* Suppliers Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredSuppliers.map((supplier) => (
+        {filteredSuppliers.map((supplier: any) => (
           <Card key={supplier.id} className={`border-border/60 ${supplier.status === "inactive" ? "opacity-60" : ""}`}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">

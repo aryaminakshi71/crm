@@ -37,9 +37,9 @@ export const Route = createFileRoute("/app/invoicing/quotes")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type Quote = {
@@ -53,13 +53,7 @@ type Quote = {
   createdAt: string;
 };
 
-const mockQuotes: Quote[] = [
-  { id: "1", quoteNumber: "QT-2026-001", client: "Acme Corp", clientEmail: "sales@acmecorp.com", amount: 25000, validUntil: "2026-04-15", status: "accepted", createdAt: "2026-03-01" },
-  { id: "2", quoteNumber: "QT-2026-002", client: "TechStart Inc", clientEmail: "hello@techstart.io", amount: 15000, validUntil: "2026-04-20", status: "sent", createdAt: "2026-03-10" },
-  { id: "3", quoteNumber: "QT-2026-003", client: "Global Solutions", clientEmail: "info@globalsol.com", amount: 35000, validUntil: "2026-04-01", status: "expired", createdAt: "2026-02-20" },
-  { id: "4", quoteNumber: "QT-2026-004", client: "Innovate Co", clientEmail: "contact@innovate.co", amount: 12000, validUntil: "2026-04-25", status: "draft", createdAt: "2026-03-18" },
-  { id: "5", quoteNumber: "QT-2026-005", client: "Enterprise Ltd", clientEmail: "sales@enterprise.com", amount: 45000, validUntil: "2026-04-30", status: "sent", createdAt: "2026-03-15" },
-];
+const EMPTY_QUOTES: any[] = [];
 
 function QuoteBuilder() {
   const [search, setSearch] = useState("");
@@ -99,6 +93,7 @@ function QuoteBuilder() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (quotesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -108,7 +103,7 @@ function QuoteBuilder() {
     </div>
   );
 
-  const quotes: Quote[] = quotesQuery.data?.data?.length ? quotesQuery.data.data : mockQuotes;
+  const quotes: any[] = (quotesQuery as any)?.data?.data ?? [];
 
   const filteredQuotes = quotes.filter((quote) => {
     if (statusFilter !== "all" && quote.status !== statusFilter) return false;
@@ -176,7 +171,7 @@ function QuoteBuilder() {
           icon={<Receipt className="h-12 w-12" />}
           title="No quotes found"
           description="Create your first quote or adjust your filters."
-          action={{ label: "Create Quote", onClick: () => setIsCreateModalOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateModalOpen(true)}>Create Quote</Button>}
         />
       ) : (
         <Card>

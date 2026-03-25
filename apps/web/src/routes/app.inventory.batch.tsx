@@ -23,23 +23,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/inventory/batch")({
   component: BatchTrackingPage,
 });
-
-const MOCK_BATCHES = [
-  { batch: "BATCH-2024-001", sku: "BEAU-OFC-50ML", name: "Organic Face Cream", quantity: 100, sold: 55, remaining: 45, manufactureDate: "Jan 15, 2024", expiryDate: "Apr 15, 2024", warehouse: "Warehouse C", location: "C-08-2", status: "active" },
-  { batch: "BATCH-2024-002", sku: "BEAU-SKR-SPF50", name: "SPF 50 Sunscreen", quantity: 200, sold: 120, remaining: 80, manufactureDate: "Feb 1, 2024", expiryDate: "Feb 1, 2026", warehouse: "Warehouse C", location: "C-08-1", status: "active" },
-  { batch: "BATCH-2024-003", sku: "HOME-LAMP-LED", name: "LED Desk Lamp", quantity: 50, sold: 35, remaining: 15, manufactureDate: "Dec 10, 2023", expiryDate: "Dec 10, 2026", warehouse: "Distribution Center", location: "DC-01-3", status: "warning" },
-  { batch: "BATCH-2023-089", sku: "ELEC-HEAD-WL", name: "Wireless Headphones", quantity: 30, sold: 22, remaining: 8, manufactureDate: "Sep 5, 2023", expiryDate: "Sep 5, 2025", warehouse: "Warehouse A", location: "A-15-2", status: "expiring_soon" },
-  { batch: "BATCH-2024-004", sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 80, sold: 24, remaining: 56, manufactureDate: "Feb 20, 2024", expiryDate: "Feb 20, 2028", warehouse: "Warehouse C", location: "C-02-1", status: "active" },
-  { batch: "BATCH-2023-045", sku: "SPORT-RS-10-BLU", name: "Running Shoes Size 10", quantity: 40, sold: 32, remaining: 8, manufactureDate: "Jun 15, 2023", expiryDate: "Jun 15, 2025", warehouse: "Warehouse A", location: "A-10-2", status: "expiring_soon" },
-];
 
 function BatchTrackingPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,11 +43,12 @@ function BatchTrackingPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch batches");
-      return res.json() as Promise<{ data: typeof MOCK_BATCHES; total: number }>;
+      return res.json() as Promise<{ data: any[]; total: number }>;
     },
+    placeholderData: (prev) => prev,
   });
 
-  const batches = batchData?.data?.length ? batchData.data : MOCK_BATCHES;
+  const batches = batchData?.data ?? [];
 
   const filteredBatches = batches.filter((batch) => {
     const matchesSearch =

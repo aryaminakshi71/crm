@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/payroll")({
   component: HrmPayrollPage,
@@ -106,12 +106,12 @@ const MOCK_ENTRIES = [
 
 const STATUS_VARIANT: Record<
   string,
-  "default" | "outline" | "warning" | "success" | "destructive"
+  "default" | "outline" | "warning" | "success" | "danger"
 > = {
   completed: "success",
   processing: "warning",
   draft: "outline",
-  failed: "destructive",
+  failed: "danger",
 };
 
 function formatCurrency(value: string | number | null | undefined): string {
@@ -151,11 +151,13 @@ function HrmPayrollPage() {
   const { data: runsData, isLoading: runsLoading, isError, refetch} = useQuery({
     queryKey: ["hrm-payroll-runs"],
     queryFn: () => nucleoApi.hrm.payroll.runs.list({ page: 1, limit: 100 }),
+    placeholderData: (prev) => prev,
   });
 
   const { data: statsData } = useQuery({
     queryKey: ["hrm-payroll-stats"],
     queryFn: () => nucleoApi.hrm.payroll.stats(),
+    placeholderData: (prev) => prev,
   });
 
   const { data: entriesData, isLoading: entriesLoading } = useQuery({
@@ -167,12 +169,13 @@ function HrmPayrollPage() {
         payrollRunId: selectedRunId ?? undefined,
       }),
     enabled: !!selectedRunId,
+    placeholderData: (prev) => prev,
   });
 
-  const payrollRuns: any[] = runsData?.data ?? MOCK_PAYROLL_RUNS;
+  const payrollRuns: any[] = runsData?.data ?? [];
   const recentPayments: any[] = selectedRunId
-    ? (entriesData?.data ?? MOCK_ENTRIES)
-    : MOCK_ENTRIES;
+    ? (entriesData?.data ?? [])
+    : [];
 
   const stats = statsData ?? {
     totalPaid: 0,
@@ -310,7 +313,7 @@ function HrmPayrollPage() {
         </CardHeader>
         <CardContent>
           {runsLoading ? (
-            <LoadingSkeleton rows={4} />
+            <div className="space-y-2">{Array.from({length:4}).map((_,i)=><div key={i} className="h-10 bg-muted animate-pulse rounded" />)}</div>
           ) : payrollRuns.length === 0 ? (
             <EmptyState
               icon={<DollarSign className="w-8 h-8" />}
@@ -390,7 +393,7 @@ function HrmPayrollPage() {
           </CardHeader>
           <CardContent>
             {entriesLoading ? (
-              <LoadingSkeleton rows={5} />
+              <div className="space-y-2">{Array.from({length:5}).map((_,i)=><div key={i} className="h-10 bg-muted animate-pulse rounded" />)}</div>
             ) : recentPayments.length === 0 ? (
               <EmptyState
                 icon={<Users className="w-8 h-8" />}
@@ -462,7 +465,7 @@ function HrmPayrollPage() {
         onClose={() => setIsModalOpen(false)}
         title="New Payroll Run"
         onSubmit={handleCreateRun}
-        isSubmitting={createRun.isPending}
+        isLoading={createRun.isPending}
       >
         <FormField label="Period Label" required>
           <Input

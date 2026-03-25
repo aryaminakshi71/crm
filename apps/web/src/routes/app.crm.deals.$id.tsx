@@ -5,7 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -26,52 +26,107 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { dealsApi } from "../lib/api";
+import { toast } from "sonner";
+import { dealsApi } from "@/lib/api";
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function authorInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export const Route = createFileRoute("/app/crm/deals/$id")({
   component: DealDetail,
 });
 
-const MOCK_DEAL = {
-  id: "",
-  title: "Enterprise SaaS License",
-  company: "Acme Corporation",
-  contact: "John Smith",
-  contactEmail: "john.smith@acmecorp.com",
-  contactPhone: "+1 (555) 123-4567",
-  value: 125000,
-  stage: "negotiation" as const,
-  probability: 75,
-  expectedClose: "2024-04-15",
-  createdAt: "2024-02-01",
-  lastActivity: "2024-03-15",
-  owner: "Sarah Chen",
-  description: "Enterprise license agreement for Acme Corporation's engineering team.",
-  nextStep: "Awaiting legal review of contract terms",
-  tags: ["enterprise", "hot", "multi-year"],
-  activities: [
-    { id: "1", type: "stage_change", title: "Stage changed to Negotiation", description: "Deal moved from Proposal to Negotiation", date: "2024-03-15", user: "Sarah Chen" },
-    { id: "2", type: "email", title: "Sent Proposal Document", date: "2024-03-10", user: "Sales Team" },
-  ],
-  timeline: [
-    { date: "2024-02-01", title: "Lead Created", stage: "lead" },
-    { date: "2024-02-15", title: "Qualified", stage: "qualified" },
-    { date: "2024-03-05", title: "Proposal Sent", stage: "proposal" },
-    { date: "2024-03-15", title: "Negotiation", stage: "negotiation" },
-  ],
-};
-
 function DealDetail() {
   const navigate = useNavigate();
   const { id } = Route.useParams();
-  const [activeTab, setActiveTab] = useState<"timeline" | "details" | "files">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "details" | "files" | "notes">("timeline");
+  const [noteContent, setNoteContent] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const queryClient = useQueryClient();
 
   const { data: apiDeal, isLoading, isError } = useQuery({
     queryKey: ["deals", id],
     queryFn: () => dealsApi.get(id),
+    placeholderData: (prev) => prev,
     retry: false,
     enabled: !!id,
   });
+
+  const { data: notesData } = useQuery({
+    queryKey: ["deals", id, "notes"],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/crm/deals/${id}/notes`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+      });
+      if (!res.ok) throw new Error("notes unavailable");
+      return res.json() as Promise<{ data: any[] }>;
+    },
+    placeholderData: (prev) => prev,
+    retry: false,
+    enabled: !!id,
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/v1/crm/deals/${id}/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to add note");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Note added");
+      setNoteContent("");
+      queryClient.invalidateQueries({ queryKey: ["deals", id, "notes"] });
+    },
+    onError: () => toast.error("Failed to add note"),
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const res = await fetch(`/api/v1/crm/deals/${id}/notes/${noteId}`, {
+        method: "DELETE",
+        headers: {
+          "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to delete note");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Note deleted");
+      queryClient.invalidateQueries({ queryKey: ["deals", id, "notes"] });
+    },
+    onError: () => toast.error("Failed to delete note"),
+  });
+
+  const notes: any[] = (notesData as any)?.data ?? [];
 
   if (isLoading) {
     return (
@@ -103,7 +158,7 @@ function DealDetail() {
     );
   }
 
-  const raw = apiDeal ?? (isError ? { ...MOCK_DEAL, id } : MOCK_DEAL);
+  const raw = (apiDeal as any) ?? null;
 
   const deal: {
     id: string;
@@ -125,24 +180,24 @@ function DealDetail() {
     activities: Array<{ id: string; type: string; title: string; description?: string; date: string; user: string }>;
     timeline: Array<{ date: string; title: string; stage: string }>;
   } = {
-    id: raw.id ?? id,
-    title: raw.name ?? raw.title ?? MOCK_DEAL.title,
-    company: raw.companyName ?? raw.company ?? MOCK_DEAL.company,
-    contact: raw.contactName ?? raw.contact ?? MOCK_DEAL.contact,
-    contactEmail: raw.contactEmail ?? MOCK_DEAL.contactEmail,
-    contactPhone: raw.contactPhone ?? MOCK_DEAL.contactPhone,
-    value: typeof raw.value === "string" ? parseFloat(raw.value) || 0 : (raw.value ?? MOCK_DEAL.value),
-    stage: raw.stage ?? MOCK_DEAL.stage,
-    probability: raw.probability ?? MOCK_DEAL.probability,
-    expectedClose: raw.expectedCloseDate ?? raw.expectedClose ?? MOCK_DEAL.expectedClose,
-    createdAt: raw.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_DEAL.createdAt,
-    lastActivity: raw.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_DEAL.lastActivity,
-    owner: raw.ownerName ?? raw.owner ?? MOCK_DEAL.owner,
-    description: raw.notes ?? raw.description ?? MOCK_DEAL.description,
-    nextStep: raw.nextStep ?? MOCK_DEAL.nextStep,
-    tags: raw.tags ?? MOCK_DEAL.tags,
-    activities: raw.activities ?? MOCK_DEAL.activities,
-    timeline: raw.timeline ?? MOCK_DEAL.timeline,
+    id: (raw as any)?.id ?? id,
+    title: (raw as any)?.name ?? "",
+    company: (raw as any)?.companyName ?? (raw as any)?.company ?? "",
+    contact: (raw as any)?.contactName ?? (raw as any)?.contact ?? "",
+    contactEmail: (raw as any)?.contactEmail ?? "",
+    contactPhone: (raw as any)?.contactPhone ?? "",
+    value: typeof (raw as any)?.value === "string" ? parseFloat(raw.value) || 0 : ((raw as any)?.value ?? 0),
+    stage: (raw as any)?.stage ?? "lead",
+    probability: (raw as any)?.probability ?? 0,
+    expectedClose: (raw as any)?.expectedCloseDate ?? (raw as any)?.expectedClose ?? "",
+    createdAt: (raw as any)?.createdAt ? String((raw as any).createdAt).slice(0, 10) : "",
+    lastActivity: (raw as any)?.updatedAt ? String((raw as any).updatedAt).slice(0, 10) : "",
+    owner: (raw as any)?.ownerName ?? (raw as any)?.owner ?? "",
+    description: (raw as any)?.notes ?? (raw as any)?.description ?? "",
+    nextStep: (raw as any)?.nextStep ?? "",
+    tags: (raw as any)?.tags ?? [],
+    activities: (raw as any)?.activities ?? [],
+    timeline: (raw as any)?.timeline ?? [],
   };
 
   const stageColors: Record<string, string> = {
@@ -286,6 +341,16 @@ function DealDetail() {
               >
                 Files & Documents
               </button>
+              <button
+                onClick={() => setActiveTab("notes")}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "notes"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Notes & Activity
+              </button>
             </nav>
           </div>
 
@@ -376,6 +441,160 @@ function DealDetail() {
                     Upload File
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes & Activity Tab */}
+          {activeTab === "notes" && (
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Notes & Activity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Activity timeline */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                    Recent Activity
+                  </p>
+                  <div className="space-y-3">
+                    {deal.activities.map((activity, index) => (
+                      <div key={activity.id} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="rounded-full bg-muted p-1.5">
+                            {activityIcons[activity.type] ?? <MessageSquare className="h-3 w-3 text-gray-600" />}
+                          </div>
+                          {index < deal.activities.length - 1 && (
+                            <div className="w-px flex-1 bg-border mt-1" />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-3">
+                          <p className="text-sm font-medium">{activity.title}</p>
+                          {activity.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{activity.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {activity.date} · {activity.user}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-border" />
+
+                {/* Add note composer */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                    Add Note
+                  </p>
+                  <textarea
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
+                    placeholder="Write a note about this deal..."
+                    rows={3}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      size="sm"
+                      disabled={!noteContent.trim() || addNoteMutation.isPending}
+                      onClick={() => {
+                        const content = noteContent.trim();
+                        if (content) addNoteMutation.mutate(content);
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      {addNoteMutation.isPending ? "Saving..." : "Add Note"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Notes list */}
+                {notes.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                      Notes ({notes.length})
+                    </p>
+                    <div className="space-y-3">
+                      {notes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="flex gap-3 p-3 rounded-lg border border-border bg-muted/20"
+                        >
+                          {/* Author initials circle */}
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-semibold text-primary">
+                              {authorInitials(note.author)}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {editingNoteId === note.id ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editingContent}
+                                  onChange={(e) => setEditingContent(e.target.value)}
+                                  rows={2}
+                                  className="w-full rounded border border-border bg-background px-2 py-1 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingNoteId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      toast.info("Edit saved locally");
+                                      setEditingNoteId(null);
+                                    }}
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <span className="text-xs font-medium text-foreground">
+                                    {note.author}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      {timeAgo(note.createdAt)}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setEditingNoteId(note.id);
+                                        setEditingContent(note.content);
+                                      }}
+                                      className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                      title="Edit note"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteNoteMutation.mutate(note.id)}
+                                      className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+                                      title="Delete note"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-foreground">{note.content}</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

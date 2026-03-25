@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { agentsApi } from "../lib/api";
+import { agentsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/agents/$agentId/chat")({
   component: AgentChatPage,

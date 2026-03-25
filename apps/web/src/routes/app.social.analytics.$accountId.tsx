@@ -26,19 +26,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 function getOrgHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
-
-const MOCK_ANALYTICS = {
-  followers: "18.5K",
-  followersChange: "+12% this month",
-  engagement: "4.8%",
-  engagementChange: "+0.5% this week",
-  reach: "125K",
-  reachChange: "+18% this month",
-  posts: "28",
-  postsLabel: "This week",
-};
 
 function AccountAnalyticsPage() {
   const { accountId } = Route.useParams();
@@ -54,6 +43,7 @@ function AccountAnalyticsPage() {
       if (!res.ok) throw new Error("Failed to fetch social analytics");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
   if (analyticsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -63,7 +53,7 @@ function AccountAnalyticsPage() {
     </div>
   );
 
-  const analytics = analyticsQuery.data ?? MOCK_ANALYTICS;
+  const analytics = (analyticsQuery.data as any) ?? {};
 
   const platform = accountId === "instagram" ? "Instagram" : accountId === "twitter" ? "Twitter" : accountId === "linkedin" ? "LinkedIn" : "Facebook";
   const Icon = accountId === "instagram" ? Instagram : accountId === "twitter" ? Twitter : accountId === "linkedin" ? Linkedin : Facebook;
@@ -105,9 +95,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Followers</p>
-                <p className="text-2xl font-bold">{analytics.followers ?? MOCK_ANALYTICS.followers}</p>
+                <p className="text-2xl font-bold">{(analytics as any).followers ?? "—"}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> {analytics.followersChange ?? MOCK_ANALYTICS.followersChange}
+                  <TrendingUp className="h-3 w-3" /> {(analytics as any).followersChange ?? ""}
                 </p>
               </div>
               <Users className="h-8 w-8 text-blue-500" />
@@ -119,9 +109,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Engagement</p>
-                <p className="text-2xl font-bold">{analytics.engagement ?? MOCK_ANALYTICS.engagement}</p>
+                <p className="text-2xl font-bold">{(analytics as any).engagement ?? "—"}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> {analytics.engagementChange ?? MOCK_ANALYTICS.engagementChange}
+                  <TrendingUp className="h-3 w-3" /> {(analytics as any).engagementChange ?? ""}
                 </p>
               </div>
               <Heart className="h-8 w-8 text-pink-500" />
@@ -133,9 +123,9 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Reach</p>
-                <p className="text-2xl font-bold">{analytics.reach ?? MOCK_ANALYTICS.reach}</p>
+                <p className="text-2xl font-bold">{(analytics as any).reach ?? "—"}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> {analytics.reachChange ?? MOCK_ANALYTICS.reachChange}
+                  <TrendingUp className="h-3 w-3" /> {(analytics as any).reachChange ?? ""}
                 </p>
               </div>
               <Eye className="h-8 w-8 text-purple-500" />
@@ -147,8 +137,8 @@ function AccountAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Posts</p>
-                <p className="text-2xl font-bold">{analytics.posts ?? MOCK_ANALYTICS.posts}</p>
-                <p className="text-xs text-muted-foreground">{analytics.postsLabel ?? MOCK_ANALYTICS.postsLabel}</p>
+                <p className="text-2xl font-bold">{(analytics as any).posts ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{(analytics as any).postsLabel ?? ""}</p>
               </div>
               <Share2 className="h-8 w-8 text-emerald-500" />
             </div>

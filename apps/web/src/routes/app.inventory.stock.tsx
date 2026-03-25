@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { inventoryApi } from "../lib/api";
+import { inventoryApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/inventory/stock")({
   component: StockLevelsPage,

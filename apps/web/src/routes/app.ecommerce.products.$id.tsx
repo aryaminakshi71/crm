@@ -24,32 +24,14 @@ import {
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/ecommerce/products/$id")({
   component: ProductEditor,
 });
-
-const MOCK_PRODUCT = {
-  id: "prod1",
-  name: '55" 4K Smart TV',
-  description: "Ultra HD Smart TV with 4K resolution, HDR support, and built-in streaming apps.",
-  shortDescription: "Premium 4K Smart TV with HDR",
-  sku: "ELEC-4KTV-55",
-  price: 499.99,
-  comparePrice: 599.99,
-  cost: 320.00,
-  stock: 124,
-  trackInventory: true,
-  status: "active",
-  weight: 25.5,
-  dimensions: "49 x 28 x 2.5 inches",
-  tags: ["electronics", "tv", "4k", "smart-tv"],
-  images: [],
-};
 
 function ProductEditor() {
   const { id } = Route.useParams();
@@ -65,6 +47,7 @@ function ProductEditor() {
       if (!res.ok) throw new Error("Failed to fetch product");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const updateMutation = useMutation({
@@ -83,7 +66,7 @@ function ProductEditor() {
     },
   });
 
-  const product = productData ?? MOCK_PRODUCT;
+  const product = (productData as any) ?? {};
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -102,8 +85,8 @@ function ProductEditor() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-foreground">{product.name}</h1>
-          <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+          <h1 className="text-xl font-bold text-foreground">{(product as any).name}</h1>
+          <p className="text-sm text-muted-foreground">SKU: {(product as any).sku}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" leftIcon={<Eye className="h-4 w-4" />}>
@@ -114,7 +97,7 @@ function ProductEditor() {
           </Button>
           <Button
             leftIcon={<Save className="h-4 w-4" />}
-            onClick={() => updateMutation.mutate({ name: product.name })}
+            onClick={() => updateMutation.mutate({ name: (product as any).name })}
             disabled={updateMutation.isPending}
           >
             {updateMutation.isPending ? "Saving..." : "Save"}
@@ -151,23 +134,23 @@ function ProductEditor() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Product Title</label>
-                  <Input defaultValue={product.name} />
+                  <Input defaultValue={(product as any).name} />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Short Description</label>
-                  <Input defaultValue={product.shortDescription} />
+                  <Input defaultValue={(product as any).shortDescription} />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
                   <textarea
                     className="w-full h-32 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                    defaultValue={product.description}
+                    defaultValue={(product as any).description}
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Tags</label>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {product.tags.map((tag) => (
+                    {(product as any).tags.map((tag: any) => (
                       <Badge key={tag} variant="outline" size="sm">
                         {tag} <button className="ml-1 hover:text-destructive">×</button>
                       </Badge>
@@ -188,22 +171,22 @@ function ProductEditor() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Price</label>
-                    <Input type="number" defaultValue={product.price} leftIcon={<DollarSign className="h-4 w-4" />} />
+                    <Input type="number" defaultValue={(product as any).price} leftIcon={<DollarSign className="h-4 w-4" />} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Compare at Price</label>
-                    <Input type="number" defaultValue={product.comparePrice || ""} leftIcon={<DollarSign className="h-4 w-4" />} />
+                    <Input type="number" defaultValue={(product as any).comparePrice || ""} leftIcon={<DollarSign className="h-4 w-4" />} />
                     <p className="text-xs text-muted-foreground mt-1">Shows original price with strikethrough</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Cost per Item</label>
-                    <Input type="number" defaultValue={product.cost} leftIcon={<DollarSign className="h-4 w-4" />} />
+                    <Input type="number" defaultValue={(product as any).cost} leftIcon={<DollarSign className="h-4 w-4" />} />
                     <p className="text-xs text-muted-foreground mt-1">Used for profit margin calculation</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Margin</label>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800 font-medium">${(product.price - product.cost).toFixed(2)} ({(100 * (product.price - product.cost) / product.price).toFixed(1)}%)</p>
+                      <p className="text-green-800 font-medium">${((product as any).price - (product as any).cost).toFixed(2)} ({(100 * ((product as any).price - (product as any).cost) / (product as any).price).toFixed(1)}%)</p>
                     </div>
                   </div>
                 </div>
@@ -231,7 +214,7 @@ function ProductEditor() {
                       <Button variant="outline" size="icon" className="h-10 w-10">
                         <Minus className="h-4 w-4" />
                       </Button>
-                      <Input type="number" defaultValue={product.stock} className="w-24 text-center" />
+                      <Input type="number" defaultValue={(product as any).stock} className="w-24 text-center" />
                       <Button variant="outline" size="icon" className="h-10 w-10">
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -239,17 +222,17 @@ function ProductEditor() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">SKU</label>
-                    <Input defaultValue={product.sku} />
+                    <Input defaultValue={(product as any).sku} />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Weight (kg)</label>
-                    <Input type="number" defaultValue={product.weight} />
+                    <Input type="number" defaultValue={(product as any).weight} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Dimensions</label>
-                    <Input defaultValue={product.dimensions} />
+                    <Input defaultValue={(product as any).dimensions} />
                   </div>
                 </div>
               </CardContent>
@@ -291,14 +274,14 @@ function ProductEditor() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Page Title</label>
-                  <Input defaultValue={product.name} />
+                  <Input defaultValue={(product as any).name} />
                   <p className="text-xs text-muted-foreground mt-1">55 characters recommended</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Meta Description</label>
                   <textarea
                     className="w-full h-24 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                    defaultValue={product.shortDescription}
+                    defaultValue={(product as any).shortDescription}
                   />
                   <p className="text-xs text-muted-foreground mt-1">155 characters recommended</p>
                 </div>

@@ -23,22 +23,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/inventory/warehouses")({
   component: WarehousesPage,
 });
-
-const MOCK_WAREHOUSES = [
-  { id: "wh1", name: "Warehouse A", code: "WHA", address: "123 Industrial Blvd, Los Angeles, CA 90001", manager: "John Martinez", type: "primary", capacity: 10000, used: 8500, products: 342, status: "active" },
-  { id: "wh2", name: "Warehouse B", code: "WHB", address: "456 Commerce Way, Phoenix, AZ 85001", manager: "Sarah Kim", type: "secondary", capacity: 15000, used: 10800, products: 567, status: "active" },
-  { id: "wh3", name: "Warehouse C", code: "WHC", address: "789 Logistics Dr, Denver, CO 80201", manager: "Michael Chen", type: "cold_storage", capacity: 8000, used: 7280, products: 189, status: "active" },
-  { id: "wh4", name: "Distribution Center", code: "DC01", address: "321 Hub Street, Dallas, TX 75201", manager: "Emily Johnson", type: "distribution", capacity: 20000, used: 13000, products: 892, status: "active" },
-  { id: "wh5", name: "Returns Center", code: "RC01", address: "654 Returns Blvd, Chicago, IL 60601", manager: "David Lee", type: "returns", capacity: 5000, used: 1200, products: 45, status: "active" },
-];
 
 function WarehousesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,11 +42,12 @@ function WarehousesPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch warehouses");
-      return res.json() as Promise<{ data: typeof MOCK_WAREHOUSES; total: number }>;
+      return res.json() as Promise<{ data: any[]; total: number }>;
     },
+    placeholderData: (prev) => prev,
   });
 
-  const warehouses = warehousesData?.data?.length ? warehousesData.data : MOCK_WAREHOUSES;
+  const warehouses = warehousesData?.data ?? [];
 
   const filteredWarehouses = warehouses.filter(
     (wh) =>

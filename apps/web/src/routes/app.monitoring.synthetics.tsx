@@ -111,7 +111,7 @@ function MonitoringSyntheticsPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to delete test"),
   });
 
-  const tests: any[] = data?.items ?? [];
+  const tests: any[] = (data as any)?.items ?? [];
 
   const statusIcon = (status: string) => {
     if (status === "passing") return <CheckCircle2 className="h-4 w-4 text-green-400" />;
@@ -181,7 +181,7 @@ function MonitoringSyntheticsPage() {
                         test.status === "passing"
                           ? "default"
                           : test.status === "failing"
-                            ? "destructive"
+                            ? "danger"
                             : "outline"
                       }
                     >

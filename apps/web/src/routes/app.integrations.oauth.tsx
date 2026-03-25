@@ -16,7 +16,7 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const MOCK_OAUTH = {
@@ -38,12 +38,13 @@ function OAuthPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors?type=oauth`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_OAUTH;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const oauthConnectors = data?.data ?? MOCK_OAUTH.data;
+  const oauthConnectors = (data as any)?.data ?? [];
 
   const handleRefresh = (name: string) => {
     toast.success(`Refreshing token for ${name}...`);

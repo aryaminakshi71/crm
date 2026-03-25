@@ -15,93 +15,87 @@ import {
   User,
   Terminal,
   Box,
+  StopCircle,
+  RotateCcw,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/runs/$id")({
   component: RunDetail,
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
-const MOCK_RUN_DETAIL = {
-  id: 1,
-  pipeline: "frontend-app",
-  status: "success",
-  duration: "4m 23s",
-  branch: "main",
-  commit: "abc1234",
-  message: "Update homepage styles",
-  author: "John Smith",
-  startedAt: "Mar 20, 2026 10:45:23 AM",
-  finishedAt: "Mar 20, 2026 10:49:46 AM",
-  stages: [
-    { name: "Build", status: "success", duration: "1m 12s" },
-    { name: "Test", status: "success", duration: "2m 05s" },
-    { name: "Deploy Staging", status: "success", duration: "1m 06s" },
-  ],
-  logs: `2026-03-20T10:45:23.123Z [INFO] Starting pipeline run
-2026-03-20T10:45:23.456Z [INFO] Checking out code from main branch
-2026-03-20T10:45:25.789Z [INFO] Installing dependencies...
-2026-03-20T10:46:12.345Z [INFO] Dependencies installed successfully
-2026-03-20T10:46:13.567Z [INFO] Running linter...
-2026-03-20T10:46:20.123Z [INFO] Linting passed
-2026-03-20T10:46:21.456Z [INFO] Running unit tests...
-2026-03-20T10:47:30.789Z [INFO] All 42 tests passed
-2026-03-20T10:47:31.012Z [INFO] Building Docker image...
-2026-03-20T10:48:15.345Z [INFO] Docker image built successfully
-2026-03-20T10:48:16.567Z [INFO] Pushing to container registry...
-2026-03-20T10:48:45.678Z [INFO] Image pushed to registry
-2026-03-20T10:48:46.890Z [INFO] Deploying to staging environment...
-2026-03-20T10:49:46.123Z [INFO] Deployment successful
-2026-03-20T10:49:46.456Z [SUCCESS] Pipeline completed successfully`,
-  artifacts: [
-    { name: "test-results", size: "1.2 MB", type: "JUnit XML" },
-    { name: "coverage-report", size: "4.5 MB", type: "HTML" },
-    { name: "docker-image", size: "145 MB", type: "Container Image" },
-  ],
+const runActionsApi = {
+  cancel: (runId: string) =>
+    fetch(`${API_BASE}/devops/runs/${runId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getOrgHeader() },
+    }).then((r) => r.json()),
+  retry: (runId: string) =>
+    fetch(`${API_BASE}/devops/runs/${runId}/retry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getOrgHeader() },
+    }).then((r) => r.json()),
 };
 
 function RunDetail() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const { data: runQuery, isLoading, refetch, isError} = useQuery({
     queryKey: ["devops", "runs", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/devops/runs/${id}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch run");
-      return res.json();
-    },
+    queryFn: () => devopsApi.runs.get(id),
+    placeholderData: (prev) => prev,
     enabled: !!id,
   });
 
-  const runDetail = runQuery?.data ?? runQuery ?? MOCK_RUN_DETAIL;
+  const cancelRun = useMutation({
+    mutationFn: () => runActionsApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "runs", id] });
+      queryClient.invalidateQueries({ queryKey: ["devops", "runs"] });
+      toast.success("Run cancelled");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to cancel run"),
+  });
 
-  const pipelineName = runDetail.pipelineName ?? runDetail.pipeline ?? "Pipeline";
-  const runNumber = runDetail.runNumber ?? runDetail.id;
-  const status = runDetail.status ?? "unknown";
-  const branch = runDetail.branch ?? runDetail.commitSha?.slice(0, 7) ?? "—";
-  const commit = runDetail.commitSha?.slice(0, 7) ?? runDetail.commit ?? "—";
-  const author = runDetail.triggeredBy ?? runDetail.author ?? "—";
-  const message = runDetail.message ?? "Pipeline run";
+  const retryRun = useMutation({
+    mutationFn: () => runActionsApi.retry(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "runs"] });
+      toast.success("Run re-triggered");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to re-run"),
+  });
+
+  const runDetail = (runQuery as any)?.data ?? runQuery ?? {};
+
+  const pipelineName = (runDetail as any)?.pipelineName ?? (runDetail as any)?.pipeline ?? "Pipeline";
+  const runNumber = (runDetail as any)?.runNumber ?? (runDetail as any)?.id;
+  const status = (runDetail as any)?.status ?? "unknown";
+  const branch = (runDetail as any)?.branch ?? (runDetail as any)?.commitSha?.slice(0, 7) ?? "—";
+  const commit = (runDetail as any)?.commitSha?.slice(0, 7) ?? (runDetail as any)?.commit ?? "—";
+  const author = (runDetail as any)?.triggeredBy ?? (runDetail as any)?.author ?? "—";
+  const message = (runDetail as any)?.message ?? "Pipeline run";
   const stages: Array<{ name: string; status: string; duration: string }> =
-    runDetail.stages ?? MOCK_RUN_DETAIL.stages;
-  const logs: string = runDetail.logs ?? MOCK_RUN_DETAIL.logs;
+    (runDetail as any)?.stages ?? [];
+  const logs: string = (runDetail as any)?.logs ?? "";
   const artifacts: Array<{ name: string; size: string; type: string }> =
-    runDetail.artifacts ?? MOCK_RUN_DETAIL.artifacts;
+    (runDetail as any)?.artifacts ?? [];
 
   if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -138,9 +132,23 @@ function RunDetail() {
             <Download className="h-4 w-4" />
             Logs
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Play className="h-4 w-4" />
-            Re-run
+          {status === "running" && (
+            <button
+              onClick={() => cancelRun.mutate()}
+              disabled={cancelRun.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-60"
+            >
+              <StopCircle className="h-4 w-4" />
+              {cancelRun.isPending ? "Cancelling..." : "Cancel"}
+            </button>
+          )}
+          <button
+            onClick={() => retryRun.mutate()}
+            disabled={retryRun.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
+            <RotateCcw className="h-4 w-4" />
+            {retryRun.isPending ? "Re-running..." : "Re-run"}
           </button>
         </div>
       </div>

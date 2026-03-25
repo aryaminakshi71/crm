@@ -43,18 +43,10 @@ interface IVRFlow {
   createdAt: string;
 }
 
-const MOCK_NODES: IVRNode[] = [
-  { id: "node-1", type: "greeting", label: "Welcome Message", config: { audio: "welcome.wav", text: "Thank you for calling. Press 1 for sales, 2 for support." } },
-  { id: "node-2", type: "menu", label: "Main Menu", config: { prompt: "main_menu" }, children: ["node-3", "node-4"] },
-  { id: "node-3", type: "transfer", label: "Sales Transfer", config: { destination: "+1-555-123-4567" } },
-  { id: "node-4", type: "action", label: "Support Options", config: { action: "queue" } },
-  { id: "node-5", type: "voicemail", label: "Voicemail", config: { mailbox: "support@company.com" } },
-];
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function IVRBuilderPage() {
@@ -73,6 +65,7 @@ function IVRBuilderPage() {
       if (!res.ok) throw new Error("Failed to load IVR flows");
       return res.json() as Promise<{ data: IVRFlow[] }>;
     },
+    placeholderData: (prev) => prev,
   });
 
   const createMutation = useMutation({
@@ -94,7 +87,7 @@ function IVRBuilderPage() {
 
   // Use first IVR flow's nodes if available, otherwise fall back to mock
   const firstFlow = data?.data?.[0];
-  const nodes: IVRNode[] = firstFlow?.nodes?.length ? firstFlow.nodes : MOCK_NODES;
+  const nodes: IVRNode[] = firstFlow?.nodes ?? [];
   const selectedNodeData = nodes.find((n) => n.id === selectedNode);
 
   const handleSave = () => {

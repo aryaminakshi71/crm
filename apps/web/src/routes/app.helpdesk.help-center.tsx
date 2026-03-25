@@ -9,20 +9,27 @@ import {
   Input,
   Loading,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { BookOpenText, ExternalLink, Globe, Search, Settings,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useState } from "react";
-import { helpdeskApi } from "../lib/api";
+import { toast } from "sonner";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/help-center")({
   component: HelpCenterPage,
 });
 
 function HelpCenterPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState({ title: "", body: "" });
 
   const { data: articlesData, isLoading, refetch, isError} = useQuery({
     queryKey: ["helpdesk", "knowledge", "published"],
@@ -35,6 +42,27 @@ function HelpCenterPage() {
     queryKey: ["helpdesk", "knowledge-categories"],
     queryFn: () => helpdeskApi.knowledgeCategories.list({ page: 1, limit: 100 }),
     retry: false,
+  });
+
+  const createArticleMutation = useMutation({
+    mutationFn: (data: { title: string; body: string }) =>
+      helpdeskApi.knowledge.create({ ...data, status: "published" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "knowledge", "published"] });
+      toast.success("Article published successfully");
+      setIsModalOpen(false);
+      setForm({ title: "", body: "" });
+    },
+    onError: () => toast.error("Failed to publish article"),
+  });
+
+  const deleteArticleMutation = useMutation({
+    mutationFn: (id: string) => helpdeskApi.knowledge.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk", "knowledge", "published"] });
+      toast.success("Article deleted");
+    },
+    onError: () => toast.error("Failed to delete article"),
   });
 
   if (isLoading) return <Loading text="Loading help center..." />;
@@ -72,12 +100,67 @@ function HelpCenterPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-bold text-2xl text-foreground">Help Center</h1>
-        <p className="text-muted-foreground">
-          Public-facing knowledge base — published articles visible to customers.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-bold text-2xl text-foreground">Help Center</h1>
+          <p className="text-muted-foreground">
+            Public-facing knowledge base — published articles visible to customers.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setIsModalOpen(true)}
+        >
+          New Article
+        </Button>
       </div>
+
+      {/* New Article Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg border border-border p-6 w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-lg">New Article</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Title *</label>
+                <Input
+                  className="mt-1"
+                  placeholder="Article title"
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Content *</label>
+                <textarea
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[120px] resize-y"
+                  placeholder="Write the article content here..."
+                  value={form.body}
+                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={!form.title.trim() || !form.body.trim() || createArticleMutation.isPending}
+                onClick={() => createArticleMutation.mutate(form)}
+              >
+                {createArticleMutation.isPending ? "Publishing..." : "Publish Article"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {articles.length === 0 ? (
         <>
@@ -170,7 +253,7 @@ function HelpCenterPage() {
                   <Card key={article.id} className="hover:border-primary/40 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground">
                             {article.title}
                           </p>
@@ -189,7 +272,17 @@ function HelpCenterPage() {
                             )}
                           </div>
                         </div>
-                        <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <ExternalLink className="h-3 w-3 text-muted-foreground mt-1" />
+                          <button
+                            className="text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+                            disabled={deleteArticleMutation.isPending}
+                            onClick={() => deleteArticleMutation.mutate(article.id)}
+                            title="Delete article"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

@@ -103,7 +103,7 @@ function MonitoringServersPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to delete server"),
   });
 
-  const servers: any[] = data?.items ?? [];
+  const servers: any[] = (data as any)?.items ?? [];
 
   const statusColor = (status: string) =>
     status === "up" ? "bg-green-400" : status === "degraded" ? "bg-yellow-400" : "bg-red-400";
@@ -194,7 +194,7 @@ function MonitoringServersPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge
-                    variant={server.status === "up" ? "default" : "destructive"}
+                    variant={server.status === "up" ? "default" : "danger"}
                     className="text-xs"
                   >
                     {server.status ?? "unknown"}

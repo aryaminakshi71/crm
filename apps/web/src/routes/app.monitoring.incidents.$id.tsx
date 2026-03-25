@@ -115,7 +115,7 @@ function IncidentDetailPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to add timeline entry"),
   });
 
-  const timeline: any[] = timelineData?.items ?? [];
+  const timeline: any[] = (timelineData as any)?.items ?? [];
 
   const severityColors: Record<string, string> = {
     low: "text-blue-400",
@@ -141,24 +141,24 @@ function IncidentDetailPage() {
         <div>
           <div className="flex items-center gap-2">
             <AlertTriangle
-              className={`h-5 w-5 ${severityColors[incident.severity] ?? "text-zinc-400"}`}
+              className={`h-5 w-5 ${severityColors[(incident as any).severity] ?? "text-zinc-400"}`}
             />
-            <h1 className="text-2xl font-bold text-white">{incident.title}</h1>
+            <h1 className="text-2xl font-bold text-white">{(incident as any).title}</h1>
           </div>
           <p className="text-sm text-zinc-400 mt-1">
             Created{" "}
-            {incident.createdAt
-              ? new Date(incident.createdAt).toLocaleString()
+            {(incident as any).createdAt
+              ? new Date((incident as any).createdAt).toLocaleString()
               : "Unknown"}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge
-            variant={incident.status === "resolved" ? "default" : "destructive"}
+            variant={(incident as any).status === "resolved" ? "default" : "danger"}
           >
-            {incident.status}
+            {(incident as any).status}
           </Badge>
-          {incident.status !== "resolved" && (
+          {(incident as any).status !== "resolved" && (
             <Button
               size="sm"
               disabled={resolveIncidentMutation.isPending}
@@ -169,7 +169,7 @@ function IncidentDetailPage() {
               {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve"}
             </Button>
           )}
-          {incident.status === "open" && (
+          {(incident as any).status === "open" && (
             <Button
               size="sm"
               variant="outline"
@@ -188,9 +188,9 @@ function IncidentDetailPage() {
           <CardContent className="p-4 space-y-1">
             <p className="text-xs text-zinc-400">Severity</p>
             <p
-              className={`text-sm font-medium capitalize ${severityColors[incident.severity] ?? "text-white"}`}
+              className={`text-sm font-medium capitalize ${severityColors[(incident as any).severity] ?? "text-white"}`}
             >
-              {incident.severity}
+              {(incident as any).severity}
             </p>
           </CardContent>
         </Card>
@@ -198,7 +198,7 @@ function IncidentDetailPage() {
           <CardContent className="p-4 space-y-1">
             <p className="text-xs text-zinc-400">Status</p>
             <p className="text-sm font-medium text-white capitalize">
-              {incident.status}
+              {(incident as any).status}
             </p>
           </CardContent>
         </Card>
@@ -206,19 +206,19 @@ function IncidentDetailPage() {
           <CardContent className="p-4 space-y-1">
             <p className="text-xs text-zinc-400">Affected Services</p>
             <p className="text-sm font-medium text-white">
-              {incident.affectedServices ?? "N/A"}
+              {(incident as any).affectedServices ?? "N/A"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {incident.description && (
+      {(incident as any).description && (
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
             <CardTitle className="text-white text-sm">Description</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-zinc-300">{incident.description}</p>
+            <p className="text-sm text-zinc-300">{(incident as any).description}</p>
           </CardContent>
         </Card>
       )}

@@ -25,9 +25,9 @@ export const Route = createFileRoute("/app/social/posts")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Post {
@@ -41,14 +41,6 @@ interface Post {
   shares: number;
   reach?: number | string;
 }
-
-const MOCK_POSTS: Post[] = [
-  { id: "p1", content: "Excited to announce our new product launch! Stay tuned for more details...", platform: "Instagram", status: "published", likes: 342, comments: 28, shares: 45, reach: "4.2K" },
-  { id: "p2", content: "We're hiring! Join our amazing team. Check out open positions.", platform: "LinkedIn", status: "published", likes: 234, comments: 56, shares: 89, reach: "8.9K" },
-  { id: "p3", content: "Behind the scenes at our latest photoshoot. #behindthescenes #nucleoone", platform: "Instagram", scheduledFor: "Tomorrow 10:00 AM", status: "scheduled", likes: 0, comments: 0, shares: 0 },
-  { id: "p4", content: "Quick poll: What feature would you like to see next?", platform: "Twitter", scheduledFor: "Mar 20, 2024 2:00 PM", status: "scheduled", likes: 0, comments: 0, shares: 0 },
-  { id: "p5", content: "Draft post about our upcoming webinar...", platform: "Twitter", status: "draft", likes: 0, comments: 0, shares: 0 },
-];
 
 function PostsPage() {
   const navigate = useNavigate();
@@ -67,6 +59,7 @@ function PostsPage() {
       if (!res.ok) throw new Error("Failed to fetch posts");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const createPostMutation = useMutation({
@@ -106,7 +99,7 @@ function PostsPage() {
     </div>
   );
 
-  const posts: Post[] = data?.data ?? MOCK_POSTS;
+  const posts: Post[] = (data as any)?.data ?? [];
 
   const filteredPosts = posts.filter((post) => {
     const matchesSearch = post.content.toLowerCase().includes(searchQuery.toLowerCase());

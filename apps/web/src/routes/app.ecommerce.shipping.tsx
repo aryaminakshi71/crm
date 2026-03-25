@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   AlertCircle,
@@ -27,14 +27,6 @@ import {
 export const Route = createFileRoute("/app/ecommerce/shipping")({
   component: ShippingPage,
 });
-
-const MOCK_SHIPPING_RATES = [
-  { id: 1, name: "Standard Shipping", carrier: "UPS", days: "5-7 business days", rate: 9.99, minOrder: 0, maxOrder: 999, enabled: true },
-  { id: 2, name: "Express Shipping", carrier: "UPS", days: "2-3 business days", rate: 19.99, minOrder: 0, maxOrder: 999, enabled: true },
-  { id: 3, name: "Next Day Air", carrier: "FedEx", days: "1 business day", rate: 39.99, minOrder: 50, maxOrder: 999, enabled: true },
-  { id: 4, name: "USPS Priority", carrier: "USPS", days: "2-3 business days", rate: 12.99, minOrder: 0, maxOrder: 70, enabled: true },
-  { id: 5, name: "Free Shipping", carrier: "Nucleo One", days: "5-10 business days", rate: 0, minOrder: 100, maxOrder: 999, enabled: true },
-];
 
 function ShippingPage() {
   const queryClient = useQueryClient();
@@ -73,6 +65,7 @@ function ShippingPage() {
       if (!res.ok) throw new Error("Failed to fetch shipping");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -83,7 +76,7 @@ function ShippingPage() {
     </div>
   );
 
-  const shippingRates = apiData?.data?.length > 0 ? apiData.data : MOCK_SHIPPING_RATES;
+  const shippingRates = (apiData as any)?.data ?? [];
 
   const carriers = [
     { id: "ups", name: "UPS", logo: "UPS", enabled: true },
@@ -137,7 +130,7 @@ function ShippingPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {shippingRates.map((rate) => (
+            {shippingRates.map((rate: any) => (
               <div key={rate.id} className="flex items-center gap-4 p-4 border border-border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

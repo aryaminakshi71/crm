@@ -21,7 +21,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ function TimelinePage() {
     enabled: !!selectedProject,
   });
 
-  const tasks = (tasksData?.data as Task[]) || [];
+  const tasks = ((tasksData as any)?.data as Task[]) || [];
 
   // Get milestones
   const { data: milestonesData } = useQuery({
@@ -84,7 +84,7 @@ function TimelinePage() {
     enabled: !!selectedProject,
   });
 
-  const milestones = (milestonesData?.data as Milestone[]) || [];
+  const milestones = ((milestonesData as any)?.data as Milestone[]) || [];
 
   // Filter tasks by search
   const filteredTasks = useMemo(() => {

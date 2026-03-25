@@ -37,9 +37,9 @@ export const Route = createFileRoute("/app/invoicing/purchase-orders")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type PurchaseOrder = {
@@ -54,13 +54,7 @@ type PurchaseOrder = {
   expectedDelivery: string;
 };
 
-const mockPurchaseOrders: PurchaseOrder[] = [
-  { id: "1", poNumber: "PO-2026-001", vendor: "AWS", vendorEmail: "orders@aws.amazon.com", items: 3, total: 15000, status: "received", createdAt: "2026-03-01", expectedDelivery: "2026-03-10" },
-  { id: "2", poNumber: "PO-2026-002", vendor: "Google Cloud", vendorEmail: "orders@google.com", items: 2, total: 8000, status: "acknowledged", createdAt: "2026-03-05", expectedDelivery: "2026-03-15" },
-  { id: "3", poNumber: "PO-2026-003", vendor: "Staples", vendorEmail: "orders@staples.com", items: 5, total: 1200, status: "sent", createdAt: "2026-03-10", expectedDelivery: "2026-03-18" },
-  { id: "4", poNumber: "PO-2026-004", vendor: "Tech Supplies Inc", vendorEmail: "orders@techsupplies.com", items: 8, total: 4500, status: "draft", createdAt: "2026-03-15", expectedDelivery: "2026-03-25" },
-  { id: "5", poNumber: "PO-2026-005", vendor: "Office Depot", vendorEmail: "orders@officedepot.com", items: 4, total: 850, status: "cancelled", createdAt: "2026-03-08", expectedDelivery: "2026-03-20" },
-];
+const EMPTY_PURCHASE_ORDERS: any[] = [];
 
 function PurchaseOrders() {
   const [search, setSearch] = useState("");
@@ -100,6 +94,7 @@ function PurchaseOrders() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (purchaseOrdersQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -108,7 +103,7 @@ function PurchaseOrders() {
       <Button variant="outline" size="sm" onClick={() => purchaseOrdersQuery.refetch()}>Retry</Button>
     </div>
   );
-  const purchaseOrders: PurchaseOrder[] = purchaseOrdersQuery.data?.data?.length ? purchaseOrdersQuery.data.data : mockPurchaseOrders;
+  const purchaseOrders: any[] = (purchaseOrdersQuery as any)?.data?.data ?? [];
 
   const filteredOrders = purchaseOrders.filter((po) => {
     if (statusFilter !== "all" && po.status !== statusFilter) return false;

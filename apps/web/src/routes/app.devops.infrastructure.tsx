@@ -13,9 +13,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/infrastructure")({
@@ -57,14 +57,14 @@ function Infrastructure() {
     },
   });
 
-  const servers = (data?.data || []).filter((s: any) =>
+  const servers = ((data as any)?.data || []).filter((s: any) =>
     search
       ? s.name?.toLowerCase().includes(search.toLowerCase()) ||
         s.type?.toLowerCase().includes(search.toLowerCase())
       : true,
   );
 
-  const total = data?.total ?? 0;
+  const total = (data as any)?.total ?? 0;
 
   const statusColor = (status: string) => {
     if (status === "running" || status === "healthy") return "text-green-500";

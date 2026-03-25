@@ -40,15 +40,10 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 function getOrgHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
-const MOCK_KPI_DATA = [
-  { label: "Total Revenue", value: "$1.24M", change: "+12.5%", trend: "up" },
-  { label: "Customers", value: "8,432", change: "+5.2%", trend: "up" },
-  { label: "Avg Order Value", value: "$147", change: "-2.1%", trend: "down" },
-  { label: "Conversion Rate", value: "3.8%", change: "+0.4%", trend: "up" },
-];
+const EMPTY_KPI_DATA: { label: string; value: string; change: string; trend: string }[] = [];
 
 const revenueData = [
   { month: "Jan", revenue: 85000, target: 80000 },
@@ -92,6 +87,7 @@ function IntelligenceDashboard() {
       if (!res.ok) throw new Error("Failed to fetch intelligence summary");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const summary = summaryQuery.data;
@@ -100,10 +96,10 @@ function IntelligenceDashboard() {
     ? [
         { label: "Total Revenue", value: "$1.24M", change: "+12.5%", trend: "up" },
         { label: "Customers", value: "8,432", change: "+5.2%", trend: "up" },
-        { label: "Agent Runs", value: String(summary.agentRuns ?? 0), change: "", trend: "up" },
-        { label: "Forecasts", value: String(summary.forecasts ?? 0), change: "", trend: "up" },
+        { label: "Agent Runs", value: String((summary as any).agentRuns ?? 0), change: "", trend: "up" },
+        { label: "Forecasts", value: String((summary as any).forecasts ?? 0), change: "", trend: "up" },
       ]
-    : MOCK_KPI_DATA;
+    : EMPTY_KPI_DATA;
 
   if (summaryQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">

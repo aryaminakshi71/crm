@@ -1,7 +1,9 @@
 import { Button } from "@crm/ui";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { z } from "zod";
 import {
   FileText,
   Plus,
@@ -26,90 +28,112 @@ import {
   Send,
   AlertCircle
 } from "lucide-react";
+import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/documents")({
+  validateSearch: z.object({
+    q: z.string().optional().default(""),
+    type: z.string().optional().default(""),
+    department: z.string().optional().default(""),
+  }),
   component: DocumentManagement,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-}
-
-const MOCK_DOCUMENTS = [
-  { id: "1", name: "Employee Handbook 2026", type: "PDF", category: "Policies", size: "2.4 MB", uploadedAt: "Jan 15, 2026", uploadedBy: "Amanda White", status: "Active", signings: 0 },
-  { id: "2", name: "NDA - Standard Template", type: "DOCX", category: "Templates", size: "156 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 45 },
-  { id: "3", name: "Offer Letter Template", type: "DOCX", category: "Templates", size: "124 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 28 },
-  { id: "4", name: "PTO Policy Update", type: "PDF", category: "Policies", size: "890 KB", uploadedAt: "Feb 1, 2026", uploadedBy: "Amanda White", status: "Pending Review", signings: 0 },
-  { id: "5", name: "Benefits Overview 2026", type: "PDF", category: "Benefits", size: "3.2 MB", uploadedAt: "Jan 5, 2026", uploadedBy: "Amanda White", status: "Active", signings: 0 },
-  { id: "6", name: "Remote Work Policy", type: "PDF", category: "Policies", size: "1.1 MB", uploadedAt: "Mar 1, 2026", uploadedBy: "Tom Wilson", status: "Active", signings: 0 },
-  { id: "7", name: "Performance Review Form", type: "DOCX", category: "Templates", size: "98 KB", uploadedAt: "Feb 15, 2026", uploadedBy: "Amanda White", status: "Active", signings: 0 },
-  { id: "8", name: "Onboarding Checklist", type: "XLSX", category: "Templates", size: "45 KB", uploadedAt: "Jan 20, 2026", uploadedBy: "Amanda White", status: "Active", signings: 0 },
-  { id: "9", name: "Employment Contract Template", type: "DOCX", category: "Contracts", size: "178 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 67 },
-  { id: "10", name: "Confidentiality Agreement", type: "PDF", category: "Contracts", size: "234 KB", uploadedAt: "Jan 10, 2026", uploadedBy: "Amanda White", status: "Active", signings: 112 },
-];
-
-const MOCK_PENDING_SIGNATURES = [
-  { id: "1", document: "Sarah Chen - Offer Letter", sentTo: "sarah.chen@email.com", sentAt: "Mar 18, 2026", status: "Pending", dueDate: "Mar 25, 2026" },
-  { id: "2", document: "Marcus Johnson - NDA", sentTo: "marcus.johnson@email.com", sentAt: "Mar 17, 2026", status: "Pending", dueDate: "Mar 24, 2026" },
-  { id: "3", document: "Employee Handbook Acknowledgment", sentTo: "all-employees@nucleo.one", sentAt: "Mar 15, 2026", status: "Sent", dueDate: "Mar 31, 2026", completedCount: 180, totalCount: 248 },
-  { id: "4", document: "Benefits Enrollment Form", sentTo: "david.kim@email.com", sentAt: "Mar 10, 2026", status: "Completed", completedAt: "Mar 12, 2026" },
-];
-
 const categories = ["All Categories", "Policies", "Templates", "Contracts", "Benefits", "Onboarding"];
+const departments = ["All Departments", "All", "HR", "Legal", "Engineering", "Sales", "Finance"];
+const fileTypes = ["All Types", "PDF", "DOCX", "XLSX"];
 
 function DocumentManagement() {
+  const { q, type, department } = useSearch({ from: Route.fullPath });
+  const navigate = useNavigate({ from: Route.fullPath });
+  const qc = useQueryClient();
+
+  const setQ = (v: string) => navigate({ search: (prev: any) => ({ ...prev, q: v }) });
+  const setType = (v: string) => navigate({ search: (prev: any) => ({ ...prev, type: v }) });
+  const setDepartment = (v: string) => navigate({ search: (prev: any) => ({ ...prev, department: v }) });
+
   const [viewMode, setViewMode] = useState<"documents" | "signatures">("documents");
-  const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<{ name: string; category: string; department: string } | null>(null);
 
+  // ── Queries ─────────────────────────────────────────────────────────────────
   const documentsQuery = useQuery({
-    queryKey: ["hrm", "documents"],
+    queryKey: ["hrm", "documents", q, type, department],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/hrm/documents`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      const res = await fetch(`/api/hrm/documents?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}&department=${encodeURIComponent(department)}`, {
+        headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to fetch documents");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
-  if (documentsQuery.isError) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-      <AlertCircle className="h-8 w-8 text-destructive" />
-      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => documentsQuery.refetch()}>Retry</Button>
-    </div>
-  );
 
   const signaturesQuery = useQuery({
     queryKey: ["hrm", "document-signatures"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/hrm/document-signatures`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      const res = await fetch(`/api/hrm/document-signatures`, {
+        headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to fetch signatures");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
-  const documents = documentsQuery.data?.data ?? MOCK_DOCUMENTS;
-  const pendingSignatures = signaturesQuery.data?.data ?? MOCK_PENDING_SIGNATURES;
+  // ── Mutations ────────────────────────────────────────────────────────────────
+  const uploadMutation = useMutation({
+    mutationFn: async (payload: { name: string; category: string; department: string }) => {
+      const res = await fetch("/api/hrm/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to upload document");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Document uploaded successfully");
+      qc.invalidateQueries({ queryKey: ["hrm", "documents"] });
+      setShowUploadModal(false);
+      setUploadFile(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Upload failed"),
+  });
 
-  const filteredDocuments = documents.filter((doc: any) => {
-    const matchesSearch = doc.name.toLowerCase().includes(search.toLowerCase());
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/hrm/documents/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete document");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Document deleted");
+      qc.invalidateQueries({ queryKey: ["hrm", "documents"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Delete failed"),
+  });
+
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const allDocuments: any[] = documentsQuery.data?.data ?? [];
+  const pendingSignatures: any[] = signaturesQuery.data?.data ?? [];
+
+  const filteredDocuments = allDocuments.filter((doc: any) => {
+    const matchesSearch = !q || doc.name.toLowerCase().includes(q.toLowerCase());
     const matchesCategory = categoryFilter === "All Categories" || doc.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesType = !type || doc.type === type;
+    const matchesDept = !department || doc.department === department;
+    return matchesSearch && matchesCategory && matchesType && matchesDept;
   });
 
   const pendingSigsCount = pendingSignatures.filter((s: any) => s.status === "Pending" || s.status === "Sent").length;
   const completedSigsCount = pendingSignatures.filter((s: any) => s.status === "Completed").length;
 
-  const getFileIcon = (type: string) => {
-    switch (type) {
+  const getFileIcon = (fileType: string) => {
+    switch (fileType) {
       case "PDF":
         return { icon: FileText, color: "text-red-500", bgColor: "bg-red-500/10" };
       case "DOCX":
@@ -157,7 +181,7 @@ function DocumentManagement() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Documents</p>
-              <p className="text-xl font-bold text-foreground">{documents.length}</p>
+              <p className="text-xl font-bold text-foreground">{allDocuments.length}</p>
             </div>
           </div>
         </div>
@@ -226,28 +250,44 @@ function DocumentManagement() {
       {viewMode === "documents" && (
         <>
           {/* Filters */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search documents..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 className="w-full rounded-lg border border-input bg-background py-2 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <div className="flex gap-2">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <select
+              value={type || "All Types"}
+              onChange={(e) => setType(e.target.value === "All Types" ? "" : e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            >
+              {fileTypes.map((ft) => (
+                <option key={ft} value={ft}>{ft}</option>
+              ))}
+            </select>
+            <select
+              value={department || "All Departments"}
+              onChange={(e) => setDepartment(e.target.value === "All Departments" ? "" : e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            >
+              {departments.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
 
           {/* Loading skeleton */}
@@ -278,8 +318,13 @@ function DocumentManagement() {
                         <fileIcon.icon className={`h-5 w-5 ${fileIcon.color}`} />
                       </div>
                       <div className="relative">
-                        <button className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreVertical className="h-4 w-4" />
+                        <button
+                          onClick={() => deleteMutation.mutate(doc.id)}
+                          disabled={deleteMutation.isPending}
+                          className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Delete document"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -422,6 +467,78 @@ function DocumentManagement() {
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-semibold text-foreground mb-1">No documents found</h3>
           <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Upload Document</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Document Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Employee Handbook Q1 2027"
+                  value={uploadFile?.name ?? ""}
+                  onChange={(e) => setUploadFile((prev) => ({ ...prev!, name: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Category</label>
+                <select
+                  value={uploadFile?.category ?? ""}
+                  onChange={(e) => setUploadFile((prev) => ({ ...prev!, category: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select category...</option>
+                  {categories.slice(1).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Department</label>
+                <select
+                  value={uploadFile?.department ?? ""}
+                  onChange={(e) => setUploadFile((prev) => ({ ...prev!, department: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select department...</option>
+                  {departments.slice(1).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="rounded-lg border-2 border-dashed border-border/60 p-6 text-center">
+                <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Click to browse or drag & drop</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, XLSX up to 50MB</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => { setShowUploadModal(false); setUploadFile(null); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!uploadFile?.name) {
+                    toast.error("Please enter a document name");
+                    return;
+                  }
+                  uploadMutation.mutate(uploadFile);
+                }}
+                disabled={uploadMutation.isPending}
+              >
+                {uploadMutation.isPending ? "Uploading..." : "Upload"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

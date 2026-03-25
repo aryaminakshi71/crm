@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { inventoryApi } from "../lib/api";
+import { inventoryApi } from "@/lib/api";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/inventory/qr")({
@@ -66,7 +66,7 @@ function QRGeneratorPage() {
   };
 
   const generateBatch = () => {
-    const allItems = items.map((item) => ("sku" in item ? item.sku : item.code));
+    const allItems = items.map((item: any) => ("sku" in item ? item.sku : item.code));
     setGeneratedCodes([...generatedCodes, ...allItems]);
   };
 
@@ -133,7 +133,7 @@ function QRGeneratorPage() {
                 <div className="text-center py-8 text-muted-foreground text-sm">Loading products...</div>
               ) : (
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {items.map((item) => {
+                  {items.map((item: any) => {
                     const key = "sku" in item ? item.sku : item.code;
                     return (
                       <button

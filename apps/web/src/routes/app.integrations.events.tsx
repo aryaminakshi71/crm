@@ -14,18 +14,8 @@ import { Zap,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_EVENTS = {
-  data: [
-    { id: "evt-1", name: "Contact Created", source: "CRM", type: "trigger", description: "Fires when a new contact is created" },
-    { id: "evt-2", name: "Deal Won", source: "CRM", type: "trigger", description: "Fires when a deal is marked as won" },
-    { id: "evt-3", name: "Invoice Paid", source: "Finance", type: "trigger", description: "Fires when an invoice payment is received" },
-    { id: "evt-4", name: "Ticket Created", source: "Helpdesk", type: "trigger", description: "Fires when a support ticket is created" },
-    { id: "evt-5", name: "Employee Onboarded", source: "HRM", type: "trigger", description: "Fires when employee onboarding is complete" },
-  ],
-};
 
 const SOURCE_COLORS: Record<string, string> = {
   CRM: "text-blue-500",
@@ -52,12 +42,13 @@ function EventsPage() {
       const res = await fetch(`${API_BASE}/v1/integration/events`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_EVENTS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const events = data?.data ?? MOCK_EVENTS.data;
+  const events = (data as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">

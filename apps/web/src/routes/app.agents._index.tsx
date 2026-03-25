@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, EmptyState, Badge, LoadingSkeleton } from "@crm/ui";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import {
   Bot,
   Plus,
@@ -31,7 +32,14 @@ import {
   YAxis,
 } from "recharts";
 
+const searchSchema = z.object({
+  q: z.string().optional(),
+  status: z.string().optional(),
+  page: z.number().optional().default(1),
+});
+
 export const Route = createFileRoute("/app/agents/_index")({
+  validateSearch: searchSchema,
   component: AgentsIndexPage,
 });
 
@@ -53,11 +61,13 @@ const AGENT_TYPES = [
 ];
 
 function AgentsIndexPage() {
-  const navigate = useNavigate();
+  const { q = "", status = "", page = 1 } = useSearch({ from: "/app/agents/_index" });
+  const navigate = useNavigate({ from: "/app/agents/_index" });
+  const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
+  const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
+  const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("all");
 
   const queryClient = useQueryClient();
 
@@ -84,8 +94,8 @@ function AgentsIndexPage() {
   });
 
   // Use real API data with static fallback
-  const chartData = tokenUsageData?.data?.length
-    ? tokenUsageData.data
+  const chartData = (tokenUsageData as any)?.data?.length
+    ? (tokenUsageData as any).data
     : TOKEN_USAGE_DATA;
 
   // Create agent mutation
@@ -112,7 +122,7 @@ function AgentsIndexPage() {
 
   // Map API agents to the display shape
   const agents = useMemo(() => {
-    const apiItems: any[] = agentsData?.data ?? [];
+    const apiItems: any[] = (agentsData as any)?.data ?? [];
     return apiItems.map((agent: any) => ({
       id: agent.id,
       name: agent.name,
@@ -197,9 +207,9 @@ function AgentsIndexPage() {
   };
 
   const filteredAgents = agents.filter((agent) => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === "all" || agent.agentType === filterType;
+    const matchesSearch = agent.name.toLowerCase().includes(q.toLowerCase()) ||
+      agent.description.toLowerCase().includes(q.toLowerCase());
+    const matchesFilter = !status || status === "all" || agent.agentType === status;
     return matchesSearch && matchesFilter;
   });
 
@@ -298,15 +308,15 @@ function AgentsIndexPage() {
           <input
             type="text"
             placeholder="Search agents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background text-sm"
           />
         </div>
         <div className="flex gap-2">
           <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
             className="px-4 py-2 border rounded-lg bg-background text-sm"
           >
             <option value="all">All Types</option>
@@ -334,12 +344,11 @@ function AgentsIndexPage() {
             <EmptyState
               icon={<Bot className="h-8 w-8" />}
               title="No agents found"
-              description={searchQuery ? "Try adjusting your search or filters." : "Create your first AI agent to get started."}
+              description={q ? "Try adjusting your search or filters." : "Create your first AI agent to get started."}
               action={
-                searchQuery ? undefined : {
-                  label: "Create Agent",
-                  onClick: () => setShowCreateDialog(true),
-                }
+                q ? undefined : (
+                  <Button onClick={() => setShowCreateDialog(true)}>Create Agent</Button>
+                )
               }
             />
           </CardContent>

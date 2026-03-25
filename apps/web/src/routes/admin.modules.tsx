@@ -184,7 +184,7 @@ function AdminModulesPage() {
   }
 
   // Merge real enabled status from API into static moduleDetails display data
-  const apiModules: any[] = modulesApiData?.modules ?? [];
+  const apiModules: any[] = (modulesApiData as any)?.modules ?? [];
   const mergedModuleDetails = Object.fromEntries(
     Object.entries(moduleDetails).map(([key, detail]) => {
       const apiModule = apiModules.find((m: any) => m.key === key);

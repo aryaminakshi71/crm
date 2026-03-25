@@ -21,9 +21,9 @@ export const Route = createFileRoute("/app/speech/transcribe")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Transcription {
@@ -36,15 +36,6 @@ interface Transcription {
   accuracy: number;
   language: string;
 }
-
-const MOCK_TRANSCRIPTIONS: Transcription[] = [
-  { id: "t1", name: "Sales Call - Q4 Review", duration: "45:23", date: "Mar 18, 2024", status: "completed", speakers: 3, accuracy: 98.2, language: "English" },
-  { id: "t2", name: "Team Standup Meeting", duration: "28:15", date: "Mar 18, 2024", status: "completed", speakers: 6, accuracy: 97.8, language: "English" },
-  { id: "t3", name: "Customer Interview #123", duration: "1:02:34", date: "Mar 17, 2024", status: "completed", speakers: 2, accuracy: 99.1, language: "English" },
-  { id: "t4", name: "Board Meeting Recording", duration: "2:15:00", date: "Mar 16, 2024", status: "processing", speakers: 8, accuracy: 0, language: "English" },
-  { id: "t5", name: "Podcast Episode 45", duration: "38:22", date: "Mar 15, 2024", status: "completed", speakers: 2, accuracy: 96.5, language: "English" },
-  { id: "t6", name: "Legal Deposition", duration: "1:45:00", date: "Mar 14, 2024", status: "failed", speakers: 4, accuracy: 0, language: "English" },
-];
 
 function TranscriptionsPage() {
   const navigate = useNavigate();
@@ -62,6 +53,7 @@ function TranscriptionsPage() {
       if (!res.ok) throw new Error("Failed to fetch transcriptions");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -72,10 +64,10 @@ function TranscriptionsPage() {
     </div>
   );
 
-  const transcriptions: Transcription[] = data?.data ?? MOCK_TRANSCRIPTIONS;
+  const transcriptions: Transcription[] = (data as any)?.data ?? [];
 
   const filteredTranscriptions = transcriptions.filter((t) => {
-    const matchesSearch = (t.name ?? t.title ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (t.name ?? (t as any).title ?? "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 

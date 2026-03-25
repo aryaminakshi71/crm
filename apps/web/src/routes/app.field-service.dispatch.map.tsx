@@ -24,7 +24,7 @@ export const Route = createFileRoute("/app/field-service/dispatch/map")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -52,6 +52,7 @@ function MapView() {
       if (!res.ok) throw new Error("Failed to fetch technicians");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   });
 
@@ -62,11 +63,12 @@ function MapView() {
       if (!res.ok) throw new Error("Failed to fetch jobs");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   });
 
-  const technicians = techData?.data ?? MOCK_TECHNICIANS;
-  const jobs = jobsData?.data ?? MOCK_JOBS;
+  const technicians = (techData as any)?.data ?? [];
+  const jobs = (jobsData as any)?.data ?? [];
 
   return (
     <div className="space-y-4">
@@ -107,7 +109,7 @@ function MapView() {
           {/* Simulated Map Markers */}
           <div className="absolute inset-0 p-8">
             {/* Technician Markers */}
-            {technicians.map((tech, idx) => {
+            {technicians.map((tech: any, idx: any) => {
               const left = 15 + (idx % 3) * 25;
               const top = 20 + Math.floor(idx / 3) * 35;
               return (
@@ -142,7 +144,7 @@ function MapView() {
             })}
 
             {/* Job Markers */}
-            {jobs.map((job, idx) => {
+            {jobs.map((job: any, idx: any) => {
               const left = 35 + (idx % 2) * 30;
               const top = 30 + idx * 20;
               return (
@@ -230,7 +232,7 @@ function MapView() {
 
       {/* Technician Details Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {technicians.slice(0, 3).map((tech) => (
+        {technicians.slice(0, 3).map((tech: any) => (
           <Card key={tech.id} className="border-border/60">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">

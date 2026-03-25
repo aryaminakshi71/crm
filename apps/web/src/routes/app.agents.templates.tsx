@@ -1,6 +1,10 @@
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Pagination } from "@/components/ui/pagination";
+
+const PAGE_SIZE = 50;
 import {
   ArrowLeft,
   Plus,
@@ -21,9 +25,9 @@ export const Route = createFileRoute("/app/agents/templates")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -71,12 +75,13 @@ const LOCAL_TEMPLATES = [
 function AgentTemplatesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
 
   // GET /api/agents/templates
   const { data: templatesData, isLoading, isError, refetch} = useQuery({
-    queryKey: ["agents", "templates"],
+    queryKey: ["agents", "templates", page],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/agents/templates`, {
+      const res = await fetch(`${API_BASE}/agents/templates?page=${page}&limit=${PAGE_SIZE}`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch templates");
@@ -114,12 +119,15 @@ function AgentTemplatesPage() {
     onSuccess: (agent) => {
       toast.success("Agent created from template");
       queryClient.invalidateQueries({ queryKey: ["agents"] });
-      navigate({ to: "/app/agents/$agentId", params: { agentId: agent.id } });
+      navigate({ to: "/app/agents/$agentId", params: { agentId: (agent as any).id } });
     },
     onError: (err: Error) => {
       toast.error(err.message);
     },
   });
+
+  const total = (templatesData as any)?.total ?? (templatesData as any)?.pagination?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Merge API templates with local templates, prefer API data
   const apiTemplates = templatesData?.data ?? [];
@@ -225,6 +233,8 @@ function AgentTemplatesPage() {
           })}
         </div>
       )}
+
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Card className="border-border/60 bg-muted/30">
         <CardContent className="p-6">

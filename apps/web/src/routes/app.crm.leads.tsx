@@ -27,7 +27,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { leadsApi } from "../lib/api";
+import { leadsApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ function CrmLeadsPage() {
         <EmptyState
           title="No leads found"
           description={search || statusFilter !== "all" ? "Try adjusting your filters." : "Create your first lead to get started."}
-          action={{ label: "New Lead", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>New Lead</Button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -382,8 +382,8 @@ function CrmLeadsPage() {
         onClose={() => setIsCreateOpen(false)}
         title="New Lead"
         onSubmit={() => createLead.mutate()}
-        isSubmitting={createLead.isPending}
-        submitLabel="Create Lead"
+        isLoading={createLead.isPending}
+        submitText="Create Lead"
       >
         <FormField label="Email *">
           <Input

@@ -12,20 +12,8 @@ import { AlertCircle, Filter, TrendingDown } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_FUNNEL = {
-  stages: [
-    { name: "Visitors", count: 12400, conversion: 100 },
-    { name: "Leads", count: 2480, conversion: 20 },
-    { name: "Qualified", count: 744, conversion: 6 },
-    { name: "Proposals", count: 298, conversion: 2.4 },
-    { name: "Closed Won", count: 119, conversion: 0.96 },
-  ],
-  overallConversion: 0.96,
-  avgDealCycle: 46,
-};
 
 const STAGE_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#ec4899", "#f43f5e"];
 
@@ -40,9 +28,10 @@ function FunnelPage() {
       const res = await fetch(`${API_BASE}/v1/intelligence/funnel`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_FUNNEL;
+      if (!res.ok) return { stages: [], overallConversion: 0, avgDealCycle: 0 };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -53,8 +42,8 @@ function FunnelPage() {
     </div>
   );
 
-  const funnel = data ?? MOCK_FUNNEL;
-  const maxCount = funnel.stages?.[0]?.count ?? 1;
+  const funnel = data ?? { stages: [], overallConversion: 0, avgDealCycle: 0 };
+  const maxCount = (funnel as any).stages?.[0]?.count ?? 1;
 
   return (
     <div className="p-6 space-y-6">
@@ -74,7 +63,7 @@ function FunnelPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{funnel.overallConversion}%</p>
+            <p className="text-3xl font-bold">{(funnel as any).overallConversion}%</p>
           </CardContent>
         </Card>
         <Card>
@@ -85,7 +74,7 @@ function FunnelPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{funnel.avgDealCycle} days</p>
+            <p className="text-3xl font-bold">{(funnel as any).avgDealCycle} days</p>
           </CardContent>
         </Card>
       </div>
@@ -98,7 +87,7 @@ function FunnelPage() {
             <CardTitle>Funnel Stages</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {funnel.stages?.map((stage: any, i: number) => {
+            {(funnel as any).stages?.map((stage: any, i: number) => {
               const pct = maxCount > 0 ? (stage.count / maxCount) * 100 : 0;
               return (
                 <div key={stage.name} className="space-y-1">

@@ -31,16 +31,10 @@ interface Transcription {
   preview?: string;
 }
 
-const MOCK_TRANSCRIPTIONS: Transcription[] = [
-  { id: "t1", contactName: "Sarah Johnson", phone: "+1 555-123-4567", durationSeconds: 323, createdAt: new Date(Date.now() - 3600000).toISOString(), speakers: 2, preview: "Agent: Thank you for calling. How can I help you today? Customer: Hi, I wanted to check on my order status..." },
-  { id: "t2", contactName: "Michael Chen", phone: "+1 555-234-5678", durationSeconds: 765, createdAt: new Date(Date.now() - 7200000).toISOString(), speakers: 2, preview: "Agent: Welcome to customer support. Customer: Yes, I have a question about my invoice..." },
-  { id: "t3", contactName: "Emily Davis", phone: "+1 555-345-6789", durationSeconds: 192, createdAt: new Date(Date.now() - 86400000).toISOString(), speakers: 2, preview: "Agent: Hi, how can I assist you? Customer: I'd like to schedule a callback..." },
-];
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function formatDuration(seconds?: number): string {
@@ -65,9 +59,10 @@ function TranscriptionsPage() {
       if (!res.ok) throw new Error("Failed to load transcriptions");
       return res.json() as Promise<{ data: Transcription[] }>;
     },
+    placeholderData: (prev) => prev,
   });
 
-  const transcriptions = data?.data ?? MOCK_TRANSCRIPTIONS;
+  const transcriptions = data?.data ?? [];
 
   const filtered = transcriptions.filter((t) => {
     const q = searchQuery.toLowerCase();

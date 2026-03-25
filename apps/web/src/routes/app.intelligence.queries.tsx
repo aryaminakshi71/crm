@@ -17,16 +17,8 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_QUERIES = {
-  data: [
-    { id: "q-1", query: "Show top 10 customers by revenue", executedAt: new Date().toISOString(), status: "success" },
-    { id: "q-2", query: "What is the churn rate this quarter?", executedAt: new Date(Date.now() - 3600000).toISOString(), status: "success" },
-    { id: "q-3", query: "Compare Q1 vs Q2 pipeline", executedAt: new Date(Date.now() - 7200000).toISOString(), status: "success" },
-  ],
-};
 
 export const Route = createFileRoute("/app/intelligence/queries")({
   component: QueriesPage,
@@ -43,9 +35,10 @@ function QueriesPage() {
       const res = await fetch(`${API_BASE}/v1/intelligence/queries`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_QUERIES;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const executeMutation = useMutation({
@@ -84,7 +77,7 @@ function QueriesPage() {
     executeMutation.mutate(queryText.trim());
   };
 
-  const queries = data?.data ?? MOCK_QUERIES.data;
+  const queries = (data as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/speech/sentiment")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -58,7 +58,7 @@ function SentimentPage() {
             <h2 className="font-bold text-xl">Sentiment Analysis</h2>
             <p className="text-muted-foreground text-sm">
               Analyze sentiment in transcriptions
-              {transcriptionsData?.total ? ` — ${transcriptionsData.total} transcriptions analyzed` : ""}
+              {(transcriptionsData as any)?.total ? ` — ${(transcriptionsData as any).total} transcriptions analyzed` : ""}
             </p>
           </div>
         </div>

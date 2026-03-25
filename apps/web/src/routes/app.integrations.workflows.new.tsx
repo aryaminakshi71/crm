@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const APP_OPTIONS = [
@@ -81,7 +81,7 @@ function NewWorkflowPage() {
     onSuccess: (workflow) => {
       queryClient.invalidateQueries({ queryKey: ["integration", "workflows"] });
       toast.success("Workflow created successfully");
-      navigate({ to: "/app/integrations/workflows/$id", params: { id: workflow.id } });
+      navigate({ to: "/app/integrations/workflows/$id", params: { id: (workflow as any).id } });
     },
     onError: () => {
       toast.error("Failed to create workflow");

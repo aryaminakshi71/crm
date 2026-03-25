@@ -35,7 +35,7 @@ export const Route = createFileRoute("/app/campaign-pro")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -103,9 +103,9 @@ function CampaignProPage() {
     },
   });
 
-  const activeCampaigns = campaignsData?.data?.filter((c: { status: string }) => c.status === "active") ?? [];
-  const totalCampaigns = campaignsData?.total ?? 12;
-  const topCampaigns = campaignsData?.data?.slice(0, 3) ?? [
+  const activeCampaigns = (campaignsData as any)?.data?.filter((c: { status: string }) => c.status === "active") ?? [];
+  const totalCampaigns = (campaignsData as any)?.total ?? 12;
+  const topCampaigns = (campaignsData as any)?.data?.slice(0, 3) ?? [
     { id: "1", name: "Spring Sale Email", status: "active" },
     { id: "2", name: "Product Launch Social", status: "active" },
     { id: "3", name: "Welcome Series", status: "completed" },
@@ -147,21 +147,21 @@ function CampaignProPage() {
         />
         <Metric
           title="Total Reach"
-          value={statsData?.totalContacts ? `${(statsData.totalContacts / 1000).toFixed(1)}K` : "2.4M"}
+          value={(statsData as any)?.totalContacts ? `${((statsData as any).totalContacts / 1000).toFixed(1)}K` : "2.4M"}
           icon={<Globe className="h-4 w-4" />}
           trend="+12% vs last month"
           color="text-info"
         />
         <Metric
           title="Engagement Rate"
-          value={statsData?.avgOpenRate ? `${statsData.avgOpenRate.toFixed(1)}%` : "4.8%"}
+          value={(statsData as any)?.avgOpenRate ? `${(statsData as any).avgOpenRate.toFixed(1)}%` : "4.8%"}
           icon={<MousePointerClick className="h-4 w-4" />}
           trend="+0.5% vs last month"
           color="text-success"
         />
         <Metric
           title="Conversions"
-          value={statsData?.totalSent?.toLocaleString() ?? "1,247"}
+          value={(statsData as any)?.totalSent?.toLocaleString() ?? "1,247"}
           icon={<Target className="h-4 w-4" />}
           trend="+23% vs last month"
           color="text-warning"

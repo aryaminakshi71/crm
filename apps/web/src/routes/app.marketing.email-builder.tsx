@@ -10,7 +10,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, Mail, Plus,
   AlertCircle
 } from "lucide-react";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/marketing/email-builder")({
   component: MarketingEmailBuilderPage,

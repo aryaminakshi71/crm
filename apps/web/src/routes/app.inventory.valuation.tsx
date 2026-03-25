@@ -20,22 +20,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/inventory/valuation")({
   component: InventoryValuationPage,
 });
-
-const MOCK_INVENTORY_VALUATION = [
-  { sku: "ELEC-4KTV-55", name: '55" 4K Smart TV', quantity: 124, avgCost: 295.00, totalValue: 36580.00, lastCost: 320.00 },
-  { sku: "ELEC-LAP-15", name: 'Laptop 15" Pro', quantity: 89, avgCost: 620.00, totalValue: 55180.00, lastCost: 650.00 },
-  { sku: "HOME-SOF-3S", name: "3-Seater Sofa", quantity: 45, avgCost: 520.00, totalValue: 23400.00, lastCost: 580.00 },
-  { sku: "SPORT-BIKE-MTN", name: "Mountain Bike", quantity: 23, avgCost: 340.00, totalValue: 7820.00, lastCost: 380.00 },
-  { sku: "APPA-JKT-WIN-B", name: "Winter Jacket Black", quantity: 156, avgCost: 58.00, totalValue: 9048.00, lastCost: 65.00 },
-];
 
 function InventoryValuationPage() {
   const [valuationMethod, setValuationMethod] = useState("fifo");
@@ -47,11 +39,12 @@ function InventoryValuationPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch valuation");
-      return res.json() as Promise<{ data: typeof MOCK_INVENTORY_VALUATION; total: number; totalValue: number }>;
+      return res.json() as Promise<{ data: any[]; total: number; totalValue: number }>;
     },
+    placeholderData: (prev) => prev,
   });
 
-  const currentInventory = valuationData?.data?.length ? valuationData.data : MOCK_INVENTORY_VALUATION;
+  const currentInventory = valuationData?.data ?? [];
   const totalValue = valuationData?.totalValue ?? currentInventory.reduce((sum, item) => sum + item.totalValue, 0);
 
   const methods = [

@@ -22,7 +22,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 const LANGUAGES = [
@@ -90,7 +90,7 @@ function NewTranscriptionPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["speech", "transcriptions"] });
       toast.success("Transcription started!");
-      navigate({ to: `/app/speech/transcribe/${data?.id ?? ""}` as string });
+      navigate({ to: `/app/speech/transcribe/${(data as any)?.id ?? ""}` as string });
     },
     onError: () => {
       toast.error("Failed to start transcription. Please try again.");

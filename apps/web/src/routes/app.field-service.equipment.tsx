@@ -17,17 +17,20 @@ import {
   Truck,
   AlertCircle
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { toast } from "sonner";
+import { fieldServiceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/field-service/equipment")({
+  validateSearch: z.object({
+    search: z.string().optional(),
+    type: z.string().optional(),
+    status: z.string().optional(),
+    customer: z.string().optional(),
+  }),
   component: Equipment,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-};
 
 const MOCK_EQUIPMENT = [
   { id: 1, name: "Carrier 24ACC636A003", type: "HVAC Unit", serial: "CR-2024-12345", location: "123 Main St, Acme Corp", installed: "2019-06-15", warranty: "2026-06-14", status: "operational", lastService: "Mar 15, 2026", nextService: "Jun 15, 2026", customer: "Acme Corporation" },
@@ -39,17 +42,38 @@ const MOCK_EQUIPMENT = [
 ];
 
 function Equipment() {
+  const queryClient = useQueryClient();
+
   const equipmentQuery = useQuery({
     queryKey: ["field-service", "equipment"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/field-service/technicians?limit=50`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch equipment");
-      return res.json();
-    },
+    queryFn: () => fieldServiceApi.equipment.list(),
+    placeholderData: (prev) => prev,
     retry: false,
   });
+
+  const createEquipmentMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => fieldServiceApi.equipment.create(data),
+    onSuccess: () => {
+      toast.success("Equipment added successfully");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "equipment"] });
+    },
+    onError: () => {
+      toast.error("Failed to add equipment");
+    },
+  });
+
+  const scheduleServiceMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => fieldServiceApi.jobs.create(data),
+    onSuccess: () => {
+      toast.success("Service scheduled successfully");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "equipment"] });
+      queryClient.invalidateQueries({ queryKey: ["field-service", "jobs"] });
+    },
+    onError: () => {
+      toast.error("Failed to schedule service");
+    },
+  });
+
   if (equipmentQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -58,7 +82,7 @@ function Equipment() {
     </div>
   );
 
-  const equipment = equipmentQuery.data?.data ?? MOCK_EQUIPMENT;
+  const equipment = (equipmentQuery as any).data?.data ?? [];
 
   const expiringWarranties = MOCK_EQUIPMENT.filter(e => {
     const warrantyDate = new Date(e.warranty);
@@ -99,7 +123,11 @@ function Equipment() {
             <Settings className="h-4 w-4" />
             Manage Types
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <button
+            onClick={() => createEquipmentMutation.mutate({ name: "New Equipment", type: "HVAC Unit", status: "operational" })}
+            disabled={createEquipmentMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
             <Plus className="h-4 w-4" />
             Add Equipment
           </button>
@@ -144,21 +172,21 @@ function Equipment() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{equipment.filter(e => e.status === "operational").length}</p>
+            <p className="text-2xl font-bold">{equipment.filter((e: any) => e.status === "operational").length}</p>
             <p className="text-xs text-muted-foreground">Operational</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <AlertTriangle className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{equipment.filter(e => e.status === "warning").length}</p>
+            <p className="text-2xl font-bold">{equipment.filter((e: any) => e.status === "warning").length}</p>
             <p className="text-xs text-muted-foreground">Needs Attention</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Calendar className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{equipment.filter(e => e.status === "maintenance").length}</p>
+            <p className="text-2xl font-bold">{equipment.filter((e: any) => e.status === "maintenance").length}</p>
             <p className="text-xs text-muted-foreground">In Maintenance</p>
           </CardContent>
         </Card>
@@ -196,7 +224,7 @@ function Equipment() {
 
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {equipment.map((eq) => (
+        {equipment.map((eq: any) => (
           <Card key={eq.id} className={`border-border/60 hover:border-primary/30 transition-colors ${
             eq.status === "warning" ? "border-amber-500/30" :
             eq.status === "maintenance" ? "border-blue-500/30" : ""
@@ -272,7 +300,11 @@ function Equipment() {
                 <button className="flex-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">
                   View History
                 </button>
-                <button className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
+                <button
+                  onClick={() => scheduleServiceMutation.mutate({ equipmentId: eq.id, type: "maintenance", title: `Service for ${eq.name}` })}
+                  disabled={scheduleServiceMutation.isPending}
+                  className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
                   Schedule Service
                 </button>
               </div>

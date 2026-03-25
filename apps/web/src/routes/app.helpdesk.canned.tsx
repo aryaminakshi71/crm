@@ -18,7 +18,7 @@ import { MessageSquare, Plus, Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/canned")({
   component: CannedResponsesPage,
@@ -101,10 +101,7 @@ function CannedResponsesPage() {
           icon={<MessageSquare className="h-12 w-12" />}
           title="No canned responses yet"
           description="Canned responses let agents reply faster to common questions."
-          action={{
-            label: "Create Response",
-            onClick: () => setIsCreateOpen(true),
-          }}
+          action={<Button onClick={() => setIsCreateOpen(true)}>Create Response</Button>}
         />
       ) : (
         <div className="space-y-3">

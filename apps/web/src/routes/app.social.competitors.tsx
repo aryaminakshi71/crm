@@ -43,7 +43,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ function CompetitorsPage() {
       return res.json();
     },
   });
-  const competitors: Competitor[] = data?.data ?? [];
+  const competitors: Competitor[] = (data as any)?.data ?? [];
 
   // ── Create competitor ────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -180,10 +180,7 @@ function CompetitorsPage() {
           icon={<ShieldAlert className="w-10 h-10 text-muted-foreground" />}
           title="No competitors tracked"
           description="Start tracking competitors to benchmark your social media performance."
-          action={{
-            label: "Track Competitor",
-            onClick: () => setIsCreateOpen(true),
-          }}
+          action={<Button onClick={() => setIsCreateOpen(true)}>Track Competitor</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -236,7 +233,7 @@ function CompetitorsPage() {
         title="Track Competitor"
         onSubmit={() => createMutation.mutate(newCompetitor)}
         isLoading={createMutation.isPending}
-        submitLabel="Add Competitor"
+        submitText="Add Competitor"
       >
         <FormField label="Competitor Name" required>
           <Input

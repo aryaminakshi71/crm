@@ -15,26 +15,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, GitBranch, XCircle,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
-
-const MOCK_WORKFLOW = (id: string) => ({
-  id,
-  name: "New Lead → Slack Notify",
-  sourceApp: "crm",
-  targetApp: "slack",
-  triggerEvent: "lead.created",
-  actionType: "send_message",
-  actionConfig: { channel: "#sales", message: "New lead: {{lead.name}}" },
-  isActive: true,
-  createdAt: new Date().toISOString(),
-  runCount: 42,
-  lastRun: new Date().toISOString(),
-  recentRuns: [
-    { id: "r-1", status: "success", executedAt: new Date().toISOString() },
-    { id: "r-2", status: "success", executedAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: "r-3", status: "failed", executedAt: new Date(Date.now() - 7200000).toISOString(), error: "Timeout" },
-  ],
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 export const Route = createFileRoute("/app/integrations/workflows/$id")({
@@ -50,20 +31,21 @@ function WorkflowDetailPage() {
       const res = await fetch(`${API_BASE}/v1/integration/workflows/${id}`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_WORKFLOW(id);
+      if (!res.ok) return {};
       return res.json();
     },
+    placeholderData: (prev) => prev,
     enabled: !!id,
   });
 
-  const workflow = data ?? MOCK_WORKFLOW(id);
+  const workflow = (data as any) ?? {};
 
   if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -85,14 +67,14 @@ function WorkflowDetailPage() {
             <GitBranch className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{workflow.name}</h1>
+            <h1 className="text-xl font-bold">{(workflow as any).name}</h1>
             <p className="text-sm text-muted-foreground">
-              {workflow.runCount ?? 0} total runs
+              {(workflow as any).runCount ?? 0} total runs
             </p>
           </div>
         </div>
-        <Badge variant={workflow.isActive ? "default" : "secondary"} className="ml-auto">
-          {workflow.isActive ? "Active" : "Inactive"}
+        <Badge variant={(workflow as any).isActive ? "default" : "secondary"} className="ml-auto">
+          {(workflow as any).isActive ? "Active" : "Inactive"}
         </Badge>
       </div>
 
@@ -105,21 +87,21 @@ function WorkflowDetailPage() {
             <div className="flex items-center gap-3">
               <div className="flex-1 rounded-lg border bg-muted px-3 py-2 text-center">
                 <p className="text-xs text-muted-foreground mb-1">Source</p>
-                <p className="font-semibold capitalize">{workflow.sourceApp}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{workflow.triggerEvent}</p>
+                <p className="font-semibold capitalize">{(workflow as any).sourceApp}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{(workflow as any).triggerEvent}</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               <div className="flex-1 rounded-lg border bg-muted px-3 py-2 text-center">
                 <p className="text-xs text-muted-foreground mb-1">Target</p>
-                <p className="font-semibold capitalize">{workflow.targetApp}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{workflow.actionType}</p>
+                <p className="font-semibold capitalize">{(workflow as any).targetApp}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{(workflow as any).actionType}</p>
               </div>
             </div>
-            {workflow.actionConfig && (
+            {(workflow as any).actionConfig && (
               <div>
                 <p className="text-sm font-medium mb-2">Action Config</p>
                 <div className="space-y-1">
-                  {Object.entries(workflow.actionConfig).map(([k, v]) => (
+                  {Object.entries((workflow as any).actionConfig).map(([k, v]) => (
                     <div key={k} className="flex justify-between text-xs">
                       <span className="text-muted-foreground capitalize">{k}</span>
                       <span className="font-mono">{String(v)}</span>
@@ -128,9 +110,9 @@ function WorkflowDetailPage() {
                 </div>
               </div>
             )}
-            {workflow.createdAt && (
+            {(workflow as any).createdAt && (
               <div className="text-xs text-muted-foreground">
-                Created: {new Date(workflow.createdAt).toLocaleString()}
+                Created: {new Date((workflow as any).createdAt).toLocaleString()}
               </div>
             )}
           </CardContent>
@@ -142,7 +124,7 @@ function WorkflowDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {(workflow.recentRuns ?? []).map((run: any) => (
+              {((workflow as any).recentRuns ?? []).map((run: any) => (
                 <div key={run.id} className="flex items-center justify-between p-2 rounded border">
                   <div className="flex items-center gap-2">
                     {run.status === "success"
@@ -156,7 +138,7 @@ function WorkflowDetailPage() {
                   </span>
                 </div>
               ))}
-              {(!workflow.recentRuns || workflow.recentRuns.length === 0) && (
+              {(!(workflow as any).recentRuns || (workflow as any).recentRuns.length === 0) && (
                 <p className="text-sm text-muted-foreground text-center py-4">No runs yet</p>
               )}
             </div>
@@ -166,8 +148,8 @@ function WorkflowDetailPage() {
 
       <div className="flex gap-3">
         <Button variant="outline">Edit Workflow</Button>
-        <Button variant={workflow.isActive ? "secondary" : "default"}>
-          {workflow.isActive ? "Deactivate" : "Activate"}
+        <Button variant={(workflow as any).isActive ? "secondary" : "secondary"}>
+          {(workflow as any).isActive ? "Deactivate" : "Activate"}
         </Button>
         <Button variant="destructive">Delete</Button>
       </div>

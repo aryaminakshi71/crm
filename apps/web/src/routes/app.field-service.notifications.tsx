@@ -25,7 +25,7 @@ export const Route = createFileRoute("/app/field-service/notifications")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -108,6 +108,7 @@ function Notifications() {
       if (!res.ok) throw new Error("Failed to fetch jobs");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const notifications = MOCK_NOTIFICATIONS;
@@ -160,7 +161,7 @@ function Notifications() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Bell className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{isLoading ? "…" : (jobsData?.data?.filter((j: { status: string }) => j.status === "pending")?.length ?? 12)}</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : ((jobsData as any)?.data?.filter((j: { status: string }) => j.status === "pending")?.length ?? 12)}</p>
             <p className="text-xs text-muted-foreground">Pending</p>
           </CardContent>
         </Card>

@@ -21,23 +21,10 @@ export const Route = createFileRoute("/app/field-service/schedule")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
-
-const MOCK_JOBS = [
-  { id: "JOB-1042", title: "HVAC Repair", time: "10:30 AM", duration: "2h", technician: "Jane Doe", status: "in_progress", date: "2026-03-20", type: "repair" },
-  { id: "JOB-1043", title: "Electrical Inspection", time: "2:00 PM", duration: "1h", technician: "John Smith", status: "scheduled", date: "2026-03-20", type: "inspection" },
-  { id: "JOB-1044", title: "Plumbing Maintenance", time: "4:00 PM", duration: "1.5h", technician: "Sarah Johnson", status: "scheduled", date: "2026-03-20", type: "maintenance" },
-  { id: "JOB-1045", title: "Generator Installation", time: "9:00 AM", duration: "3h", technician: "Mike Wilson", status: "completed", date: "2026-03-21", type: "installation" },
-  { id: "JOB-1046", title: "AC Unit Repair", time: "1:00 PM", duration: "2h", technician: "Tom Brown", status: "scheduled", date: "2026-03-21", type: "repair" },
-  { id: "JOB-1047", title: "HVAC Installation", time: "8:00 AM", duration: "4h", technician: "John Smith", status: "scheduled", date: "2026-03-22", type: "installation" },
-  { id: "JOB-1048", title: "Electrical Panel Upgrade", time: "11:00 AM", duration: "3h", technician: "Lisa Chen", status: "scheduled", date: "2026-03-22", type: "repair" },
-  { id: "JOB-1049", title: "Water Heater Install", time: "3:00 PM", duration: "2h", technician: "Jane Doe", status: "scheduled", date: "2026-03-22", type: "installation" },
-];
-
-const MOCK_TECHNICIANS = ["John Smith", "Jane Doe", "Mike Wilson", "Sarah Johnson", "Tom Brown", "Lisa Chen"];
 
 const hours = Array.from({ length: 12 }, (_, i) => i + 7); // 7 AM to 6 PM
 
@@ -51,6 +38,7 @@ function Schedule() {
       if (!res.ok) throw new Error("Failed to fetch schedule");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
   if (scheduleQuery.isError) return (
@@ -61,8 +49,8 @@ function Schedule() {
     </div>
   );
 
-  const jobs = scheduleQuery.data?.jobs ?? MOCK_JOBS;
-  const technicians = scheduleQuery.data?.technicians?.map((t: any) => t.name).filter(Boolean) ?? MOCK_TECHNICIANS;
+  const jobs = (scheduleQuery as any).data?.jobs ?? [];
+  const technicians = (scheduleQuery as any).data?.technicians?.map((t: any) => t.name).filter(Boolean) ?? [];
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const dates = ["2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22"];
@@ -158,7 +146,7 @@ function Schedule() {
           </div>
 
           {/* Technician Rows */}
-          {technicians.map((tech, techIdx) => (
+          {technicians.map((tech: any, techIdx: any) => (
             <div
               key={tech}
               className={`grid grid-cols-8 border-b border-border/60 last:border-b-0 ${
@@ -168,7 +156,7 @@ function Schedule() {
               <div className="p-3 border-r border-border/60">
                 <p className="text-sm font-medium text-foreground">{tech}</p>
                 <p className="text-xs text-muted-foreground">
-                  {getJobsForDate("2026-03-20").filter(j => j.technician === tech).length} jobs today
+                  {getJobsForDate("2026-03-20").filter((j: any) => j.technician === tech).length} jobs today
                 </p>
               </div>
               {dates.map((date, dateIdx) => {
@@ -181,7 +169,7 @@ function Schedule() {
                     }`}
                   >
                     <div className="space-y-1">
-                      {dayJobs.slice(0, 2).map((job) => (
+                      {dayJobs.slice(0, 2).map((job: any) => (
                         <div
                           key={job.id}
                           className={`p-1 rounded text-xs truncate ${
@@ -210,7 +198,7 @@ function Schedule() {
         <CardContent className="p-6">
           <h3 className="font-bold text-foreground mb-4">Today's Schedule - March 20, 2026</h3>
           <div className="space-y-3">
-            {jobs.filter(j => j.date === "2026-03-20").map((job) => (
+            {jobs.filter((j: any) => j.date === "2026-03-20").map((job: any) => (
               <div
                 key={job.id}
                 className={`flex items-center gap-4 p-4 rounded-lg border ${

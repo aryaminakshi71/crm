@@ -51,7 +51,7 @@ import {
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { marketingApi } from "../lib/api";
+import { marketingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/marketing/_index")({
   component: MarketingDashboard,
@@ -125,12 +125,6 @@ interface Campaign {
   status: "active" | "draft";
 }
 
-const MOCK_CAMPAIGNS: Campaign[] = [
-  { id: "1", name: "Spring Sale 2026", channel: "Email", audienceSize: 25000, budget: 5000, startDate: "2026-03-01", endDate: "2026-03-31", status: "active" },
-  { id: "2", name: "Product Launch - Series X", channel: "Social", audienceSize: 18000, budget: 8000, startDate: "2026-03-15", endDate: "2026-04-15", status: "active" },
-  { id: "3", name: "Customer Retention Q1", channel: "Email", audienceSize: 32000, budget: 3000, startDate: "2026-01-01", endDate: "2026-03-31", status: "draft" },
-  { id: "4", name: "Newsletter Weekly", channel: "Email", audienceSize: 45000, budget: 1000, startDate: "2026-01-06", endDate: "2026-12-31", status: "active" },
-];
 
 interface NewCampaignModalProps {
   open: boolean;
@@ -463,12 +457,11 @@ function MarketingDashboard() {
     queryKey: ["marketing", "campaigns"],
     queryFn: () => marketingApi.campaigns.list({ limit: 50 }),
     retry: false,
+    placeholderData: (prev) => prev,
   });
 
-  const [localCampaigns, setLocalCampaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
-  const campaigns: Campaign[] = campaignsQuery.data?.data?.length > 0
-    ? campaignsQuery.data.data
-    : localCampaigns;
+  const [localCampaigns, setLocalCampaigns] = useState<Campaign[]>([]);
+  const campaigns: Campaign[] = campaignsQuery.data?.data ?? localCampaigns;
 
   const [showNewCampaign, setShowNewCampaign] = useState(false);
 

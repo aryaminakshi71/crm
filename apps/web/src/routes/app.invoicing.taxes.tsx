@@ -34,9 +34,9 @@ export const Route = createFileRoute("/app/invoicing/taxes")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type TaxRate = {
@@ -48,15 +48,7 @@ type TaxRate = {
   status: "active" | "inactive";
 };
 
-const mockTaxRates: TaxRate[] = [
-  { id: "1", name: "US Sales Tax", rate: 8.875, type: "sales", region: "New York, USA", status: "active" },
-  { id: "2", name: "UK VAT", rate: 20, type: "vat", region: "United Kingdom", status: "active" },
-  { id: "3", name: "EU VAT Standard", rate: 21, type: "vat", region: "European Union", status: "active" },
-  { id: "4", name: "Australia GST", rate: 10, type: "gst", region: "Australia", status: "active" },
-  { id: "5", name: "Canada GST", rate: 5, type: "gst", region: "Canada", status: "active" },
-  { id: "6", name: "California Sales Tax", rate: 7.25, type: "sales", region: "California, USA", status: "inactive" },
-  { id: "7", name: "Custom Support Fee", rate: 15, type: "custom", region: "All Regions", status: "active" },
-];
+const EMPTY_TAX_RATES: any[] = [];
 
 function TaxConfiguration() {
   const [search, setSearch] = useState("");
@@ -96,6 +88,7 @@ function TaxConfiguration() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (taxesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -104,7 +97,7 @@ function TaxConfiguration() {
       <Button variant="outline" size="sm" onClick={() => taxesQuery.refetch()}>Retry</Button>
     </div>
   );
-  const taxRates: TaxRate[] = taxesQuery.data?.data?.length ? taxesQuery.data.data : mockTaxRates;
+  const taxRates: any[] = (taxesQuery as any)?.data?.data ?? [];
 
   const filteredTaxRates = taxRates.filter((tax) => {
     if (!search.trim()) return true;

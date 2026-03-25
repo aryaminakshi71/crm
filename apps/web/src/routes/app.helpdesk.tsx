@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   BookOpenText,
   ListOrdered,
@@ -41,7 +41,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, nucleoApi } from "@/lib/api";
 
 const CHART_COLORS = [
   "#22d3ee",
@@ -57,6 +57,10 @@ export const Route = createFileRoute("/app/helpdesk")({
 });
 
 function HelpdeskPage() {
+  const location = useLocation();
+  const isSubRoute = location.pathname !== "/app/helpdesk";
+  if (isSubRoute) return <Outlet />;
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");

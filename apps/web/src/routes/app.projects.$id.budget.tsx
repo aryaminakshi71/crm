@@ -39,7 +39,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -391,7 +391,7 @@ function BudgetPage() {
             <select
               value={newExpense.category}
               onChange={(e) =>
-                setNewExpense((e) => ({ ...e, category: e.target.value }))
+                setNewExpense((e) => ({ ...e, category: (e as any).target.value }))
               }
               className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
             >
@@ -407,7 +407,7 @@ function BudgetPage() {
             <Input
               value={newExpense.description}
               onChange={(e) =>
-                setNewExpense((e) => ({ ...e, description: e.target.value }))
+                setNewExpense((e) => ({ ...e, description: (e as any).target.value }))
               }
               placeholder="Enter description..."
             />
@@ -417,7 +417,7 @@ function BudgetPage() {
               type="number"
               value={newExpense.amount}
               onChange={(e) =>
-                setNewExpense((e) => ({ ...e, amount: e.target.value }))
+                setNewExpense((e) => ({ ...e, amount: (e as any).target.value }))
               }
               placeholder="$0.00"
             />

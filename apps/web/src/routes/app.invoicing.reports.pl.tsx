@@ -48,37 +48,16 @@ export const Route = createFileRoute("/app/invoicing/reports/pl")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
-const revenueBreakdown = [
-  { name: "Product Sales", value: 180000, color: "#22d3ee" },
-  { name: "Services", value: 95000, color: "#a78bfa" },
-  { name: "Subscriptions", value: 45000, color: "#f472b6" },
-  { name: "Other", value: 7500, color: "#34d399" },
-];
-
-const monthlyPLData = [
-  { month: "Jan", revenue: 45000, expenses: 32000, profit: 13000 },
-  { month: "Feb", revenue: 52000, expenses: 35000, profit: 17000 },
-  { month: "Mar", revenue: 48000, expenses: 33000, profit: 15000 },
-  { month: "Apr", revenue: 61000, expenses: 38000, profit: 23000 },
-  { month: "May", revenue: 55000, expenses: 36000, profit: 19000 },
-  { month: "Jun", revenue: 67000, expenses: 40000, profit: 27000 },
-];
-
-const expenseBreakdown = [
-  { category: "Salaries & Wages", amount: 120000, percentage: 50 },
-  { category: "Software & Tools", amount: 24000, percentage: 10 },
-  { category: "Marketing", amount: 36000, percentage: 15 },
-  { category: "Office & Facilities", amount: 18000, percentage: 7.5 },
-  { category: "Professional Services", amount: 18000, percentage: 7.5 },
-  { category: "Other Expenses", amount: 24000, percentage: 10 },
-];
+const EMPTY_REVENUE_BREAKDOWN: any[] = [];
+const EMPTY_PL_DATA: any[] = [];
+const EMPTY_EXPENSE_BREAKDOWN: any[] = [];
 
 function PLReports() {
   const [dateRange, setDateRange] = useState("ytd");
@@ -90,6 +69,7 @@ function PLReports() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (plQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -99,10 +79,10 @@ function PLReports() {
     </div>
   );
 
-  const totalRevenue = plQuery.data?.totalRevenue ?? 327500;
-  const totalExpenses = plQuery.data?.totalExpenses ?? 238000;
-  const netProfit = plQuery.data?.netProfit ?? 89500;
-  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : (plQuery.data?.profitMargin ?? 27.3);
+  const totalRevenue = (plQuery as any).data?.totalRevenue ?? 327500;
+  const totalExpenses = (plQuery as any).data?.totalExpenses ?? 238000;
+  const netProfit = (plQuery as any).data?.netProfit ?? 89500;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : ((plQuery as any).data?.profitMargin ?? 27.3);
 
   return (
     <div className="space-y-6">
@@ -152,7 +132,7 @@ function PLReports() {
           <CardContent>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyPLData}>
+                <AreaChart data={EMPTY_PL_DATA}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#34d399" stopOpacity={0.2} />
@@ -196,7 +176,7 @@ function PLReports() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={revenueBreakdown}
+                    data={EMPTY_REVENUE_BREAKDOWN}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -204,7 +184,7 @@ function PLReports() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {revenueBreakdown.map((entry, index) => (
+                    {EMPTY_REVENUE_BREAKDOWN.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -221,7 +201,7 @@ function PLReports() {
               </ResponsiveContainer>
             </div>
             <div className="mt-4 space-y-2">
-              {revenueBreakdown.map((item) => (
+              {EMPTY_REVENUE_BREAKDOWN.map((item: any) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -253,7 +233,7 @@ function PLReports() {
               </tr>
             </thead>
             <tbody>
-              {expenseBreakdown.map((expense) => (
+              {EMPTY_EXPENSE_BREAKDOWN.map((expense: any) => (
                 <tr key={expense.category} className="border-b border-border">
                   <td className="px-4 py-3 text-sm font-medium">{expense.category}</td>
                   <td className="px-4 py-3 text-sm text-rose-400">${expense.amount.toLocaleString()}</td>

@@ -11,7 +11,7 @@ import { DollarSign, Target, TrendingUp,
   AlertCircle
 } from "lucide-react";
 import { useMemo } from "react";
-import { dealsApi } from "../lib/api";
+import { dealsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/crm/forecasting")({
   component: CrmForecastingPage,

@@ -12,22 +12,22 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 function getOrgHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
-const MOCK_SUBSCRIPTION = {
-  plan: "growth",
-  status: "active",
-  billingCycle: "monthly",
-  currentPeriodEnd: "2026-04-19",
-  trialEnd: null,
-  userCount: 8,
+const EMPTY_SUBSCRIPTION = {
+  plan: "growth" as const,
+  status: "active" as const,
+  billingCycle: "monthly" as const,
+  currentPeriodEnd: "—",
+  trialEnd: null as null | string,
+  userCount: 0,
 };
 
-const MOCK_USAGE = {
-  apiCalls: { used: 8450, limit: 50000, percent: 17 },
-  storage: { used: 3.2, limit: 100, percent: 3 },
-  users: { used: 8, limit: 25, percent: 32 },
+const EMPTY_USAGE = {
+  apiCalls: { used: 0, limit: 50000, percent: 0 },
+  storage: { used: 0, limit: 100, percent: 0 },
+  users: { used: 0, limit: 25, percent: 0 },
 };
 
 function SettingsBillingPage() {
@@ -41,6 +41,7 @@ function SettingsBillingPage() {
       if (!res.ok) throw new Error("Failed to fetch subscription");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
   if (subscriptionQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -60,9 +61,10 @@ function SettingsBillingPage() {
       if (!res.ok) throw new Error("Failed to fetch usage");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const apiSub = subscriptionQuery.data?.subscription;
+  const apiSub = (subscriptionQuery as any).data?.subscription;
   const subscription = apiSub
     ? {
         plan: apiSub.plan?.key ?? "growth",
@@ -74,28 +76,28 @@ function SettingsBillingPage() {
         trialEnd: apiSub.trialEnd ?? null,
         userCount: apiSub.userCount ?? 0,
       }
-    : MOCK_SUBSCRIPTION;
+    : EMPTY_SUBSCRIPTION;
 
   const apiUsage = usageQuery.data;
   const usage = apiUsage
     ? {
         apiCalls: {
-          used: apiUsage.usage?.apiCalls ?? 0,
-          limit: apiUsage.limits?.maxApiCalls ?? 50000,
-          percent: apiUsage.percentages?.apiCalls ?? 0,
+          used: (apiUsage as any).usage?.apiCalls ?? 0,
+          limit: (apiUsage as any).limits?.maxApiCalls ?? 50000,
+          percent: (apiUsage as any).percentages?.apiCalls ?? 0,
         },
         storage: {
-          used: Math.round(((apiUsage.usage?.storageMb ?? 0) / 1024) * 10) / 10,
-          limit: Math.round((apiUsage.limits?.maxStorage ?? 102400) / 1024),
-          percent: apiUsage.percentages?.storage ?? 0,
+          used: Math.round((((apiUsage as any).usage?.storageMb ?? 0) / 1024) * 10) / 10,
+          limit: Math.round(((apiUsage as any).limits?.maxStorage ?? 102400) / 1024),
+          percent: (apiUsage as any).percentages?.storage ?? 0,
         },
         users: {
-          used: apiUsage.usage?.users ?? 0,
-          limit: apiUsage.limits?.maxUsers ?? 25,
-          percent: apiUsage.percentages?.users ?? 0,
+          used: (apiUsage as any).usage?.users ?? 0,
+          limit: (apiUsage as any).limits?.maxUsers ?? 25,
+          percent: (apiUsage as any).percentages?.users ?? 0,
         },
       }
-    : MOCK_USAGE;
+    : EMPTY_USAGE;
 
   const isLoading = subscriptionQuery.isLoading || usageQuery.isLoading;
 

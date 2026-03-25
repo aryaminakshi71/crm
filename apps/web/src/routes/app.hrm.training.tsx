@@ -7,17 +7,21 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  Code,
   Download,
   FileText,
   GraduationCap,
+  Lightbulb,
   MoreVertical,
   Plus,
   Search,
+  Shield,
+  TrendingUp,
   Users,
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/training")({
   component: TrainingPrograms,
@@ -131,7 +135,6 @@ function _unused() {
     status: "Active",
     nextSession: "Self-paced",
     instructor: "Chris Martinez",
-    status: "active",
   },
   ]; // end _unused
 }
@@ -140,6 +143,8 @@ function TrainingPrograms() {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"programs" | "records">("programs");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newProgram, setNewProgram] = useState({ title: "", category: "General", durationHours: "4" });
 
@@ -164,8 +169,11 @@ function TrainingPrograms() {
     onError: () => toast.error("Failed to create program"),
   });
 
-  const programs: any[] = programsData?.data ?? [];
-  const records: any[] = recordsData?.data ?? [];
+  const programs: any[] = (programsData as any)?.data ?? [];
+  const records: any[] = (recordsData as any)?.data ?? [];
+
+  const types = ["All", ...Array.from(new Set(programs.map((p: any) => p.category ?? p.type ?? "General")))];
+  const statuses = ["All", "Active", "Mandatory", "Archived"];
 
   const filteredPrograms = programs.filter((p) => {
     if (!search.trim()) return true;
@@ -289,7 +297,7 @@ function TrainingPrograms() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
-                {types.map((type) => (
+                {types.map((type: any) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
@@ -298,7 +306,7 @@ function TrainingPrograms() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
-                {statuses.map((status) => (
+                {statuses.map((status: any) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>

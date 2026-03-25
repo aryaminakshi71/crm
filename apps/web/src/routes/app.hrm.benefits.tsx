@@ -35,7 +35,7 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 // ─── Route ───────────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ function HrmBenefitsPage() {
       });
       if (!res.ok) throw new Error("Failed to fetch benefits");
       const json = await res.json();
-      return json.data ?? json;
+      return (json as any).data ?? json;
     },
     placeholderData: DEMO_BENEFITS,
   });
@@ -400,11 +400,12 @@ function HrmBenefitsPage() {
       {/* Create Benefit Modal */}
       {showCreate && (
         <FormModal
+          isOpen={showCreate}
           title="Add Benefit Plan"
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreateSubmit}
           isLoading={createBenefitMutation.isPending}
-          submitLabel="Add Benefit"
+          submitText="Add Benefit"
         >
           <FormField label="Benefit Name" required>
             <Input

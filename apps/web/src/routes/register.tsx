@@ -44,8 +44,8 @@ async function notifyWeavebridgeOfSignup(data: {
         },
       }),
     });
-  } catch (e) {
-    console.error("Webhook notification failed:", e);
+  } catch {
+    // webhook notification failure is non-critical
   }
 }
 

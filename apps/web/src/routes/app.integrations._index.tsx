@@ -4,12 +4,13 @@
  * Dashboard showing integration stats, recent activity, and quick actions.
  */
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@crm/ui";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@crm/ui";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   Puzzle,
+  Search,
   Workflow,
   Bell,
   Webhook,
@@ -22,6 +23,7 @@ import {
   Activity,
   Zap,
 } from "lucide-react";
+import { z } from "zod";
 import {
   Area,
   AreaChart,
@@ -39,13 +41,19 @@ import {
   YAxis,
 } from "recharts";
 
+const searchSchema = z.object({
+  q: z.string().optional(),
+  status: z.enum(["success", "error"]).optional(),
+});
+
 export const Route = createFileRoute("/app/integrations/_index")({
+  validateSearch: searchSchema,
   component: IntegrationsOverview,
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -72,6 +80,9 @@ const MOCK_EVENTS = [
 ];
 
 function IntegrationsOverview() {
+  const { q = "", status: statusFilter } = useSearch({ from: "/app/integrations/_index" });
+  const navigate = useNavigate({ from: "/app/integrations/_index" });
+
   const { data: connectorsData, isLoading: connectorsLoading, isError: connectorsError, refetch: connectorsRefetch } = useQuery({
     queryKey: ["integration-connectors"],
     queryFn: async () => {
@@ -79,6 +90,7 @@ function IntegrationsOverview() {
       if (!res.ok) throw new Error("Failed to fetch connectors");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: workflowsData, isLoading: workflowsLoading } = useQuery({
@@ -88,6 +100,7 @@ function IntegrationsOverview() {
       if (!res.ok) throw new Error("Failed to fetch workflows");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (connectorsError) return (
@@ -98,20 +111,29 @@ function IntegrationsOverview() {
     </div>
   );
 
-  const connectors = connectorsData?.data ?? MOCK_CONNECTORS;
-  const workflows = workflowsData?.data ?? MOCK_WORKFLOWS;
-  const recentEvents = MOCK_EVENTS;
+  const connectors = (connectorsData as any)?.data ?? [];
+  const workflows = (workflowsData as any)?.data ?? [];
+  const recentEvents: any[] = [];
 
   const stats = {
-    activeConnectors: connectorsData?.total ?? 24,
-    activeWorkflows: workflowsData?.total ?? 156,
+    activeConnectors: (connectorsData as any)?.total ?? 24,
+    activeWorkflows: (workflowsData as any)?.total ?? 156,
     eventsToday: 12847,
     successRate: 99.2,
     failedEvents: 23,
     pendingEvents: 145,
   };
 
-  const topConnectors = connectors.slice(0, 5).map((c: { name: string; type?: string; events?: number; status?: string }) => ({
+  const filteredConnectors = connectors.filter((c: any) =>
+    !q || c.name?.toLowerCase().includes(q.toLowerCase()) || c.type?.toLowerCase().includes(q.toLowerCase()),
+  );
+  const filteredEvents = recentEvents.filter((e) => {
+    const matchesQ = !q || e.type.toLowerCase().includes(q.toLowerCase()) || e.connector.toLowerCase().includes(q.toLowerCase()) || e.workflow.toLowerCase().includes(q.toLowerCase());
+    const matchesStatus = !statusFilter || e.status === statusFilter;
+    return matchesQ && matchesStatus;
+  });
+
+  const topConnectors = filteredConnectors.slice(0, 5).map((c: { name: string; type?: string; events?: number; status?: string }) => ({
     name: c.name,
     type: c.type ?? "Integration",
     events: c.events ?? 0,
@@ -145,6 +167,32 @@ function IntegrationsOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            className="pl-9"
+            placeholder="Search connectors or events..."
+            value={q}
+            onChange={(e) =>
+              navigate({ search: (prev) => ({ ...prev, q: e.target.value || undefined }) })
+            }
+          />
+        </div>
+        <select
+          value={statusFilter ?? ""}
+          onChange={(e) =>
+            navigate({ search: (prev) => ({ ...prev, status: (e.target.value as typeof statusFilter) || undefined }) })
+          }
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All statuses</option>
+          <option value="success">Success</option>
+          <option value="error">Error</option>
+        </select>
+      </div>
+
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60">
@@ -371,7 +419,7 @@ function IntegrationsOverview() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {topConnectors.map((connector) => (
+            {topConnectors.map((connector: any) => (
               <div
                 key={connector.name}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
@@ -411,7 +459,10 @@ function IntegrationsOverview() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentEvents.map((event) => (
+            {filteredEvents.length === 0 && (
+              <p className="text-sm text-muted-foreground py-2">No events match your search.</p>
+            )}
+            {filteredEvents.map((event) => (
               <div
                 key={event.id}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"

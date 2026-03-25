@@ -6,16 +6,16 @@ import { Video, Plus, Calendar, Users, Clock,
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/marketing/webinars")({
   component: MarketingWebinarsPage,
 });
 
-const MOCK_WEBINARS = [
+const _MOCK_WEBINARS = [
   {
     id: "wb-1",
     name: "Intro to Nucleo CRM: Live Demo",
@@ -77,9 +77,10 @@ function MarketingWebinarsPage() {
         return null;
       }
     },
+    placeholderData: (prev) => prev,
   });
 
-  const webinars = campaignsData?.data?.length ? campaignsData.data : MOCK_WEBINARS;
+  const webinars = (campaignsData as any)?.data ?? [];
 
   const statusColor = (s: string) =>
     s === "upcoming" ? "bg-blue-100 text-blue-800"
@@ -92,7 +93,7 @@ function MarketingWebinarsPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

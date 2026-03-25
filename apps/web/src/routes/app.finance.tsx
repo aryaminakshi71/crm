@@ -17,7 +17,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   AlertCircle,
@@ -50,7 +50,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/finance")({
   validateSearch: z.object({
@@ -62,6 +62,8 @@ export const Route = createFileRoute("/app/finance")({
 type FinanceView = "overview" | "transactions" | "payroll";
 
 function FinancePage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/finance") return <Outlet />;
   const queryClient = useQueryClient();
   const { view: viewParam } = Route.useSearch();
   const [view, setView] = useState<FinanceView>(viewParam ?? "overview");

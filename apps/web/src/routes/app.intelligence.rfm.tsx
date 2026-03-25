@@ -13,7 +13,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const MOCK_RFM = {
@@ -51,9 +51,10 @@ function RfmPage() {
       const res = await fetch(`${API_BASE}/v1/intelligence/rfm`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_RFM;
+      if (!res.ok) return null;
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -64,7 +65,7 @@ function RfmPage() {
     </div>
   );
 
-  const rfm = data ?? MOCK_RFM;
+  const rfm = data ?? [];
 
   return (
     <div className="p-6 space-y-6">
@@ -87,7 +88,7 @@ function RfmPage() {
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
-                    data={rfm.segments}
+                    data={(rfm as any).segments}
                     dataKey="count"
                     nameKey="name"
                     cx="50%"
@@ -96,7 +97,7 @@ function RfmPage() {
                     label={({ name, percentage }) => `${name} (${percentage}%)`}
                     labelLine={false}
                   >
-                    {rfm.segments?.map((seg: any, i: number) => (
+                    {(rfm as any).segments?.map((seg: any, i: number) => (
                       <Cell key={i} fill={seg.color} />
                     ))}
                   </Pie>
@@ -112,7 +113,7 @@ function RfmPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {rfm.segments?.map((segment: any) => (
+                {(rfm as any).segments?.map((segment: any) => (
                   <div key={segment.name} className="flex items-center justify-between p-3 rounded-lg border">
                     <div>
                       <p className="font-semibold text-sm" style={{ color: segment.color }}>{segment.name}</p>

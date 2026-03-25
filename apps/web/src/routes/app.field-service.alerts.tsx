@@ -18,19 +18,23 @@ import {
   Calendar,
   TrendingUp,
   TrendingDown,
-  AlertCircle
+  AlertCircle,
+  X,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { toast } from "sonner";
+import { fieldServiceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/field-service/alerts")({
+  validateSearch: z.object({
+    search: z.string().optional(),
+    severity: z.string().optional(),
+    type: z.string().optional(),
+    slaType: z.string().optional(),
+  }),
   component: Alerts,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-};
 
 const MOCK_ALERTS = [
   { id: 1, type: "sla_breach", severity: "critical", jobId: "JOB-1035", customer: "Downtown Office", issue: "Response time SLA breached", technician: "John Smith", breachedAt: "10:15 AM", currentStatus: "Technician on site", responseTime: "1h 15m", resolutionTime: null, slaType: "response" },
@@ -48,17 +52,38 @@ const slaStats = [
 ];
 
 function Alerts() {
+  const queryClient = useQueryClient();
+
   const alertsQuery = useQuery({
     queryKey: ["field-service", "alerts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/field-service/jobs?limit=50`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch alerts");
-      return res.json();
-    },
+    queryFn: () => fieldServiceApi.jobs.list(),
+    placeholderData: (prev) => prev,
     retry: false,
   });
+
+  const dismissAlertMutation = useMutation({
+    mutationFn: (jobId: string) => fieldServiceApi.jobs.update(jobId, { alertStatus: "dismissed" }),
+    onSuccess: () => {
+      toast.success("Alert dismissed");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "alerts"] });
+    },
+    onError: () => {
+      toast.error("Failed to dismiss alert");
+    },
+  });
+
+  const resolveAlertMutation = useMutation({
+    mutationFn: (jobId: string) => fieldServiceApi.jobs.update(jobId, { alertStatus: "resolved", status: "resolved" }),
+    onSuccess: () => {
+      toast.success("Alert resolved successfully");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["field-service", "jobs"] });
+    },
+    onError: () => {
+      toast.error("Failed to resolve alert");
+    },
+  });
+
   if (alertsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -67,7 +92,7 @@ function Alerts() {
     </div>
   );
 
-  const alerts = alertsQuery.data?.data ?? MOCK_ALERTS;
+  const alerts = (alertsQuery as any).data?.data ?? [];
 
   if (alertsQuery.isLoading) {
     return (
@@ -170,12 +195,12 @@ function Alerts() {
               <AlertTriangle className="h-6 w-6 text-red-500" />
               <h3 className="font-bold text-red-500">Active SLA Breaches</h3>
               <span className="ml-auto text-xs bg-red-500/20 text-red-500 px-2 py-1 rounded-full">
-                {alerts.filter(a => a.type === "sla_breach" && a.severity === "critical").length} Critical
+                {alerts.filter((a: any) => a.type === "sla_breach" && a.severity === "critical").length} Critical
               </span>
             </div>
           </div>
           <div className="space-y-4">
-            {alerts.filter(a => a.type === "sla_breach" && a.severity === "critical").map((alert) => (
+            {alerts.filter((a: any) => a.type === "sla_breach" && a.severity === "critical").map((alert: any) => (
               <div key={alert.id} className="p-4 rounded-lg border border-red-500/20 bg-red-500/5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -190,11 +215,21 @@ function Alerts() {
                       <p className="text-sm text-muted-foreground mt-1">{alert.issue}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-red-500">
-                      {alert.slaType === "response" ? alert.responseTime : alert.timeRemaining}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{alert.slaType} SLA</p>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-red-500">
+                        {alert.slaType === "response" ? alert.responseTime : alert.timeRemaining}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{alert.slaType} SLA</p>
+                    </div>
+                    <button
+                      onClick={() => dismissAlertMutation.mutate(String(alert.id))}
+                      disabled={dismissAlertMutation.isPending}
+                      className="p-1 rounded hover:bg-muted/50 transition-colors"
+                      title="Dismiss"
+                    >
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded bg-muted/30 mb-3">
@@ -219,8 +254,12 @@ function Alerts() {
                   <button className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors">
                     Escalate Now
                   </button>
-                  <button className="flex-1 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
-                    View Job
+                  <button
+                    onClick={() => resolveAlertMutation.mutate(String(alert.id))}
+                    disabled={resolveAlertMutation.isPending}
+                    className="flex-1 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    Resolve
                   </button>
                 </div>
               </div>
@@ -237,12 +276,12 @@ function Alerts() {
               <Clock className="h-6 w-6 text-amber-500" />
               <h3 className="font-bold text-amber-500">At Risk - SLA Approaching</h3>
               <span className="ml-auto text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
-                {alerts.filter(a => a.severity === "warning").length} Warnings
+                {alerts.filter((a: any) => a.severity === "warning").length} Warnings
               </span>
             </div>
           </div>
           <div className="space-y-3">
-            {alerts.filter(a => a.severity === "warning").map((alert) => (
+            {alerts.filter((a: any) => a.severity === "warning").map((alert: any) => (
               <div key={alert.id} className="flex items-center justify-between p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/20">
@@ -261,8 +300,20 @@ function Alerts() {
                     <p className="text-sm font-medium text-amber-500">{alert.timeRemaining}</p>
                     <p className="text-xs text-muted-foreground">remaining</p>
                   </div>
-                  <button className="px-3 py-1 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors">
-                    Take Action
+                  <button
+                    onClick={() => resolveAlertMutation.mutate(String(alert.id))}
+                    disabled={resolveAlertMutation.isPending}
+                    className="px-3 py-1 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+                  >
+                    Resolve
+                  </button>
+                  <button
+                    onClick={() => dismissAlertMutation.mutate(String(alert.id))}
+                    disabled={dismissAlertMutation.isPending}
+                    className="p-1 rounded hover:bg-muted/50 transition-colors"
+                    title="Dismiss"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
                   </button>
                 </div>
               </div>

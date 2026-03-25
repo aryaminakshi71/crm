@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   ShoppingCart,
@@ -31,15 +31,6 @@ export const Route = createFileRoute("/app/ecommerce/abandoned")({
   component: AbandonedCartsPage,
 });
 
-const MOCK_ABANDONED_CARTS = [
-  { id: 1, customer: "Alex Johnson", email: "alex@example.com", items: 3, total: 459.97, recovered: true, lastActivity: "2 hours ago", checkoutStep: "payment", products: ["55\" 4K Smart TV", "HDMI Cable", "TV Stand"] },
-  { id: 2, customer: "Emma Williams", email: "emma@example.com", items: 2, total: 1249.98, recovered: true, lastActivity: "3 hours ago", checkoutStep: "shipping", products: ["Laptop 15\" Pro", "Laptop Bag"] },
-  { id: 3, customer: "James Brown", email: "james@example.com", items: 1, total: 599.99, recovered: false, lastActivity: "5 hours ago", checkoutStep: "billing", products: ["Mountain Bike"] },
-  { id: 4, customer: "Sophia Martinez", email: "sophia@example.com", items: 4, total: 789.96, recovered: false, lastActivity: "1 day ago", checkoutStep: "cart", products: ["3-Seater Sofa", "Throw Pillows", "Blanket", "Side Table"] },
-  { id: 5, customer: "William Davis", email: "william@example.com", items: 2, total: 299.98, recovered: false, lastActivity: "1 day ago", checkoutStep: "shipping", products: ["Winter Jacket Black", "Winter Gloves"] },
-  { id: 6, customer: "Olivia Wilson", email: "olivia@example.com", items: 1, total: 249.99, recovered: false, lastActivity: "2 days ago", checkoutStep: "cart", products: ["Wireless Headphones Pro"] },
-];
-
 function AbandonedCartsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -53,6 +44,7 @@ function AbandonedCartsPage() {
       if (!res.ok) throw new Error("Failed to fetch abandoned carts");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -63,9 +55,9 @@ function AbandonedCartsPage() {
     </div>
   );
 
-  const abandonedCarts = apiData?.data?.length > 0 ? apiData.data : MOCK_ABANDONED_CARTS;
+  const abandonedCarts = (apiData as any)?.data ?? [];
 
-  const filteredCarts = abandonedCarts.filter((cart: typeof MOCK_ABANDONED_CARTS[0]) => {
+  const filteredCarts = abandonedCarts.filter((cart: any) => {
     const matchesSearch =
       cart.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cart.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -77,11 +69,11 @@ function AbandonedCartsPage() {
 
   const summary = {
     total: abandonedCarts.length,
-    recovered: abandonedCarts.filter((c: typeof MOCK_ABANDONED_CARTS[0]) => c.recovered).length,
-    abandoned: abandonedCarts.filter((c: typeof MOCK_ABANDONED_CARTS[0]) => !c.recovered).length,
-    totalRevenue: abandonedCarts.reduce((sum: number, c: typeof MOCK_ABANDONED_CARTS[0]) => sum + c.total, 0),
-    recoveredRevenue: abandonedCarts.filter((c) => c.recovered).reduce((sum, c) => sum + c.total, 0),
-    recoveryRate: ((abandonedCarts.filter((c) => c.recovered).length / abandonedCarts.length) * 100).toFixed(1),
+    recovered: abandonedCarts.filter((c: any) => c.recovered).length,
+    abandoned: abandonedCarts.filter((c: any) => !c.recovered).length,
+    totalRevenue: abandonedCarts.reduce((sum: number, c: any) => sum + c.total, 0),
+    recoveredRevenue: abandonedCarts.filter((c: any) => c.recovered).reduce((sum: any, c: any) => sum + c.total, 0),
+    recoveryRate: ((abandonedCarts.filter((c: any) => c.recovered).length / abandonedCarts.length) * 100).toFixed(1),
   };
 
   const getStepBadge = (step: string) => {
@@ -188,7 +180,7 @@ function AbandonedCartsPage() {
 
       {/* Abandoned Carts List */}
       <div className="space-y-4">
-        {filteredCarts.map((cart) => (
+        {filteredCarts.map((cart: any) => (
           <Card key={cart.id} className={`border-border/60 ${cart.recovered ? "border-green-200" : ""}`}>
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
@@ -207,7 +199,7 @@ function AbandonedCartsPage() {
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">{cart.email}</p>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {cart.products.map((product) => (
+                    {cart.products.map((product: any) => (
                       <Badge key={product} variant="outline" size="sm">
                         {product}
                       </Badge>

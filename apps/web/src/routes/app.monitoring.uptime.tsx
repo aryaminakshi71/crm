@@ -67,8 +67,8 @@ function UptimePage() {
     { id: "6", name: "Database Primary", url: "https://db.nucleo.one:5432/health", interval: "30s", status: "up", latency: 12, uptime: 99.99, lastCheck: "10 sec ago" },
   ];
 
-  const checks = catalogData?.data?.length > 0
-    ? catalogData.data.map((app: any) => ({
+  const checks = (catalogData as any)?.data?.length > 0
+    ? (catalogData as any).data.map((app: any) => ({
         id: app.id,
         name: app.name,
         url: app.metadata?.endpoint || "",

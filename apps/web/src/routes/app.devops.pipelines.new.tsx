@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/pipelines/new")({
@@ -51,7 +51,7 @@ function NewPipeline() {
       return res.json();
     },
     onSuccess: (created) => {
-      const id = created?.id ?? created?.data?.id;
+      const id = (created as any)?.id ?? (created as any)?.data?.id;
       if (id) {
         navigate({ to: "/app/devops" });
       } else {

@@ -1,11 +1,11 @@
 /**
  * CRM Deals List
  *
- * Deals list with filters, sorting, and status tracking.
+ * Deals list with filters, sorting, status tracking, mutations, and pipeline chart.
  */
 
 import { Badge, Button, Card, CardContent, Input, Progress } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Briefcase,
@@ -18,13 +18,30 @@ import {
   Target,
   TrendingUp,
   User,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { dealsApi } from "../lib/api";
+import { dealsApi } from "@/lib/api";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { z } from "zod";
 
 export const Route = createFileRoute("/app/crm/deals")({
+  validateSearch: z.object({
+    stage: z.string().optional(),
+    search: z.string().optional(),
+    sort: z.string().optional(),
+  }),
   component: DealsList,
 });
 
@@ -43,45 +60,31 @@ interface Deal {
   tags: string[];
 }
 
-const MOCK_DEALS: Deal[] = [
-  {
-    id: "1",
-    title: "Enterprise SaaS License",
-    company: "Acme Corporation",
-    contact: "John Smith",
-    value: 125000,
-    stage: "negotiation",
-    probability: 75,
-    expectedClose: "2024-04-15",
-    createdAt: "2024-02-01",
-    lastActivity: "2024-03-15",
-    owner: "Sarah Chen",
-    tags: ["enterprise", "hot"],
-  },
-  {
-    id: "2",
-    title: "Cloud Migration Project",
-    company: "TechStart Inc",
-    contact: "Sarah Johnson",
-    value: 89000,
-    stage: "proposal",
-    probability: 60,
-    expectedClose: "2024-04-30",
-    createdAt: "2024-02-15",
-    lastActivity: "2024-03-14",
-    owner: "David Park",
-    tags: ["cloud", "mid-market"],
-  },
-];
+const EMPTY_CHART_DATA: any[] = [];
 
 function DealsList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("value");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteId, setShowDeleteId] = useState<string | null>(null);
+  const [stageMenuId, setStageMenuId] = useState<string | null>(null);
 
-  const { data: dealsData, isLoading: dealsLoading, isError, refetch} = useQuery({
+  // ── Create form state ──────────────────────────────────────────────────────
+  const [newDeal, setNewDeal] = useState({
+    name: "",
+    value: "",
+    stage: "lead",
+    probability: "50",
+    expectedCloseDate: "",
+    notes: "",
+  });
+
+  // ── Query ──────────────────────────────────────────────────────────────────
+  const { data: dealsData, isLoading: dealsLoading, isError, refetch } = useQuery({
     queryKey: ["deals", { stage: stageFilter !== "all" ? stageFilter : undefined, search: searchQuery || undefined }],
     queryFn: () =>
       dealsApi.list({
@@ -89,10 +92,23 @@ function DealsList() {
         search: searchQuery || undefined,
         limit: 100,
       }),
+    placeholderData: (prev) => prev,
     retry: false,
+    refetchInterval: 30_000,
   });
 
-  const rawDeals: Deal[] = (dealsData?.data ?? MOCK_DEALS).map((d: any) => ({
+  const updateStageMutation = useMutation({
+    mutationFn: ({ id, stage }: { id: string; stage: string }) => dealsApi.updateStage(id, stage),
+    onSuccess: () => {
+      toast.success("Stage updated");
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-forecast"] });
+      setStageMenuId(null);
+    },
+    onError: () => toast.error("Failed to update stage"),
+  });
+
+  const rawDeals: Deal[] = (dealsData?.data ?? []).map((d: any) => ({
     id: d.id,
     title: d.name ?? d.title ?? "",
     company: d.companyName ?? d.company ?? "",
@@ -146,8 +162,59 @@ function DealsList() {
 
   const totalValue = rawDeals.reduce((sum, d) => sum + d.value, 0);
   const weightedValue = rawDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0);
-  const wonValue = rawDeals.filter((d) => d.stage === "closed_won" || d.stage === "won").reduce((sum, d) => sum + d.value, 0);
+  const wonValue = rawDeals.filter((d) => (d.stage as string) === "closed_won" || (d.stage as string) === "won").reduce((sum, d) => sum + d.value, 0);
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const createDeal = useMutation({
+    mutationFn: () => {
+      const value = Number(newDeal.value);
+      if (!newDeal.name.trim()) throw new Error("Deal name is required");
+      if (!Number.isFinite(value) || value <= 0) throw new Error("Value must be a positive number");
+      return dealsApi.create({
+        name: newDeal.name.trim(),
+        value,
+        stage: newDeal.stage || "lead",
+        probability: newDeal.probability ? Number(newDeal.probability) : undefined,
+        expectedCloseDate: newDeal.expectedCloseDate || undefined,
+        notes: newDeal.notes.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Deal created successfully");
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-forecast"] });
+      setShowCreateModal(false);
+      setNewDeal({ name: "", value: "", stage: "lead", probability: "50", expectedCloseDate: "", notes: "" });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create deal"),
+  });
+
+  const updateDeal = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof dealsApi.update>[1] }) =>
+      dealsApi.update(id, data),
+    onSuccess: () => {
+      toast.success("Deal updated");
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-forecast"] });
+    },
+    onError: () => toast.error("Failed to update deal"),
+  });
+
+  const deleteDeal = useMutation({
+    mutationFn: (id: string) => dealsApi.delete(id),
+    onSuccess: () => {
+      toast.success("Deal deleted");
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-forecast"] });
+      setShowDeleteId(null);
+    },
+    onError: () => toast.error("Failed to delete deal"),
+  });
+
+  // ── Loading / error states ─────────────────────────────────────────────────
   if (dealsLoading) {
     return (
       <div className="space-y-6">
@@ -181,6 +248,7 @@ function DealsList() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -273,6 +341,54 @@ function DealsList() {
         </Card>
       </div>
 
+      {/* Pipeline Value AreaChart */}
+      <Card className="border-border/60">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold mb-4">Pipeline Value Trend</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={EMPTY_CHART_DATA} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorPipeline" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorWeighted" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                stroke="hsl(var(--muted-foreground))"
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
+              />
+              <Tooltip
+                formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
+                contentStyle={{ fontSize: 12, borderRadius: 6 }}
+              />
+              <Area
+                type="monotone"
+                dataKey="pipeline"
+                name="Pipeline"
+                stroke="hsl(var(--primary))"
+                fill="url(#colorPipeline)"
+                strokeWidth={2}
+              />
+              <Area
+                type="monotone"
+                dataKey="weighted"
+                name="Weighted"
+                stroke="#22c55e"
+                fill="url(#colorWeighted)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
       {/* Deals Table */}
       <Card className="border-border/60">
         <CardContent className="p-0">
@@ -342,9 +458,30 @@ function DealsList() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <Badge variant="outline" className={stageColors[deal.stage]}>
-                          {stageLabels[deal.stage]}
-                        </Badge>
+                        <div className="relative">
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setStageMenuId(stageMenuId === deal.id ? null : deal.id)}
+                          >
+                            <Badge variant="outline" className={stageColors[deal.stage]}>
+                              {stageLabels[deal.stage]}
+                            </Badge>
+                          </button>
+                          {stageMenuId === deal.id && (
+                            <div className="absolute left-0 top-full mt-1 z-20 w-44 rounded-md border border-border bg-background shadow-lg py-1">
+                              {Object.entries(stageLabels).map(([s, label]) => (
+                                <button
+                                  key={s}
+                                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                                  onClick={() => updateStageMutation.mutate({ id: deal.id, stage: s })}
+                                  disabled={updateStageMutation.isPending}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
@@ -368,8 +505,14 @@ function DealsList() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setShowDeleteId(deal.id)}
+                          disabled={deleteDeal.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
@@ -398,6 +541,119 @@ function DealsList() {
           </Button>
         </div>
       </div>
+
+      {/* Create Deal Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg">Create Deal</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowCreateModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Deal Name *</label>
+                <Input
+                  placeholder="Enterprise License"
+                  value={newDeal.name}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, name: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Value ($) *</label>
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={newDeal.value}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, value: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Stage</label>
+                <select
+                  value={newDeal.stage}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, stage: e.target.value }))}
+                  className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value="lead">Lead</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="proposal">Proposal</option>
+                  <option value="negotiation">Negotiation</option>
+                  <option value="closed_won">Closed Won</option>
+                  <option value="closed_lost">Closed Lost</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Probability (%)</label>
+                <Input
+                  type="number"
+                  placeholder="50"
+                  min={0}
+                  max={100}
+                  value={newDeal.probability}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, probability: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Expected Close Date</label>
+                <Input
+                  type="date"
+                  value={newDeal.expectedCloseDate}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, expectedCloseDate: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Notes</label>
+                <textarea
+                  placeholder="Any notes about this deal..."
+                  value={newDeal.notes}
+                  onChange={(e) => setNewDeal((p) => ({ ...p, notes: e.target.value }))}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => createDeal.mutate()} disabled={createDeal.isPending}>
+                {createDeal.isPending ? "Creating..." : "Create Deal"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-bold text-lg">Delete Deal</h2>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this deal? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteDeal.mutate(showDeleteId)}
+                disabled={deleteDeal.isPending}
+              >
+                {deleteDeal.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -99,24 +99,28 @@ function HrmDashboard() {
   const summaryQuery = useQuery({
     queryKey: ["hrm-summary"],
     queryFn: () => hrmApi.getSummary(),
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
   const employeesQuery = useQuery({
     queryKey: ["hrm-employees-dashboard"],
     queryFn: () => hrmApi.employees.list({ limit: 5 }),
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
   const leaveQuery = useQuery({
     queryKey: ["hrm-leave-dashboard"],
     queryFn: () => hrmApi.leaveRequests.list({ status: "pending", limit: 5 }),
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
   const reviewsQuery = useQuery({
     queryKey: ["hrm-reviews-dashboard"],
     queryFn: () => hrmApi.reviews.list({ limit: 5 }),
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
@@ -132,7 +136,7 @@ function HrmDashboard() {
     leaveQuery.isError ||
     reviewsQuery.isError;
 
-  const summary = (summaryQuery.data as any) ?? MOCK_SUMMARY;
+  const summary = (summaryQuery.data as any) ?? { headcount: 0, pendingLeave: 0, requisitions: 0, candidates: 0, avgGoalProgress: 0 };
 
   const stats = [
     {
@@ -185,7 +189,7 @@ function HrmDashboard() {
     },
   ];
 
-  const recentHires = ((employeesQuery.data as any)?.data ?? MOCK_EMPLOYEES).slice(0, 4).map((emp: any) => ({
+  const recentHires = ((employeesQuery.data as any)?.data ?? []).slice(0, 4).map((emp: any) => ({
     id: emp.id,
     name: emp.fullName || `${emp.firstName} ${emp.lastName}`,
     role: emp.jobTitle || "Employee",
@@ -199,7 +203,7 @@ function HrmDashboard() {
     { id: "4", name: "David Kim", role: "Sales Executive", dept: "Sales", startDate: "Mar 1, 2026", avatar: "DK" },
   ];
 
-  const pendingLeaveData = (leaveQuery.data as any)?.data ?? MOCK_LEAVE_REQUESTS;
+  const pendingLeaveData = (leaveQuery.data as any)?.data ?? [];
   const pendingLeave = pendingLeaveData.length > 0 ? pendingLeaveData.map((lr: any) => ({
     id: lr.id,
     name: lr.employeeName || "Employee",
@@ -214,7 +218,7 @@ function HrmDashboard() {
     { id: "4", name: "Amanda White", type: "Personal Day", days: 1, startDate: "Mar 24, 2026", status: "Pending" },
   ];
 
-  const reviewsData = (reviewsQuery.data as any)?.data ?? MOCK_REVIEWS;
+  const reviewsData = (reviewsQuery.data as any)?.data ?? [];
   const upcomingReviews = reviewsData.length > 0 ? reviewsData.map((r: any) => ({
     id: r.id,
     name: r.employeeName || "Employee",
@@ -303,7 +307,7 @@ function HrmDashboard() {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {recentHires.map((hire) => (
+              {recentHires.map((hire: any) => (
                 <div key={hire.id} className="flex items-center gap-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                     {hire.avatar}
@@ -332,7 +336,7 @@ function HrmDashboard() {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {pendingLeave.map((leave) => (
+              {pendingLeave.map((leave: any) => (
                 <div key={leave.id} className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground text-sm">{leave.name}</p>
@@ -469,7 +473,7 @@ function HrmDashboard() {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {upcomingReviews.map((review) => (
+              {upcomingReviews.map((review: any) => (
                 <div key={review.id} className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500 text-xs font-medium">
                     {review.name.split(" ").map((n: string) => n[0]).join("")}

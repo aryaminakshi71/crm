@@ -14,7 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/voice/dial")({
   component: DialpadPage,

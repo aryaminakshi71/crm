@@ -18,7 +18,7 @@ import { Plus, ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/sla")({
   component: SlaPage,
@@ -157,10 +157,7 @@ function SlaPage() {
           icon={<ShieldCheck className="h-12 w-12" />}
           title="No SLA policies yet"
           description="Create SLA policies to set response and resolution time targets by priority."
-          action={{
-            label: "Create Policy",
-            onClick: () => setIsCreateOpen(true),
-          }}
+          action={<Button onClick={() => setIsCreateOpen(true)}>Create Policy</Button>}
         />
       ) : (
         <div className="space-y-4">

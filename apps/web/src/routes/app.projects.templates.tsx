@@ -30,7 +30,7 @@ import { toast } from "sonner";
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 // ─── Route ──────────────────────────────────────────────────────────────────
@@ -70,131 +70,6 @@ type TemplateMilestone = {
   description?: string;
 };
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-const MOCK_TEMPLATES: Template[] = [
-  {
-      id: "t1",
-      name: "Agile Software Development",
-      description: "Complete sprint-based development workflow with standard Agile ceremonies",
-      category: "software",
-      tasks: [
-        { title: "Sprint Planning", category: "Planning", priority: "high", estimatedHours: 2, assigneeRole: "Scrum Master" },
-        { title: "Backlog Grooming", category: "Planning", priority: "medium", estimatedHours: 1, assigneeRole: "Team Lead" },
-        { title: "Daily Standup", category: "Ceremony", priority: "medium", estimatedHours: 0.5, assigneeRole: "Team" },
-        { title: "Sprint Review", category: "Ceremony", priority: "high", estimatedHours: 1, assigneeRole: "Scrum Master" },
-        { title: "Sprint Retrospective", category: "Ceremony", priority: "medium", estimatedHours: 1, assigneeRole: "Scrum Master" },
-        { title: "Code Review", category: "Development", priority: "high", estimatedHours: 2, assigneeRole: "Developer" },
-        { title: "Unit Testing", category: "Development", priority: "high", estimatedHours: 4, assigneeRole: "Developer" },
-        { title: "Integration Testing", category: "QA", priority: "high", estimatedHours: 4, assigneeRole: "QA Engineer" },
-        { title: "Documentation", category: "Delivery", priority: "low", estimatedHours: 2, assigneeRole: "Technical Writer" },
-      ],
-      milestones: [
-        { title: "Project Kickoff", dayOffset: 0, description: "Initial team alignment" },
-        { title: "Sprint 1 Complete", dayOffset: 14, description: "First working increment" },
-        { title: "Sprint 2 Complete", dayOffset: 28, description: "Feature complete" },
-        { title: "Release", dayOffset: 35, description: "Production deployment" },
-      ],
-      teamRoles: [
-        { role: "Scrum Master", count: 1 },
-        { role: "Developer", count: 3 },
-        { role: "QA Engineer", count: 1 },
-      ],
-      estimatedDuration: "5 weeks",
-      budget: "$50,000",
-      usageCount: 156,
-      createdAt: "2023-06-15",
-      isFeatured: true,
-    },
-    {
-      id: "t2",
-      name: "Marketing Campaign",
-      description: "Full marketing campaign from planning to execution and analytics",
-      category: "marketing",
-      tasks: [
-        { title: "Market Research", category: "Research", priority: "high", estimatedHours: 8, assigneeRole: "Marketing Manager" },
-        { title: "Competitor Analysis", category: "Research", priority: "medium", estimatedHours: 4, assigneeRole: "Analyst" },
-        { title: "Campaign Strategy", category: "Planning", priority: "high", estimatedHours: 6, assigneeRole: "Marketing Manager" },
-        { title: "Content Creation", category: "Creation", priority: "high", estimatedHours: 20, assigneeRole: "Content Writer" },
-        { title: "Design Assets", category: "Creation", priority: "high", estimatedHours: 16, assigneeRole: "Designer" },
-        { title: "Social Media Setup", category: "Execution", priority: "medium", estimatedHours: 4, assigneeRole: "Social Media Manager" },
-        { title: "Email Campaign Setup", category: "Execution", priority: "medium", estimatedHours: 4, assigneeRole: "Marketing Manager" },
-        { title: "Launch", category: "Execution", priority: "high", estimatedHours: 8, assigneeRole: "Team" },
-        { title: "Analytics Review", category: "Analysis", priority: "medium", estimatedHours: 4, assigneeRole: "Analyst" },
-      ],
-      milestones: [
-        { title: "Strategy Approved", dayOffset: 7 },
-        { title: "Content Ready", dayOffset: 21 },
-        { title: "Campaign Launch", dayOffset: 28 },
-        { title: "Final Report", dayOffset: 45 },
-      ],
-      teamRoles: [
-        { role: "Marketing Manager", count: 1 },
-        { role: "Content Writer", count: 1 },
-        { role: "Designer", count: 1 },
-        { role: "Analyst", count: 1 },
-      ],
-      estimatedDuration: "6 weeks",
-      budget: "$25,000",
-      usageCount: 89,
-      createdAt: "2023-08-20",
-    },
-    {
-      id: "t3",
-      name: "Product Research",
-      description: "Comprehensive product research and validation workflow",
-      category: "research",
-      tasks: [
-        { title: "Problem Statement", category: "Discovery", priority: "high", estimatedHours: 4 },
-        { title: "User Interviews", category: "Research", priority: "high", estimatedHours: 16 },
-        { title: "Survey Creation", category: "Research", priority: "medium", estimatedHours: 4 },
-        { title: "Data Analysis", category: "Analysis", priority: "high", estimatedHours: 12 },
-        { title: "Competitive Analysis", category: "Analysis", priority: "medium", estimatedHours: 8 },
-        { title: "User Personas", category: "Deliverable", priority: "high", estimatedHours: 6 },
-        { title: "Requirements Doc", category: "Deliverable", priority: "high", estimatedHours: 8 },
-        { title: "Prototype", category: "Deliverable", priority: "medium", estimatedHours: 16 },
-      ],
-      milestones: [
-        { title: "Research Complete", dayOffset: 14 },
-        { title: "Analysis Complete", dayOffset: 21 },
-        { title: "Deliverables Ready", dayOffset: 28 },
-      ],
-      teamRoles: [
-        { role: "Researcher", count: 2 },
-        { role: "Designer", count: 1 },
-      ],
-      estimatedDuration: "4 weeks",
-      usageCount: 67,
-      createdAt: "2023-09-10",
-    },
-    {
-      id: "t4",
-      name: "Operations Setup",
-      description: "Setting up new business operations and processes",
-      category: "operations",
-      tasks: [
-        { title: "Process Documentation", category: "Documentation", priority: "high", estimatedHours: 12 },
-        { title: "Workflow Design", category: "Design", priority: "high", estimatedHours: 8 },
-        { title: "Tool Selection", category: "Planning", priority: "medium", estimatedHours: 4 },
-        { title: "Training Materials", category: "Training", priority: "medium", estimatedHours: 8 },
-        { title: "Team Onboarding", category: "Training", priority: "high", estimatedHours: 8 },
-        { title: "QA Pass", category: "Review", priority: "high", estimatedHours: 4 },
-      ],
-      milestones: [
-        { title: "Processes Defined", dayOffset: 10 },
-        { title: "Tools Configured", dayOffset: 15 },
-        { title: "Team Trained", dayOffset: 20 },
-      ],
-      teamRoles: [
-        { role: "Operations Manager", count: 1 },
-        { role: "Process Analyst", count: 1 },
-      ],
-      estimatedDuration: "3 weeks",
-      usageCount: 45,
-      createdAt: "2023-10-05",
-    },
-];
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function TemplatesPage() {
@@ -221,6 +96,7 @@ function TemplatesPage() {
       if (!res.ok) throw new Error("Failed to fetch templates");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
   if (templatesQuery.isError) return (
@@ -231,7 +107,7 @@ function TemplatesPage() {
     </div>
   );
 
-  const templates: Template[] = templatesQuery.data?.data ?? MOCK_TEMPLATES;
+  const templates: Template[] = (templatesQuery as any).data?.data ?? [];
 
   // Filter templates
   const filteredTemplates = templates.filter((t) => {

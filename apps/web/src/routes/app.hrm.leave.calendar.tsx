@@ -10,7 +10,7 @@ import {
   Filter,
   AlertCircle
 } from "lucide-react";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/leave/calendar")({
   component: LeaveCalendar,

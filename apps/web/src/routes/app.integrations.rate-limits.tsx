@@ -13,17 +13,8 @@ import { Gauge,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_CONNECTORS = {
-  data: [
-    { id: "conn-1", name: "Stripe", type: "payment", status: "connected", rateLimit: { limit: 1000, remaining: 847, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-    { id: "conn-2", name: "Slack", type: "webhook", status: "connected", rateLimit: { limit: 500, remaining: 498, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-    { id: "conn-3", name: "GitHub", type: "oauth", status: "connected", rateLimit: { limit: 5000, remaining: 4960, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-    { id: "conn-5", name: "PagerDuty Webhook", type: "webhook", status: "active", rateLimit: { limit: 200, remaining: 199, resetAt: new Date(Date.now() + 3600000).toISOString() } },
-  ],
-};
 
 export const Route = createFileRoute("/app/integrations/rate-limits")({
   component: RateLimitsPage,
@@ -56,12 +47,13 @@ function RateLimitsPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_CONNECTORS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const connectors = (data?.data ?? MOCK_CONNECTORS.data).filter(
+  const connectors = ((data as any)?.data ?? []).filter(
     (c: any) => c.rateLimit,
   );
 

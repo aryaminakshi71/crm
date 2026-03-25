@@ -35,9 +35,9 @@ export const Route = createFileRoute("/app/invoicing/recurring")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type RecurringInvoice = {
@@ -52,13 +52,7 @@ type RecurringInvoice = {
   totalCreated: number;
 };
 
-const mockRecurring: RecurringInvoice[] = [
-  { id: "1", client: "Acme Corp", description: "Monthly Retainer", amount: 5000, frequency: "monthly", nextDate: "2026-04-01", status: "active", lastCreated: "2026-03-01", totalCreated: 12 },
-  { id: "2", client: "TechStart Inc", description: " Hosting Services", amount: 1200, frequency: "monthly", nextDate: "2026-04-15", status: "active", lastCreated: "2026-03-15", totalCreated: 8 },
-  { id: "3", client: "Global Solutions", description: "Quarterly License", amount: 15000, frequency: "quarterly", nextDate: "2026-05-01", status: "active", lastCreated: "2026-02-01", totalCreated: 4 },
-  { id: "4", client: "Innovate Co", description: "Weekly Support", amount: 800, frequency: "weekly", nextDate: "2026-03-24", status: "paused", lastCreated: "2026-03-10", totalCreated: 10 },
-  { id: "5", client: "Enterprise Ltd", description: "Annual Subscription", amount: 36000, frequency: "annually", nextDate: "2026-06-01", status: "active", lastCreated: "2026-06-01", totalCreated: 2 },
-];
+const EMPTY_RECURRING: any[] = [];
 
 function RecurringInvoices() {
   const [search, setSearch] = useState("");
@@ -98,6 +92,7 @@ function RecurringInvoices() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (recurringQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -106,7 +101,7 @@ function RecurringInvoices() {
       <Button variant="outline" size="sm" onClick={() => recurringQuery.refetch()}>Retry</Button>
     </div>
   );
-  const recurring: RecurringInvoice[] = recurringQuery.data?.data?.length ? recurringQuery.data.data : mockRecurring;
+  const recurring: any[] = (recurringQuery as any)?.data?.data ?? [];
 
   const filteredRecurring = recurring.filter((item) => {
     if (statusFilter !== "all" && item.status !== statusFilter) return false;

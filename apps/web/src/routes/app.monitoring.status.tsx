@@ -24,7 +24,7 @@ import { useState } from "react";
 import { monitoringApi } from "@/lib/api";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({ "x-org-id": localStorage.getItem("activeOrganizationId") ?? "" });
+const getOrgHeader = () => ({ "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "" });
 
 export const Route = createFileRoute("/app/monitoring/status")({
   component: StatusPage,
@@ -89,7 +89,7 @@ function StatusPage() {
     refetchInterval: 60000,
   });
 
-  const incidents: IncidentPoint[] = incidentsData || [
+  const incidents: IncidentPoint[] = (incidentsData as any) || [
     { id: 1, title: "CDN Performance Degradation", status: "investigating", severity: "major", startedAt: "Mar 18, 2026 12:00", affected: ["CDN"] },
     { id: 2, title: "API Latency Spike", status: "resolved", severity: "minor", startedAt: "Mar 15, 2026 08:30", affected: ["API Services"] },
   ];

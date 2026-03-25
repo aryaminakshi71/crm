@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { activitiesApi } from "../lib/api";
+import { activitiesApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -183,7 +183,7 @@ function CrmActivitiesPage() {
         <EmptyState
           title="No activities yet"
           description="Log calls, meetings, emails, and notes to track your interactions."
-          action={{ label: "Log Activity", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>Log Activity</Button>}
         />
       ) : (
         <div className="relative">
@@ -234,8 +234,8 @@ function CrmActivitiesPage() {
         onClose={() => setIsCreateOpen(false)}
         title="Log Activity"
         onSubmit={() => createActivity.mutate()}
-        isSubmitting={createActivity.isPending}
-        submitLabel="Log Activity"
+        isLoading={createActivity.isPending}
+        submitText="Log Activity"
       >
         <FormField label="Type">
           <select

@@ -14,7 +14,7 @@ import { CheckCircle2, Shield, XCircle,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const MOCK_AUDIT = {
@@ -38,12 +38,13 @@ function AuditPage() {
       const res = await fetch(`${API_BASE}/v1/integration/runs`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_AUDIT;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const runs = data?.data ?? MOCK_AUDIT.data;
+  const runs = (data as any)?.data ?? [];
   const successCount = runs.filter((r: any) => r.status === "success").length;
   const failCount = runs.filter((r: any) => r.status === "failed").length;
 
@@ -115,7 +116,7 @@ function AuditPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant={run.status === "success" ? "default" : "destructive"}>
+                    <Badge variant={run.status === "success" ? "default" : "danger"}>
                       {run.status}
                     </Badge>
                     <span className="text-xs text-muted-foreground">

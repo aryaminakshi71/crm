@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { dealsApi } from "../lib/api";
+import { dealsApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -292,8 +292,8 @@ function CrmPipelinePage() {
         onClose={() => setIsCreateOpen(false)}
         title="New Deal"
         onSubmit={() => createDeal.mutate()}
-        isSubmitting={createDeal.isPending}
-        submitLabel="Create Deal"
+        isLoading={createDeal.isPending}
+        submitText="Create Deal"
       >
         <FormField label="Deal Name *">
           <Input

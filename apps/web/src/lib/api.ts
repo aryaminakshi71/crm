@@ -832,6 +832,7 @@ interface CatalogResponse {
   data?: CatalogAppItem[];
   items?: CatalogAppItem[];
   total?: number;
+  [key: string]: unknown;
 }
 
 // Performance API response interface
@@ -4279,6 +4280,18 @@ export const communicationsApi = {
       commFetch("/sms/send", { method: "POST", body: JSON.stringify(data) }),
   },
 
+  email: {
+    /** POST /communications/email/send */
+    send: (data: {
+      to: string[];
+      cc?: string[];
+      subject: string;
+      body: string;
+      attachments?: string[];
+      draft?: boolean;
+    }) => commFetch("/email/send", { method: "POST", body: JSON.stringify(data) }),
+  },
+
   videoRooms: {
     /** GET /communications/video-rooms */
     list: (params?: { page?: number; limit?: number; status?: string }) => {
@@ -4388,6 +4401,123 @@ export const inventoryApi = {
       return await withRpcTimeout(rpc.inventory?.updateProduct?.({ id, status: "resolved" }), "inventory.resolveAlert");
     },
   },
+
+  purchaseOrders: {
+    list: async (params?: { page?: number; limit?: number; status?: string; search?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listPurchaseOrders?.({ page: params?.page ?? 1, limit: params?.limit ?? 100, ...params }),
+          "inventory.listPurchaseOrders",
+        );
+      } catch {
+        return { data: [], total: 0 };
+      }
+    },
+    create: async (data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.createPurchaseOrder?.(data), "inventory.createPurchaseOrder");
+    },
+    update: async (id: string, data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updatePurchaseOrder?.({ id, ...data }), "inventory.updatePurchaseOrder");
+    },
+    updateStatus: async (id: string, status: string): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updatePurchaseOrder?.({ id, status }), "inventory.updatePOStatus");
+    },
+  },
+
+  batch: {
+    list: async (params?: { page?: number; limit?: number; status?: string; search?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listBatches?.({ page: params?.page ?? 1, limit: params?.limit ?? 200, ...params }),
+          "inventory.listBatches",
+        );
+      } catch {
+        return { data: [], total: 0 };
+      }
+    },
+    create: async (data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.createBatch?.(data), "inventory.createBatch");
+    },
+    update: async (id: string, data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updateBatch?.({ id, ...data }), "inventory.updateBatch");
+    },
+  },
+
+  serial: {
+    list: async (params?: { page?: number; limit?: number; status?: string; search?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listSerialNumbers?.({ page: params?.page ?? 1, limit: params?.limit ?? 200, ...params }),
+          "inventory.listSerialNumbers",
+        );
+      } catch {
+        return { data: [], total: 0 };
+      }
+    },
+    create: async (data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.createSerialNumber?.(data), "inventory.createSerialNumber");
+    },
+    update: async (id: string, data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updateSerialNumber?.({ id, ...data }), "inventory.updateSerialNumber");
+    },
+  },
+
+  valuation: {
+    get: async (method?: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.getValuation?.({ method: method ?? "fifo" }),
+          "inventory.getValuation",
+        );
+      } catch {
+        return { data: [], total: 0, totalValue: 0 };
+      }
+    },
+    history: async (method?: string): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.getValuationHistory?.({ method: method ?? "fifo" }),
+          "inventory.getValuationHistory",
+        );
+      } catch {
+        return { data: [] };
+      }
+    },
+    saveMethod: async (method: string): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.saveValuationMethod?.({ method }), "inventory.saveValuationMethod");
+    },
+  },
+
+  locations: {
+    list: async (params?: { page?: number; limit?: number; warehouse?: string; search?: string }): Promise<any> => {
+      try {
+        return await withRpcTimeout(
+          rpc.inventory?.listLocations?.({ page: params?.page ?? 1, limit: params?.limit ?? 200, ...params }),
+          "inventory.listLocations",
+        );
+      } catch {
+        return { data: [], total: 0 };
+      }
+    },
+    create: async (data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.createLocation?.(data), "inventory.createLocation");
+    },
+    update: async (id: string, data: any): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.updateLocation?.({ id, ...data }), "inventory.updateLocation");
+    },
+    delete: async (id: string): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.deleteLocation?.({ id }), "inventory.deleteLocation");
+    },
+  },
+
+  qr: {
+    generate: async (data: { type: "product" | "location"; identifier: string; size?: string; format?: string; errorCorrection?: string }): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.generateQRCode?.(data), "inventory.generateQRCode");
+    },
+    generateBatch: async (data: { type: "product" | "location"; identifiers: string[]; size?: string; format?: string }): Promise<any> => {
+      return await withRpcTimeout(rpc.inventory?.generateQRCodeBatch?.(data), "inventory.generateQRCodeBatch");
+    },
+  },
 };
 
 // ── Helpdesk API ─────────────────────────────────────────────────────────────
@@ -4399,7 +4529,7 @@ function getHdOrgHeader(): Record<string, string> {
     typeof window !== "undefined"
       ? localStorage.getItem("activeOrganizationId") ?? ""
       : "";
-  return { "x-org-id": orgId, "Content-Type": "application/json" };
+  return { "x-organization-id": orgId, "Content-Type": "application/json" };
 }
 
 async function hdFetch(path: string, opts?: RequestInit): Promise<any> {
@@ -4731,7 +4861,7 @@ function getEcOrgHeader(): Record<string, string> {
     typeof window !== "undefined"
       ? localStorage.getItem("activeOrganizationId") ?? ""
       : "";
-  return { "x-org-id": orgId, "Content-Type": "application/json" };
+  return { "x-organization-id": orgId, "Content-Type": "application/json" };
 }
 
 async function ecFetch(path: string, opts?: RequestInit): Promise<any> {
@@ -4811,7 +4941,7 @@ function getInvOrgHeader(): Record<string, string> {
     typeof window !== "undefined"
       ? localStorage.getItem("activeOrganizationId") ?? ""
       : "";
-  return { "x-org-id": orgId, "Content-Type": "application/json" };
+  return { "x-organization-id": orgId, "Content-Type": "application/json" };
 }
 
 async function invFetch(path: string, opts?: RequestInit): Promise<any> {
@@ -4880,6 +5010,39 @@ export const invoicingApi = {
   settings: {
     get: () => invFetch("/invoicing/settings"),
     update: (data: any) => invFetch("/invoicing/settings", { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  recurring: {
+    list: () => invFetch("/invoicing/recurring"),
+    create: (data: any) => invFetch("/invoicing/recurring", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/recurring/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  vendors: {
+    list: (params?: { page?: number; limit?: number; search?: string }) =>
+      invFetch(`/invoicing/vendors?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()}`),
+    get: (id: string) => invFetch(`/invoicing/vendors/${id}`),
+    create: (data: any) => invFetch("/invoicing/vendors", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => invFetch(`/invoicing/vendors/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+
+  accounts: {
+    list: () => invFetch("/invoicing/accounts"),
+    create: (data: any) => invFetch("/invoicing/accounts", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  taxes: {
+    list: () => invFetch("/invoicing/taxes"),
+    create: (data: any) => invFetch("/invoicing/taxes", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  reports: {
+    profitLoss: (params?: { dateRange?: string }) =>
+      invFetch(`/invoicing/reports/pl${params?.dateRange ? `?dateRange=${params.dateRange}` : ""}`),
+    cashFlow: (params?: { dateRange?: string }) =>
+      invFetch(`/invoicing/reports/cashflow${params?.dateRange ? `?dateRange=${params.dateRange}` : ""}`),
+    balanceSheet: (params?: { asOf?: string }) =>
+      invFetch(`/invoicing/reports/balance${params?.asOf ? `?asOf=${params.asOf}` : ""}`),
   },
 };
 
@@ -4982,6 +5145,35 @@ export const speechApi = {
     get: () => fetch(`${API_BASE}/speech/settings`, { headers: getOrgHeader() }).then(r => r.json()),
     update: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/settings`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
   },
+  speakers: {
+    list: () => fetch(`${API_BASE}/speech/speakers`, { headers: getOrgHeader() }).then(r => r.json()),
+    get: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    delete: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+  },
+  sentiment: {
+    list: (params?: { limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit) qs.set("limit", String(params.limit));
+      return fetch(`${API_BASE}/speech/sentiment?${qs}`, { headers: getOrgHeader() }).then(r => r.json());
+    },
+  },
+};
+
+export const notificationsApi = {
+  list: (params?: { unreadOnly?: boolean; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.unreadOnly) qs.set("unreadOnly", "true");
+    if (params?.limit) qs.set("limit", String(params.limit));
+    return fetch(`${API_BASE}/notifications?${qs}`, { headers: getOrgHeader() }).then(r => r.json());
+  },
+  markRead: (id: string) =>
+    fetch(`${API_BASE}/notifications/${id}/read`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json()),
+  markAllRead: () =>
+    fetch(`${API_BASE}/notifications/read-all`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json()),
+  unreadCount: () =>
+    fetch(`${API_BASE}/notifications/unread-count`, { headers: getOrgHeader() }).then(r => r.json()),
 };
 
 export const devopsApi = {

@@ -141,7 +141,7 @@ function RecruitmentPipeline() {
   const [stageFilter, setStageFilter] = useState("All");
   const [deptFilter, setDeptFilter] = useState("All Departments");
 
-  const filteredCandidates = candidates.filter((c) => {
+  const filteredCandidates = candidates.filter((c: any) => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.role.toLowerCase().includes(search.toLowerCase());
     const matchesStage = stageFilter === "All" || c.stage === stageFilter;
     const matchesDept = deptFilter === "All Departments" || c.dept === deptFilter;
@@ -259,7 +259,7 @@ function RecruitmentPipeline() {
           {/* Kanban Board */}
           <div className="flex gap-4 overflow-x-auto pb-4">
             {stages.map((stage) => {
-              const stageCandidates = candidates.filter((c) => c.stage === stage);
+              const stageCandidates = candidates.filter((c: any) => c.stage === stage);
               return (
                 <div key={stage} className="flex-shrink-0 w-72">
                   <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
@@ -270,7 +270,7 @@ function RecruitmentPipeline() {
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {stageCandidates.map((candidate) => (
+                      {stageCandidates.map((candidate: any) => (
                         <a
                           key={candidate.id}
                           href={`/app/hrm/recruitment/${candidate.id}`}
@@ -317,7 +317,7 @@ function RecruitmentPipeline() {
       {/* Jobs View */}
       {viewMode === "jobs" && (
         <div className="space-y-4">
-          {jobs.map((job) => (
+          {jobs.map((job: any) => (
             <div key={job.id} className="rounded-lg border border-border/60 bg-card">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-4">
@@ -413,7 +413,7 @@ function RecruitmentPipeline() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCandidates.map((candidate) => (
+                {filteredCandidates.map((candidate: any) => (
                   <tr key={candidate.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
                       <a href={`/app/hrm/recruitment/${candidate.id}`} className="flex items-center gap-3 hover:text-primary">

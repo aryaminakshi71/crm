@@ -15,9 +15,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/pipelines")({
@@ -66,7 +66,7 @@ function Pipelines() {
     </div>
   );
 
-  const pipelines = (data?.data || []).filter((p: any) =>
+  const pipelines = ((data as any)?.data || []).filter((p: any) =>
     search
       ? p.name?.toLowerCase().includes(search.toLowerCase()) ||
         p.description?.toLowerCase().includes(search.toLowerCase())
@@ -133,7 +133,7 @@ function Pipelines() {
         </div>
       ) : pipelines.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
-          {data?.data?.length === 0 ? "No pipelines yet. Create your first pipeline." : "No matching pipelines."}
+          {(data as any)?.data?.length === 0 ? "No pipelines yet. Create your first pipeline." : "No matching pipelines."}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

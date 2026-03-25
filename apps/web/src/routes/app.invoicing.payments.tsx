@@ -35,9 +35,9 @@ export const Route = createFileRoute("/app/invoicing/payments")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 type Payment = {
@@ -51,13 +51,7 @@ type Payment = {
   reference: string;
 };
 
-const mockPayments: Payment[] = [
-  { id: "1", invoiceNumber: "INV-2026-001", client: "Acme Corp", amount: 12500, method: "bank", status: "completed", date: "2026-03-15", reference: "TRF-123456" },
-  { id: "2", invoiceNumber: "INV-2026-006", client: "StartupXYZ", amount: 3850, method: "card", status: "completed", date: "2026-03-12", reference: "CARD-789012" },
-  { id: "3", invoiceNumber: "INV-2025-089", client: "Legacy Inc", amount: 7500, method: "paypal", status: "completed", date: "2026-03-10", reference: "PP-345678" },
-  { id: "4", invoiceNumber: "INV-2026-003", client: "Global Solutions", amount: 15200, method: "bank", status: "pending", date: "2026-03-20", reference: "TRF-PENDING" },
-  { id: "5", invoiceNumber: "INV-2026-002", client: "TechStart Inc", amount: 8750, method: "check", status: "pending", date: "2026-03-18", reference: "CHK-111222" },
-];
+const EMPTY_PAYMENTS: any[] = [];
 
 function PaymentTracking() {
   const [search, setSearch] = useState("");
@@ -71,6 +65,7 @@ function PaymentTracking() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (paymentsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -80,7 +75,7 @@ function PaymentTracking() {
     </div>
   );
 
-  const payments: Payment[] = paymentsQuery.data?.data?.length ? paymentsQuery.data.data : mockPayments;
+  const payments: any[] = (paymentsQuery as any)?.data?.data ?? [];
 
   const filteredPayments = payments.filter((payment) => {
     if (statusFilter !== "all" && payment.status !== statusFilter) return false;

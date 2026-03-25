@@ -38,7 +38,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { dealsApi, leadsApi, nucleoApi } from "../lib/api";
+import { dealsApi, leadsApi, nucleoApi } from "@/lib/api";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 

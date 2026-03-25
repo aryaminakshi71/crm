@@ -35,7 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/contracts")({
   component: ContractsPage,

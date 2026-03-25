@@ -16,17 +16,8 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_SOURCES = {
-  sources: [
-    { id: "src-1", name: "PostgreSQL (Primary)", type: "database", status: "connected", lastSync: new Date().toISOString(), recordCount: 142800 },
-    { id: "src-2", name: "Stripe", type: "payment", status: "connected", lastSync: new Date(Date.now() - 1800000).toISOString(), recordCount: 8420 },
-    { id: "src-3", name: "HubSpot CRM", type: "crm", status: "syncing", lastSync: new Date(Date.now() - 600000).toISOString(), recordCount: 3200 },
-    { id: "src-4", name: "Google Analytics", type: "analytics", status: "error", lastSync: new Date(Date.now() - 86400000).toISOString(), recordCount: 0 },
-  ],
-};
 
 export const Route = createFileRoute("/app/intelligence/sources")({
   component: SourcesPage,
@@ -55,9 +46,10 @@ function SourcesPage() {
       const res = await fetch(`${API_BASE}/v1/intelligence/sources`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_SOURCES;
+      if (!res.ok) return { sources: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const syncMutation = useMutation({
@@ -78,7 +70,7 @@ function SourcesPage() {
     },
   });
 
-  const sources = data?.sources ?? MOCK_SOURCES.sources;
+  const sources = (data as any)?.sources ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">

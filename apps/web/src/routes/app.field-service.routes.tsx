@@ -23,73 +23,10 @@ export const Route = createFileRoute("/app/field-service/routes")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
-
-const MOCK_ROUTES = [
-  {
-    id: "RT-001",
-    name: "Manhattan Morning Route",
-    technician: "John Smith",
-    status: "active",
-    jobs: 6,
-    totalDistance: "24.5 mi",
-    estimatedDuration: "4h 30m",
-    startTime: "8:00 AM",
-    jobsCompleted: 2,
-    jobsRemaining: 4,
-    efficiency: "+18%",
-    stops: [
-      { id: 1, address: "123 Park Ave", job: "JOB-1043", time: "8:30 AM", status: "completed" },
-      { id: 2, address: "456 5th Ave", job: "JOB-1044", time: "9:45 AM", status: "completed" },
-      { id: 3, address: "789 Broadway", job: "JOB-1047", time: "11:00 AM", status: "current" },
-      { id: 4, address: "321 Madison Ave", job: "JOB-1048", time: "12:30 PM", status: "pending" },
-      { id: 5, address: "654 Lexington Ave", job: "JOB-1049", time: "2:00 PM", status: "pending" },
-      { id: 6, address: "987 3rd Ave", job: "JOB-1050", time: "3:30 PM", status: "pending" },
-    ],
-  },
-  {
-    id: "RT-002",
-    name: "Brooklyn Mid-Day Route",
-    technician: "Sarah Johnson",
-    status: "active",
-    jobs: 4,
-    totalDistance: "18.2 mi",
-    estimatedDuration: "3h 45m",
-    startTime: "9:00 AM",
-    jobsCompleted: 1,
-    jobsRemaining: 3,
-    efficiency: "+12%",
-    stops: [
-      { id: 1, address: "200 Atlantic Ave", job: "JOB-1051", time: "9:30 AM", status: "completed" },
-      { id: 2, address: "350 Court St", job: "JOB-1052", time: "10:45 AM", status: "current" },
-      { id: 3, address: "500 Flatbush Ave", job: "JOB-1053", time: "12:00 PM", status: "pending" },
-      { id: 4, address: "650 Nostrand Ave", job: "JOB-1054", time: "1:30 PM", status: "pending" },
-    ],
-  },
-  {
-    id: "RT-003",
-    name: "Queens Afternoon Route",
-    technician: "Mike Wilson",
-    status: "scheduled",
-    jobs: 5,
-    totalDistance: "22.8 mi",
-    estimatedDuration: "4h 00m",
-    startTime: "1:00 PM",
-    jobsCompleted: 0,
-    jobsRemaining: 5,
-    efficiency: null,
-    stops: [
-      { id: 1, address: "100 Queens Blvd", job: "JOB-1055", time: "1:30 PM", status: "scheduled" },
-      { id: 2, address: "250 Junction Blvd", job: "JOB-1056", time: "2:45 PM", status: "scheduled" },
-      { id: 3, address: "400 Main St", job: "JOB-1057", time: "3:45 PM", status: "scheduled" },
-      { id: 4, address: "550 Roosevelt Ave", job: "JOB-1058", time: "4:30 PM", status: "scheduled" },
-      { id: 5, address: "700 Flushing Ave", job: "JOB-1059", time: "5:15 PM", status: "scheduled" },
-    ],
-  },
-];
 
 function Routes() {
   const routesQuery = useQuery({
@@ -102,6 +39,7 @@ function Routes() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (routesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -111,7 +49,7 @@ function Routes() {
     </div>
   );
 
-  const routes = routesQuery.data?.data ?? MOCK_ROUTES;
+  const routes = (routesQuery as any).data?.data ?? [];
 
   if (routesQuery.isLoading) {
     return (
@@ -209,7 +147,7 @@ function Routes() {
 
       {/* Routes List */}
       <div className="space-y-4">
-        {routes.map((route) => (
+        {routes.map((route: any) => (
           <Card key={route.id} className="border-border/60">
             <CardContent className="p-6">
               {/* Route Header */}
@@ -284,7 +222,7 @@ function Routes() {
 
               {/* Stops */}
               <div className="space-y-2">
-                {route.stops.map((stop, idx) => (
+                {route.stops.map((stop: any, idx: any) => (
                   <div
                     key={stop.id}
                     className={`flex items-center gap-4 p-3 rounded-lg ${

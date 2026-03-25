@@ -24,21 +24,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
-
-const MOCK_PLATFORMS = [
-  { name: "Instagram", icon: Instagram, followers: "18.5K", color: "bg-pink-500" },
-  { name: "Twitter", icon: Twitter, followers: "12.3K", color: "bg-sky-500" },
-  { name: "LinkedIn", icon: Linkedin, followers: "8.9K", color: "bg-blue-600" },
-  { name: "Facebook", icon: Facebook, followers: "5.5K", color: "bg-blue-500" },
-];
-
-const MOCK_RECENT_POSTS = [
-  { id: "p1", platform: "Instagram", content: "Behind the scenes of our new product launch!", likes: 342, comments: 28, reach: "4.2K" },
-  { id: "p2", platform: "Twitter", content: "Excited to announce our partnership with @techleader", likes: 567, comments: 45, reach: "12K" },
-  { id: "p3", platform: "LinkedIn", content: "We're hiring! Join our growing team.", likes: 234, comments: 56, reach: "8.9K" },
-];
 
 const QUICK_ACTIONS = [
   { name: "Create Post", href: "/app/social/posts/new", icon: Share2 },
@@ -57,6 +44,7 @@ function SocialDashboard() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: accountsData } = useQuery({
@@ -68,27 +56,24 @@ function SocialDashboard() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const recentPosts = postsData?.data?.length
-    ? postsData.data.map((p: any) => ({
+  const recentPosts = ((postsData as any)?.data ?? []).map((p: any) => ({
         id: p.id,
         platform: p.platform ?? "Unknown",
         content: p.content ?? "",
         likes: p.likes ?? 0,
         comments: p.comments ?? 0,
         reach: p.reach ?? "0",
-      }))
-    : MOCK_RECENT_POSTS;
+      }));
 
-  const platforms = accountsData?.data?.length
-    ? accountsData.data.map((a: any) => ({
+  const platforms = ((accountsData as any)?.data ?? []).map((a: any) => ({
         name: a.platform ?? a.name ?? "Unknown",
         icon: Share2,
         followers: a.followers ? `${(a.followers / 1000).toFixed(1)}K` : "0",
         color: "bg-primary",
-      }))
-    : MOCK_PLATFORMS;
+      }));
 
   if (postsError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">

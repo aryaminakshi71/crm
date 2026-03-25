@@ -32,7 +32,7 @@ import {
   Plus,
   ShieldCheck,
   TrendingUp,
-  Zap,,
+  Zap,
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -46,7 +46,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { activitiesApi } from "../lib/api";
+import { activitiesApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/activities")({
   component: ActivitiesPage,
@@ -106,7 +106,6 @@ function ActivitiesPage() {
     onError: (error: Error) => {
       const errorMessage = error.message || "Failed to create activity";
       toast.error(errorMessage);
-      console.error("Activity creation error:", error);
     },
   });
 
@@ -129,7 +128,6 @@ function ActivitiesPage() {
     return <Icon className="h-5 w-5" />;
   };
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -137,8 +135,7 @@ function ActivitiesPage() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return <Loading text="Loading activities..." />;
-  }
+  if (isLoading) return <Loading text="Loading activities..." />;
 
   return (
     <div className="space-y-6">
@@ -481,4 +478,4 @@ function Metric({
     </Card>
   );
 }
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";

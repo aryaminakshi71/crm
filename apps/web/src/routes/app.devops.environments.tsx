@@ -14,9 +14,9 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/environments")({
@@ -52,7 +52,7 @@ function Environments() {
     </div>
   );
 
-  const envList: any[] = Array.isArray(environments) ? environments : (environments?.data ?? []);
+  const envList: any[] = Array.isArray(environments) ? environments : ((environments as any)?.data ?? []);
 
   // Helper to get color class based on env name or type
   const getColor = (env: any) => ENV_COLORS[env.name?.toLowerCase()] || ENV_COLORS[env.type?.toLowerCase()] || "gray";

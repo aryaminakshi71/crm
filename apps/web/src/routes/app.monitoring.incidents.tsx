@@ -106,7 +106,7 @@ function MonitoringIncidentsPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to resolve incident"),
   });
 
-  const incidents: any[] = data?.items ?? [];
+  const incidents: any[] = (data as any)?.items ?? [];
 
   const severityColors: Record<string, string> = {
     low: "bg-blue-500/10 text-blue-400",
@@ -135,7 +135,7 @@ function MonitoringIncidentsPage() {
         {["all", "open", "investigating", "resolved"].map((s) => (
           <Button
             key={s}
-            variant={statusFilter === s ? "default" : "outline"}
+            variant={statusFilter === s ? "secondary" : "outline"}
             size="sm"
             onClick={() => setStatusFilter(s)}
           >
@@ -190,7 +190,7 @@ function MonitoringIncidentsPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge
-                      variant={incident.status === "resolved" ? "default" : "destructive"}
+                      variant={incident.status === "resolved" ? "default" : "danger"}
                     >
                       {incident.status}
                     </Badge>

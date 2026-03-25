@@ -16,15 +16,8 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_WEBHOOKS = {
-  data: [
-    { id: "conn-2", name: "Slack", type: "webhook", status: "connected", connectedAt: new Date().toISOString(), rateLimit: { limit: 500, remaining: 498 } },
-    { id: "conn-5", name: "PagerDuty Webhook", type: "webhook", status: "active", connectedAt: new Date().toISOString(), rateLimit: { limit: 200, remaining: 199 } },
-  ],
-};
 
 export const Route = createFileRoute("/app/integrations/webhooks")({
   component: WebhooksPage,
@@ -37,12 +30,13 @@ function WebhooksPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors?type=webhook`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_WEBHOOKS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const webhooks = data?.data ?? MOCK_WEBHOOKS.data;
+  const webhooks = (data as any)?.data ?? [];
 
   const copyEndpoint = (id: string) => {
     const url = `${window.location.origin}/api/v1/webhooks/inbound/${id}`;

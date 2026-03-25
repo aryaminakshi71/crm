@@ -17,50 +17,57 @@ import {
   FileCode,
   History,
   GitCommit,
+  StopCircle,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/pipelines/$id")({
   component: PipelineDetail,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-};
-
-const MOCK_PIPELINE = {
-  id: "1",
-  name: "frontend-app",
-  description: "React frontend application",
-  repo: "github.com/nucleo/frontend",
-  branch: "main",
-  status: "enabled",
-  lastRun: "5 min ago",
-  successRate: 98,
-  avgDuration: "4m 23s",
-  runs: [
-    { id: 1, status: "success", duration: "4m 23s", branch: "main", commit: "abc1234", time: "5 min ago" },
-    { id: 2, status: "success", duration: "4m 10s", branch: "main", commit: "def5678", time: "1 hour ago" },
-    { id: 3, status: "failed", duration: "3m 45s", branch: "feature/ui", commit: "ghi9012", time: "2 hours ago" },
-    { id: 4, status: "success", duration: "5m 02s", branch: "main", commit: "jkl3456", time: "4 hours ago" },
-  ],
-};
-
 function PipelineDetail() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const pipelineQuery = useQuery({
     queryKey: ["devops", "pipelines", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/v1/devops/pipelines/${id}`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch pipeline");
-      return res.json();
-    },
+    queryFn: () => devopsApi.pipelines.get(id),
+    placeholderData: (prev) => prev,
     retry: false,
+  });
+
+  const triggerRun = useMutation({
+    mutationFn: () => devopsApi.pipelines.trigger(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "pipelines", id] });
+      queryClient.invalidateQueries({ queryKey: ["devops", "runs"] });
+      toast.success("Pipeline run triggered");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to trigger run"),
+  });
+
+  const cancelRun = useMutation({
+    mutationFn: (runId: string) =>
+      fetch(
+        `${import.meta.env.VITE_API_URL ?? "/api"}/devops/runs/${runId}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(localStorage.getItem("activeOrganizationId")
+              ? { "x-organization-id": localStorage.getItem("activeOrganizationId")! }
+              : {}),
+          },
+        }
+      ).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devops", "pipelines", id] });
+      queryClient.invalidateQueries({ queryKey: ["devops", "runs"] });
+      toast.success("Run cancelled");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to cancel run"),
   });
   if (pipelineQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -70,7 +77,7 @@ function PipelineDetail() {
     </div>
   );
 
-  const pipeline = pipelineQuery.data ?? MOCK_PIPELINE;
+  const pipeline = (pipelineQuery.data as any) ?? {};
 
   if (pipelineQuery.isLoading) {
     return (
@@ -93,23 +100,27 @@ function PipelineDetail() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">{pipeline.name}</h2>
+            <h2 className="text-xl font-bold text-foreground">{(pipeline as any).name}</h2>
             <span className={`rounded-full px-3 py-1 text-sm font-medium ${
-              pipeline.status === "enabled" ? "bg-green-500/10 text-green-500" : "bg-muted/10 text-muted-foreground"
+              (pipeline as any).status === "enabled" ? "bg-green-500/10 text-green-500" : "bg-muted/10 text-muted-foreground"
             }`}>
-              {pipeline.status}
+              {(pipeline as any).status}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{pipeline.description}</p>
+          <p className="text-sm text-muted-foreground">{(pipeline as any).description}</p>
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
             <Settings className="h-4 w-4" />
             Settings
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <button
+            onClick={() => triggerRun.mutate()}
+            disabled={triggerRun.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
             <Play className="h-4 w-4" />
-            Run Pipeline
+            {triggerRun.isPending ? "Triggering..." : "Run Pipeline"}
           </button>
         </div>
       </div>
@@ -119,28 +130,28 @@ function PipelineDetail() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <GitBranch className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">{pipeline.successRate}%</p>
+            <p className="text-2xl font-bold">{(pipeline as any).successRate}%</p>
             <p className="text-xs text-muted-foreground">Success Rate</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Clock className="h-5 w-5 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{pipeline.avgDuration}</p>
+            <p className="text-2xl font-bold">{(pipeline as any).avgDuration}</p>
             <p className="text-xs text-muted-foreground">Avg Duration</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <GitCommit className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{pipeline.branch}</p>
+            <p className="text-2xl font-bold">{(pipeline as any).branch}</p>
             <p className="text-xs text-muted-foreground">Default Branch</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <History className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{pipeline.lastRun}</p>
+            <p className="text-2xl font-bold">{(pipeline as any).lastRun}</p>
             <p className="text-xs text-muted-foreground">Last Run</p>
           </CardContent>
         </Card>
@@ -153,10 +164,10 @@ function PipelineDetail() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <GitBranch className="h-4 w-4 text-muted-foreground" />
-              <span>{pipeline.repo}</span>
+              <span>{(pipeline as any).repo}</span>
             </div>
             <span className="text-muted-foreground">|</span>
-            <span className="text-sm text-muted-foreground">Branch: {pipeline.branch}</span>
+            <span className="text-sm text-muted-foreground">Branch: {(pipeline as any).branch}</span>
           </div>
         </CardContent>
       </Card>
@@ -171,7 +182,7 @@ function PipelineDetail() {
             </Link>
           </div>
           <div className="space-y-3">
-            {pipeline.runs.map((run) => (
+            {(pipeline as any).runs.map((run: any) => (
               <Link
                 key={run.id}
                 to="/app/devops/runs/$id"
@@ -200,15 +211,27 @@ function PipelineDetail() {
                     Branch: {run.branch} - {run.time}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={`font-medium ${
-                    run.status === "success" ? "text-green-600" :
-                    run.status === "failed" ? "text-red-600" :
-                    "text-blue-600"
-                  }`}>
-                    {run.duration}
-                  </p>
-                  <p className="text-xs text-muted-foreground capitalize">{run.status}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className={`font-medium ${
+                      run.status === "success" ? "text-green-600" :
+                      run.status === "failed" ? "text-red-600" :
+                      "text-blue-600"
+                    }`}>
+                      {run.duration}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">{run.status}</p>
+                  </div>
+                  {run.status === "running" && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); cancelRun.mutate(String(run.id)); }}
+                      disabled={cancelRun.isPending}
+                      className="p-1 rounded hover:bg-red-50 transition-colors"
+                      title="Cancel run"
+                    >
+                      <StopCircle className="h-4 w-4 text-red-500" />
+                    </button>
+                  )}
                 </div>
               </Link>
             ))}

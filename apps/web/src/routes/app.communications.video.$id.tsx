@@ -19,24 +19,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/video/$id")({
   component: VideoRoomPage,
 });
-
-const MOCK_PARTICIPANTS = [
-  { id: "p1", name: "You", isMuted: false, isVideoOn: true, isSpeaking: true },
-  { id: "p2", name: "Sarah Johnson", isMuted: false, isVideoOn: true, isSpeaking: false },
-  { id: "p3", name: "Michael Chen", isMuted: true, isVideoOn: true, isSpeaking: false },
-  { id: "p4", name: "Emily Davis", isMuted: false, isVideoOn: false, isSpeaking: false },
-];
-
-const CHAT_MESSAGES = [
-  { id: "1", sender: "Sarah", content: "Can you share your screen?", timestamp: "10:30 AM" },
-  { id: "2", sender: "Michael", content: "I'll share the presentation", timestamp: "10:31 AM" },
-  { id: "3", sender: "You", content: "Great, thanks!", timestamp: "10:31 AM" },
-];
 
 function VideoRoomPage() {
   const { id } = Route.useParams();
@@ -52,6 +39,7 @@ function VideoRoomPage() {
     queryKey: ["communications", "video-room", id],
     queryFn: () => communicationsApi.videoRooms.get(id),
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (roomQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -73,15 +61,13 @@ function VideoRoomPage() {
 
   // Use API participants if available, fall back to MOCK_PARTICIPANTS
   const participants =
-    roomData?.participants?.length
-      ? roomData.participants.map((p: any, i: number) => ({
+    (roomData?.participants ?? []).map((p: any, i: number) => ({
           id: p.identity ?? `p${i}`,
           name: p.name ?? p.identity ?? "Participant",
           isMuted: false,
           isVideoOn: true,
           isSpeaking: i === 0,
-        }))
-      : MOCK_PARTICIPANTS;
+        }));
 
   const roomName = roomData?.name ?? "Team Standup";
   const participantCount = participants.length;
@@ -133,7 +119,7 @@ function VideoRoomPage() {
         {/* Video Grid */}
         <div className="flex-1 p-4 bg-gray-900">
           <div className="grid grid-cols-2 gap-4 h-full">
-            {participants.map((participant) => (
+            {participants.map((participant: any) => (
               <div key={participant.id} className="relative rounded-xl bg-gray-800 overflow-hidden">
                 {participant.isVideoOn ? (
                   <div className="absolute inset-0 flex items-center justify-center">

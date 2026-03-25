@@ -3,7 +3,10 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { toast } from "sonner";
+import { fieldServiceApi } from "@/lib/api";
 import {
   FileText,
   Camera,
@@ -19,82 +22,65 @@ import {
   Download,
   Trash2,
   Plus,
+  XCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/field-service/proof")({
+  validateSearch: z.object({
+    search: z.string().optional(),
+    status: z.string().optional(),
+    technician: z.string().optional(),
+    date: z.string().optional(),
+  }),
   component: Proof,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-  "Content-Type": "application/json",
-});
-
-const MOCK_PROOF_RECORDS = [
-  {
-    id: 1,
-    jobId: "JOB-1042",
-    jobTitle: "HVAC System Repair",
-    customer: "Acme Corporation",
-    technician: "Jane Doe",
-    completedAt: "Mar 20, 2026 12:45 PM",
-    photos: 4,
-    signature: true,
-    customerName: "Robert Johnson",
-    notes: "Replaced compressor and recharged refrigerant. System running smoothly.",
-  },
-  {
-    id: 2,
-    jobId: "JOB-1040",
-    jobTitle: "Plumbing Maintenance",
-    customer: "Green Valley Clinic",
-    technician: "Mike Wilson",
-    completedAt: "Mar 20, 2026 11:30 AM",
-    photos: 2,
-    signature: true,
-    customerName: "Dr. Sarah Williams",
-    notes: "Routine maintenance completed. All systems operational.",
-  },
-  {
-    id: 3,
-    jobId: "JOB-1035",
-    jobTitle: "Generator Maintenance",
-    customer: "Harbor View Hotel",
-    technician: "John Smith",
-    completedAt: "Mar 19, 2026 3:00 PM",
-    photos: 6,
-    signature: true,
-    customerName: "Michael Chen",
-    notes: "Full generator service completed. Oil change, filter replacement, load test passed.",
-  },
-  {
-    id: 4,
-    jobId: "JOB-1032",
-    jobTitle: "Electrical Inspection",
-    customer: "TechStart Inc",
-    technician: "Lisa Chen",
-    completedAt: "Mar 18, 2026 10:00 AM",
-    photos: 3,
-    signature: false,
-    customerName: null,
-    notes: "Inspection complete. Minor issues noted - see detailed report.",
-  },
-];
 
 function Proof() {
+  const queryClient = useQueryClient();
+
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ["field-service-jobs-proof"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/field-service/jobs?status=completed`, { headers: getOrgHeader() });
-      if (!res.ok) throw new Error("Failed to fetch jobs");
-      return res.json();
+    queryFn: () => fieldServiceApi.jobs.list(),
+    placeholderData: (prev) => prev,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (jobId: string) => fieldServiceApi.jobs.update(jobId, { proofStatus: "approved" }),
+    onSuccess: () => {
+      toast.success("Proof of work approved");
+      queryClient.invalidateQueries({ queryKey: ["field-service-jobs-proof"] });
+    },
+    onError: () => {
+      toast.error("Failed to approve proof of work");
     },
   });
 
-  const completedJobs = jobsData?.data ?? [];
+  const rejectMutation = useMutation({
+    mutationFn: (jobId: string) => fieldServiceApi.jobs.update(jobId, { proofStatus: "rejected" }),
+    onSuccess: () => {
+      toast.success("Proof of work rejected");
+      queryClient.invalidateQueries({ queryKey: ["field-service-jobs-proof"] });
+    },
+    onError: () => {
+      toast.error("Failed to reject proof of work");
+    },
+  });
 
-  // Map API jobs to proof records format, fall back to mock if empty
+  const deleteProofMutation = useMutation({
+    mutationFn: (jobId: string) => fieldServiceApi.jobs.update(jobId, { proofStatus: "deleted" }),
+    onSuccess: () => {
+      toast.success("Proof record deleted");
+      queryClient.invalidateQueries({ queryKey: ["field-service-jobs-proof"] });
+    },
+    onError: () => {
+      toast.error("Failed to delete proof record");
+    },
+  });
+
+  const completedJobs = (jobsData as any)?.data ?? [];
+
+  // Map API jobs to proof records format
   const proofRecords = completedJobs.length > 0
     ? completedJobs.map((job: {
         id: string | number;
@@ -122,7 +108,7 @@ function Proof() {
         customerName: job.signedBy ?? null,
         notes: job.notes ?? "",
       }))
-    : MOCK_PROOF_RECORDS;
+    : [];
 
   return (
     <div className="space-y-6">
@@ -151,7 +137,7 @@ function Proof() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <FileText className="h-5 w-5 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold">{isLoading ? "…" : (jobsData?.total ?? 156)}</p>
+            <p className="text-2xl font-bold">{isLoading ? "…" : ((jobsData as any)?.total ?? 156)}</p>
             <p className="text-xs text-muted-foreground">Total Records</p>
           </CardContent>
         </Card>
@@ -212,7 +198,7 @@ function Proof() {
       <Card className="border-border/60">
         <CardContent className="p-6">
           <div className="space-y-4">
-            {proofRecords.map((record) => (
+            {proofRecords.map((record: any) => (
               <div
                 key={record.id}
                 className="p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
@@ -237,10 +223,30 @@ function Proof() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => approveMutation.mutate(String(record.id))}
+                      disabled={approveMutation.isPending}
+                      className="p-2 rounded-lg hover:bg-green-500/10 transition-colors"
+                      title="Approve"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    </button>
+                    <button
+                      onClick={() => rejectMutation.mutate(String(record.id))}
+                      disabled={rejectMutation.isPending}
+                      className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                      title="Reject"
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    </button>
                     <button className="p-2 rounded-lg hover:bg-muted transition-colors">
                       <Download className="h-4 w-4 text-muted-foreground" />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-muted transition-colors">
+                    <button
+                      onClick={() => deleteProofMutation.mutate(String(record.id))}
+                      disabled={deleteProofMutation.isPending}
+                      className="p-2 rounded-lg hover:bg-muted transition-colors"
+                    >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>

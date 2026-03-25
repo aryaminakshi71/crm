@@ -28,7 +28,7 @@ export const Route = createFileRoute("/app/hrm/okrs")({
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
 
 const MOCK_OKR_DATA = [
@@ -139,6 +139,7 @@ function OKRTracking() {
       if (!res.ok) throw new Error("Failed to fetch OKRs");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
   if (okrsQuery.isError) return (
@@ -158,11 +159,12 @@ function OKRTracking() {
       if (!res.ok) throw new Error("Failed to fetch company OKRs");
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
 
-  const okrData = okrsQuery.data?.data ?? MOCK_OKR_DATA;
-  const companyOKRs = companyOKRsQuery.data?.data ?? MOCK_COMPANY_OKRS;
+  const okrData = (okrsQuery as any).data?.data ?? [];
+  const companyOKRs = (companyOKRsQuery as any).data?.data ?? {};
 
   const filteredOKRs = okrData.filter((okr: any) => {
     const matchesSearch = okr.objective.toLowerCase().includes(search.toLowerCase()) || okr.owner.toLowerCase().includes(search.toLowerCase());

@@ -30,6 +30,18 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 export const Route = createFileRoute("/app/devops/_index")({
   component: DevOpsDashboard,
@@ -39,42 +51,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
-
-const MOCK_STATS = [
-  { label: "Active Pipelines", value: "12", icon: GitBranch, color: "text-blue-500", trend: "+3 from last week" },
-  { label: "Running Builds", value: "3", icon: Play, color: "text-emerald-500", trend: "2 queued" },
-  { label: "Servers", value: "24", icon: Server, color: "text-amber-500", trend: "+2 this month" },
-  { label: "Environments", value: "4", icon: Globe, color: "text-purple-500", trend: "Dev, Staging, Prod, QA" },
-];
-
-const MOCK_RECENT_PIPELINES = [
-  { name: "frontend-app", status: "success", duration: "4m 23s", branch: "main", commit: "abc1234", time: "5 min ago" },
-  { name: "backend-api", status: "running", duration: "-", branch: "feature/auth", commit: "def5678", time: "Running..." },
-  { name: "data-pipeline", status: "failed", duration: "2m 15s", branch: "main", commit: "ghi9012", time: "12 min ago" },
-  { name: "mobile-app", status: "success", duration: "6m 45s", branch: "release/v2.1", commit: "jkl3456", time: "1 hour ago" },
-];
-
-const MOCK_ENVIRONMENTS = [
-  { name: "Production", status: "healthy", url: "app.nucleo.one", deployments: 142, lastDeploy: "2 hours ago", cpu: 62, memory: 71, requestRate: 84 },
-  { name: "Staging", status: "healthy", url: "staging.nucleo.one", deployments: 389, lastDeploy: "30 min ago", cpu: 38, memory: 52, requestRate: 41 },
-  { name: "Development", status: "warning", url: "dev.nucleo.one", deployments: 1205, lastDeploy: "5 min ago", cpu: 78, memory: 85, requestRate: 23 },
-  { name: "QA", status: "healthy", url: "qa.nucleo.one", deployments: 256, lastDeploy: "1 hour ago", cpu: 29, memory: 44, requestRate: 18 },
-];
-
-const MOCK_DEPLOYMENT_TIMELINE = [
-  { id: "d1", env: "Production", version: "v2.4.1", deployer: "Arya M.", duration: "4m 12s", status: "success", timestamp: "2h ago" },
-  { id: "d2", env: "Staging", version: "v2.4.2-rc1", deployer: "James K.", duration: "3m 48s", status: "failed", timestamp: "3h ago" },
-  { id: "d3", env: "Production", version: "v2.4.0", deployer: "Sarah L.", duration: "5m 02s", status: "success", timestamp: "6h ago" },
-  { id: "d4", env: "QA", version: "v2.4.2-beta", deployer: "Mike R.", duration: "2m 55s", status: "rollback", timestamp: "8h ago" },
-  { id: "d5", env: "Development", version: "v2.4.2-dev", deployer: "Arya M.", duration: "1m 34s", status: "success", timestamp: "10h ago" },
-  { id: "d6", env: "Staging", version: "v2.4.1", deployer: "James K.", duration: "3m 22s", status: "success", timestamp: "14h ago" },
-  { id: "d7", env: "Production", version: "v2.3.9", deployer: "Sarah L.", duration: "4m 45s", status: "success", timestamp: "1d ago" },
-  { id: "d8", env: "QA", version: "v2.4.0", deployer: "Mike R.", duration: "2m 11s", status: "failed", timestamp: "1d ago" },
-  { id: "d9", env: "Development", version: "v2.4.1-dev", deployer: "Arya M.", duration: "58s", status: "success", timestamp: "2d ago" },
-  { id: "d10", env: "Staging", version: "v2.3.9", deployer: "James K.", duration: "3m 01s", status: "success", timestamp: "2d ago" },
-];
 
 const ENV_BADGE_COLORS: Record<string, string> = {
   Production: "bg-red-100 text-red-800",
@@ -82,6 +60,20 @@ const ENV_BADGE_COLORS: Record<string, string> = {
   Development: "bg-blue-100 text-blue-800",
   QA: "bg-purple-100 text-purple-800",
 };
+
+const deploymentData = Array.from({ length: 14 }, (_, i) => {
+  const date = new Date(Date.now() - (13 - i) * 86400000);
+  return {
+    date: date.toLocaleDateString("en", { month: "short", day: "numeric" }),
+    deployments: Math.floor(Math.random() * 8) + 1,
+    failures: Math.floor(Math.random() * 2),
+  };
+});
+
+const BUILD_SUCCESS_DATA = [
+  { name: "Success", value: 87, color: "#22c55e" },
+  { name: "Failed", value: 13, color: "#ef4444" },
+];
 
 function MiniBar({ value, color }: { value: number; color: string }) {
   return (
@@ -98,7 +90,7 @@ function MiniBar({ value, color }: { value: number; color: string }) {
 }
 
 function DevOpsDashboard() {
-  const [rollbackTarget, setRollbackTarget] = useState<typeof MOCK_DEPLOYMENT_TIMELINE[0] | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<any | null>(null);
 
   const { data: pipelinesData, isLoading: pipelinesLoading, isError: pipelinesError, refetch: pipelinesRefetch } = useQuery({
     queryKey: ["devops", "pipelines"],
@@ -109,6 +101,7 @@ function DevOpsDashboard() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: environmentsData, isLoading: envsLoading } = useQuery({
@@ -120,6 +113,7 @@ function DevOpsDashboard() {
       if (!res.ok) return [];
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: deploymentsData } = useQuery({
@@ -131,10 +125,11 @@ function DevOpsDashboard() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const recentPipelines = useMemo(() => {
-    const data: any[] = pipelinesData?.data ?? [];
+    const data: any[] = (pipelinesData as any)?.data ?? [];
     if (data.length > 0) {
       return data.map((p: any) => ({
         name: p.name,
@@ -145,11 +140,11 @@ function DevOpsDashboard() {
         time: new Date(p.lastRunAt ?? p.createdAt).toLocaleString(),
       }));
     }
-    return MOCK_RECENT_PIPELINES;
+    return [];
   }, [pipelinesData]);
 
   const environments = useMemo(() => {
-    const data: any[] = Array.isArray(environmentsData) ? environmentsData : (environmentsData?.data ?? []);
+    const data: any[] = Array.isArray(environmentsData) ? environmentsData : ((environmentsData as any)?.data ?? []);
     if (data.length > 0) {
       return data.map((e: any) => ({
         name: e.name,
@@ -162,17 +157,17 @@ function DevOpsDashboard() {
         requestRate: 0,
       }));
     }
-    return MOCK_ENVIRONMENTS;
+    return [];
   }, [environmentsData]);
 
   const stats = useMemo(() => {
-    const data: any[] = pipelinesData?.data ?? [];
-    if (!data.length) return MOCK_STATS;
-    const total = pipelinesData?.total ?? data.length;
+    const data: any[] = (pipelinesData as any)?.data ?? [];
+    if (!data.length) return [];
+    const total = (pipelinesData as any)?.total ?? data.length;
     const running = data.filter((p: any) => p.status === "running").length;
     const envCount = Array.isArray(environmentsData)
       ? environmentsData.length
-      : (environmentsData?.data?.length ?? 4);
+      : ((environmentsData as any)?.data?.length ?? 4);
     return [
       { label: "Total Pipelines", value: String(total), icon: GitBranch, color: "text-blue-500", trend: `${running} running` },
       { label: "Running Builds", value: String(running), icon: Play, color: "text-emerald-500", trend: `${total - running} idle` },
@@ -182,8 +177,8 @@ function DevOpsDashboard() {
   }, [pipelinesData, environmentsData]);
 
   const deploymentTimeline = useMemo(() => {
-    const data: any[] = deploymentsData?.data ?? [];
-    if (!data.length) return MOCK_DEPLOYMENT_TIMELINE;
+    const data: any[] = (deploymentsData as any)?.data ?? [];
+    if (!data.length) return [];
     return data.map((d: any) => ({
       id: d.id,
       env: d.environment ?? "Unknown",
@@ -243,6 +238,80 @@ function DevOpsDashboard() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Charts: Deployment Frequency + Build Success Rate */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="border-border/60 lg:col-span-2">
+          <CardContent className="p-6">
+            <h3 className="font-bold text-foreground mb-4">Deployment Frequency</h3>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={deploymentData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="deployGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="failGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} interval={2} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                  />
+                  <Area type="monotone" dataKey="deployments" name="Deployments" stroke="#3b82f6" strokeWidth={2} fill="url(#deployGradient)" dot={false} activeDot={{ r: 4 }} />
+                  <Area type="monotone" dataKey="failures" name="Failures" stroke="#ef4444" strokeWidth={2} fill="url(#failGradient)" dot={false} activeDot={{ r: 4 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60">
+          <CardContent className="p-6">
+            <h3 className="font-bold text-foreground mb-4">Build Success Rate</h3>
+            <div className="h-[200px] flex flex-col items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={BUILD_SUCCESS_DATA}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {BUILD_SUCCESS_DATA.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(value: number) => [`${value}%`, ""]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex items-center gap-4 mt-2 text-xs">
+                {BUILD_SUCCESS_DATA.map((d) => (
+                  <span key={d.name} className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                    <span className="text-muted-foreground">{d.name}</span>
+                    <span className="font-semibold">{d.value}%</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions */}

@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   Area,
@@ -50,26 +50,6 @@ export const Route = createFileRoute("/app/ecommerce/_index")({
   component: EcommerceDashboard,
 });
 
-const MOCK_STATS = {
-  revenue: 48750,
-  revenueChange: 12.5,
-  orders: 342,
-  ordersChange: 8.2,
-  customers: 156,
-  customersChange: 15.3,
-  conversionRate: 3.2,
-  conversionChange: 0.4,
-  averageOrder: 142.54,
-  cartAbandonment: 28.5,
-};
-
-const MOCK_RECENT_ORDERS = [
-  { id: "ORD-2024-342", customer: "Michael Torres", items: 3, total: 459.99, status: "processing", time: "5 min ago" },
-  { id: "ORD-2024-341", customer: "Sarah Chen", items: 1, total: 999.99, status: "shipped", time: "12 min ago" },
-  { id: "ORD-2024-340", customer: "Emily Zhang", items: 5, total: 234.50, status: "delivered", time: "1 hour ago" },
-  { id: "ORD-2024-339", customer: "David Park", items: 2, total: 129.98, status: "processing", time: "2 hours ago" },
-];
-
 function EcommerceDashboard() {
   const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: statsRefetch } = useQuery({
     queryKey: ["ecommerce-stats"],
@@ -80,6 +60,7 @@ function EcommerceDashboard() {
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -91,24 +72,22 @@ function EcommerceDashboard() {
       if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const stats = statsData
-    ? {
-        revenue: statsData.totalRevenue ?? statsData.revenue ?? 0,
-        revenueChange: statsData.revenueChange ?? 0,
-        orders: statsData.totalOrders ?? statsData.orders ?? 0,
-        ordersChange: statsData.ordersChange ?? 0,
-        customers: statsData.totalCustomers ?? statsData.customers ?? 0,
-        customersChange: statsData.customersChange ?? 0,
-        conversionRate: statsData.conversionRate ?? 0,
-        conversionChange: statsData.conversionChange ?? 0,
-        averageOrder: statsData.averageOrder ?? 0,
-        cartAbandonment: statsData.cartAbandonment ?? 0,
-      }
-    : MOCK_STATS;
-  const recentOrders =
-    ordersData?.data?.length > 0 ? ordersData.data : MOCK_RECENT_ORDERS;
+  const stats = {
+    revenue: (statsData as any)?.totalRevenue ?? (statsData as any)?.revenue ?? 0,
+    revenueChange: (statsData as any)?.revenueChange ?? 0,
+    orders: (statsData as any)?.totalOrders ?? (statsData as any)?.orders ?? 0,
+    ordersChange: (statsData as any)?.ordersChange ?? 0,
+    customers: (statsData as any)?.totalCustomers ?? (statsData as any)?.customers ?? 0,
+    customersChange: (statsData as any)?.customersChange ?? 0,
+    conversionRate: (statsData as any)?.conversionRate ?? 0,
+    conversionChange: (statsData as any)?.conversionChange ?? 0,
+    averageOrder: (statsData as any)?.averageOrder ?? 0,
+    cartAbandonment: (statsData as any)?.cartAbandonment ?? 0,
+  };
+  const recentOrders = (ordersData as any)?.data ?? [];
 
   const revenueData = [
     { month: "Jan", revenue: 32000, orders: 245 },
@@ -373,7 +352,7 @@ function EcommerceDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentOrders.map((order) => (
+            {recentOrders.map((order: any) => (
               <div
                 key={order.id}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"

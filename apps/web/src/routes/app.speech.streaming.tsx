@@ -18,7 +18,7 @@ export const Route = createFileRoute("/app/speech/streaming")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -62,7 +62,7 @@ function StreamingPage() {
     },
   });
 
-  const recentItems = recentTranscriptions?.data?.slice(0, 5) ?? [];
+  const recentItems = (recentTranscriptions as any)?.data?.slice(0, 5) ?? [];
 
   return (
     <div className="space-y-6">
@@ -172,10 +172,7 @@ function StreamingPage() {
           icon={<Radio className="h-12 w-12 text-muted-foreground/50" />}
           title="No recent sessions"
           description="Start a new session to begin live transcription. Sessions are saved automatically."
-          action={{
-            label: "View Documentation",
-            onClick: () => window.open("https://docs.nucleo.one/speech/streaming", "_blank"),
-          }}
+          action={<Button onClick={() => window.open("https://docs.nucleo.one/speech/streaming", "_blank")}>View Documentation</Button>}
         />
       )}
     </div>

@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 import { PriorityBadge } from "./app.projects";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ function KanbanBoardPage() {
     enabled: !!selectedProject,
   });
 
-  const tasks = (tasksData?.data as Task[]) || [];
+  const tasks = ((tasksData as any)?.data as Task[]) || [];
 
   // Filter tasks by search
   const filteredTasks = useMemo(() => {

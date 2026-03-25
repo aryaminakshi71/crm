@@ -14,17 +14,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/sms/compose")({
   component: ComposeSMSPage,
 });
-
-const MOCK_RECIPIENTS = [
-  { id: "1", name: "Sarah Johnson", phone: "+1 555-123-4567", type: "contact" },
-  { id: "2", name: "Michael Chen", phone: "+1 555-234-5678", type: "contact" },
-  { id: "3", name: "Emily Davis", phone: "+1 555-345-6789", type: "contact" },
-];
 
 function ComposeSMSPage() {
   const navigate = useNavigate();
@@ -36,11 +30,12 @@ function ComposeSMSPage() {
   const characterCount = message.length;
   const segmentCount = Math.ceil(characterCount / 160) || 1;
 
-  // Load contact suggestions from API, fall back to MOCK_RECIPIENTS
+  // Load contact suggestions from API
   const contactsQuery = useQuery({
     queryKey: ["communications", "contacts-for-compose"],
     queryFn: () => communicationsApi.conversations.list({ limit: 50 }),
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (contactsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -51,13 +46,11 @@ function ComposeSMSPage() {
   );
 
   const quickAddContacts =
-    contactsQuery.data?.data?.length
-      ? contactsQuery.data.data.map((c: any) => ({
+    (contactsQuery.data?.data ?? []).map((c: any) => ({
           id: c.id,
           name: c.participantName ?? c.subject ?? "Unknown",
           phone: c.participantContact ?? "",
-        })).filter((c: any) => c.phone)
-      : MOCK_RECIPIENTS;
+        })).filter((c: any) => c.phone);
 
   const sendMutation = useMutation({
     mutationFn: () =>

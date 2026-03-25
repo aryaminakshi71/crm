@@ -21,7 +21,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ type Sprint = {
 type Task = {
   id: string;
   title: string;
-  status: "todo" | "in_progress" | "done";
+  status: "todo" | "in_progress" | "done" | "completed";
   priority: "low" | "medium" | "high";
   assignee?: string;
   storyPoints?: number;
@@ -73,7 +73,7 @@ function SprintsPage() {
     enabled: !!selectedProjectId,
   });
 
-  const sprintTasks: Task[] = (tasksData?.data ?? []) as Task[];
+  const sprintTasks: Task[] = ((tasksData as any)?.data ?? []) as Task[];
 
   // Map projects to sprint shape
   const sprints: Sprint[] = projects.map((p) => ({

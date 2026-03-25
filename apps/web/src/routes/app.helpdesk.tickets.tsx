@@ -26,12 +26,8 @@ import {
   Ticket,
 } from "lucide-react";
 import { useState } from "react";
-import { helpdeskApi } from "../lib/api";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { toast } from "sonner";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/tickets")({
   component: TicketList,
@@ -58,20 +54,14 @@ function TicketList() {
   const queryClient = useQueryClient();
 
   const createTicketMutation = useMutation({
-    mutationFn: async (data: { subject: string; description: string; priority: string }) => {
-      const res = await fetch(`${API_BASE}/v1/helpdesk/tickets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to create ticket");
-      return res.json();
-    },
+    mutationFn: (data: { subject: string; description: string; priority: string }) =>
+      helpdeskApi.tickets.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk", "tickets"] });
       setIsCreateModalOpen(false);
       setNewTicket({ subject: "", description: "", priority: "medium" });
     },
+    onError: () => toast.error("Failed to create ticket"),
   });
 
   const { data: ticketsData, isLoading, isError, refetch } = useQuery({
@@ -200,7 +190,7 @@ function TicketList() {
           icon={<Ticket className="h-12 w-12" />}
           title="No tickets found"
           description="Adjust your filters or create a new ticket."
-          action={{ label: "Create Ticket", onClick: () => setIsCreateModalOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateModalOpen(true)}>Create Ticket</Button>}
         />
       ) : (
         <Card>

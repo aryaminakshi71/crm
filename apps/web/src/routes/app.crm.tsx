@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   ArrowRightLeft,
@@ -63,7 +63,7 @@ import {
   contactsApi,
   dealsApi,
   leadsApi,
-} from "../lib/api";
+} from "@/lib/api";
 
 import { CsvImportModal } from "../components/CsvImportModal";
 
@@ -351,6 +351,10 @@ function DealKanbanColumn({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function CrmWorkspacePage() {
+  const location = useLocation();
+  const isSubRoute = location.pathname !== "/app/crm";
+  if (isSubRoute) return <Outlet />;
+
   const { view: viewParam } = Route.useSearch();
   const navigate = useNavigate();
   const view: CrmView = viewParam ?? "overview";

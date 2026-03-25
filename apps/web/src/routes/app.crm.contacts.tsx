@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { contactsApi } from "../lib/api";
+import { contactsApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -189,7 +189,7 @@ function CrmContactsPage() {
         <EmptyState
           title="No contacts found"
           description={search ? "Try adjusting your search." : "Create your first contact to get started."}
-          action={{ label: "New Contact", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>New Contact</Button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -252,8 +252,8 @@ function CrmContactsPage() {
         onClose={() => setIsCreateOpen(false)}
         title="New Contact"
         onSubmit={() => createContact.mutate()}
-        isSubmitting={createContact.isPending}
-        submitLabel="Create Contact"
+        isLoading={createContact.isPending}
+        submitText="Create Contact"
       >
         <div className="grid grid-cols-2 gap-3">
           <FormField label="First Name *">
@@ -313,8 +313,8 @@ function CrmContactsPage() {
               },
             })
           }
-          isSubmitting={updateContact.isPending}
-          submitLabel="Save Changes"
+          isLoading={updateContact.isPending}
+          submitText="Save Changes"
         >
           <div className="grid grid-cols-2 gap-3">
             <FormField label="First Name">

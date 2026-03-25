@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { LeadCaptureWidget } from "@/components/lead-capture-widget";
 import { leadsApi } from "@/lib/api";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -952,12 +952,12 @@ function HrmMockUI() {
           <div />
           {calDays.map((d) => <div key={d} className="text-[9px] text-center text-muted-foreground font-medium">{d}</div>)}
           {employees.map((emp, i) => (
-            <>
-              <div key={emp.name + "-label"} className="text-[9px] text-muted-foreground truncate">{emp.avatar}</div>
+            <React.Fragment key={emp.name}>
+              <div className="text-[9px] text-muted-foreground truncate">{emp.avatar}</div>
               {leaveData[i].map((isLeave, j) => (
                 <div key={j} className={cn("h-4 rounded-sm", isLeave ? "bg-amber-500/40" : "bg-muted/30")} />
               ))}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>

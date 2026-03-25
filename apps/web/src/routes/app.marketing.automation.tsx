@@ -6,16 +6,16 @@ import { Zap, Plus, Play, Pause, Users,
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/marketing/automation")({
   component: MarketingAutomationPage,
 });
 
-const MOCK_AUTOMATIONS = [
+const _MOCK_AUTOMATIONS = [
   {
     id: "auto-1",
     name: "Welcome Series",
@@ -77,9 +77,10 @@ function MarketingAutomationPage() {
         return null;
       }
     },
+    placeholderData: (prev) => prev,
   });
 
-  const automations = campaignsData?.data?.length ? campaignsData.data : MOCK_AUTOMATIONS;
+  const automations = (campaignsData as any)?.data ?? [];
 
   const statusColor = (s: string) =>
     s === "active" ? "bg-green-100 text-green-800"
@@ -91,7 +92,7 @@ function MarketingAutomationPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

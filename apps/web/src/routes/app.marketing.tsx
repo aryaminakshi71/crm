@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   BarChart3,
   DollarSign,
@@ -52,7 +52,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { aiApi, marketingApi, nucleoApi } from "../lib/api";
+import { aiApi, marketingApi, nucleoApi } from "@/lib/api";
 
 const CHART_COLORS = [
   "#22d3ee",
@@ -171,6 +171,8 @@ function Metric({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function MarketingPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/marketing") return <Outlet />;
   const { view: viewParam } = Route.useSearch();
   const [view, setView] = useState<MarketingView>(viewParam ?? "campaigns");
   const [search, setSearch] = useState("");
@@ -618,10 +620,7 @@ function MarketingPage() {
               icon={<Megaphone className="h-12 w-12" />}
               title="No campaigns"
               description="Create your first campaign with AI assistance."
-              action={{
-                label: "Create Campaign",
-                onClick: () => setIsCreateOpen(true),
-              }}
+              action={<Button onClick={() => setIsCreateOpen(true)}>Create Campaign</Button>}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -920,10 +919,7 @@ function MarketingPage() {
               icon={<Users className="h-12 w-12" />}
               title="No audience segments"
               description="Create segments to target your campaigns effectively."
-              action={{
-                label: "Create Segment",
-                onClick: () => setIsSegmentOpen(true),
-              }}
+              action={<Button onClick={() => setIsSegmentOpen(true)}>Create Segment</Button>}
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

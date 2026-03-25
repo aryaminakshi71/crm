@@ -7,7 +7,7 @@ import {
   Edit,
   Trash2,
   Mic,
-  Power,,
+  Power,
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -18,9 +18,9 @@ export const Route = createFileRoute("/app/speech/commands")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Command {
@@ -30,14 +30,6 @@ interface Command {
   enabled: boolean;
   usageCount: number;
 }
-
-const MOCK_COMMANDS: Command[] = [
-  { id: "c1", phrase: "Hey Nucleo", action: "Wake word activation", enabled: true, usageCount: 1247 },
-  { id: "c2", phrase: "Start transcription", action: "Begin audio transcription", enabled: true, usageCount: 456 },
-  { id: "c3", phrase: "Stop transcription", action: "End current transcription", enabled: true, usageCount: 389 },
-  { id: "c4", phrase: "Create summary", action: "Generate meeting notes", enabled: true, usageCount: 234 },
-  { id: "c5", phrase: "Export to PDF", action: "Export current document", enabled: false, usageCount: 0 },
-];
 
 function CommandsPage() {
   const navigate = useNavigate();
@@ -52,16 +44,16 @@ function CommandsPage() {
       if (!res.ok) throw new Error("Failed to fetch commands");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const commands: Command[] = data?.data ?? MOCK_COMMANDS;
+  const commands: Command[] = (data as any)?.data ?? [];
 
   const filteredCommands = commands.filter((cmd) =>
     (cmd.phrase ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (cmd.action ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -69,12 +61,11 @@ function CommandsPage() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

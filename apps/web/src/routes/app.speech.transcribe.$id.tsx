@@ -8,7 +8,7 @@ import {
   BarChart3,
   User,
   Clock,
-  Loader2,,
+  Loader2,
   AlertCircle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +29,6 @@ function TranscriptionDetailPage() {
     queryFn: () => api["speech"]["transcriptions.get"]({ id }),
   });
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -37,12 +36,11 @@ function TranscriptionDetailPage() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
 
   if (error || !transcription) {
     return (

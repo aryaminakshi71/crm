@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ function MilestonesPage() {
     enabled: !!id,
   });
 
-  const milestones = (milestonesData?.data || []) as Milestone[];
+  const milestones = ((milestonesData as any)?.data || []) as Milestone[];
 
   // Calculate overall progress
   const completedCount = milestones.filter((m) => m.status === "completed").length;

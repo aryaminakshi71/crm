@@ -45,7 +45,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ function InfluencersPage() {
       return res.json();
     },
   });
-  const influencers: Influencer[] = data?.data ?? [];
+  const influencers: Influencer[] = (data as any)?.data ?? [];
 
   // ── Create influencer ────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -186,7 +186,7 @@ function InfluencersPage() {
           icon={<Users className="w-10 h-10 text-muted-foreground" />}
           title="No influencers tracked"
           description="Add your first influencer to start tracking partnerships and performance."
-          action={{ label: "Add Influencer", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>Add Influencer</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -236,7 +236,7 @@ function InfluencersPage() {
         title="Add Influencer"
         onSubmit={() => createMutation.mutate(newInfluencer)}
         isLoading={createMutation.isPending}
-        submitLabel="Add Influencer"
+        submitText="Add Influencer"
       >
         <FormField label="Handle / Username" required>
           <Input

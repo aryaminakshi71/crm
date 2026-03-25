@@ -12,7 +12,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Mic, MessageSquare, Phone, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/numbers")({
   component: PhoneNumbersPage,
@@ -55,9 +55,10 @@ function PhoneNumbersPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["communications", "phone-numbers"],
     queryFn: () => communicationsApi.phoneNumbers.list({ page: 1, limit: 100 }),
+    placeholderData: (prev) => prev,
   });
 
-  const numbers: any[] = data?.data ?? MOCK_NUMBERS;
+  const numbers: any[] = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -165,12 +166,12 @@ function PhoneNumbersPage() {
 
       {/* Add modal */}
       <FormModal
-        open={isModalOpen}
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add Phone Number"
         onSubmit={() => createMutation.mutate(form)}
-        isSubmitting={createMutation.isPending}
-        submitLabel="Add Number"
+        isLoading={createMutation.isPending}
+        submitText="Add Number"
       >
         <FormField label="Phone number" required>
           <Input

@@ -12,36 +12,23 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { MessageSquare, Plus, Search, Send } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { z } from "zod";
+import { Pagination } from "@/components/ui/pagination";
+import { communicationsApi } from "@/lib/api";
 
-export const Route = createFileRoute("/app/communications/sms")({
-  component: SmsPage,
+const searchSchema = z.object({
+  q: z.string().optional(),
+  page: z.number().optional().default(1),
 });
 
-// ─── Fallback mock data ───────────────────────────────────────────────────────
-
-const MOCK_CAMPAIGNS = [
-  {
-    id: "mock-sms-1",
-    name: "Welcome Series",
-    status: "completed",
-    body: "Welcome to Nucleo! Reply STOP to opt out.",
-    recipientCount: "1240",
-    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-sms-2",
-    name: "Promo Blast Q1",
-    status: "draft",
-    body: "Get 20% off this week only. Use code Q1SAVE.",
-    recipientCount: "0",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+export const Route = createFileRoute("/app/communications/sms")({
+  validateSearch: searchSchema,
+  component: SmsPage,
+});
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -51,18 +38,29 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-orange-500/20 text-orange-400",
 };
 
+const PAGE_SIZE = 20;
+
 function SmsPage() {
-  const [search, setSearch] = useState("");
+  const { q = "", page = 1 } = useSearch({ from: "/app/communications/sms" });
+  const navigate = useNavigate({ from: "/app/communications/sms" });
+  const setQ = (v: string) =>
+    navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
+  const setPage = (v: number) =>
+    navigate({ search: (p) => ({ ...p, page: v }) });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", body: "", fromNumber: "" });
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["communications", "campaigns"],
-    queryFn: () => communicationsApi.campaigns.list({ page: 1, limit: 100 }),
+    queryKey: ["communications", "campaigns", page],
+    queryFn: () => communicationsApi.campaigns.list({ page, limit: PAGE_SIZE }),
+    placeholderData: (prev) => prev,
   });
 
-  const campaigns: any[] = data?.data ?? MOCK_CAMPAIGNS;
+  const campaigns: any[] = data?.data ?? [];
+  const total = (data as any)?.total ?? (data as any)?.pagination?.total ?? campaigns.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -81,7 +79,7 @@ function SmsPage() {
   });
 
   const filtered = campaigns.filter((c) =>
-    !search || c.name?.toLowerCase().includes(search.toLowerCase()),
+    !q || c.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
   return (
@@ -109,8 +107,8 @@ function SmsPage() {
         <Input
           className="pl-9"
           placeholder="Search campaigns..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
         />
       </div>
 
@@ -171,14 +169,16 @@ function SmsPage() {
         </p>
       )}
 
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+
       {/* Create modal */}
       <FormModal
-        open={isModalOpen}
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="New SMS Campaign"
         onSubmit={() => createMutation.mutate(form)}
-        isSubmitting={createMutation.isPending}
-        submitLabel="Create Campaign"
+        isLoading={createMutation.isPending}
+        submitText="Create Campaign"
       >
         <FormField label="Campaign name" required>
           <Input

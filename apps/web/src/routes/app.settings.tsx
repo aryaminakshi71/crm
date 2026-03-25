@@ -55,6 +55,9 @@ function SettingsPage() {
   const { tab: activeTabParam } = Route.useSearch();
   const [activeTab, setActiveTab] = useState(activeTabParam || "profile");
   const [saving, setSaving] = useState(false);
+  const activeOrganization = (authClient as any).useActiveOrganization?.()?.data ?? null;
+  const isError = false;
+  const refetch = () => {};
   const [profileData, setProfileData] = useState({
     firstName: "John",
     lastName: "Doe",
@@ -720,6 +723,7 @@ function BillingTab() {
   const { data: invoicesData, isError, refetch} = useQuery({
     queryKey: ["billing", "invoices"],
     queryFn: () => nucleoApi.invoices.list({ page: 1, limit: 50 }),
+    placeholderData: (prev) => prev,
   });
 
   const handleUpgrade = async (planId: string) => {
@@ -947,7 +951,7 @@ function BillingTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(invoicesData?.data ?? MOCK_INVOICES).map((inv) => (
+                  {(invoicesData?.data ?? []).map((inv: any) => (
                     <tr
                       key={inv.id}
                       className="border-t border-border/50 hover:bg-muted/10 transition-colors"

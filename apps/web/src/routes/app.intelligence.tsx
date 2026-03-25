@@ -43,7 +43,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, dealsApi, leadsApi, nucleoApi } from "../lib/api";
+import { aiApi, dealsApi, leadsApi, nucleoApi } from "@/lib/api";
 
 // ── Mini Components ──────────────────────────────────────────────────────────
 

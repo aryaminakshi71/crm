@@ -24,23 +24,14 @@ import {
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/ecommerce/orders")({
   component: OrdersPage,
 });
-
-const MOCK_ORDERS = [
-  { id: "ORD-2024-342", customer: "Michael Torres", email: "michael@example.com", items: 3, total: 459.99, status: "pending", payment: "paid", date: "Mar 20, 2024", shipping: "Standard" },
-  { id: "ORD-2024-341", customer: "Sarah Chen", email: "sarah@example.com", items: 1, total: 999.99, status: "processing", payment: "paid", date: "Mar 20, 2024", shipping: "Express" },
-  { id: "ORD-2024-340", customer: "Emily Zhang", email: "emily@example.com", items: 5, total: 234.50, status: "shipped", payment: "paid", date: "Mar 19, 2024", shipping: "Standard" },
-  { id: "ORD-2024-339", customer: "David Park", email: "david@example.com", items: 2, total: 129.98, status: "delivered", payment: "paid", date: "Mar 18, 2024", shipping: "Standard" },
-  { id: "ORD-2024-338", customer: "Lisa Wang", email: "lisa@example.com", items: 4, total: 89.96, status: "cancelled", payment: "refunded", date: "Mar 17, 2024", shipping: "-" },
-  { id: "ORD-2024-337", customer: "Robert Kim", email: "robert@example.com", items: 1, total: 49.99, status: "pending", payment: "pending", date: "Mar 17, 2024", shipping: "Standard" },
-];
 
 function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,11 +48,12 @@ function OrdersPage() {
       if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const orders = apiData?.data?.length > 0 ? apiData.data : MOCK_ORDERS;
+  const orders = (apiData as any)?.data ?? [];
 
-  const filteredOrders = orders.filter((order: typeof MOCK_ORDERS[0]) => {
+  const filteredOrders = orders.filter((order: any) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (order.customer ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,10 +98,10 @@ function OrdersPage() {
 
   const summary = {
     total: orders.length,
-    pending: orders.filter((o) => o.status === "pending").length,
-    processing: orders.filter((o) => o.status === "processing").length,
-    shipped: orders.filter((o) => o.status === "shipped").length,
-    delivered: orders.filter((o) => o.status === "delivered").length,
+    pending: orders.filter((o: any) => o.status === "pending").length,
+    processing: orders.filter((o: any) => o.status === "processing").length,
+    shipped: orders.filter((o: any) => o.status === "shipped").length,
+    delivered: orders.filter((o: any) => o.status === "delivered").length,
   };
 
   if (isError) return (
@@ -211,7 +203,7 @@ function OrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredOrders.map((order) => (
+                {filteredOrders.map((order: any) => (
                   <tr key={order.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

@@ -39,7 +39,7 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 // ─── Route ───────────────────────────────────────────────────────────────────
@@ -161,7 +161,7 @@ function SocialCampaignsPage() {
       });
       if (!res.ok) throw new Error("Failed to fetch campaigns");
       const json = await res.json();
-      return json.data ?? json;
+      return (json as any).data ?? json;
     },
     placeholderData: DEMO_CAMPAIGNS,
   });
@@ -404,11 +404,12 @@ function SocialCampaignsPage() {
       {/* Create Campaign Modal */}
       {showCreate && (
         <FormModal
+          isOpen={showCreate}
           title="Create Campaign"
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreateSubmit}
           isLoading={createCampaignMutation.isPending}
-          submitLabel="Create Campaign"
+          submitText="Create Campaign"
         >
           <FormField label="Campaign Name" required>
             <Input

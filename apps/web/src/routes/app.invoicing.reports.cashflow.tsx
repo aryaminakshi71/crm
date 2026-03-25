@@ -43,19 +43,12 @@ export const Route = createFileRoute("/app/invoicing/reports/cashflow")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
-const monthlyCashFlow = [
-  { month: "Jan", operating: 15000, investing: -5000, financing: -3000, net: 7000 },
-  { month: "Feb", operating: 18000, investing: -8000, financing: -2000, net: 8000 },
-  { month: "Mar", operating: 22000, investing: -4000, financing: -5000, net: 13000 },
-  { month: "Apr", operating: 19000, investing: -6000, financing: -3000, net: 10000 },
-  { month: "May", operating: 24000, investing: -7000, financing: -4000, net: 13000 },
-  { month: "Jun", operating: 26000, investing: -9000, financing: -3000, net: 14000 },
-];
+const EMPTY_CASHFLOW_DATA: any[] = [];
 
 function CashFlowStatement() {
   const [dateRange, setDateRange] = useState("ytd");
@@ -67,6 +60,7 @@ function CashFlowStatement() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (cashflowQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -76,12 +70,12 @@ function CashFlowStatement() {
     </div>
   );
 
-  const operatingCashFlow = cashflowQuery.data?.operatingCashFlow ?? 124000;
-  const investingCashFlow = cashflowQuery.data?.investingCashFlow ?? -39000;
-  const financingCashFlow = cashflowQuery.data?.financingCashFlow ?? -20000;
-  const netCashFlow = cashflowQuery.data?.netCashFlow ?? 65000;
-  const beginningCash = cashflowQuery.data?.beginningCash ?? 60000;
-  const endingCash = cashflowQuery.data?.endingCash ?? 125000;
+  const operatingCashFlow = (cashflowQuery as any).data?.operatingCashFlow ?? 124000;
+  const investingCashFlow = (cashflowQuery as any).data?.investingCashFlow ?? -39000;
+  const financingCashFlow = (cashflowQuery as any).data?.financingCashFlow ?? -20000;
+  const netCashFlow = (cashflowQuery as any).data?.netCashFlow ?? 65000;
+  const beginningCash = (cashflowQuery as any).data?.beginningCash ?? 60000;
+  const endingCash = (cashflowQuery as any).data?.endingCash ?? 125000;
 
   return (
     <div className="space-y-6">
@@ -128,7 +122,7 @@ function CashFlowStatement() {
         <CardContent>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyCashFlow}>
+              <AreaChart data={EMPTY_CASHFLOW_DATA}>
                 <defs>
                   <linearGradient id="colorOperating" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#34d399" stopOpacity={0.2} />

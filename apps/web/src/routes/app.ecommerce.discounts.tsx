@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   AlertCircle,
@@ -30,14 +30,6 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/ecommerce/discounts")({
   component: DiscountsPage,
 });
-
-const MOCK_DISCOUNTS = [
-    { id: 1, code: "SAVE20", name: "20% Off Summer Sale", type: "percentage", value: 20, minOrder: 50, maxDiscount: 100, usage: 156, limit: 500, status: "active", expiresAt: "Mar 31, 2024" },
-    { id: 2, code: "FREESHIP", name: "Free Shipping", type: "shipping", value: 0, minOrder: 75, maxDiscount: null, usage: 89, limit: null, status: "active", expiresAt: "Apr 15, 2024" },
-    { id: 3, code: "10OFF", name: "$10 Off Orders Over $50", type: "fixed", value: 10, minOrder: 50, maxDiscount: null, usage: 234, limit: 1000, status: "active", expiresAt: "May 1, 2024" },
-    { id: 4, code: "WELCOME15", name: "15% Off First Order", type: "percentage", value: 15, minOrder: 0, maxDiscount: 50, usage: 67, limit: null, status: "active", expiresAt: null },
-  { id: 5, code: "FLASH50", name: "$50 Off $500+", type: "fixed", value: 50, minOrder: 500, maxDiscount: null, usage: 12, limit: 100, status: "expired", expiresAt: "Feb 28, 2024" },
-];
 
 function DiscountsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +69,7 @@ function DiscountsPage() {
       if (!res.ok) throw new Error("Failed to fetch discounts");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -87,10 +80,10 @@ function DiscountsPage() {
     </div>
   );
 
-  const discounts = apiData?.data?.length > 0 ? apiData.data : MOCK_DISCOUNTS;
+  const discounts = (apiData as any)?.data ?? [];
 
   const filteredDiscounts = discounts.filter(
-    (d: typeof MOCK_DISCOUNTS[0]) =>
+    (d: any) =>
       d.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -130,7 +123,7 @@ function DiscountsPage() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Discount Codes</h2>
           <p className="text-sm text-muted-foreground">
-            {discounts.filter((d) => d.status === "active").length} active discounts
+            {discounts.filter((d: any) => d.status === "active").length} active discounts
           </p>
         </div>
         <Button
@@ -175,7 +168,7 @@ function DiscountsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredDiscounts.map((discount) => (
+                {filteredDiscounts.map((discount: any) => (
                   <tr key={discount.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

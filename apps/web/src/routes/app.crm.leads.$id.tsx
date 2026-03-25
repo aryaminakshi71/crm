@@ -5,7 +5,7 @@
  */
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  MessageSquarePlus,
   MoreHorizontal,
   Phone,
   Star,
@@ -24,56 +25,111 @@ import {
   Trash2,
   TrendingUp,
   User,
+  UserCheck,
   XCircle,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { leadsApi } from "../lib/api";
+import { toast } from "sonner";
+import { leadsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/crm/leads/$id")({
   component: LeadDetail,
 });
 
-const MOCK_LEAD = {
-  id: "",
-  name: "Alex Rivera",
-  email: "alex.r@techventures.com",
-  phone: "+1 (555) 111-2222",
-  company: "Tech Ventures LLC",
-  jobTitle: "CTO",
-  location: "San Francisco, CA",
-  website: "techventures.com",
-  source: "Website",
-  status: "qualified" as const,
-  score: 92,
-  scoreBreakdown: {
-    engagement: { score: 30, max: 35, label: "Engagement", description: "Website visits, email opens, content downloads" },
-    firmographics: { score: 35, max: 40, label: "Firmographics", description: "Company size, industry, revenue" },
-    demographic: { score: 27, max: 25, label: "Demographics", description: "Job title, seniority, decision-making authority" },
-  },
-  assignedTo: "Sarah Chen",
-  createdAt: "2024-03-10",
-  lastActivity: "2024-03-15",
-  estimatedValue: 150000,
-  notes: "Highly engaged prospect. Perfect fit for enterprise tier.",
-  tags: ["hot-lead", "enterprise", "decision-maker", "tech"],
-  activities: [
-    { id: "1", type: "page_view", title: "Viewed Pricing Page", description: "Enterprise tier pricing viewed for 3 minutes", date: "2024-03-15", user: "System" },
-    { id: "2", type: "email", title: "Opened Email: Product Demo Invite", date: "2024-03-14", user: "Sales Team" },
-    { id: "3", type: "form", title: "Submitted Contact Form", date: "2024-03-10", user: "System" },
-  ],
-  deals: [{ id: "1", name: "Enterprise SaaS License", value: 150000, stage: "Qualified" }],
-};
-
 function LeadDetail() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = Route.useParams();
 
+  // ── Edit state ─────────────────────────────────────────────────────────────
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    companyName: "",
+    jobTitle: "",
+    status: "" as string,
+    notes: "",
+  });
+
+  // ── Add note state ─────────────────────────────────────────────────────────
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
+  // ── Convert confirm state ──────────────────────────────────────────────────
+  const [showConvertConfirm, setShowConvertConfirm] = useState(false);
+
+  // ── Query ──────────────────────────────────────────────────────────────────
   const { data: apiLead, isLoading, isError } = useQuery({
     queryKey: ["leads", id],
     queryFn: () => leadsApi.get(id),
+    placeholderData: (prev) => prev,
     retry: false,
     enabled: !!id,
+  });
+
+  // ── updateLead mutation ────────────────────────────────────────────────────
+  const updateLead = useMutation({
+    mutationFn: (data: Parameters<typeof leadsApi.update>[1]) => leadsApi.update(id, data),
+    onSuccess: () => {
+      toast.success("Lead updated");
+      queryClient.invalidateQueries({ queryKey: ["leads", id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowEditModal(false);
+    },
+    onError: () => toast.error("Failed to update lead"),
+  });
+
+  // ── addNote mutation (via update notes field) ──────────────────────────────
+  const addNote = useMutation({
+    mutationFn: (note: string) => {
+      if (!note.trim()) throw new Error("Note cannot be empty");
+      const existingNotes = (lead as any).notes ?? "";
+      const timestamp = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const combined = existingNotes
+        ? `${existingNotes}\n\n[${timestamp}] ${note.trim()}`
+        : `[${timestamp}] ${note.trim()}`;
+      return leadsApi.update(id, { notes: combined });
+    },
+    onSuccess: () => {
+      toast.success("Note added");
+      queryClient.invalidateQueries({ queryKey: ["leads", id] });
+      setShowNoteModal(false);
+      setNoteText("");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to add note"),
+  });
+
+  // ── convertToContact mutation ──────────────────────────────────────────────
+  const convertToContact = useMutation({
+    mutationFn: () =>
+      leadsApi.convert(id, {
+        createContact: true,
+        createDeal: false,
+      }),
+    onSuccess: () => {
+      toast.success("Lead converted to contact successfully");
+      queryClient.invalidateQueries({ queryKey: ["leads", id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      setShowConvertConfirm(false);
+      navigate({ to: "/app/crm/contacts" });
+    },
+    onError: () => toast.error("Failed to convert lead"),
+  });
+
+  // ── deleteLead mutation ────────────────────────────────────────────────────
+  const deleteLead = useMutation({
+    mutationFn: () => leadsApi.delete(id),
+    onSuccess: () => {
+      toast.success("Lead deleted");
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      navigate({ to: "/app/crm/leads" });
+    },
+    onError: () => toast.error("Failed to delete lead"),
   });
 
   if (isLoading) {
@@ -106,31 +162,31 @@ function LeadDetail() {
     );
   }
 
-  const raw = apiLead ?? (isError ? { ...MOCK_LEAD, id } : MOCK_LEAD);
+  const raw = (apiLead as any) ?? null;
 
   const lead = {
-    id: raw.id ?? id,
-    name: raw.firstName && raw.lastName
-      ? `${raw.firstName} ${raw.lastName}`
-      : raw.firstName ?? raw.lastName ?? raw.name ?? MOCK_LEAD.name,
-    email: raw.email ?? MOCK_LEAD.email,
-    phone: raw.phone ?? MOCK_LEAD.phone,
-    company: raw.companyName ?? raw.company ?? MOCK_LEAD.company,
-    jobTitle: raw.jobTitle ?? MOCK_LEAD.jobTitle,
-    location: raw.location ?? MOCK_LEAD.location,
-    website: raw.website ?? MOCK_LEAD.website,
-    source: raw.source ?? MOCK_LEAD.source,
-    status: (raw.status ?? MOCK_LEAD.status) as "new" | "contacted" | "qualified" | "unqualified",
-    score: raw.score ?? MOCK_LEAD.score,
-    scoreBreakdown: raw.scoreBreakdown ?? MOCK_LEAD.scoreBreakdown,
-    assignedTo: raw.assignedToName ?? raw.assignedTo ?? MOCK_LEAD.assignedTo,
-    createdAt: raw.createdAt ? String(raw.createdAt).slice(0, 10) : MOCK_LEAD.createdAt,
-    lastActivity: raw.updatedAt ? String(raw.updatedAt).slice(0, 10) : MOCK_LEAD.lastActivity,
-    estimatedValue: raw.estimatedValue ?? MOCK_LEAD.estimatedValue,
-    notes: raw.notes ?? MOCK_LEAD.notes,
-    tags: raw.tags ?? MOCK_LEAD.tags,
-    activities: raw.activities ?? MOCK_LEAD.activities,
-    deals: raw.deals ?? MOCK_LEAD.deals,
+    id: (raw as any)?.id ?? id,
+    name: (raw as any)?.firstName && (raw as any).lastName
+      ? `${(raw as any).firstName} ${(raw as any).lastName}`
+      : (raw as any)?.firstName ?? (raw as any)?.lastName ?? (raw as any)?.name ?? "",
+    email: (raw as any)?.email ?? "",
+    phone: (raw as any)?.phone ?? "",
+    company: (raw as any)?.companyName ?? (raw as any)?.company ?? "",
+    jobTitle: (raw as any)?.jobTitle ?? "",
+    location: (raw as any)?.location ?? "",
+    website: (raw as any)?.website ?? "",
+    source: (raw as any)?.source ?? "",
+    status: ((raw as any)?.status ?? "new") as "new" | "contacted" | "qualified" | "unqualified",
+    score: (raw as any)?.score ?? 0,
+    scoreBreakdown: (raw as any)?.scoreBreakdown ?? { engagement: { score: 0, max: 0, label: "", description: "" }, firmographics: { score: 0, max: 0, label: "", description: "" }, demographic: { score: 0, max: 0, label: "", description: "" } },
+    assignedTo: (raw as any)?.assignedToName ?? (raw as any)?.assignedTo ?? "",
+    createdAt: (raw as any)?.createdAt ? String((raw as any).createdAt).slice(0, 10) : "",
+    lastActivity: (raw as any)?.updatedAt ? String((raw as any).updatedAt).slice(0, 10) : "",
+    estimatedValue: (raw as any)?.estimatedValue ?? 0,
+    notes: (raw as any)?.notes ?? "",
+    tags: (raw as any)?.tags ?? [],
+    activities: (raw as any)?.activities ?? [],
+    deals: (raw as any)?.deals ?? [],
   };
 
   const statusConfig = {
@@ -148,6 +204,21 @@ function LeadDetail() {
     call: <Phone className="h-4 w-4 text-green-600" />,
     meeting: <Calendar className="h-4 w-4 text-purple-600" />,
   };
+
+  function openEditModal() {
+    const parts = lead.name.split(" ");
+    setEditForm({
+      firstName: parts[0] ?? "",
+      lastName: parts.slice(1).join(" "),
+      email: lead.email,
+      phone: lead.phone,
+      companyName: lead.company,
+      jobTitle: lead.jobTitle,
+      status: lead.status,
+      notes: lead.notes,
+    });
+    setShowEditModal(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -172,13 +243,18 @@ function LeadDetail() {
             <Mail className="h-4 w-4 mr-2" />
             Send Email
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={openEditModal}>
             <Edit2 className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline" className="text-destructive hover:text-destructive">
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={() => deleteLead.mutate()}
+            disabled={deleteLead.isPending}
+          >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            {deleteLead.isPending ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>
@@ -258,14 +334,14 @@ function LeadDetail() {
                   <div key={key}>
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <span className="font-medium text-sm">{data.label}</span>
-                        <p className="text-xs text-muted-foreground">{data.description}</p>
+                        <span className="font-medium text-sm">{(data as any).label}</span>
+                        <p className="text-xs text-muted-foreground">{(data as any).description}</p>
                       </div>
                       <span className="text-sm font-semibold">
-                        {data.score}/{data.max}
+                        {(data as any).score}/{(data as any).max}
                       </span>
                     </div>
-                    <Progress value={(data.score / data.max) * 100} className="h-2" />
+                    <Progress value={((data as any).score / (data as any).max) * 100} className="h-2" />
                   </div>
                 ))}
               </div>
@@ -333,7 +409,7 @@ function LeadDetail() {
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs text-muted-foreground mb-2">Tags</p>
                 <div className="flex flex-wrap gap-2">
-                  {lead.tags.map((tag) => (
+                  {lead.tags.map((tag: any) => (
                     <Badge key={tag} variant="secondary">
                       {tag}
                     </Badge>
@@ -350,7 +426,7 @@ function LeadDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {lead.activities.map((activity, index) => (
+                {lead.activities.map((activity: any, index: any) => (
                   <div key={activity.id} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className="rounded-full bg-muted p-2">
@@ -398,9 +474,22 @@ function LeadDetail() {
                 <Calendar className="h-4 w-4 mr-2" />
                 Schedule Meeting
               </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Target className="h-4 w-4 mr-2" />
-                Convert to Deal
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowNoteModal(true)}
+              >
+                <MessageSquarePlus className="h-4 w-4 mr-2" />
+                Add Note
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-primary hover:text-primary"
+                onClick={() => setShowConvertConfirm(true)}
+                disabled={convertToContact.isPending}
+              >
+                <UserCheck className="h-4 w-4 mr-2" />
+                {convertToContact.isPending ? "Converting..." : "Convert to Contact"}
               </Button>
             </CardContent>
           </Card>
@@ -438,10 +527,15 @@ function LeadDetail() {
               <CardTitle className="text-base font-semibold">Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{lead.notes}</p>
-              <Button variant="ghost" size="sm" className="mt-2">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{lead.notes}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setShowNoteModal(true)}
+              >
                 <Edit2 className="h-4 w-4 mr-2" />
-                Edit Notes
+                Add Note
               </Button>
             </CardContent>
           </Card>
@@ -470,6 +564,165 @@ function LeadDetail() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg">Edit Lead</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">First Name</label>
+                <input
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Last Name</label>
+                <input
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <input
+                type="email"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editForm.email}
+                onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Phone</label>
+              <input
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editForm.phone}
+                onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Company</label>
+              <input
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editForm.companyName}
+                onChange={(e) => setEditForm((p) => ({ ...p, companyName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Job Title</label>
+              <input
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editForm.jobTitle}
+                onChange={(e) => setEditForm((p) => ({ ...p, jobTitle: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <select
+                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={editForm.status}
+                onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+              >
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="qualified">Qualified</option>
+                <option value="unqualified">Unqualified</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes</label>
+              <textarea
+                rows={3}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                value={editForm.notes}
+                onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
+              <Button
+                onClick={() =>
+                  updateLead.mutate({
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
+                    email: editForm.email,
+                    phone: editForm.phone,
+                    companyName: editForm.companyName,
+                    jobTitle: editForm.jobTitle,
+                    status: editForm.status,
+                    notes: editForm.notes,
+                  })
+                }
+                disabled={updateLead.isPending}
+              >
+                {updateLead.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Note Modal */}
+      {showNoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg">Add Note</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowNoteModal(false)}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <textarea
+              rows={5}
+              placeholder="Write your note here..."
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowNoteModal(false)}>Cancel</Button>
+              <Button
+                onClick={() => addNote.mutate(noteText)}
+                disabled={addNote.isPending}
+              >
+                {addNote.isPending ? "Saving..." : "Add Note"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert Confirmation */}
+      {showConvertConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-bold text-lg">Convert Lead to Contact</h2>
+            <p className="text-sm text-muted-foreground">
+              This will create a new contact from <strong>{lead.name}</strong> and mark the lead as
+              converted. You will be redirected to the contacts page.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowConvertConfirm(false)}>Cancel</Button>
+              <Button
+                onClick={() => convertToContact.mutate()}
+                disabled={convertToContact.isPending}
+              >
+                {convertToContact.isPending ? "Converting..." : "Convert"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

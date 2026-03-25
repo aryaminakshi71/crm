@@ -29,7 +29,7 @@ export const Route = createFileRoute("/app/monitoring/dashboards/new")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
   "Content-Type": "application/json",
 });
 
@@ -37,7 +37,7 @@ function NewDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dashboardName, setDashboardName] = useState("");
-  const [widgets, setWidgets] = useState([
+  const [widgets, setWidgets] = useState<any[]>([
     { id: 1, type: "metric", title: "Total Revenue", metric: "$124,500", icon: "DollarSign" },
     { id: 2, type: "chart", title: "Revenue Trend", chartType: "line" },
     { id: 3, type: "metric", title: "Active Users", metric: "1,247", icon: "Users" },

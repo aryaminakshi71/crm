@@ -28,9 +28,9 @@ export const Route = createFileRoute("/app/agents/sandbox")({
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 const LANGUAGES = [
@@ -161,7 +161,7 @@ function SandboxPage() {
     },
     onSuccess: ({ data, elapsed }) => {
       setExecutionTime(elapsed);
-      const out = data.output?.summary ?? JSON.stringify(data.output ?? {}, null, 2);
+      const out = (data as any).output?.summary ?? JSON.stringify((data as any).output ?? {}, null, 2);
       setOutput(out);
       setStatus("success");
     },

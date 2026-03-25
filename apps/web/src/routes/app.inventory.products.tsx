@@ -4,7 +4,7 @@
  * Browse and manage product catalog with real API integration.
  */
 
-import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
+import { Badge, Button, Card, CardContent, Input, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,14 +19,15 @@ import {
   Image,
   DollarSign,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { inventoryApi } from "../lib/api";
+import { inventoryApi } from "@/lib/api";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/inventory/products")({
@@ -38,6 +39,7 @@ function ProductsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -55,6 +57,14 @@ function ProductsPage() {
 
   const products = data?.data ?? [];
   const total = data?.total ?? 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => inventoryApi.products.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory", "products"] });
+      setDeleteProductId(null);
+    },
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -199,8 +209,8 @@ function ProductsPage() {
                         Edit
                       </Button>
                     </Link>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteProductId(product.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </CardContent>
@@ -251,8 +261,8 @@ function ProductsPage() {
                           Edit
                         </Button>
                       </Link>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteProductId(product.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
@@ -262,6 +272,27 @@ function ProductsPage() {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteProductId} onOpenChange={(open) => !open && setDeleteProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteProductId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteProductId && deleteMutation.mutate(deleteProductId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {!isLoading && products.length === 0 && (
         <div className="text-center py-12">

@@ -9,9 +9,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   ArrowLeft,
@@ -30,51 +30,6 @@ import {
 export const Route = createFileRoute("/app/ecommerce/orders/$id")({
   component: OrderDetailPage,
 });
-
-const MOCK_ORDER = {
-  id: "ORD-2024-342",
-  status: "processing",
-  date: "Mar 20, 2024",
-  customer: {
-    name: "Michael Torres",
-    email: "michael@example.com",
-    phone: "+1-555-0123",
-  },
-  shippingAddress: {
-    line1: "123 Main Street",
-    line2: "Apt 4B",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90001",
-    country: "United States",
-  },
-  billingAddress: {
-    line1: "123 Main Street",
-    line2: "Apt 4B",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90001",
-    country: "United States",
-  },
-  payment: {
-    method: "Credit Card",
-    last4: "4242",
-    status: "paid",
-  },
-  shippingInfo: {
-    method: "Standard Shipping",
-    tracking: "1Z999AA10123456784",
-    status: "in_transit",
-  },
-  items: [
-    { id: 1, name: '55" 4K Smart TV', sku: "ELEC-4KTV-55", price: 499.99, quantity: 1 },
-    { id: 2, name: "HDMI Cable 6ft", sku: "ELEC-HDMI-6", price: 14.99, quantity: 2 },
-  ],
-  subtotal: 529.97,
-  shippingCost: 9.99,
-  tax: 42.40,
-  total: 582.36,
-};
 
 function OrderDetailPage() {
   const { id } = Route.useParams();
@@ -102,9 +57,10 @@ function OrderDetailPage() {
       if (!res.ok) throw new Error("Failed to fetch order");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const order = orderData ?? MOCK_ORDER;
+  const order = orderData ?? {};
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -124,10 +80,10 @@ function OrderDetailPage() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">Order {order.id}</h1>
+            <h1 className="text-xl font-bold text-foreground">Order {(order as any).id}</h1>
             <Badge variant="info" size="sm">Processing</Badge>
           </div>
-          <p className="text-sm text-muted-foreground">Placed on {order.date}</p>
+          <p className="text-sm text-muted-foreground">Placed on {(order as any).date}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>
@@ -150,7 +106,7 @@ function OrderDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {order.items.map((item) => (
+              {(order as any).items.map((item: any) => (
                 <div key={item.id} className="flex items-center gap-4 p-3 border border-border rounded-lg">
                   <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
                     <Package className="h-8 w-8 text-muted-foreground" />
@@ -171,19 +127,19 @@ function OrderDetailPage() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${order.subtotal.toFixed(2)}</span>
+                  <span>${(order as any).subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>${order.shippingCost.toFixed(2)}</span>
+                  <span>${(order as any).shippingCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>${order.tax.toFixed(2)}</span>
+                  <span>${(order as any).tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
                   <span>Total</span>
-                  <span>${order.total.toFixed(2)}</span>
+                  <span>${(order as any).total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -198,9 +154,9 @@ function OrderDetailPage() {
               <CardTitle className="text-base font-semibold">Customer</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="font-medium text-foreground">{order.customer.name}</p>
-              <p className="text-sm text-muted-foreground">{order.customer.email}</p>
-              <p className="text-sm text-muted-foreground">{order.customer.phone}</p>
+              <p className="font-medium text-foreground">{(order as any).customer.name}</p>
+              <p className="text-sm text-muted-foreground">{(order as any).customer.email}</p>
+              <p className="text-sm text-muted-foreground">{(order as any).customer.phone}</p>
             </CardContent>
           </Card>
 
@@ -213,15 +169,15 @@ function OrderDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-foreground">{order.customer.name}</p>
-              <p className="text-sm text-muted-foreground">{order.shippingAddress.line1}</p>
-              {order.shippingAddress.line2 && (
-                <p className="text-sm text-muted-foreground">{order.shippingAddress.line2}</p>
+              <p className="text-foreground">{(order as any).customer.name}</p>
+              <p className="text-sm text-muted-foreground">{(order as any).shippingAddress.line1}</p>
+              {(order as any).shippingAddress.line2 && (
+                <p className="text-sm text-muted-foreground">{(order as any).shippingAddress.line2}</p>
               )}
               <p className="text-sm text-muted-foreground">
-                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+                {(order as any).shippingAddress.city}, {(order as any).shippingAddress.state} {(order as any).shippingAddress.zip}
               </p>
-              <p className="text-sm text-muted-foreground">{order.shippingAddress.country}</p>
+              <p className="text-sm text-muted-foreground">{(order as any).shippingAddress.country}</p>
             </CardContent>
           </Card>
 
@@ -239,7 +195,7 @@ function OrderDetailPage() {
                 <span className="font-medium text-green-600">Paid</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {order.payment.method} ending in {order.payment.last4}
+                {(order as any).payment.method} ending in {(order as any).payment.last4}
               </p>
             </CardContent>
           </Card>
@@ -253,8 +209,8 @@ function OrderDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="font-medium text-foreground">{order.shippingInfo.method}</p>
-              <p className="text-sm text-muted-foreground mt-1">Tracking: {order.shippingInfo.tracking}</p>
+              <p className="font-medium text-foreground">{(order as any).shippingInfo.method}</p>
+              <p className="text-sm text-muted-foreground mt-1">Tracking: {(order as any).shippingInfo.tracking}</p>
               <Badge variant="info" size="sm" className="mt-2">In Transit</Badge>
             </CardContent>
           </Card>

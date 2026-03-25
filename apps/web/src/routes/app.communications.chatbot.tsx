@@ -13,36 +13,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Bot, Plus, Power, PowerOff, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/chatbot")({
   component: ChatbotPage,
 });
-
-// ─── Fallback mock data ───────────────────────────────────────────────────────
-
-const MOCK_BOTS = [
-  {
-    id: "mock-bot-1",
-    name: "Support Bot",
-    description: "Handles first-line customer support inquiries",
-    channel: "chat",
-    status: "active",
-    model: "gpt-4o-mini",
-    handoffThreshold: "0.7",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "mock-bot-2",
-    name: "SMS Assistant",
-    description: "Answers FAQ via SMS",
-    channel: "sms",
-    status: "inactive",
-    model: "gpt-4o-mini",
-    handoffThreshold: "0.8",
-    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-];
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-500/20 text-green-400",
@@ -65,9 +40,10 @@ function ChatbotPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["communications", "bots"],
     queryFn: () => communicationsApi.bots.list({ page: 1, limit: 100 }),
+    placeholderData: (prev) => prev,
   });
 
-  const bots: any[] = data?.data ?? MOCK_BOTS;
+  const bots: any[] = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -210,12 +186,12 @@ function ChatbotPage() {
 
       {/* Create modal */}
       <FormModal
-        open={isModalOpen}
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Create Chatbot"
         onSubmit={() => createMutation.mutate(form)}
-        isSubmitting={createMutation.isPending}
-        submitLabel="Create Bot"
+        isLoading={createMutation.isPending}
+        submitText="Create Bot"
       >
         <FormField label="Bot name" required>
           <Input

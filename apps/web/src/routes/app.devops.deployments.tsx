@@ -14,9 +14,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/deployments")({
@@ -65,14 +65,14 @@ function Deployments() {
     </div>
   );
 
-  const deployments = (data?.data || []).filter((d: any) =>
+  const deployments = ((data as any)?.data || []).filter((d: any) =>
     search
       ? d.version?.toLowerCase().includes(search.toLowerCase()) ||
         d.environment?.toLowerCase().includes(search.toLowerCase())
       : true,
   );
 
-  const total = data?.total ?? 0;
+  const total = (data as any)?.total ?? 0;
   const successful = deployments.filter((d: any) => d.status === "success" || d.status === "deployed").length;
   const failed = deployments.filter((d: any) => d.status === "failed").length;
 

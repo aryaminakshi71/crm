@@ -18,7 +18,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { competitors } from "../lib/seo";
+import { competitors } from "@/lib/seo";
 
 export const Route = createFileRoute("/compare")({
   head: () => {

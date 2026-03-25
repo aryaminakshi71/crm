@@ -9,40 +9,23 @@ import {
   Input,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { MessageCircle, Plus, Search, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { z } from "zod";
+import { communicationsApi } from "@/lib/api";
 
-export const Route = createFileRoute("/app/communications/chat")({
-  component: ChatPage,
+const searchSchema = z.object({
+  q: z.string().optional(),
+  status: z.string().optional(),
+  page: z.number().optional().default(1),
 });
 
-// ─── Fallback mock data ───────────────────────────────────────────────────────
-
-const MOCK_CHATS = [
-  {
-    id: "mock-1",
-    channel: "chat",
-    status: "open",
-    subject: "Product inquiry",
-    participantName: "Alice Johnson",
-    participantContact: "alice@example.com",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "mock-2",
-    channel: "chat",
-    status: "closed",
-    subject: "Billing question",
-    participantName: "Bob Smith",
-    participantContact: "bob@example.com",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-];
+export const Route = createFileRoute("/app/communications/chat")({
+  validateSearch: searchSchema,
+  component: ChatPage,
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,25 +38,35 @@ const STATUS_COLORS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function ChatPage() {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const { q = "", status: statusFilter = "all", page = 1 } = useSearch({
+    from: "/app/communications/chat",
+  });
+  const navigate = useNavigate({ from: "/app/communications/chat" });
+  const setQ = (v: string) =>
+    navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
+  const setStatusFilter = (v: string) =>
+    navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
+  const setPage = (v: number) =>
+    navigate({ search: (p) => ({ ...p, page: v }) });
+
   const [isCreating, setIsCreating] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [newParticipant, setNewParticipant] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["communications", "conversations", statusFilter],
+    queryKey: ["communications", "conversations", statusFilter, page],
     queryFn: () =>
       communicationsApi.conversations.list({
-        page: 1,
+        page,
         limit: 100,
         channel: "chat",
         status: statusFilter !== "all" ? statusFilter : undefined,
       }),
+    placeholderData: (prev) => prev,
   });
 
-  const conversations: any[] = data?.data ?? MOCK_CHATS;
+  const conversations: any[] = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: { subject: string; participantName: string }) =>
@@ -93,11 +86,11 @@ function ChatPage() {
   });
 
   const filtered = conversations.filter((c) => {
-    const q = search.toLowerCase();
+    const search = q.toLowerCase();
     return (
-      !q ||
-      c.subject?.toLowerCase().includes(q) ||
-      c.participantName?.toLowerCase().includes(q)
+      !search ||
+      c.subject?.toLowerCase().includes(search) ||
+      c.participantName?.toLowerCase().includes(search)
     );
   });
 
@@ -164,14 +157,14 @@ function ChatPage() {
           <Input
             className="pl-9"
             placeholder="Search conversations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
           />
         </div>
         {(["all", "open", "pending", "closed"] as const).map((s) => (
           <Button
             key={s}
-            variant={statusFilter === s ? "default" : "outline"}
+            variant={statusFilter === s ? "primary" : "outline"}
             size="sm"
             onClick={() => setStatusFilter(s)}
           >

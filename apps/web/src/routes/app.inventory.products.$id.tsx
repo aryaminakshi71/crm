@@ -16,11 +16,11 @@ import {
   Settings,
   DollarSign,
   Image,
-  Save,,
+  Save,
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { inventoryApi } from "../../lib/api";
+import { inventoryApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/inventory/products/$id")({
   component: ProductDetail,
@@ -56,7 +56,6 @@ function ProductDetail() {
     },
   });
 
-  if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
@@ -64,12 +63,11 @@ function ProductDetail() {
       <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
     </div>
   );
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading product...</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-12">
+      <p className="text-muted-foreground">Loading product...</p>
+    </div>
+  );
 
   if (!product) {
     return (

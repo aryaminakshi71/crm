@@ -1,3 +1,4 @@
+import { DarkModeProvider } from "@crm/ui";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -6,15 +7,15 @@ import { Toaster } from "sonner";
 import { ErrorBoundaryWrapper } from "../components/error-boundary-wrapper";
 import { BrandingProvider } from "../components/providers/branding-provider";
 import { PostHogProvider } from "../components/providers/posthog-provider";
-import { addSkipLink } from "../lib/accessibility";
-import { queryClient } from "../lib/query";
-import { initSentry } from "../lib/sentry";
-import { registerServiceWorker } from "../lib/service-worker";
+import { addSkipLink } from "@/lib/accessibility";
+import { queryClient } from "@/lib/query";
+import { initSentry } from "@/lib/sentry";
+import { registerServiceWorker } from "@/lib/service-worker";
 import {
   generateOrganizationSchema,
   generateWebSiteSchema,
   getCRMOrganizationSchema,
-} from "../lib/structured-data";
+} from "@/lib/structured-data";
 
 import appCss from "../app.css?url";
 
@@ -169,16 +170,18 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ErrorBoundaryWrapper>
-          <BrandingProvider>
-            <PostHogProvider>
-              <QueryClientProvider client={queryClient}>
-                {children}
-                <Toaster position="top-right" />
-                {import.meta.env.PROD ? null : <TanStackRouterDevtools />}
-                <Scripts />
-              </QueryClientProvider>
-            </PostHogProvider>
-          </BrandingProvider>
+          <DarkModeProvider>
+            <BrandingProvider>
+              <PostHogProvider>
+                <QueryClientProvider client={queryClient}>
+                  {children}
+                  <Toaster position="top-right" />
+                  {import.meta.env.PROD ? null : <TanStackRouterDevtools />}
+                  <Scripts />
+                </QueryClientProvider>
+              </PostHogProvider>
+            </BrandingProvider>
+          </DarkModeProvider>
         </ErrorBoundaryWrapper>
       </body>
     </html>

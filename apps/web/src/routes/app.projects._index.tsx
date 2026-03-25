@@ -7,7 +7,8 @@ import {
   CardTitle,
 } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import {
   Activity,
   AlertCircle,
@@ -48,16 +49,27 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
+const searchSchema = z.object({
+  q: z.string().optional(),
+  status: z.string().optional(),
+  page: z.number().optional().default(1),
+});
+
 export const Route = createFileRoute("/app/projects/_index")({
+  validateSearch: searchSchema,
   component: ProjectsIndexPage,
 });
 
 function ProjectsIndexPage() {
-  const navigate = useNavigate();
+  const { q = "", status, page = 1 } = useSearch({ from: "/app/projects/_index" });
+  const navigate = useNavigate({ from: "/app/projects/_index" });
+  const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
+  const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
+  const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["nucleo-projects"],

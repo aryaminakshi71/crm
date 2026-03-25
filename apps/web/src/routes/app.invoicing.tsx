@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   CreditCard,
@@ -36,13 +36,15 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing")({
   component: InvoicingPage,
 });
 
 function InvoicingPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/invoicing") return <Outlet />;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("all");

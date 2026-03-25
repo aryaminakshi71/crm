@@ -13,40 +13,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { FileText, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { communicationsApi } from "../lib/api";
+import { communicationsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/communications/templates")({
   component: TemplatesPage,
 });
-
-// ─── Fallback mock data ───────────────────────────────────────────────────────
-
-const MOCK_TEMPLATES = [
-  {
-    id: "mock-tpl-1",
-    name: "Welcome Message",
-    channel: "sms",
-    category: "onboarding",
-    body: "Hi {{name}}, welcome to {{company}}! We're excited to have you.",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "mock-tpl-2",
-    name: "Appointment Reminder",
-    channel: "sms",
-    category: "reminders",
-    body: "Reminder: Your appointment is on {{date}} at {{time}}. Reply CONFIRM or CANCEL.",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "mock-tpl-3",
-    name: "Support Greeting",
-    channel: "chat",
-    category: "support",
-    body: "Hello! How can I help you today?",
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-];
 
 const CHANNEL_COLORS: Record<string, string> = {
   sms: "bg-green-500/20 text-green-400",
@@ -74,9 +45,10 @@ function TemplatesPage() {
         limit: 100,
         channel: channelFilter !== "all" ? channelFilter : undefined,
       }),
+    placeholderData: (prev) => prev,
   });
 
-  const templates: any[] = data?.data ?? MOCK_TEMPLATES;
+  const templates: any[] = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -144,7 +116,7 @@ function TemplatesPage() {
         {(["all", "sms", "email", "chat"] as const).map((ch) => (
           <Button
             key={ch}
-            variant={channelFilter === ch ? "default" : "outline"}
+            variant={channelFilter === ch ? "primary" : "outline"}
             size="sm"
             onClick={() => setChannelFilter(ch)}
           >
@@ -217,12 +189,12 @@ function TemplatesPage() {
 
       {/* Create modal */}
       <FormModal
-        open={isModalOpen}
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="New Message Template"
         onSubmit={() => createMutation.mutate(form)}
-        isSubmitting={createMutation.isPending}
-        submitLabel="Create Template"
+        isLoading={createMutation.isPending}
+        submitText="Create Template"
       >
         <FormField label="Template name" required>
           <Input

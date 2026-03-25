@@ -14,16 +14,8 @@ import { AlertTriangle, XCircle,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_ERRORS = {
-  data: [
-    { id: "r-3", connector: "GitHub", event: "ticket.created", status: "failed", executedAt: new Date(Date.now() - 3600000).toISOString(), durationMs: 5000, error: "Connection timeout" },
-    { id: "r-5", connector: "Stripe", event: "invoice.paid", status: "failed", executedAt: new Date(Date.now() - 86400000).toISOString(), durationMs: 3000, error: "Rate limit exceeded" },
-    { id: "r-7", connector: "Mailchimp", event: "contact.updated", status: "failed", executedAt: new Date(Date.now() - 172800000).toISOString(), durationMs: 1200, error: "Invalid API key" },
-  ],
-};
 
 export const Route = createFileRoute("/app/integrations/errors")({
   component: ErrorsPage,
@@ -36,12 +28,13 @@ function ErrorsPage() {
       const res = await fetch(`${API_BASE}/v1/integration/runs?status=failed`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_ERRORS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const errors = data?.data ?? MOCK_ERRORS.data;
+  const errors = (data as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -97,7 +90,7 @@ function ErrorsPage() {
                       <XCircle className="h-4 w-4 text-rose-500 flex-shrink-0" />
                       <span className="font-medium text-sm">{run.event}</span>
                     </div>
-                    <Badge variant="destructive">failed</Badge>
+                    <Badge variant="danger">failed</Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>via <strong>{run.connector}</strong></span>

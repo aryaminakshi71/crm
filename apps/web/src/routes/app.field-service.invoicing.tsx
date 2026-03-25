@@ -25,18 +25,10 @@ export const Route = createFileRoute("/app/field-service/invoicing")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
-
-const MOCK_INVOICES = [
-  { id: "INV-2026-001", jobId: "JOB-1042", customer: "Acme Corporation", amount: 870, status: "draft", date: "Mar 20, 2026", dueDate: "Mar 27, 2026", items: [{ name: "Compressor Scroll", qty: 1, price: 450 }, { name: "Labor", qty: 2, price: 180 }] },
-  { id: "INV-2026-002", jobId: "JOB-1040", customer: "Green Valley Clinic", amount: 245, status: "sent", date: "Mar 20, 2026", dueDate: "Mar 27, 2026", items: [{ name: "Parts & Labor", qty: 1, price: 245 }] },
-  { id: "INV-2026-003", jobId: "JOB-1035", customer: "Harbor View Hotel", amount: 1250, status: "paid", date: "Mar 19, 2026", dueDate: "Mar 26, 2026", items: [{ name: "Generator Maintenance", qty: 1, price: 1250 }] },
-  { id: "INV-2026-004", jobId: "JOB-1032", customer: "TechStart Inc", amount: 320, status: "sent", date: "Mar 18, 2026", dueDate: "Mar 25, 2026", items: [{ name: "Electrical Inspection", qty: 1, price: 320 }] },
-  { id: "INV-2026-005", jobId: "JOB-1028", customer: "Metro Hospital", amount: 2100, status: "overdue", date: "Mar 10, 2026", dueDate: "Mar 17, 2026", items: [{ name: "HVAC Repair", qty: 1, price: 2100 }] },
-];
 
 function Invoicing() {
   const invoicesQuery = useQuery({
@@ -49,6 +41,7 @@ function Invoicing() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (invoicesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -58,7 +51,7 @@ function Invoicing() {
     </div>
   );
 
-  const invoices = invoicesQuery.data?.data ?? MOCK_INVOICES;
+  const invoices = (invoicesQuery as any).data?.data ?? [];
 
   if (invoicesQuery.isLoading) {
     return (
@@ -175,7 +168,7 @@ function Invoicing() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
+              {invoices.map((invoice: any) => (
                 <tr key={invoice.id} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
                     <Link to="/app/invoicing" className="font-medium text-primary hover:underline">

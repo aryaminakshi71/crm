@@ -12,7 +12,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   Fingerprint,
@@ -38,7 +38,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/enterprise")({
   component: EnterpriseControlsPage,
@@ -52,6 +52,8 @@ function relativeTime(value: unknown) {
 }
 
 function EnterpriseControlsPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/enterprise") return <Outlet />;
   const queryClient = useQueryClient();
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);

@@ -14,18 +14,8 @@ import { Sparkles, TrendingDown, TrendingUp,
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_PREDICTIVE = {
-  forecasts: [
-    { id: "f-1", metric: "Revenue", period: "Q2 2025", predicted: 480000, confidence: 0.82, trend: "up" },
-    { id: "f-2", metric: "New Customers", period: "Q2 2025", predicted: 145, confidence: 0.76, trend: "up" },
-    { id: "f-3", metric: "Churn Rate", period: "Q2 2025", predicted: 5.2, confidence: 0.71, trend: "down" },
-    { id: "f-4", metric: "Avg Deal Size", period: "Q2 2025", predicted: 3200, confidence: 0.88, trend: "up" },
-  ],
-  lastUpdated: new Date().toISOString(),
-};
 
 export const Route = createFileRoute("/app/intelligence/predictive")({
   component: PredictivePage,
@@ -44,12 +34,13 @@ function PredictivePage() {
       const res = await fetch(`${API_BASE}/v1/intelligence/predictive`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_PREDICTIVE;
+      if (!res.ok) return { forecasts: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const predictive = data ?? MOCK_PREDICTIVE;
+  const predictive = data ?? { forecasts: [] };
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -67,9 +58,9 @@ function PredictivePage() {
         </p>
       </div>
 
-      {predictive.lastUpdated && (
+      {(predictive as any).lastUpdated && (
         <p className="text-xs text-muted-foreground">
-          Last updated: {new Date(predictive.lastUpdated).toLocaleString()}
+          Last updated: {new Date((predictive as any).lastUpdated).toLocaleString()}
         </p>
       )}
 
@@ -81,7 +72,7 @@ function PredictivePage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {(predictive.forecasts ?? []).map((forecast: any) => (
+          {((predictive as any).forecasts ?? []).map((forecast: any) => (
             <Card key={forecast.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">

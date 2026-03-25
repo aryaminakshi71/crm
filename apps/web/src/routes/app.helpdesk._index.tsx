@@ -39,9 +39,9 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, helpdeskApi, nucleoApi } from "../lib/api";
+import { aiApi, helpdeskApi, nucleoApi } from "@/lib/api";
 
-export const Route = createFileRoute("/app/helpdesk/")({
+export const Route = createFileRoute("/app/helpdesk/_index")({
   component: HelpdeskIndexPage,
 });
 
@@ -500,10 +500,7 @@ function HelpdeskIndexPage() {
           icon={<LifeBuoy className="h-12 w-12" />}
           title="No tickets found"
           description="Create your first support ticket or adjust filters."
-          action={{
-            label: "Create Ticket",
-            onClick: () => setIsCreateModalOpen(true),
-          }}
+          action={<Button onClick={() => setIsCreateModalOpen(true)}>Create Ticket</Button>}
         />
       ) : (
         <div className="space-y-3">
@@ -743,10 +740,7 @@ function HelpdeskIndexPage() {
               icon={<ListOrdered className="h-12 w-12" />}
               title="No queue tokens"
               description="Create a token to start queue operations."
-              action={{
-                label: "Create Queue Token",
-                onClick: () => setIsQueueModalOpen(true),
-              }}
+              action={<Button onClick={() => setIsQueueModalOpen(true)}>Create Queue Token</Button>}
             />
           ) : (
             <div className="space-y-3">

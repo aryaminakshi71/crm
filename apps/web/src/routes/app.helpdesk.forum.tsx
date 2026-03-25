@@ -19,7 +19,7 @@ import { MessageCircle, Plus, Pin,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/forum")({
   component: ForumPage,
@@ -120,10 +120,7 @@ function ForumPage() {
             icon={<MessageCircle className="h-12 w-12" />}
             title="No forum posts yet"
             description="Create the first discussion post to get community conversations started."
-            action={{
-              label: "New Post",
-              onClick: () => setIsCreateOpen(true),
-            }}
+            action={<Button onClick={() => setIsCreateOpen(true)}>New Post</Button>}
           />
           <Card>
             <CardHeader>

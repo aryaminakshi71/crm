@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const CONNECTOR_TYPES = [
@@ -58,7 +58,7 @@ function NewConnectorPage() {
     onSuccess: (connector) => {
       queryClient.invalidateQueries({ queryKey: ["integration", "connectors"] });
       toast.success("Connector created successfully");
-      navigate({ to: "/app/integrations/connectors/$id", params: { id: connector.id } });
+      navigate({ to: "/app/integrations/connectors/$id", params: { id: (connector as any).id } });
     },
     onError: () => {
       toast.error("Failed to create connector");

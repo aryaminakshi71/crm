@@ -54,7 +54,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, nucleoApi } from "@/lib/api";
 import { PriorityBadge } from "./app.projects";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
@@ -101,10 +101,10 @@ function ProjectDetailPage() {
     enabled: !!id,
   });
 
-  const project = projectData?.data;
-  const tasks = (tasksData?.data || []) as any[];
-  const milestones = (milestonesData?.data || []) as any[];
-  const resources = (resourcesData?.data || []) as any[];
+  const project = (projectData as any)?.data;
+  const tasks = ((tasksData as any)?.data || []) as any[];
+  const milestones = ((milestonesData as any)?.data || []) as any[];
+  const resources = ((resourcesData as any)?.data || []) as any[];
 
   // Delete mutation
   const deleteProject = useMutation({

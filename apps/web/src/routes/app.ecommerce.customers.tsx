@@ -22,23 +22,14 @@ import {
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/ecommerce/customers")({
   component: CustomersPage,
 });
-
-const MOCK_CUSTOMERS = [
-  { id: 1, name: "Michael Torres", email: "michael@example.com", orders: 5, totalSpent: 1250.99, lastOrder: "Mar 20, 2024", status: "active", tags: ["VIP", "Repeat"] },
-  { id: 2, name: "Sarah Chen", email: "sarah@example.com", orders: 12, totalSpent: 4520.50, lastOrder: "Mar 18, 2024", status: "active", tags: ["VIP"] },
-  { id: 3, name: "Emily Zhang", email: "emily@example.com", orders: 2, totalSpent: 189.99, lastOrder: "Mar 15, 2024", status: "active", tags: ["New"] },
-  { id: 4, name: "David Park", email: "david@example.com", orders: 8, totalSpent: 2150.00, lastOrder: "Mar 10, 2024", status: "active", tags: ["Repeat"] },
-  { id: 5, name: "Lisa Wang", email: "lisa@example.com", orders: 1, totalSpent: 49.99, lastOrder: "Feb 28, 2024", status: "inactive", tags: ["New"] },
-  { id: 6, name: "Robert Kim", email: "robert@example.com", orders: 15, totalSpent: 8999.99, lastOrder: "Mar 5, 2024", status: "active", tags: ["VIP", "Wholesale"] },
-];
 
 function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,6 +57,7 @@ function CustomersPage() {
       if (!res.ok) throw new Error("Failed to fetch customers");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -76,10 +68,10 @@ function CustomersPage() {
     </div>
   );
 
-  const customers = apiData?.data?.length > 0 ? apiData.data : MOCK_CUSTOMERS;
+  const customers = (apiData as any)?.data ?? [];
 
   const filteredCustomers = customers.filter(
-    (c: typeof MOCK_CUSTOMERS[0]) =>
+    (c: any) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -91,7 +83,7 @@ function CustomersPage() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Customer Accounts</h2>
           <p className="text-sm text-muted-foreground">
-            {customers.length} customers / {customers.filter((c) => c.status === "active").length} active
+            {customers.length} customers / {customers.filter((c: any) => c.status === "active").length} active
           </p>
         </div>
         <Button
@@ -122,14 +114,14 @@ function CustomersPage() {
 
       {/* Customers List */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredCustomers.map((customer) => (
+        {filteredCustomers.map((customer: any) => (
           <Card key={customer.id} className="border-border/60 hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="text-primary font-bold text-sm">
-                      {customer.name.split(" ").map((n) => n[0]).join("")}
+                      {customer.name.split(" ").map((n: any) => n[0]).join("")}
                     </span>
                   </div>
                   <div>
@@ -143,7 +135,7 @@ function CustomersPage() {
               </div>
 
               <div className="flex flex-wrap gap-1 mb-4">
-                {customer.tags.map((tag) => (
+                {customer.tags.map((tag: any) => (
                   <Badge key={tag} variant="outline" size="sm">{tag}</Badge>
                 ))}
               </div>

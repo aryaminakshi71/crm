@@ -18,7 +18,7 @@ import { GitBranch, Plus, Plug, Webhook, Zap } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
 
 const MOCK_CONNECTORS = {
@@ -48,12 +48,13 @@ function IntegrationsIndexPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_CONNECTORS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const connectors = data?.data ?? MOCK_CONNECTORS.data;
+  const connectors = (data as any)?.data ?? [];
   const connected = connectors.filter((c: any) => c.status === "connected" || c.status === "active").length;
 
   return (

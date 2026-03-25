@@ -6,16 +6,16 @@ import { Layout, Plus, Eye, MousePointerClick, ExternalLink,
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/marketing/landing-pages")({
   component: MarketingLandingPagesPage,
 });
 
-const MOCK_LANDING_PAGES = [
+const _MOCK_LANDING_PAGES = [
   {
     id: "lp-1",
     name: "Product Launch 2025",
@@ -73,9 +73,10 @@ function MarketingLandingPagesPage() {
         return null;
       }
     },
+    placeholderData: (prev) => prev,
   });
 
-  const pages = campaignsData?.data?.length ? campaignsData.data : MOCK_LANDING_PAGES;
+  const pages = (campaignsData as any)?.data ?? [];
 
   const statusColor = (s: string) =>
     s === "published" ? "bg-green-100 text-green-800"
@@ -87,7 +88,7 @@ function MarketingLandingPagesPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

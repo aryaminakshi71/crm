@@ -31,7 +31,16 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
-import { nucleoApi } from "../lib/api";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -226,6 +235,43 @@ function ClientPortalPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Engagement Trend */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold">Portal Engagement (Last 8 Weeks)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart
+              data={[
+                { week: "W1", views: 18, comments: 4, downloads: 3 },
+                { week: "W2", views: 24, comments: 6, downloads: 5 },
+                { week: "W3", views: 19, comments: 3, downloads: 2 },
+                { week: "W4", views: 31, comments: 8, downloads: 7 },
+                { week: "W5", views: 27, comments: 5, downloads: 4 },
+                { week: "W6", views: 38, comments: 10, downloads: 9 },
+                { week: "W7", views: 42, comments: 11, downloads: 8 },
+                { week: "W8", views: 47, comments: 12, downloads: 11 },
+              ]}
+            >
+              <defs>
+                <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Area type="monotone" dataKey="views" stroke="#6366f1" fill="url(#viewsGrad)" strokeWidth={2} name="Views" />
+              <Area type="monotone" dataKey="comments" stroke="#10b981" fill="none" strokeWidth={2} name="Comments" />
+              <Area type="monotone" dataKey="downloads" stroke="#f59e0b" fill="none" strokeWidth={2} name="Downloads" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Client Projects */}

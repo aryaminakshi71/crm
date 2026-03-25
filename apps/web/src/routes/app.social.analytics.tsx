@@ -26,21 +26,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
-
-const MOCK_PLATFORM_STATS = [
-  { platform: "Instagram", icon: Instagram, followers: "18.5K", change: "+12%", color: "text-pink-500" },
-  { platform: "Twitter", icon: Twitter, followers: "12.3K", change: "+8%", color: "text-sky-500" },
-  { platform: "LinkedIn", icon: Linkedin, followers: "8.9K", change: "+15%", color: "text-blue-600" },
-  { platform: "Facebook", icon: Facebook, followers: "5.5K", change: "+3%", color: "text-blue-500" },
-];
-
-const MOCK_TOP_POSTS = [
-  { id: "p1", content: "Behind the scenes of our new product launch!", platform: "Instagram", likes: 342, reach: "4.2K" },
-  { id: "p2", content: "We're hiring! Join our growing team.", platform: "LinkedIn", likes: 234, reach: "8.9K" },
-  { id: "p3", content: "Excited to announce our partnership with @techleader", platform: "Twitter", likes: 567, reach: "12K" },
-];
 
 function AnalyticsPage() {
   const navigate = useNavigate();
@@ -54,6 +41,7 @@ function AnalyticsPage() {
       if (!res.ok) return null;
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const { data: postsData } = useQuery({
@@ -65,22 +53,21 @@ function AnalyticsPage() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const topPosts = postsData?.data?.length
-    ? postsData.data.map((p: any) => ({
+  const topPosts = ((postsData as any)?.data ?? []).map((p: any) => ({
         id: p.id,
         content: p.content ?? "",
         platform: p.platform ?? "Unknown",
         likes: p.likes ?? 0,
         reach: p.reach ?? "0",
-      }))
-    : MOCK_TOP_POSTS;
+      }));
 
-  const totalFollowers = analyticsData?.totalFollowers ?? 45200;
-  const totalLikes = analyticsData?.totalLikes ?? 2400;
-  const totalComments = analyticsData?.totalComments ?? 456;
-  const totalShares = analyticsData?.totalShares ?? 789;
+  const totalFollowers = (analyticsData as any)?.totalFollowers ?? 45200;
+  const totalLikes = (analyticsData as any)?.totalLikes ?? 2400;
+  const totalComments = (analyticsData as any)?.totalComments ?? 456;
+  const totalShares = (analyticsData as any)?.totalShares ?? 789;
 
   return (
     <div className="space-y-6">

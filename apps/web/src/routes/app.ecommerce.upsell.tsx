@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   Percent,
@@ -28,14 +28,6 @@ import {
 export const Route = createFileRoute("/app/ecommerce/upsell")({
   component: UpsellPage,
 });
-
-const MOCK_UPSELL_RULES = [
-  { id: 1, name: "TV Accessories Bundle", trigger: "55\" 4K Smart TV added to cart", products: ["HDMI Cable", "TV Stand", "Soundbar"], discount: 15, status: "active", conversions: 234 },
-  { id: 2, name: "Laptop Essentials", trigger: "Laptop added to cart", products: ["Laptop Bag", "Mouse", "Keyboard"], discount: 10, status: "active", conversions: 189 },
-  { id: 3, name: "Sofa Add-ons", trigger: "Sofa added to cart", products: ["Throw Pillows", "Blanket", "Side Table"], discount: 20, status: "active", conversions: 145 },
-  { id: 4, name: "Bike Gear", trigger: "Mountain Bike added to cart", products: ["Helmet", "Gloves", "Bike Lock"], discount: 10, status: "active", conversions: 98 },
-  { id: 5, name: "Phone Accessories", trigger: "Phone added to cart", products: ["Case", "Screen Protector", "Charger"], discount: 15, status: "draft", conversions: 0 },
-];
 
 function UpsellPage() {
   const queryClient = useQueryClient();
@@ -74,9 +66,10 @@ function UpsellPage() {
       if (!res.ok) throw new Error("Failed to fetch upsell rules");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const rules = apiData?.data?.length > 0 ? apiData.data : MOCK_UPSELL_RULES;
+  const rules = (apiData as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -111,13 +104,13 @@ function UpsellPage() {
         <Card className="border-border/60">
           <CardContent className="p-4">
             <p className="text-xs text-green-600">Active</p>
-            <p className="text-2xl font-bold text-green-600">{rules.filter((r) => r.status === "active").length}</p>
+            <p className="text-2xl font-bold text-green-600">{rules.filter((r: any) => r.status === "active").length}</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Conversions</p>
-            <p className="text-2xl font-bold">{rules.reduce((sum, r) => sum + r.conversions, 0)}</p>
+            <p className="text-2xl font-bold">{rules.reduce((sum: any, r: any) => sum + r.conversions, 0)}</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
@@ -132,7 +125,7 @@ function UpsellPage() {
       <Card className="border-border/60">
         <CardContent className="p-0">
           <div className="space-y-3 p-4">
-            {rules.map((rule) => (
+            {rules.map((rule: any) => (
               <div key={rule.id} className="flex items-center gap-4 p-4 border border-border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -143,7 +136,7 @@ function UpsellPage() {
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">Trigger: {rule.trigger}</p>
                   <div className="flex flex-wrap gap-2">
-                    {rule.products.map((product) => (
+                    {rule.products.map((product: any) => (
                       <Badge key={product} variant="outline" size="sm">
                         {product}
                       </Badge>

@@ -24,12 +24,12 @@ export const Route = createFileRoute("/app/field-service/parts")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
-const MOCK_PARTS = [
+const _MOCK_PARTS = [
   { id: 1, sku: "COMP-001", name: "Compressor Scroll", category: "HVAC", qty: 12, minStock: 5, price: 450, location: "Warehouse A", lastRestocked: "Mar 15, 2026" },
   { id: 2, sku: "REF-410A", name: "Refrigerant R-410A", category: "HVAC", qty: 24, minStock: 10, price: 120, location: "Warehouse A", lastRestocked: "Mar 18, 2026" },
   { id: 3, sku: "FILT-2025", name: "HVAC Filter 20x25x1", category: "HVAC", qty: 45, minStock: 20, price: 25, location: "Warehouse A", lastRestocked: "Mar 10, 2026" },
@@ -54,6 +54,7 @@ function Parts() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (partsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -63,9 +64,7 @@ function Parts() {
     </div>
   );
 
-  const parts = partsQuery.isSuccess && partsQuery.data?.data?.length > 0
-    ? partsQuery.data.data
-    : MOCK_PARTS;
+  const parts = (partsQuery as any)?.data?.data ?? [];
 
   const lowStockParts = parts.filter((p: any) => p.qty <= p.minStock);
 
@@ -113,7 +112,7 @@ function Parts() {
               </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {lowStockParts.map((part) => (
+              {lowStockParts.map((part: any) => (
                 <div key={part.id} className="p-3 rounded-lg bg-amber-500/10">
                   <p className="font-medium text-sm">{part.name}</p>
                   <p className="text-xs text-muted-foreground">{part.sku}</p>
@@ -205,7 +204,7 @@ function Parts() {
               </tr>
             </thead>
             <tbody>
-              {parts.map((part) => (
+              {parts.map((part: any) => (
                 <tr key={part.id} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 text-sm font-mono">{part.sku}</td>
                   <td className="px-4 py-3 text-sm font-medium">{part.name}</td>

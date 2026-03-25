@@ -5,6 +5,7 @@
  */
 
 import { Button, Card, CardContent, Badge } from "@crm/ui";
+import { SkeletonStats, SkeletonTable } from "@/components/ui/skeleton-table";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,9 +25,19 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { monitoringApi } from "@/lib/api";
+import { useState, useEffect } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({ "x-org-id": localStorage.getItem("activeOrganizationId") ?? "" });
+const getOrgHeader = () => ({ "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "" });
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
 
 export const Route = createFileRoute("/app/monitoring/_index")({
   component: MonitoringOverview,
@@ -34,6 +45,7 @@ export const Route = createFileRoute("/app/monitoring/_index")({
 
 function MonitoringOverview() {
   const queryClient = useQueryClient();
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const createIncidentMutation = useMutation({
     mutationFn: async (data: { title: string; severity: string }) => {
@@ -52,7 +64,8 @@ function MonitoringOverview() {
   const { data: dashboard, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["monitoring", "dashboard"],
     queryFn: () => monitoringApi.getDashboard(),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
+    onSuccess: () => setLastUpdated(new Date()),
   });
 
   const { data: alerts } = useQuery({
@@ -75,6 +88,13 @@ function MonitoringOverview() {
     </div>
   );
 
+  if (isLoading) return (
+    <div className="space-y-6">
+      <SkeletonStats count={4} />
+      <SkeletonTable rows={8} cols={5} />
+    </div>
+  );
+
   const activeAlertCount = alerts?.filter((a: any) => a.enabled).length || 0;
   const activeIncidentCount = incidents?.filter((i: any) => i.status !== "resolved").length || 0;
 
@@ -83,7 +103,16 @@ function MonitoringOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Monitoring Overview</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-foreground">Monitoring Overview</h2>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              Live · updated {timeAgo(lastUpdated.toISOString())}
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">
             Real-time platform monitoring and health checks
           </p>

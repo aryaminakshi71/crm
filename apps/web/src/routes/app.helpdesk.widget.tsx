@@ -17,7 +17,7 @@ import { Code, Copy, MessageSquare, Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/widget")({
   component: WidgetPage,

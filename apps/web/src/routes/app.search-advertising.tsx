@@ -95,7 +95,7 @@ function SearchAdvertisingPage() {
   const isLoading = statusLoading || overviewLoading || campaignsLoading;
 
   // Find Google Ads connection status
-  const googleAdsConnected = connectionStatus?.find(
+  const googleAdsConnected = (connectionStatus as any)?.find(
     (s: any) => s.adNetwork === "google_ads" && s.connected,
   );
 
@@ -145,16 +145,13 @@ function SearchAdvertisingPage() {
           description="Start tracking your search advertising campaigns by connecting
             your Google Ads account. Track conversions, analyze performance, and
             optimize your ad spend."
-          action={{
-            label: "Connect Google Ads",
-            onClick: () => {
+          action={<Button onClick={() => {
               // TODO: Open OAuth flow or settings modal
               advertisingApi.connect({
                 adNetwork: "google_ads",
                 accountName: "My Google Ads Account",
               });
-            },
-          }}
+            }}>Connect Google Ads</Button>}
         />
 
         {/* Connection Options */}
@@ -233,10 +230,10 @@ function SearchAdvertisingPage() {
   }
 
   // Calculate totals from campaigns
-  const totalSpend = campaigns?.reduce((sum: number, c: any) => sum + (c.cost || 0), 0) || 0;
-  const totalImpressions = campaigns?.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0) || 0;
-  const totalClicks = campaigns?.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) || 0;
-  const totalConversions = campaigns?.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0) || 0;
+  const totalSpend = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.cost || 0), 0) || 0;
+  const totalImpressions = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0) || 0;
+  const totalClicks = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) || 0;
+  const totalConversions = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -269,7 +266,7 @@ function SearchAdvertisingPage() {
           title="Total Spend"
           value={formatCurrency(totalSpend)}
           icon={<DollarSign className="h-4 w-4" />}
-          trend={`${campaigns?.length || 0} campaigns`}
+          trend={`${(campaigns as any)?.length || 0} campaigns`}
           color="text-warning"
         />
         <Metric
@@ -305,9 +302,9 @@ function SearchAdvertisingPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {campaigns && campaigns.length > 0 ? (
+            {campaigns && (campaigns as any).length > 0 ? (
               <div className="space-y-3">
-                {campaigns.slice(0, 5).map((campaign: any, idx: number) => (
+                {(campaigns as any).slice(0, 5).map((campaign: any, idx: number) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
@@ -396,8 +393,8 @@ function SearchAdvertisingPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">ROAS</span>
                 <span className="font-medium text-success">
-                  {totalSpend && overview?.totalValue
-                    ? (overview.totalValue / totalSpend).toFixed(1)
+                  {totalSpend && (overview as any)?.totalValue
+                    ? ((overview as any).totalValue / totalSpend).toFixed(1)
                     : "0.0"}
                   x
                 </span>
@@ -405,13 +402,13 @@ function SearchAdvertisingPage() {
             </div>
 
             {/* Conversion by Type */}
-            {overview?.byType && overview.byType.length > 0 && (
+            {(overview as any)?.byType && (overview as any).byType.length > 0 && (
               <div className="pt-4 border-t border-border/50">
                 <p className="text-xs text-muted-foreground mb-2">
                   Conversions by Type
                 </p>
                 <div className="space-y-2">
-                  {overview.byType.map((type: any) => (
+                  {(overview as any).byType.map((type: any) => (
                     <div
                       key={type.conversionType}
                       className="flex items-center justify-between"
@@ -437,9 +434,9 @@ function SearchAdvertisingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {overview?.byNetwork && overview.byNetwork.length > 0 ? (
+          {(overview as any)?.byNetwork && (overview as any).byNetwork.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {overview.byNetwork.map((network: any) => (
+              {(overview as any).byNetwork.map((network: any) => (
                 <div
                   key={network.adNetwork}
                   className="flex items-center gap-3 p-4 rounded-lg bg-muted/30"

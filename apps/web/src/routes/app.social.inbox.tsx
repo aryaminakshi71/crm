@@ -11,9 +11,9 @@ export const Route = createFileRoute("/app/social/inbox")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Message {
@@ -48,9 +48,10 @@ function InboxPage() {
       if (!res.ok) throw new Error("Failed to fetch mentions");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const messages: Message[] = data?.data ?? MOCK_MESSAGES;
+  const messages: Message[] = (data as any)?.data ?? [];
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -75,7 +76,7 @@ function InboxPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

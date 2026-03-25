@@ -18,18 +18,8 @@ import { AlertCircle, Plug, Plus } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
 });
-
-const MOCK_CONNECTORS = {
-  data: [
-    { id: "conn-1", name: "Stripe", type: "payment", status: "connected", connectedAt: new Date().toISOString() },
-    { id: "conn-2", name: "Slack", type: "webhook", status: "connected", connectedAt: new Date().toISOString() },
-    { id: "conn-3", name: "GitHub", type: "oauth", status: "connected", connectedAt: new Date().toISOString() },
-    { id: "conn-4", name: "Mailchimp", type: "oauth", status: "disconnected", connectedAt: null },
-    { id: "conn-5", name: "PagerDuty Webhook", type: "webhook", status: "active", connectedAt: new Date().toISOString() },
-  ],
-};
 
 export const Route = createFileRoute("/app/integrations/connectors")({
   component: ConnectorsLayout,
@@ -51,9 +41,10 @@ function ConnectorsListPage() {
       const res = await fetch(`${API_BASE}/v1/integration/connectors`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
-      if (!res.ok) return MOCK_CONNECTORS;
+      if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -64,7 +55,7 @@ function ConnectorsListPage() {
     </div>
   );
 
-  const connectors = data?.data ?? MOCK_CONNECTORS.data;
+  const connectors = (data as any)?.data ?? [];
 
   return (
     <div className="p-6 space-y-6">

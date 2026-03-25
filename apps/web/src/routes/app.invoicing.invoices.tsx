@@ -32,16 +32,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/invoices")({
   component: InvoiceList,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-};
 
 type Invoice = {
   id: string;
@@ -57,15 +52,6 @@ type Invoice = {
   items: Array<{ description: string; quantity: number; rate: number }>;
 };
 
-const mockInvoices: Invoice[] = [
-  { id: "1", invoiceNumber: "INV-2026-001", client: "Acme Corp", clientEmail: "billing@acmecorp.com", amount: 11500, tax: 1000, total: 12500, status: "paid", issueDate: "2026-03-01", dueDate: "2026-03-31", items: [{ description: "Consulting Services - March", quantity: 1, rate: 11500 }] },
-  { id: "2", invoiceNumber: "INV-2026-002", client: "TechStart Inc", clientEmail: "accounts@techstart.io", amount: 8000, tax: 750, total: 8750, status: "sent", issueDate: "2026-03-10", dueDate: "2026-04-10", items: [{ description: "Software Development", quantity: 1, rate: 8000 }] },
-  { id: "3", invoiceNumber: "INV-2026-003", client: "Global Solutions", clientEmail: "finance@globalsol.com", amount: 14000, tax: 1200, total: 15200, status: "overdue", issueDate: "2026-02-15", dueDate: "2026-03-17", items: [{ description: "Implementation Services", quantity: 1, rate: 14000 }] },
-  { id: "4", invoiceNumber: "INV-2026-004", client: "Innovate Co", clientEmail: "ap@innovate.co", amount: 6200, tax: 600, total: 6800, status: "draft", issueDate: "2026-03-20", dueDate: "2026-04-20", items: [{ description: "Monthly Support", quantity: 1, rate: 6200 }] },
-  { id: "5", invoiceNumber: "INV-2026-005", client: "Enterprise Ltd", clientEmail: "payments@enterprise.com", amount: 25000, tax: 2500, total: 27500, status: "sent", issueDate: "2026-03-15", dueDate: "2026-04-15", items: [{ description: "Enterprise License", quantity: 1, rate: 25000 }] },
-  { id: "6", invoiceNumber: "INV-2026-006", client: "StartupXYZ", clientEmail: "hello@startupxyz.com", amount: 3500, tax: 350, total: 3850, status: "paid", issueDate: "2026-03-05", dueDate: "2026-03-35", items: [{ description: "Starter Plan", quantity: 1, rate: 3500 }] },
-];
-
 function InvoiceList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -74,43 +60,36 @@ function InvoiceList() {
   const queryClient = useQueryClient();
 
   const createInvoiceMutation = useMutation({
-    mutationFn: async (data: { client: string; clientEmail: string; amount: number; tax: number; total: number }) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/invoices`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
+    mutationFn: (data: { client: string; clientEmail: string; amount: number; tax: number; total: number }) => {
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+      return nucleoApi.invoices.create({
+        invoiceNumber,
+        currency: "USD",
+        subtotal: data.amount,
+        tax: data.tax,
+        total: data.total,
+        notes: `Client: ${data.client} (${data.clientEmail})`,
       });
-      if (!res.ok) throw new Error("Failed to create invoice");
-      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoicing", "invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["nucleo", "invoices"] });
       setIsCreateModalOpen(false);
       setNewInvoice({ client: "", email: "", amount: "", tax: "10" });
     },
   });
 
   const deleteInvoiceMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to delete invoice");
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing", "invoices"] }),
+    mutationFn: (id: string) => nucleoApi.invoices.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nucleo", "invoices"] }),
   });
 
   const invoicesQuery = useQuery({
-    queryKey: ["invoicing/invoices"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/invoices`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryKey: ["nucleo", "invoices"],
+    queryFn: () => nucleoApi.invoices.list({ limit: 100 }),
+    placeholderData: (prev) => prev,
     retry: false,
   });
-  const invoices: Invoice[] = invoicesQuery.data?.data?.length ? invoicesQuery.data.data : mockInvoices;
+  const invoices: Invoice[] = invoicesQuery.data?.data ?? [];
 
   if (invoicesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -186,7 +165,7 @@ function InvoiceList() {
           icon={<FileText className="h-12 w-12" />}
           title="No invoices found"
           description="Create your first invoice or adjust your filters."
-          action={{ label: "Create Invoice", onClick: () => setIsCreateModalOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateModalOpen(true)}>Create Invoice</Button>}
         />
       ) : (
         <Card>

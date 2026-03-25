@@ -6,16 +6,16 @@ import { FlaskConical, Plus, TrendingUp,
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/marketing/ab-testing")({
   component: MarketingAbTestingPage,
 });
 
-const MOCK_AB_TESTS = [
+const _MOCK_AB_TESTS = [
   {
     id: "ab-1",
     name: "Subject Line Test: Personalization vs Generic",
@@ -66,9 +66,10 @@ function MarketingAbTestingPage() {
         return null;
       }
     },
+    placeholderData: (prev) => prev,
   });
 
-  const tests = campaignsData?.data?.length ? campaignsData.data : MOCK_AB_TESTS;
+  const tests = (campaignsData as any)?.data ?? [];
 
   const statusColor = (s: string) =>
     s === "running" ? "bg-blue-100 text-blue-800"
@@ -80,7 +81,7 @@ function MarketingAbTestingPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

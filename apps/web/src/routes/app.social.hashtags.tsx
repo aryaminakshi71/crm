@@ -11,9 +11,9 @@ export const Route = createFileRoute("/app/social/hashtags")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Hashtag {
@@ -22,15 +22,6 @@ interface Hashtag {
   trend: string;
   sentiment: "positive" | "neutral" | "negative";
 }
-
-const MOCK_HASHTAGS: Hashtag[] = [
-  { tag: "#NucleoOne", posts: 12500, trend: "+15%", sentiment: "positive" },
-  { tag: "#SaaS", posts: 89000, trend: "+8%", sentiment: "neutral" },
-  { tag: "#AIAgents", posts: 45000, trend: "+23%", sentiment: "positive" },
-  { tag: "#TechNews", posts: 156000, trend: "+5%", sentiment: "neutral" },
-  { tag: "#ProductLaunch", posts: 34000, trend: "+12%", sentiment: "positive" },
-  { tag: "#StartupLife", posts: 67000, trend: "+3%", sentiment: "neutral" },
-];
 
 function HashtagsPage() {
   const navigate = useNavigate();
@@ -46,12 +37,13 @@ function HashtagsPage() {
       if (!res.ok) throw new Error("Failed to fetch hashtags");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const hashtags: Hashtag[] = data?.data ?? MOCK_HASHTAGS;
+  const hashtags: Hashtag[] = (data as any)?.data ?? [];
 
   const filteredHashtags = hashtags.filter((h) =>
-    (h.tag ?? h.keyword ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+    (h.tag ?? (h as any).keyword ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getSentimentColor = (sentiment: Hashtag["sentiment"]) => {
@@ -67,7 +59,7 @@ function HashtagsPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -115,7 +107,7 @@ function HashtagsPage() {
                     <Hash className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold">{hashtag.tag ?? (hashtag as Record<string, unknown>).keyword}</p>
+                    <p className="font-semibold">{hashtag.tag ?? (hashtag as any).keyword}</p>
                     <p className="text-sm text-muted-foreground">{(hashtag.posts ?? 0).toLocaleString()} posts</p>
                   </div>
                 </div>

@@ -13,7 +13,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ExternalLink, ListOrdered, Plus,
   AlertCircle
 } from "lucide-react";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/queue")({
   component: QueuePage,
@@ -84,7 +84,7 @@ function QueuePage() {
             Priority-ordered tickets awaiting agent assignment.
           </p>
         </div>
-        <Link to="/app/helpdesk/">
+        <Link to="/app/helpdesk">
           <Button
             variant="primary"
             leftIcon={<Plus className="h-4 w-4" />}
@@ -142,10 +142,7 @@ function QueuePage() {
           icon={<ListOrdered className="h-12 w-12" />}
           title="Queue is empty"
           description="No open or pending tickets awaiting assignment. Great work!"
-          action={{
-            label: "Create Ticket",
-            onClick: () => {},
-          }}
+          action={<Button onClick={() => {}}>Create Ticket</Button>}
         />
       ) : (
         <Card>
@@ -207,7 +204,7 @@ function QueuePage() {
                       {ticket.status}
                     </Badge>
                     {ticket.slaBreached && (
-                      <Badge variant="destructive" className="text-[10px]">
+                      <Badge variant="danger" className="text-[10px]">
                         SLA
                       </Badge>
                     )}

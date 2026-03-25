@@ -19,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/reports/$id")({
   component: IntelligenceReportDetailPage,
@@ -32,12 +32,12 @@ function IntelligenceReportDetailPage() {
 
   const reportQuery = useQuery({
     queryKey: ["intelligence", "reports", id],
-    queryFn: () => nucleoApi.intelligence.reports.get(id),
+    queryFn: () => (nucleoApi as any).intelligence.reports.get(id),
     enabled: !!id,
   });
 
   const deleteReportMutation = useMutation({
-    mutationFn: () => nucleoApi.intelligence.reports.delete(id),
+    mutationFn: () => (nucleoApi as any).intelligence.reports.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] });
       toast.success("Report deleted");
@@ -47,7 +47,7 @@ function IntelligenceReportDetailPage() {
   });
 
   const exportReportMutation = useMutation({
-    mutationFn: () => nucleoApi.intelligence.reports.export(id),
+    mutationFn: () => (nucleoApi as any).intelligence.reports.export(id),
     onSuccess: (data: any) => {
       toast.success("Report exported successfully");
       // In a real implementation this would trigger a download
@@ -92,7 +92,7 @@ function IntelligenceReportDetailPage() {
           <Badge
             variant={
               report.riskBand === "high"
-                ? "destructive"
+                ? "danger"
                 : report.riskBand === "low"
                   ? "default"
                   : "secondary"

@@ -3,57 +3,169 @@ import {
   Card,
   CardContent,
 } from "@crm/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { z } from "zod";
 import {
   Shield,
   Plus,
   Search,
-  Filter,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Calendar,
   FileText,
-  Send,
+  AlertCircle,
 } from "lucide-react";
+import { fieldServiceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/field-service/warranty")({
+  validateSearch: z.object({
+    search: z.string().optional(),
+    status: z.string().optional(),
+    type: z.string().optional(),
+  }),
   component: Warranty,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-  "Content-Type": "application/json",
-});
-
-const MOCK_WARRANTIES = [
-  { id: 1, equipment: "Carrier HVAC Unit", serial: "CR-2024-12345", customer: "Acme Corporation", startDate: "2024-01-15", endDate: "2027-01-14", type: "Extended", status: "active", remainingDays: 300, coverage: ["Parts", "Labor", "Refrigerant"] },
-  { id: 2, equipment: "Trane Heat Pump", serial: "TR-2023-98765", customer: "TechStart Inc", startDate: "2023-03-20", endDate: "2026-03-19", type: "Manufacturer", status: "expiring", remainingDays: -1, coverage: ["Parts", "Labor"] },
-  { id: 3, equipment: "Generac Generator", serial: "GN-2022-54321", customer: "Metro Hospital", startDate: "2022-11-01", endDate: "2025-11-01", type: "Extended", status: "expiring_soon", remainingDays: 45, coverage: ["Parts", "Labor"] },
-  { id: 4, equipment: "Rheem Water Heater", serial: "RH-2021-11111", customer: "Green Valley Clinic", startDate: "2021-08-10", endDate: "2029-08-09", type: "Manufacturer", status: "active", remainingDays: 1265, coverage: ["Parts", "Labor", "Tank Replacement"] },
-  { id: 5, equipment: "Lennox AC Unit", serial: "LN-2019-33333", customer: "Riverside Apartments", startDate: "2019-07-22", endDate: "2024-07-21", type: "Manufacturer", status: "expired", remainingDays: -607, coverage: ["Parts"] },
-  { id: 6, equipment: "York Heat Pump", serial: "YK-2020-22222", customer: "Harbor View Hotel", startDate: "2020-05-15", endDate: "2027-05-14", type: "Extended", status: "active", remainingDays: 421, coverage: ["Parts", "Labor", "Refrigerant"] },
-];
-
-const MOCK_CLAIMS = [
-  { id: 1, equipment: "Carrier HVAC Unit", serial: "CR-2024-12345", claimNumber: "CLM-2026-001", date: "Mar 15, 2026", status: "approved", amount: 850, description: "Compressor failure - compressor replaced under warranty" },
-  { id: 2, equipment: "Generac Generator", serial: "GN-2022-54321", claimNumber: "CLM-2026-002", date: "Mar 10, 2026", status: "pending", amount: 420, description: "Control board replacement" },
-  { id: 3, equipment: "Trane Heat Pump", serial: "TR-2023-98765", claimNumber: "CLM-2026-003", date: "Mar 5, 2026", status: "denied", amount: 1200, description: "Compressor replacement - denied due to improper maintenance" },
-];
 
 function Warranty() {
-  const { data: jobsData } = useQuery({
-    queryKey: ["field-service-jobs-warranty"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() });
-      if (!res.ok) throw new Error("Failed to fetch jobs");
-      return res.json();
+  const queryClient = useQueryClient();
+  const search = Route.useSearch();
+
+  const jobsQuery = useQuery({
+    queryKey: ["field-service", "jobs", "warranty"],
+    queryFn: () => fieldServiceApi.jobs.list(),
+    placeholderData: (prev) => prev,
+    retry: false,
+  });
+
+  const equipmentQuery = useQuery({
+    queryKey: ["field-service", "equipment"],
+    queryFn: () => fieldServiceApi.equipment.list(),
+    placeholderData: (prev) => prev,
+    retry: false,
+  });
+
+  const createClaimMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      fieldServiceApi.jobs.create({ ...data, type: "warranty_claim" }),
+    onSuccess: () => {
+      toast.success("Warranty claim filed successfully");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "jobs"] });
+    },
+    onError: () => {
+      toast.error("Failed to file warranty claim");
     },
   });
 
-  const warranties = MOCK_WARRANTIES;
-  const claims = MOCK_CLAIMS;
+  const updateClaimStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      fieldServiceApi.jobs.update(id, { status }),
+    onSuccess: (_, { status }) => {
+      toast.success(`Claim status updated to ${status}`);
+      queryClient.invalidateQueries({ queryKey: ["field-service", "jobs"] });
+    },
+    onError: () => {
+      toast.error("Failed to update claim status");
+    },
+  });
+
+  const createWarrantyMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      fieldServiceApi.equipment.create({ ...data, warrantyRecord: true }),
+    onSuccess: () => {
+      toast.success("Warranty record created");
+      queryClient.invalidateQueries({ queryKey: ["field-service", "equipment"] });
+    },
+    onError: () => {
+      toast.error("Failed to create warranty record");
+    },
+  });
+
+  if (jobsQuery.isError || equipmentQuery.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <p className="text-sm text-muted-foreground">Failed to load warranty data. Please try again.</p>
+        <button
+          className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+          onClick={() => {
+            jobsQuery.refetch();
+            equipmentQuery.refetch();
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (jobsQuery.isLoading || equipmentQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-muted/40 rounded animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+        <div className="h-96 rounded-lg bg-muted/40 animate-pulse" />
+      </div>
+    );
+  }
+
+  const rawEquipment = (equipmentQuery as any).data?.data ?? [];
+  const warranties = Array.isArray(rawEquipment) && rawEquipment.length > 0
+    ? rawEquipment.map((eq: any) => ({
+        id: eq.id,
+        equipment: eq.name ?? "Unknown Equipment",
+        serial: eq.serial ?? "—",
+        customer: eq.customer ?? "—",
+        startDate: eq.installed ?? "—",
+        endDate: eq.warranty ?? "—",
+        type: eq.warrantyType ?? "Manufacturer",
+        status: eq.warrantyStatus ?? "active",
+        remainingDays: eq.warranty
+          ? Math.ceil((new Date(eq.warranty).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0,
+        coverage: eq.coverage ?? ["Parts", "Labor"],
+      }))
+    : [];
+
+  const rawJobs = (jobsQuery as any).data?.data ?? [];
+  const claims = Array.isArray(rawJobs) && rawJobs.length > 0
+    ? rawJobs
+        .filter((j: any) => j.type === "warranty_claim")
+        .map((j: any) => ({
+          id: j.id,
+          equipment: j.equipmentName ?? j.title ?? "Unknown",
+          serial: j.serial ?? "—",
+          claimNumber: j.jobNumber ?? `CLM-${j.id}`,
+          date: j.createdAt ? new Date(j.createdAt).toLocaleDateString() : "—",
+          status: j.status ?? "pending",
+          amount: j.totalCost ?? 0,
+          description: j.description ?? "—",
+        }))
+    : [];
+
+  let filteredWarranties = warranties;
+  if (search.search) {
+    const q = search.search.toLowerCase();
+    filteredWarranties = filteredWarranties.filter(
+      (w: any) =>
+        w.equipment.toLowerCase().includes(q) ||
+        w.customer.toLowerCase().includes(q) ||
+        w.serial.toLowerCase().includes(q)
+    );
+  }
+  if (search.status) {
+    filteredWarranties = filteredWarranties.filter((w: any) => w.status === search.status);
+  }
+  if (search.type) {
+    filteredWarranties = filteredWarranties.filter(
+      (w: any) => w.type.toLowerCase() === search.type!.toLowerCase()
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,13 +178,27 @@ function Warranty() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors">
+          <button
+            onClick={() => createWarrantyMutation.mutate({ name: "New Equipment", warrantyRecord: true })}
+            disabled={createWarrantyMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
+          >
             <FileText className="h-4 w-4" />
             Claims Report
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <button
+            onClick={() =>
+              createClaimMutation.mutate({
+                title: "New Warranty Claim",
+                type: "warranty_claim",
+                status: "pending",
+              })
+            }
+            disabled={createClaimMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
             <Plus className="h-4 w-4" />
-            File Claim
+            {createClaimMutation.isPending ? "Filing..." : "File Claim"}
           </button>
         </div>
       </div>
@@ -89,21 +215,21 @@ function Warranty() {
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{warranties.filter(w => w.status === "active").length}</p>
+            <p className="text-2xl font-bold">{warranties.filter((w: any) => w.status === "active").length}</p>
             <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <Clock className="h-5 w-5 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{warranties.filter(w => w.status.includes("expiring")).length}</p>
+            <p className="text-2xl font-bold">{warranties.filter((w: any) => String(w.status).includes("expiring")).length}</p>
             <p className="text-xs text-muted-foreground">Expiring Soon</p>
           </CardContent>
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-4 text-center">
             <AlertTriangle className="h-5 w-5 text-red-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold">{warranties.filter(w => w.status === "expired").length}</p>
+            <p className="text-2xl font-bold">{warranties.filter((w: any) => w.status === "expired").length}</p>
             <p className="text-xs text-muted-foreground">Expired</p>
           </CardContent>
         </Card>
@@ -116,16 +242,23 @@ function Warranty() {
           <input
             type="text"
             placeholder="Search warranties..."
+            defaultValue={search.search ?? ""}
             className="w-full rounded-lg border border-border bg-card pl-10 pr-4 py-2 text-sm"
           />
         </div>
-        <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <select
+          defaultValue={search.status ?? ""}
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="expiring">Expiring</option>
           <option value="expired">Expired</option>
         </select>
-        <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <select
+          defaultValue={search.type ?? ""}
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
           <option value="">All Types</option>
           <option value="manufacturer">Manufacturer</option>
           <option value="extended">Extended</option>
@@ -137,80 +270,106 @@ function Warranty() {
         <div className="lg:col-span-2 space-y-4">
           <Card className="border-border/60">
             <CardContent className="p-6">
-              <h3 className="font-bold text-foreground mb-4">Warranties</h3>
-              <div className="space-y-3">
-                {warranties.map((warranty) => (
-                  <div
-                    key={warranty.id}
-                    className={`p-4 rounded-lg border ${
-                      warranty.status === "expired" ? "border-red-500/20 bg-red-500/5" :
-                      warranty.status.includes("expiring") ? "border-amber-500/20 bg-amber-500/5" :
-                      "border-border/40"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-foreground">{warranty.equipment}</p>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            warranty.status === "active" ? "bg-green-500/10 text-green-500" :
-                            warranty.status === "expired" ? "bg-red-500/10 text-red-500" :
-                            "bg-amber-500/10 text-amber-500"
-                          }`}>
-                            {warranty.status.replace("_", " ")}
-                          </span>
+              <h3 className="font-bold text-foreground mb-4">
+                Warranties
+                {filteredWarranties.length !== warranties.length && (
+                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                    ({filteredWarranties.length} of {warranties.length})
+                  </span>
+                )}
+              </h3>
+              {filteredWarranties.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  No warranties match your filters.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredWarranties.map((warranty: any) => (
+                    <div
+                      key={warranty.id}
+                      className={`p-4 rounded-lg border ${
+                        warranty.status === "expired" ? "border-red-500/20 bg-red-500/5" :
+                        String(warranty.status).includes("expiring") ? "border-amber-500/20 bg-amber-500/5" :
+                        "border-border/40"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-foreground">{warranty.equipment}</p>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              warranty.status === "active" ? "bg-green-500/10 text-green-500" :
+                              warranty.status === "expired" ? "bg-red-500/10 text-red-500" :
+                              "bg-amber-500/10 text-amber-500"
+                            }`}>
+                              {String(warranty.status).replace("_", " ")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{warranty.customer}</p>
+                          <p className="text-xs text-muted-foreground font-mono mt-1">S/N: {warranty.serial}</p>
                         </div>
-                        <p className="text-sm text-muted-foreground">{warranty.customer}</p>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">S/N: {warranty.serial}</p>
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${
+                            warranty.remainingDays < 0 ? "text-red-500" :
+                            warranty.remainingDays < 90 ? "text-amber-500" :
+                            "text-green-600"
+                          }`}>
+                            {warranty.remainingDays < 0
+                              ? "Expired"
+                              : warranty.remainingDays === 0
+                                ? "Today"
+                                : `${warranty.remainingDays}d`
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {warranty.remainingDays < 0 ? "ago" : "remaining"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-bold ${
-                          warranty.remainingDays < 0 ? "text-red-500" :
-                          warranty.remainingDays < 90 ? "text-amber-500" :
-                          "text-green-600"
-                        }`}>
-                          {warranty.remainingDays < 0
-                            ? "Expired"
-                            : warranty.remainingDays === 0
-                              ? "Today"
-                              : `${warranty.remainingDays}d`
-                          }
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {warranty.remainingDays < 0 ? "ago" : "remaining"}
-                        </p>
+                      <div className="grid grid-cols-2 gap-2 p-3 rounded bg-muted/30 mb-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Start Date</p>
+                          <p className="text-sm font-medium">{warranty.startDate}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">End Date</p>
+                          <p className="text-sm font-medium">{warranty.endDate}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 p-3 rounded bg-muted/30 mb-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Start Date</p>
-                        <p className="text-sm font-medium">{warranty.startDate}</p>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {warranty.coverage.map((item: string) => (
+                          <span key={item} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-xs">
+                            {item}
+                          </span>
+                        ))}
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">End Date</p>
-                        <p className="text-sm font-medium">{warranty.endDate}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {warranty.coverage.map((item) => (
-                        <span key={item} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-xs">
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">
-                        View Details
-                      </button>
-                      {warranty.status !== "expired" && (
-                        <button className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
-                          File Claim
+                      <div className="flex gap-2">
+                        <button className="flex-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">
+                          View Details
                         </button>
-                      )}
+                        {warranty.status !== "expired" && (
+                          <button
+                            onClick={() =>
+                              createClaimMutation.mutate({
+                                title: `Warranty Claim - ${warranty.equipment}`,
+                                equipmentId: warranty.id,
+                                serial: warranty.serial,
+                                customer: warranty.customer,
+                                type: "warranty_claim",
+                                status: "pending",
+                              })
+                            }
+                            disabled={createClaimMutation.isPending}
+                            className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                          >
+                            {createClaimMutation.isPending ? "Filing..." : "File Claim"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -223,7 +382,7 @@ function Warranty() {
               <button className="text-xs text-primary hover:underline">View All</button>
             </div>
             <div className="space-y-3">
-              {claims.map((claim) => (
+              {claims.map((claim: any) => (
                 <div
                   key={claim.id}
                   className={`p-3 rounded-lg border ${
@@ -244,10 +403,32 @@ function Warranty() {
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">{claim.equipment}</p>
                   <p className="text-xs text-muted-foreground mb-2">{claim.description}</p>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">{claim.status === "denied" ? "" : `$${claim.amount}`}</span>
                     <span className="text-xs text-muted-foreground">{claim.date}</span>
                   </div>
+                  {claim.status === "pending" && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() =>
+                          updateClaimStatusMutation.mutate({ id: String(claim.id), status: "approved" })
+                        }
+                        disabled={updateClaimStatusMutation.isPending}
+                        className="flex-1 px-2 py-1 rounded text-xs bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() =>
+                          updateClaimStatusMutation.mutate({ id: String(claim.id), status: "denied" })
+                        }
+                        disabled={updateClaimStatusMutation.isPending}
+                        className="flex-1 px-2 py-1 rounded text-xs bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

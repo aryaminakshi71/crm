@@ -12,6 +12,7 @@ import {
   Mic,
   FileText,
   Plus,
+  AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -30,16 +31,10 @@ interface Call {
   status: string;
 }
 
-const MOCK_CALLS: Call[] = [
-  { id: "1", contactName: "Sarah Johnson", from: "+1 555-123-4567", to: "+1 555-000-0001", durationSeconds: 323, createdAt: new Date().toISOString(), direction: "inbound", status: "completed" },
-  { id: "2", contactName: "Michael Chen", from: "+1 555-000-0001", to: "+1 555-234-5678", durationSeconds: 765, createdAt: new Date().toISOString(), direction: "outbound", status: "completed" },
-  { id: "3", contactName: "Emily Davis", from: "+1 555-345-6789", to: "+1 555-000-0001", durationSeconds: undefined, createdAt: new Date().toISOString(), direction: "inbound", status: "missed" },
-];
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function formatDuration(seconds?: number): string {
@@ -63,6 +58,7 @@ function VoiceCallsPage() {
       if (!res.ok) throw new Error("Failed to load calls");
       return res.json() as Promise<{ data: Call[] }>;
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -73,7 +69,7 @@ function VoiceCallsPage() {
     </div>
   );
 
-  const calls = data?.data ?? MOCK_CALLS;
+  const calls = data?.data ?? [];
 
   const filteredCalls = calls.filter((call) => {
     if (filter === "all") return true;

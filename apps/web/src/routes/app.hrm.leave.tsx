@@ -1,6 +1,7 @@
 import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -68,7 +69,7 @@ function LeaveManagement() {
       queryClient.invalidateQueries({ queryKey: ["hrm-leave-requests"] });
       queryClient.invalidateQueries({ queryKey: ["hrm-summary"] });
     } catch (e) {
-      console.error("Failed to approve leave:", e);
+      toast.error("Failed to approve leave");
     }
     setProcessing(null);
     setShowActions(null);
@@ -81,7 +82,7 @@ function LeaveManagement() {
       queryClient.invalidateQueries({ queryKey: ["hrm-leave-requests"] });
       queryClient.invalidateQueries({ queryKey: ["hrm-summary"] });
     } catch (e) {
-      console.error("Failed to reject leave:", e);
+      toast.error("Failed to reject leave");
     }
     setProcessing(null);
     setShowActions(null);
@@ -228,7 +229,7 @@ function LeaveManagement() {
             </tr>
           </thead>
           <tbody>
-            {filteredRequests.map((request) => (
+            {filteredRequests.map((request: any) => (
               <tr key={request.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

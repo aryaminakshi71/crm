@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { monitoringApi } from "../lib/api";
+import { monitoringApi } from "@/lib/api";
 
 const API_BASE = "/api/v1";
 
@@ -42,15 +42,6 @@ export const Route = createFileRoute("/app/monitoring/dashboards")({
   component: DashboardsPage,
 });
 
-const MOCK_DASHBOARDS = [
-  { id: 1, name: "Production Overview", description: "Key production metrics and KPIs", widgets: 8, lastViewed: "2 hours ago", createdBy: "Admin", isDefault: true },
-  { id: 2, name: "API Performance", description: "API latency and error rates", widgets: 5, lastViewed: "1 day ago", createdBy: "DevOps", isDefault: false },
-  { id: 3, name: "User Activity", description: "User engagement and behavior", widgets: 6, lastViewed: "3 hours ago", createdBy: "Analytics", isDefault: false },
-  { id: 4, name: "Infrastructure", description: "Server and infrastructure health", widgets: 7, lastViewed: "30 min ago", createdBy: "DevOps", isDefault: false },
-  { id: 5, name: "Revenue Dashboard", description: "Revenue metrics and trends", widgets: 4, lastViewed: "5 hours ago", createdBy: "Finance", isDefault: false },
-  { id: 6, name: "Customer Support", description: "Support ticket metrics", widgets: 5, lastViewed: "1 day ago", createdBy: "Support", isDefault: false },
-];
-
 function DashboardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [createName, setCreateName] = useState("");
@@ -61,6 +52,7 @@ function DashboardsPage() {
     queryKey: ["monitoring", "dashboard"],
     queryFn: () => monitoringApi.getDashboard(),
     retry: false,
+    placeholderData: (prev) => prev,
   });
 
   const createMutation = useMutation({
@@ -94,7 +86,7 @@ function DashboardsPage() {
     },
   });
 
-  const dashboards = MOCK_DASHBOARDS;
+  const dashboards = (dashboardQuery.data as any)?.dashboards ?? [];
 
   const filteredDashboards = dashboards.filter(
     (d) =>

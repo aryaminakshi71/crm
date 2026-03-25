@@ -22,37 +22,9 @@ export const Route = createFileRoute("/app/devops/deployments/$id")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
-};
-
-const MOCK_DEPLOYMENT = {
-  id: 1,
-  application: "frontend-app",
-  version: "v2.1.45",
-  environment: "production",
-  status: "success",
-  deployedBy: "John Smith",
-  deployedAt: "Mar 20, 2026 8:30:15 AM",
-  completedAt: "Mar 20, 2026 8:32:30 AM",
-  duration: "2m 15s",
-  commit: "abc1234",
-  message: "Update homepage styles and fix responsive layout",
-  branch: "main",
-  artifacts: ["frontend-v2.1.45.docker", "coverage-report-v2.1.45"],
-  servers: [
-    { name: "web-prod-01", status: "healthy", ip: "10.0.1.15", region: "us-east-1" },
-    { name: "web-prod-02", status: "healthy", ip: "10.0.1.16", region: "us-east-1" },
-    { name: "web-prod-03", status: "healthy", ip: "10.0.1.17", region: "us-west-2" },
-  ],
-  stages: [
-    { name: "Pre-deployment checks", status: "success", duration: "15s" },
-    { name: "Building Docker image", status: "success", duration: "45s" },
-    { name: "Pushing to registry", status: "success", duration: "30s" },
-    { name: "Rolling update", status: "success", duration: "30s" },
-    { name: "Health checks", status: "success", duration: "15s" },
-  ],
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function DeploymentDetail() {
@@ -69,6 +41,7 @@ function DeploymentDetail() {
       return res.json();
     },
     enabled: !!id,
+    placeholderData: (prev) => prev,
   });
 
   const rollbackMutation = useMutation({
@@ -85,26 +58,26 @@ function DeploymentDetail() {
     },
   });
 
-  const deployment = deploymentQuery?.data ?? deploymentQuery ?? MOCK_DEPLOYMENT;
+  const deployment = (deploymentQuery as any)?.data ?? deploymentQuery ?? {};
 
-  const application = deployment.application ?? "Application";
-  const version = deployment.version ?? "—";
-  const environment = deployment.environment ?? "—";
-  const status = deployment.status ?? "unknown";
-  const deployedBy = deployment.deployedBy ?? deployment.deployedByUserId ?? "—";
-  const message = deployment.message ?? "Deployment";
-  const commit = deployment.commitSha?.slice(0, 7) ?? deployment.commit ?? "—";
+  const application = (deployment as any)?.application ?? "Application";
+  const version = (deployment as any)?.version ?? "—";
+  const environment = (deployment as any)?.environment ?? "—";
+  const status = (deployment as any)?.status ?? "unknown";
+  const deployedBy = (deployment as any)?.deployedBy ?? (deployment as any)?.deployedByUserId ?? "—";
+  const message = (deployment as any)?.message ?? "Deployment";
+  const commit = (deployment as any)?.commitSha?.slice(0, 7) ?? (deployment as any)?.commit ?? "—";
   const stages: Array<{ name: string; status: string; duration: string }> =
-    deployment.stages ?? MOCK_DEPLOYMENT.stages;
+    (deployment as any)?.stages ?? [];
   const servers: Array<{ name: string; status: string; ip: string; region: string }> =
-    deployment.servers ?? MOCK_DEPLOYMENT.servers;
+    (deployment as any)?.servers ?? [];
 
   if (isLoading) {
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (

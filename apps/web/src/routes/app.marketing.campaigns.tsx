@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -244,7 +244,7 @@ function MarketingCampaignsPage() {
         <EmptyState
           title="No campaigns found"
           description={search || channelFilter !== "all" ? "Try adjusting your filters." : "Create your first campaign to get started."}
-          action={{ label: "New Campaign", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>New Campaign</Button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -320,8 +320,8 @@ function MarketingCampaignsPage() {
         onClose={() => setIsCreateOpen(false)}
         title="New Campaign"
         onSubmit={() => createCampaign.mutate()}
-        isSubmitting={createCampaign.isPending}
-        submitLabel="Create Campaign"
+        isLoading={createCampaign.isPending}
+        submitText="Create Campaign"
       >
         <FormField label="Campaign Name *">
           <Input

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ function ResourcesPage() {
     enabled: !!id,
   });
 
-  const resources = (resourcesData?.data || []) as Resource[];
+  const resources = ((resourcesData as any)?.data || []) as Resource[];
 
   // Calculate totals
   const totalAllocation = resources.reduce((sum, r) => sum + r.allocation, 0);

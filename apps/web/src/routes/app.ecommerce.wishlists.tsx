@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   Heart,
@@ -39,12 +39,6 @@ const MOCK_POPULAR_ITEMS = [
   { id: 6, name: "Winter Jacket Black", sku: "APPA-JKT-WIN-B", price: 149.99, wishlisted: 123, inStock: true },
 ];
 
-const MOCK_RECENT_WISHLISTS = [
-  { id: 1, customer: "Michael Torres", email: "michael@example.com", items: 3, products: ["55\" 4K Smart TV", "Laptop 15\" Pro"], createdAt: "2 hours ago" },
-  { id: 2, customer: "Sarah Chen", email: "sarah@example.com", items: 5, products: ["3-Seater Sofa", "Mountain Bike", "Winter Jacket"], createdAt: "5 hours ago" },
-  { id: 3, customer: "Emily Zhang", email: "emily@example.com", items: 2, products: ["Wireless Headphones Pro"], createdAt: "1 day ago" },
-];
-
 function WishlistsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -57,11 +51,10 @@ function WishlistsPage() {
       if (!res.ok) throw new Error("Failed to fetch wishlists");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const popularItems = MOCK_POPULAR_ITEMS;
-  const recentWishlists =
-    apiData?.data?.length > 0 ? apiData.data : MOCK_RECENT_WISHLISTS;
+  const recentWishlists = (apiData as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -164,11 +157,11 @@ function WishlistsPage() {
         <CardContent className="p-4">
           <h3 className="font-semibold text-foreground mb-4">Recent Wishlists</h3>
           <div className="space-y-3">
-            {recentWishlists.map((wishlist) => (
+            {recentWishlists.map((wishlist: any) => (
               <div key={wishlist.id} className="flex items-center gap-4 p-3 border border-border rounded-lg">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-primary font-bold text-xs">
-                    {wishlist.customer.split(" ").map((n) => n[0]).join("")}
+                    {wishlist.customer.split(" ").map((n: any) => n[0]).join("")}
                   </span>
                 </div>
                 <div className="flex-1">

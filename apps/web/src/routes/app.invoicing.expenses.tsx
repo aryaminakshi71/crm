@@ -45,9 +45,9 @@ export const Route = createFileRoute("/app/invoicing/expenses")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
@@ -63,22 +63,14 @@ type Expense = {
   receipt: boolean;
 };
 
-const mockExpenses: Expense[] = [
-  { id: "1", description: "Office Supplies", category: "Operations", amount: 450, date: "2026-03-18", vendor: "Staples", status: "approved", receipt: true },
-  { id: "2", description: "Software Subscription", category: "Software", amount: 1200, date: "2026-03-15", vendor: "Slack", status: "approved", receipt: true },
-  { id: "3", description: "Marketing Campaign", category: "Marketing", amount: 3500, date: "2026-03-12", vendor: "Google Ads", status: "approved", receipt: true },
-  { id: "4", description: "Travel - Client Meeting", category: "Travel", amount: 890, date: "2026-03-10", vendor: "United Airlines", status: "pending", receipt: true },
-  { id: "5", description: "Team Lunch", category: "Meals", amount: 156, date: "2026-03-08", vendor: "Local Restaurant", status: "approved", receipt: false },
-  { id: "6", description: "Cloud Hosting", category: "Software", amount: 2500, date: "2026-03-05", vendor: "AWS", status: "approved", receipt: true },
-  { id: "7", description: "Equipment Purchase", category: "Equipment", amount: 1800, date: "2026-03-01", vendor: "Best Buy", status: "pending", receipt: true },
-];
+const EMPTY_EXPENSES: any[] = [];
 
-const categoryData = [
-  { name: "Software", value: 3700, color: "#22d3ee" },
-  { name: "Marketing", value: 3500, color: "#a78bfa" },
-  { name: "Equipment", value: 1800, color: "#f472b6" },
-  { name: "Travel", value: 890, color: "#34d399" },
-  { name: "Operations", value: 450, color: "#fbbf24" },
+const EMPTY_CATEGORY_DATA = [
+  { name: "Software", value: 0, color: "#22d3ee" },
+  { name: "Marketing", value: 0, color: "#a78bfa" },
+  { name: "Equipment", value: 0, color: "#f472b6" },
+  { name: "Travel", value: 0, color: "#34d399" },
+  { name: "Operations", value: 0, color: "#fbbf24" },
 ];
 
 function ExpenseManagement() {
@@ -119,6 +111,7 @@ function ExpenseManagement() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (expensesQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -128,7 +121,7 @@ function ExpenseManagement() {
     </div>
   );
 
-  const expenses: Expense[] = expensesQuery.data?.data?.length ? expensesQuery.data.data : mockExpenses;
+  const expenses: any[] = (expensesQuery as any)?.data?.data ?? [];
 
   const filteredExpenses = expenses.filter((expense) => {
     if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
@@ -175,7 +168,7 @@ function ExpenseManagement() {
           <CardContent>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryData}>
+                <BarChart data={EMPTY_CATEGORY_DATA}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
                   <YAxis axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
@@ -188,7 +181,7 @@ function ExpenseManagement() {
                     }}
                   />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {categoryData.map((entry, index) => (
+                    {EMPTY_CATEGORY_DATA.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Bar>
@@ -206,7 +199,7 @@ function ExpenseManagement() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {categoryData.map((item) => (
+              {EMPTY_CATEGORY_DATA.map((item) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />

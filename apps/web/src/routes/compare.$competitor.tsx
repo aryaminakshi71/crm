@@ -20,8 +20,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { competitors } from "../lib/seo";
-import { trackCompetitorView } from "../lib/lead-tracking";
+import { competitors } from "@/lib/seo";
+import { trackCompetitorView } from "@/lib/lead-tracking";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/compare/$competitor")({

@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   DollarSign,
@@ -27,14 +27,6 @@ import {
 export const Route = createFileRoute("/app/ecommerce/taxes")({
   component: TaxesPage,
 });
-
-const MOCK_TAX_RATES = [
-  { id: 1, name: "US - California", rate: 7.25, region: "CA, USA", enabled: true },
-  { id: 2, name: "US - New York", rate: 8.0, region: "NY, USA", enabled: true },
-  { id: 3, name: "US - Texas", rate: 6.25, region: "TX, USA", enabled: true },
-  { id: 4, name: "Canada - Ontario", rate: 13.0, region: "ON, Canada", enabled: true },
-  { id: 5, name: "EU - VAT Standard", rate: 20.0, region: "European Union", enabled: false },
-];
 
 function TaxesPage() {
   const queryClient = useQueryClient();
@@ -73,9 +65,10 @@ function TaxesPage() {
       if (!res.ok) throw new Error("Failed to fetch taxes");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const taxRates = apiData?.data?.length > 0 ? apiData.data : MOCK_TAX_RATES;
+  const taxRates = (apiData as any)?.data ?? [];
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -136,7 +129,7 @@ function TaxesPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {taxRates.map((rate) => (
+            {taxRates.map((rate: any) => (
               <div key={rate.id} className="flex items-center gap-4 p-4 border border-border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

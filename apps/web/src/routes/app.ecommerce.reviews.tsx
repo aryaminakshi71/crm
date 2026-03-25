@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 import {
   Star,
@@ -30,14 +30,6 @@ export const Route = createFileRoute("/app/ecommerce/reviews")({
   component: ReviewsPage,
 });
 
-const MOCK_REVIEWS = [
-    { id: 1, product: '55" 4K Smart TV', sku: "ELEC-4KTV-55", author: "John D.", email: "john@example.com", rating: 5, title: "Amazing TV!", content: "Best purchase I've made. The picture quality is incredible.", status: "approved", date: "Mar 15, 2024", helpful: 45 },
-    { id: 2, product: "Laptop 15\" Pro", sku: "ELEC-LAP-15", author: "Jane S.", email: "jane@example.com", rating: 4, title: "Great laptop", content: "Very fast and reliable. Battery life could be better.", status: "approved", date: "Mar 14, 2024", helpful: 32 },
-    { id: 3, product: "3-Seater Sofa", sku: "HOME-SOF-3S", author: "Mike R.", email: "mike@example.com", rating: 2, title: "Not as described", content: "Color was different than shown. Fabric feels cheap.", status: "pending", date: "Mar 18, 2024", helpful: 5 },
-    { id: 4, product: "Mountain Bike", sku: "SPORT-BIKE-MTN", author: "Sarah L.", email: "sarah@example.com", rating: 5, title: "Perfect for trails", content: "Great bike for the price. Shifts smoothly and handles well.", status: "approved", date: "Mar 12, 2024", helpful: 28 },
-  { id: 5, product: "Wireless Headphones Pro", sku: "ELEC-HEAD-无线", author: "Tom B.", email: "tom@example.com", rating: 1, title: "Defective", content: "Left earbud stopped working after 2 weeks. Terrible quality.", status: "pending", date: "Mar 19, 2024", helpful: 2 },
-];
-
 function ReviewsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("pending");
@@ -55,6 +47,7 @@ function ReviewsPage() {
       if (!res.ok) throw new Error("Failed to fetch reviews");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const updateReviewMutation = useMutation({
@@ -70,9 +63,9 @@ function ReviewsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-reviews"] }),
   });
 
-  const reviews = apiData?.data?.length > 0 ? apiData.data : MOCK_REVIEWS;
+  const reviews = (apiData as any)?.data ?? [];
 
-  const filteredReviews = reviews.filter((review: typeof MOCK_REVIEWS[0]) => {
+  const filteredReviews = reviews.filter((review: any) => {
     const matchesSearch =
       review.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
       review.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -96,9 +89,9 @@ function ReviewsPage() {
 
   const summary = {
     total: reviews.length,
-    approved: reviews.filter((r) => r.status === "approved").length,
-    pending: reviews.filter((r) => r.status === "pending").length,
-    averageRating: (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1),
+    approved: reviews.filter((r: any) => r.status === "approved").length,
+    pending: reviews.filter((r: any) => r.status === "pending").length,
+    averageRating: (reviews.reduce((sum: any, r: any) => sum + r.rating, 0) / reviews.length).toFixed(1),
   };
 
   if (isError) return (
@@ -178,7 +171,7 @@ function ReviewsPage() {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {filteredReviews.map((review) => (
+        {filteredReviews.map((review: any) => (
           <Card key={review.id} className={`border-border/60 ${
             review.status === "pending" ? "border-yellow-200" : ""
           }`}>

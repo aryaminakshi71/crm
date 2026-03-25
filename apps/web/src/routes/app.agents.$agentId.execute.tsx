@@ -18,7 +18,7 @@ import {
   Image,
 } from "lucide-react";
 import { useState } from "react";
-import { agentsApi } from "../lib/api";
+import { agentsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/agents/$agentId/execute")({
   component: AgentExecutePage,
@@ -42,16 +42,8 @@ const TASK_TYPES = [
   { value: "db_query", label: "Database Query", icon: Database },
 ];
 
-const MOCK_EXECUTION_LOGS = [
-  { level: "info", message: "Initializing agent execution environment...", timestamp: "10:23:01" },
-  { level: "info", message: "Loading agent configuration...", timestamp: "10:23:02" },
-  { level: "info", message: "Validating input parameters...", timestamp: "10:23:03" },
-  { level: "info", message: "Starting task execution...", timestamp: "10:23:04" },
-  { level: "info", message: "Fetching data from source...", timestamp: "10:23:05" },
-  { level: "info", message: "Processing 1,247 records...", timestamp: "10:23:08" },
-  { level: "info", message: "Generating analysis report...", timestamp: "10:23:12" },
-  { level: "info", message: "Task completed successfully", timestamp: "10:23:15" },
-];
+type ExecutionLog = { level: string; message: string; timestamp: string };
+const EMPTY_EXECUTION_LOGS: ExecutionLog[] = [];
 
 function AgentExecutePage() {
   const { agentId } = Route.useParams();
@@ -59,7 +51,7 @@ function AgentExecutePage() {
   const [selectedTask, setSelectedTask] = useState("code_generation");
   const [taskInput, setTaskInput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionLogs, setExecutionLogs] = useState<typeof MOCK_EXECUTION_LOGS>([]);
+  const [executionLogs, setExecutionLogs] = useState<ExecutionLog>([]);
   const [taskHistory, setTaskHistory] = useState<Task[]>([
     { id: "1", name: "Generate API Documentation", status: "completed", progress: 100, duration: "4.2s", timestamp: new Date(Date.now() - 300000) },
     { id: "2", name: "Analyze Sales Data Q4", status: "completed", progress: 100, duration: "8.5s", timestamp: new Date(Date.now() - 600000) },
@@ -97,7 +89,7 @@ function AgentExecutePage() {
       });
 
       // Use API logs if available, fall back to MOCK_EXECUTION_LOGS
-      const logs: typeof MOCK_EXECUTION_LOGS = result?.logs?.length
+      const logs: ExecutionLog[] = result?.logs?.length
         ? result.logs.map((l: any) => ({
             level: l.level ?? "info",
             message: l.message,
@@ -105,7 +97,7 @@ function AgentExecutePage() {
               ? new Date(l.timestamp).toLocaleTimeString()
               : new Date().toLocaleTimeString(),
           }))
-        : MOCK_EXECUTION_LOGS;
+        : EMPTY_EXECUTION_LOGS;
 
       // Animate logs one by one
       for (const log of logs) {
@@ -121,8 +113,8 @@ function AgentExecutePage() {
         )
       );
     } catch {
-      // Fallback to mock logs on API error
-      for (const log of MOCK_EXECUTION_LOGS) {
+      // Fallback to empty logs on API error
+      for (const log of EMPTY_EXECUTION_LOGS) {
         await new Promise((resolve) => setTimeout(resolve, 500));
         setExecutionLogs((prev) => [...prev, log]);
       }

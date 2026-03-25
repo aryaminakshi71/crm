@@ -17,7 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BookOpenText, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { helpdeskApi } from "../lib/api";
+import { helpdeskApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/helpdesk/knowledge")({
   component: KnowledgeBasePage,
@@ -127,10 +127,7 @@ function KnowledgeBasePage() {
           icon={<BookOpenText className="h-12 w-12" />}
           title="No knowledge articles"
           description="Create articles for recurring support issues so agents can resolve them faster."
-          action={{
-            label: "Create Article",
-            onClick: () => setIsCreateOpen(true),
-          }}
+          action={<Button onClick={() => setIsCreateOpen(true)}>Create Article</Button>}
         />
       ) : (
         <div className="space-y-3">

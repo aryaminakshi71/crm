@@ -29,37 +29,14 @@ export const Route = createFileRoute("/app/invoicing/reports/balance")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
-const assets = [
-  { category: "Current Assets", items: [
-    { name: "Cash & Cash Equivalents", amount: 125000 },
-    { name: "Accounts Receivable", amount: 89400 },
-    { name: "Inventory", amount: 45000 },
-    { name: "Prepaid Expenses", amount: 12000 },
-  ]},
-  { category: "Fixed Assets", items: [
-    { name: "Property & Equipment", amount: 180000 },
-    { name: "Less: Accumulated Depreciation", amount: -45000 },
-    { name: "Intangible Assets", amount: 25000 },
-  ]},
-];
-
-const liabilities = [
-  { category: "Current Liabilities", items: [
-    { name: "Accounts Payable", amount: 35000 },
-    { name: "Accrued Expenses", amount: 18000 },
-    { name: "Deferred Revenue", amount: 42000 },
-    { name: "Short-term Debt", amount: 25000 },
-  ]},
-  { category: "Long-term Liabilities", items: [
-    { name: "Long-term Debt", amount: 120000 },
-    { name: "Other Long-term Liabilities", amount: 15000 },
-  ]},
-];
+const EMPTY_ASSETS: any[] = [];
+const EMPTY_LIABILITIES: any[] = [];
+const EMPTY_EQUITY: any[] = [];
 
 function BalanceSheet() {
   const [dateRange, setDateRange] = useState("q1");
@@ -71,6 +48,7 @@ function BalanceSheet() {
       return res.json();
     },
     retry: false,
+    placeholderData: (prev) => prev,
   });
   if (balanceQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -80,15 +58,15 @@ function BalanceSheet() {
     </div>
   );
 
-  const totalCurrentAssets = balanceQuery.data?.totalCurrentAssets ?? 271400;
-  const totalFixedAssets = balanceQuery.data?.totalFixedAssets ?? 160000;
-  const totalAssets = balanceQuery.data?.totalAssets ?? 431400;
+  const totalCurrentAssets = (balanceQuery as any).data?.totalCurrentAssets ?? 271400;
+  const totalFixedAssets = (balanceQuery as any).data?.totalFixedAssets ?? 160000;
+  const totalAssets = (balanceQuery as any).data?.totalAssets ?? 431400;
 
-  const totalCurrentLiabilities = balanceQuery.data?.totalCurrentLiabilities ?? 120000;
-  const totalLongTermLiabilities = balanceQuery.data?.totalLongTermLiabilities ?? 135000;
-  const totalLiabilities = balanceQuery.data?.totalLiabilities ?? 255000;
+  const totalCurrentLiabilities = (balanceQuery as any).data?.totalCurrentLiabilities ?? 120000;
+  const totalLongTermLiabilities = (balanceQuery as any).data?.totalLongTermLiabilities ?? 135000;
+  const totalLiabilities = (balanceQuery as any).data?.totalLiabilities ?? 255000;
 
-  const totalEquity = balanceQuery.data?.totalEquity ?? 176400;
+  const totalEquity = (balanceQuery as any).data?.totalEquity ?? 176400;
 
   return (
     <div className="space-y-6">
@@ -137,7 +115,7 @@ function BalanceSheet() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {assets.map((section) => (
+            {EMPTY_ASSETS.map((section: any) => (
               <div key={section.category}>
                 <p className="text-xs font-medium text-muted-foreground mb-2">{section.category}</p>
                 <div className="space-y-2">
@@ -172,7 +150,7 @@ function BalanceSheet() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {liabilities.map((section) => (
+            {EMPTY_LIABILITIES.map((section: any) => (
               <div key={section.category}>
                 <p className="text-xs font-medium text-muted-foreground mb-2">{section.category}</p>
                 <div className="space-y-2">

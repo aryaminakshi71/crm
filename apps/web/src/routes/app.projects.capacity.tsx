@@ -18,7 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 // ─── Route ──────────────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ function CapacityPage() {
 
   // Map API resources to TeamMember shape; fall back to empty array
   const teamMembers: TeamMember[] = useMemo(() => {
-    const resources = resourcesData?.data ?? [];
+    const resources = (resourcesData as any)?.data ?? [];
     if (resources.length === 0) return [];
     return resources.map((r: any) => ({
       id: r.id,

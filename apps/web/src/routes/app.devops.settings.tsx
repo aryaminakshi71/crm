@@ -18,9 +18,9 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/settings")({
@@ -64,17 +64,17 @@ function SettingsPage() {
   });
 
   useEffect(() => {
-    if (orgSettings?.preferences?.devops) {
+    if ((orgSettings as any)?.preferences?.devops) {
       setForm((prev) => ({
         ...prev,
-        ...(orgSettings.preferences.devops as Partial<DevOpsSettings>),
+        ...((orgSettings as any).preferences.devops as Partial<DevOpsSettings>),
       }));
     }
   }, [orgSettings]);
 
   const saveSettings = useMutation({
     mutationFn: async (settings: DevOpsSettings) => {
-      const existingPrefs = orgSettings?.preferences ?? {};
+      const existingPrefs = (orgSettings as any)?.preferences ?? {};
       const res = await fetch(`${API_BASE}/v1/settings/organization`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getOrgHeader() },

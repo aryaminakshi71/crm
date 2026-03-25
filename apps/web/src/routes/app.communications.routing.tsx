@@ -29,17 +29,10 @@ interface RouteRule {
   createdAt: string;
 }
 
-const MOCK_ROUTES: RouteRule[] = [
-  { id: "r1", name: "Business Hours", conditions: ["Time: 9AM-5PM", "Day: Mon-Fri"], destination: "Sales Team", priority: 1, status: "active", createdAt: new Date().toISOString() },
-  { id: "r2", name: "After Hours", conditions: ["Time: 5PM-9AM", "Day: Mon-Fri"], destination: "Voicemail", priority: 2, status: "active", createdAt: new Date().toISOString() },
-  { id: "r3", name: "Weekend", conditions: ["Day: Sat-Sun"], destination: "Emergency Line", priority: 3, status: "active", createdAt: new Date().toISOString() },
-  { id: "r4", name: "VIP Customers", conditions: ["Caller ID: +1 555-123-4567"], destination: "VIP Support", priority: 1, status: "paused", createdAt: new Date().toISOString() },
-];
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function CallRoutingPage() {
@@ -57,9 +50,10 @@ function CallRoutingPage() {
       if (!res.ok) throw new Error("Failed to load routing rules");
       return res.json() as Promise<{ data: RouteRule[] }>;
     },
+    placeholderData: (prev) => prev,
   });
 
-  const rules = data?.data ?? MOCK_ROUTES;
+  const rules = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: async (input: { name: string; destination: string; conditions: string[]; priority: number }) => {

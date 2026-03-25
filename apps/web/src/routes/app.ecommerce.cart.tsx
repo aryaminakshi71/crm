@@ -21,9 +21,9 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 const SESSION_KEY = "ecommerce_cart_items";
@@ -113,10 +113,10 @@ function CartSettingsPage() {
   });
 
   useEffect(() => {
-    if (orgSettings?.preferences?.ecommerceCart) {
+    if ((orgSettings as any)?.preferences?.ecommerceCart) {
       setSettings((prev) => ({
         ...prev,
-        ...(orgSettings.preferences.ecommerceCart as Partial<CartSettings>),
+        ...((orgSettings as any).preferences.ecommerceCart as Partial<CartSettings>),
       }));
     }
   }, [orgSettings]);
@@ -124,7 +124,7 @@ function CartSettingsPage() {
   // Save cart settings to org settings
   const saveSettings = useMutation({
     mutationFn: async (s: CartSettings) => {
-      const existingPrefs = orgSettings?.preferences ?? {};
+      const existingPrefs = (orgSettings as any)?.preferences ?? {};
       const res = await fetch(`${API_BASE}/v1/settings/organization`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getOrgHeader() },

@@ -31,9 +31,9 @@ export const Route = createFileRoute("/app/invoicing/invoices/$id")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function InvoiceDetail() {
@@ -72,6 +72,7 @@ function InvoiceDetail() {
       const res = await fetch(`${API_BASE}/invoicing/invoices/${id}`, { headers: { ...getOrgHeader() } });
       return res.json();
     },
+    placeholderData: (prev) => prev,
     retry: false,
   });
   if (invoiceQuery.isError) return (
@@ -82,26 +83,7 @@ function InvoiceDetail() {
     </div>
   );
 
-  const MOCK_INVOICE = {
-    id: "1",
-    invoiceNumber: "INV-2026-002",
-    client: "TechStart Inc",
-    clientEmail: "accounts@techstart.io",
-    clientAddress: "123 Tech Street, San Francisco, CA 94105",
-    amount: 8000,
-    tax: 750,
-    total: 8750,
-    status: "sent",
-    issueDate: "2026-03-10",
-    dueDate: "2026-04-10",
-    items: [
-      { id: "1", description: "Software Development Services", quantity: 1, rate: 6000 },
-      { id: "2", description: "UI/UX Design", quantity: 1, rate: 2000 },
-    ],
-    notes: "Thank you for your business! Payment is due within 30 days.",
-  };
-
-  const invoice = invoiceQuery.data ?? MOCK_INVOICE;
+  const invoice = invoiceQuery.data ?? {};
 
   return (
     <div className="space-y-6">
@@ -113,11 +95,11 @@ function InvoiceDetail() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-xl text-foreground">{invoice.invoiceNumber}</h2>
-              <Badge variant="primary">{invoice.status}</Badge>
+              <h2 className="font-bold text-xl text-foreground">{(invoice as any).invoiceNumber}</h2>
+              <Badge variant="primary">{(invoice as any).status}</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Issued {new Date(invoice.issueDate).toLocaleDateString()} - Due {new Date(invoice.dueDate).toLocaleDateString()}
+              Issued {new Date((invoice as any).issueDate).toLocaleDateString()} - Due {new Date((invoice as any).dueDate).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -151,7 +133,7 @@ function InvoiceDetail() {
               </div>
               <div className="text-right">
                 <h1 className="text-2xl font-bold">INVOICE</h1>
-                <p className="text-sm text-muted-foreground">{invoice.invoiceNumber}</p>
+                <p className="text-sm text-muted-foreground">{(invoice as any).invoiceNumber}</p>
               </div>
             </div>
 
@@ -159,18 +141,18 @@ function InvoiceDetail() {
             <div className="grid grid-cols-2 gap-8 mb-8">
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">BILL TO</p>
-                <p className="font-semibold">{invoice.client}</p>
-                <p className="text-sm text-muted-foreground">{invoice.clientEmail}</p>
-                <p className="text-sm text-muted-foreground">{invoice.clientAddress}</p>
+                <p className="font-semibold">{(invoice as any).client}</p>
+                <p className="text-sm text-muted-foreground">{(invoice as any).clientEmail}</p>
+                <p className="text-sm text-muted-foreground">{(invoice as any).clientAddress}</p>
               </div>
               <div className="text-right">
                 <div className="mb-2">
                   <p className="text-xs text-muted-foreground">Issue Date</p>
-                  <p className="text-sm font-medium">{new Date(invoice.issueDate).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium">{new Date((invoice as any).issueDate).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Due Date</p>
-                  <p className="text-sm font-medium">{new Date(invoice.dueDate).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium">{new Date((invoice as any).dueDate).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
@@ -186,7 +168,7 @@ function InvoiceDetail() {
                 </tr>
               </thead>
               <tbody>
-                {invoice.items.map((item) => (
+                {(invoice as any).items.map((item: any) => (
                   <tr key={item.id} className="border-b border-border">
                     <td className="px-2 py-3 text-sm">{item.description}</td>
                     <td className="px-2 py-3 text-sm text-right">{item.quantity}</td>
@@ -202,24 +184,24 @@ function InvoiceDetail() {
               <div className="w-64 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${invoice.amount.toLocaleString()}</span>
+                  <span>${(invoice as any).amount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>${invoice.tax.toLocaleString()}</span>
+                  <span>${(invoice as any).tax.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                   <span>Total</span>
-                  <span>${invoice.total.toLocaleString()}</span>
+                  <span>${(invoice as any).total.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
             {/* Notes */}
-            {invoice.notes && (
+            {(invoice as any).notes && (
               <div className="mt-8 pt-4 border-t border-border">
                 <p className="text-xs font-medium text-muted-foreground mb-1">NOTES</p>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+                <p className="text-sm text-muted-foreground">{(invoice as any).notes}</p>
               </div>
             )}
           </CardContent>

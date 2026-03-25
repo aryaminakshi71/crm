@@ -14,9 +14,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 export const Route = createFileRoute("/app/devops/runs")({
@@ -63,7 +63,7 @@ function Runs() {
     </div>
   );
 
-  const runs = (data?.data || []).filter((r: any) =>
+  const runs = ((data as any)?.data || []).filter((r: any) =>
     search
       ? r.branch?.toLowerCase().includes(search.toLowerCase()) ||
         r.commitSha?.toLowerCase().includes(search.toLowerCase())

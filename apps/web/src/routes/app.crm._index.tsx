@@ -97,6 +97,13 @@ function CrmOverview() {
     },
   });
 
+  // Fetch top deals from API
+  const { data: topDealsData } = useQuery({
+    queryKey: ["deals", "top"],
+    queryFn: () => dealsApi.list({ limit: 5 }),
+    placeholderData: (prev) => prev,
+  });
+
   // Map API response to display values with safe fallbacks
   const stats = {
     totalLeads: dashboardStats?.totalContacts ?? 1247,
@@ -113,30 +120,15 @@ function CrmOverview() {
   };
 
   // Static fallback pipeline data
-  const PIPELINE_FALLBACK = [
-    { name: "Lead", value: 450, color: "#818cf8" },
-    { name: "Qualified", value: 280, color: "#a78bfa" },
-    { name: "Proposal", value: 150, color: "#22d3ee" },
-    { name: "Negotiation", value: 80, color: "#fbbf24" },
-    { name: "Closed", value: 45, color: "#22c55e" },
-  ];
+  const EMPTY_PIPELINE_DATA: any[] = [];
+  const EMPTY_REVENUE_DATA: any[] = [];
 
-  // Static fallback revenue data
-  const REVENUE_FALLBACK = [
-    { month: "Jan", revenue: 65000, target: 60000 },
-    { month: "Feb", revenue: 72000, target: 70000 },
-    { month: "Mar", revenue: 68000, target: 75000 },
-    { month: "Apr", revenue: 85000, target: 80000 },
-    { month: "May", revenue: 92000, target: 85000 },
-    { month: "Jun", revenue: 98000, target: 90000 },
-  ];
-
-  // Use real data with fallback to existing mock
-  const pipelineData = chartsData?.pipeline?.length ? chartsData.pipeline : PIPELINE_FALLBACK;
-  const revenueData = chartsData?.revenue?.length ? chartsData.revenue : REVENUE_FALLBACK;
+  // Use real data; show empty chart when no API data
+  const pipelineData = (chartsData as any)?.pipeline?.length ? (chartsData as any).pipeline : EMPTY_PIPELINE_DATA;
+  const revenueData = (chartsData as any)?.revenue?.length ? (chartsData as any).revenue : EMPTY_REVENUE_DATA;
 
   // Use API recent activities, fall back to empty array (shown only when loaded)
-  const recentActivities = (dashboardStats?.recentActivities ?? []).map((a: { id: string; type: string; message: string; time: string }) => ({
+  const recentActivities = ((dashboardStats as any)?.recentActivities ?? []).map((a: { id: string; type: string; message: string; time: string }) => ({
     id: a.id,
     type: a.type,
     title: a.message,
@@ -144,13 +136,15 @@ function CrmOverview() {
     user: "",
   }));
 
-  const topDeals = [
-    { id: "1", name: "Acme Corp Enterprise", value: 125000, stage: "Negotiation", probability: 75, owner: "SC", closeDate: "Mar 28" },
-    { id: "2", name: "TechStart Solutions", value: 89000, stage: "Proposal", probability: 60, owner: "DP", closeDate: "Apr 5" },
-    { id: "3", name: "Global Industries", value: 67000, stage: "Qualified", probability: 40, owner: "EZ", closeDate: "Apr 12" },
-    { id: "4", name: "DataFlow Inc", value: 54000, stage: "Negotiation", probability: 80, owner: "SC", closeDate: "Mar 25" },
-    { id: "5", name: "CloudSystems Ltd", value: 42000, stage: "Proposal", probability: 55, owner: "JL", closeDate: "Apr 8" },
-  ];
+  const topDeals = (topDealsData?.data ?? []).map((d: any) => ({
+    id: d.id,
+    name: d.name,
+    value: d.value,
+    stage: d.stage,
+    probability: d.probability ?? 50,
+    owner: d.ownerInitials ?? d.assignedTo?.charAt(0) ?? "?",
+    closeDate: d.expectedCloseDate ? new Date(d.expectedCloseDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "TBD",
+  }));
 
   const todaysFocus = [
     { type: "call", label: "Discovery call with Lisa Wang", time: "10:00 AM", urgent: true },
@@ -477,7 +471,7 @@ function CrmOverview() {
         <Button
           variant="outline"
           className="h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate({ to: "/app/crm/contacts", search: { action: "create" } })}
+          onClick={() => navigate({ to: "/app/crm/contacts", search: {} as any })}
         >
           <UserPlus className="h-5 w-5" />
           <span className="text-sm font-medium">Add Contact</span>
@@ -485,7 +479,7 @@ function CrmOverview() {
         <Button
           variant="outline"
           className="h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate({ to: "/app/crm/leads", search: { action: "create" } })}
+          onClick={() => navigate({ to: "/app/crm/leads", search: {} as any })}
         >
           <Target className="h-5 w-5" />
           <span className="text-sm font-medium">New Lead</span>
@@ -513,7 +507,7 @@ function CrmOverview() {
         <Button
           variant="outline"
           className="h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate({ to: "/app/crm/sequences", search: { action: "create" } })}
+          onClick={() => navigate({ to: "/app/crm/sequences", search: {} as any })}
         >
           <Mail className="h-5 w-5" />
           <span className="text-sm font-medium">Email Sequence</span>

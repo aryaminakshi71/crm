@@ -370,7 +370,7 @@ function EmployeeDirectory() {
       {/* Grid View */}
       {viewMode === "grid" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredEmployees.map((employee) => (
+          {filteredEmployees.map((employee: any) => (
             <a
               key={employee.id}
               href={`/app/hrm/employees/${employee.id}`}
@@ -430,7 +430,7 @@ function EmployeeDirectory() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((employee) => (
+              {filteredEmployees.map((employee: any) => (
                 <tr key={employee.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">

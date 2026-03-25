@@ -19,9 +19,9 @@ export const Route = createFileRoute("/app/speech/speakers")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 interface Speaker {
@@ -31,13 +31,6 @@ interface Speaker {
   transcriptions: number;
   totalSpeakingTime: string;
 }
-
-const MOCK_SPEAKERS: Speaker[] = [
-  { id: "s1", name: "Sarah Johnson", color: "bg-blue-500", transcriptions: 12, totalSpeakingTime: "2h 34m" },
-  { id: "s2", name: "Michael Chen", color: "bg-green-500", transcriptions: 8, totalSpeakingTime: "1h 45m" },
-  { id: "s3", name: "Emily Davis", color: "bg-purple-500", transcriptions: 15, totalSpeakingTime: "3h 12m" },
-  { id: "s4", name: "Robert Wilson", color: "bg-amber-500", transcriptions: 6, totalSpeakingTime: "1h 02m" },
-];
 
 const SPEAKER_COLORS = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-amber-500", "bg-red-500", "bg-pink-500"];
 
@@ -54,6 +47,7 @@ function SpeakersPage() {
       if (!res.ok) throw new Error("Failed to fetch speakers");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -64,7 +58,7 @@ function SpeakersPage() {
     </div>
   );
 
-  const speakers: Speaker[] = data?.data ?? MOCK_SPEAKERS;
+  const speakers: Speaker[] = (data as any)?.data ?? [];
 
   const filteredSpeakers = speakers.map((s, i) => ({
     ...s,

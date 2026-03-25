@@ -21,14 +21,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 function getOrgHeader(): Record<string, string> {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 }
-
-const MOCK_RECENT_TRANSCRIPTIONS = [
-  { id: "t1", name: "Sales Call - Q4 Review", duration: "45:23", date: "2 hours ago", accuracy: 98.2 },
-  { id: "t2", name: "Team Standup Meeting", duration: "28:15", date: "4 hours ago", accuracy: 97.8 },
-  { id: "t3", name: "Customer Interview", duration: "1:02:34", date: "Yesterday", accuracy: 99.1 },
-];
 
 const QUICK_ACTIONS = [
   { name: "Upload Audio", description: "Transcribe audio file", href: "/app/speech/transcribe/new", icon: Upload, color: "bg-blue-500" },
@@ -47,6 +41,7 @@ function SpeechDashboard() {
       if (!res.ok) return { data: [] };
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -57,19 +52,17 @@ function SpeechDashboard() {
     </div>
   );
 
-  const recentTranscriptions = transcriptionsData?.data?.length
-    ? transcriptionsData.data.map((t: any) => ({
+  const recentTranscriptions = ((transcriptionsData as any)?.data ?? []).map((t: any) => ({
         id: t.id,
         name: t.name ?? t.fileName ?? "Untitled",
         duration: t.duration ?? "-",
         date: t.createdAt ? new Date(t.createdAt).toLocaleString() : "-",
         accuracy: t.accuracy ?? 0,
-      }))
-    : MOCK_RECENT_TRANSCRIPTIONS;
+      }));
 
-  const totalHours = transcriptionsData?.totalDurationHours ?? 128;
-  const avgAccuracy = transcriptionsData?.avgAccuracy ?? 98.2;
-  const speakersDetected = transcriptionsData?.totalSpeakers ?? 24;
+  const totalHours = (transcriptionsData as any)?.totalDurationHours ?? 128;
+  const avgAccuracy = (transcriptionsData as any)?.avgAccuracy ?? 98.2;
+  const speakersDetected = (transcriptionsData as any)?.totalSpeakers ?? 24;
 
   return (
     <div className="space-y-6">

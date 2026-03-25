@@ -11,6 +11,7 @@ import {
   Copy,
   MoreHorizontal,
   VideoOff,
+  AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,17 +31,10 @@ interface VideoRoom {
   scheduledAt?: string;
 }
 
-const MOCK_ROOMS: VideoRoom[] = [
-  { id: "room-1", name: "Team Standup", participants: [], maxParticipants: 10, status: "active", createdAt: new Date(Date.now() - 600000).toISOString() },
-  { id: "room-2", name: "Product Review", participants: [], maxParticipants: 8, status: "active", createdAt: new Date(Date.now() - 1500000).toISOString() },
-  { id: "room-3", name: "Sales Call - Acme Corp", participants: [], maxParticipants: 6, status: "scheduled", createdAt: new Date().toISOString(), scheduledAt: new Date(Date.now() + 86400000).toISOString() },
-  { id: "room-4", name: "Engineering Sync", participants: [], maxParticipants: 12, status: "ended", createdAt: new Date(Date.now() - 86400000).toISOString(), endedAt: new Date(Date.now() - 83700000).toISOString() },
-];
-
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 function VideoRoomsPage() {
@@ -58,6 +52,7 @@ function VideoRoomsPage() {
       if (!res.ok) throw new Error("Failed to load video rooms");
       return res.json() as Promise<{ data: VideoRoom[] }>;
     },
+    placeholderData: (prev) => prev,
   });
 
   if (isError) return (
@@ -68,7 +63,7 @@ function VideoRoomsPage() {
     </div>
   );
 
-  const rooms = data?.data ?? MOCK_ROOMS;
+  const rooms = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {

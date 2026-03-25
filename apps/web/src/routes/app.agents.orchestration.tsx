@@ -51,7 +51,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
 
 // ─── Mock fallback data ────────────────────────────────────────────────────────
@@ -180,8 +180,9 @@ function OrchestrationPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
-  const workflows: Workflow[] = workflowsData?.data ?? MOCK_WORKFLOWS;
+  const workflows: Workflow[] = (workflowsData as any)?.data ?? [];
 
   // ── Fetch stats ──────────────────────────────────────────────────────────
   const { data: stats } = useQuery({
@@ -244,10 +245,10 @@ function OrchestrationPage() {
   });
 
   // ── Stats (fallback to local count) ─────────────────────────────────────
-  const totalWorkflows = stats?.totalWorkflows ?? workflows.length;
+  const totalWorkflows = (stats as any)?.totalWorkflows ?? workflows.length;
   const activeWorkflows =
-    stats?.activeWorkflows ?? workflows.filter((w) => w.status === "active").length;
-  const runsToday = stats?.runsToday ?? 0;
+    (stats as any)?.activeWorkflows ?? workflows.filter((w) => w.status === "active").length;
+  const runsToday = (stats as any)?.runsToday ?? 0;
 
   if (isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
@@ -320,7 +321,7 @@ function OrchestrationPage() {
           icon={<Bot className="w-10 h-10 text-muted-foreground" />}
           title="No workflows yet"
           description="Create your first agent workflow to automate complex tasks."
-          action={{ label: "New Workflow", onClick: () => setIsCreateOpen(true) }}
+          action={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsCreateOpen(true)}>New Workflow</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -399,7 +400,7 @@ function OrchestrationPage() {
         title="New Workflow"
         onSubmit={() => createMutation.mutate(newWorkflow)}
         isLoading={createMutation.isPending}
-        submitLabel="Create Workflow"
+        submitText="Create Workflow"
       >
         <FormField label="Name" required>
           <Input

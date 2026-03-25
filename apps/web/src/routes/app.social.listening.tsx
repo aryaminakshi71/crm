@@ -20,17 +20,10 @@ export const Route = createFileRoute("/app/social/listening")({
 });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => {
+const getOrgHeader = (): Record<string, string> => {
   const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-org-id": orgId } : {};
+  return orgId ? { "x-organization-id": orgId } : {};
 };
-
-const MOCK_ALERTS = [
-  { id: "a1", type: "mention", content: "@nucleoone Your product is amazing! Just bought the Pro plan.", author: "@techfan42", platform: "twitter", sentiment: "positive", time: "5 min ago" },
-  { id: "a2", type: "hashtag", content: "Someone used #NucleoOneSuccess in their post about our platform", author: "@startupfounder", platform: "twitter", sentiment: "positive", time: "15 min ago" },
-  { id: "a3", type: "mention", content: "Having trouble with the API integration. Any help?", author: "@devuser123", platform: "instagram", sentiment: "neutral", time: "30 min ago" },
-  { id: "a4", type: "competitor", content: "Users discussing Nucleo One vs @competitorproduct", author: "Various", platform: "twitter", sentiment: "neutral", time: "1 hour ago" },
-];
 
 const TRENDING_TOPICS = [
   { topic: "#NucleoOne", mentions: 245, trend: "+15%" },
@@ -52,9 +45,10 @@ function ListeningPage() {
       if (!res.ok) throw new Error("Failed to fetch listening alerts");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
-  const alerts = data?.data ?? MOCK_ALERTS;
+  const alerts = (data as any)?.data ?? [];
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -77,7 +71,7 @@ function ListeningPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
     </div>
   );
     return (
@@ -110,7 +104,7 @@ function ListeningPage() {
                 <Bell className="h-5 w-5" /> Recent Alerts
               </h3>
               <div className="space-y-4">
-                {alerts.map((alert: typeof MOCK_ALERTS[number]) => (
+                {alerts.map((alert: any) => (
                   <div key={alert.id} className="p-4 bg-muted/50 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">

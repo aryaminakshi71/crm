@@ -3,20 +3,17 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FormField,
+  FormModal,
+  Input,
   Loading,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertCircle, FileText, Upload } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { assetsApi } from "../lib/api";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-org-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { assetsApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +33,8 @@ function formatSize(bytes: number) {
 
 function CrmDocumentsPage() {
   const queryClient = useQueryClient();
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [docName, setDocName] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["crm-documents"],
@@ -47,34 +46,28 @@ function CrmDocumentsPage() {
   // ── Mutations ────────────────────────────────────────────────────────────
 
   const uploadDocumentMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/crm/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (name: string) =>
+      assetsApi.create({
+        name,
+        mimeType: "application/octet-stream",
+        size: "0",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-documents"] });
-      toast.success("Document uploaded successfully");
+      toast.success("Document added successfully");
+      setIsUploadOpen(false);
+      setDocName("");
     },
     onError: () => {
-      toast.error("Failed to upload document");
+      toast.error("Failed to add document");
     },
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  function handleUpload() {
-    const name = window.prompt("Enter document name:");
-    if (!name?.trim()) return;
-    uploadDocumentMutation.mutate({
-      name: name.trim(),
-      type: "document",
-      url: "",
-    });
+  function handleUploadSubmit() {
+    if (!docName.trim()) return;
+    uploadDocumentMutation.mutate(docName.trim());
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -112,10 +105,10 @@ function CrmDocumentsPage() {
         <Button
           leftIcon={<Upload className="h-4 w-4" />}
           variant="outline"
-          onClick={handleUpload}
+          onClick={() => setIsUploadOpen(true)}
           disabled={uploadDocumentMutation.isPending}
         >
-          {uploadDocumentMutation.isPending ? "Uploading..." : "Upload"}
+          Upload
         </Button>
       </div>
 
@@ -125,7 +118,8 @@ function CrmDocumentsPage() {
         <EmptyState
           icon={<FileText className="h-8 w-8 text-primary/40" />}
           title="No documents yet"
-          description="Files attached to contacts, leads, and deals will appear here. Use the Assets section to upload files."
+          description="Files attached to contacts, leads, and deals will appear here."
+          action={<Button leftIcon={<Upload className="h-4 w-4" />} onClick={() => setIsUploadOpen(true)}>Upload Document</Button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -161,6 +155,25 @@ function CrmDocumentsPage() {
           ))}
         </div>
       )}
+
+      {/* Upload Modal */}
+      <FormModal
+        isOpen={isUploadOpen}
+        onClose={() => { setIsUploadOpen(false); setDocName(""); }}
+        title="Add Document"
+        onSubmit={handleUploadSubmit}
+        isLoading={uploadDocumentMutation.isPending}
+        submitText="Add Document"
+      >
+        <FormField label="Document Name *">
+          <Input
+            placeholder="e.g. Contract Q1 2025"
+            value={docName}
+            onChange={(e) => setDocName(e.target.value)}
+            autoFocus
+          />
+        </FormField>
+      </FormModal>
     </div>
   );
 }
