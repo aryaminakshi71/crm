@@ -23,7 +23,15 @@ export function createAuth(connectionString: string) {
     }),
     baseURL: env.VITE_PUBLIC_SITE_URL || "http://localhost:3001",
     basePath: "/api/auth",
-    secret: env.BETTER_AUTH_SECRET || "change-me-in-production-min-32-chars",
+    secret: (() => {
+      if (!env.BETTER_AUTH_SECRET) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error("BETTER_AUTH_SECRET environment variable is required in production");
+        }
+        return "dev-only-insecure-secret-do-not-use-in-prod";
+      }
+      return env.BETTER_AUTH_SECRET;
+    })(),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,

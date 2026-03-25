@@ -27,50 +27,13 @@ export const base = os.$context<InitialContext>();
 export const pub = base;
 
 /**
- * Authenticated procedure - requires login (session auth) or demo mode
+ * Authenticated procedure - requires login (session auth)
  * Uses .use<T>() for explicit type parameter instead of .middleware() for better type inference.
  */
 export const authed = base.use<AuthContext>(async ({ context, next }) => {
   if (!context.headers) {
     throw new ORPCError("UNAUTHORIZED", {
       message: "Missing headers",
-    });
-  }
-
-  // Check for demo mode
-  const isDemoEnabled = context.env.DEMO_MODE_ENABLED === "true";
-  const isDemo = isDemoEnabled && context.headers.get("x-demo-mode") === "true";
-  if (isDemo) {
-    // Create a mock auth context for demo mode
-    const db = getDb(context);
-    const auth = createAuthFromEnv(db, context.env);
-
-    // Return demo context with mock user and session
-    return next({
-      context: {
-        ...context,
-        auth,
-        user: {
-          id: "demo-user-001",
-          email: "demo@example.com",
-          name: "Demo User",
-          emailVerified: true,
-          image: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as any,
-        session: {
-          id: "demo-session-001",
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          token: "demo-token",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          ipAddress: null,
-          userAgent: null,
-          userId: "demo-user-001",
-          activeOrganizationId: "demo-org",
-        } as any,
-      },
     });
   }
 
@@ -106,31 +69,8 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
 /**
  * Organization-scoped procedure - requires org membership
  * Prefetches organization and member data in a single query.
- * Supports demo mode with demo organization.
  */
 export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
-  // Check for demo mode
-  const isDemoEnabled = context.env.DEMO_MODE_ENABLED === "true";
-  const isDemo = isDemoEnabled && context.headers.get("x-demo-mode") === "true";
-  if (isDemo) {
-    // Return demo organization context
-    return next({
-      context: {
-        ...context,
-        organization: {
-          id: "demo-org",
-          name: "Demo Organization",
-          slug: "demo",
-          plan: "pro",
-        },
-        member: {
-          id: "demo-member-001",
-          role: "owner" as const,
-        },
-      },
-    });
-  }
-
   const orgSlug = context.headers.get("x-organization-slug");
   const orgId =
     context.headers.get("x-organization-id") ||

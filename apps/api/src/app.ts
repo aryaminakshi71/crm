@@ -84,6 +84,37 @@ const crmAgentEvents: Array<Record<string, unknown>> = [];
 const MOBILE_REDIRECT_PROTOCOLS = new Set(["nucleocrm:", "exp:", "exps:"]);
 const AUTH_COOKIE_PREFIX = "saas-layer";
 
+/**
+ * Validate session and return auth context for REST endpoints.
+ * Returns { authorized: true, session } on success, { authorized: false, session: null } on failure.
+ */
+async function requireAuth(c: any) {
+  const { auth } = createRequestAuthConfig(c.env || {});
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session?.user) {
+      return { authorized: false, session: null };
+    }
+    return { authorized: true, session };
+  } catch {
+    return { authorized: false, session: null };
+  }
+}
+
+/**
+ * Get organization ID from request, validating session membership.
+ */
+async function getOrgIdFromSession(c: any): Promise<string | null> {
+  const authResult = await requireAuth(c);
+  if (!authResult.authorized) return null;
+  return (
+    c.req.header("x-organization-id") ||
+    (authResult.session as any)?.session?.activeOrganizationId ||
+    (authResult.session as any)?.activeOrganizationId ||
+    null
+  );
+}
+
 function resolveRequestConnectionString(envBindings: Partial<AppEnv> = {}) {
   return envBindings.DATABASE?.connectionString || process.env.DATABASE_URL;
 }
@@ -302,10 +333,23 @@ export function createApp() {
   // (Sentry and Datadog require semver which fails in Workers environment)
   initSentry();
 
+  // CORS allowlist - only allow known origins in production
+  const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   // Global middleware
   app.use(
     "*",
-    cors({ origin: (origin: string | null) => origin, credentials: true }),
+    cors({
+      origin: (origin: string | null) => {
+        if (!origin) return true; // allow non-browser clients (curl, server-to-server)
+        if (process.env.NODE_ENV !== "production") return origin; // allow all in dev
+        return ALLOWED_ORIGINS.includes(origin);
+      },
+      credentials: true,
+    }),
   );
   app.use("*", requestId());
   app.use("*", loggerMiddleware);
@@ -365,12 +409,18 @@ export function createApp() {
 
   // Direct REST endpoints
   app.get("/api/v1/deals", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
+
     const { search, stage, sortBy, sortOrder, page, limit } = c.req.query();
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
 
-    if (isDemoOrg(orgId)) {
+    // Demo mode for development only
+    const isDemo = isDemoOrg(orgId);
+    if (isDemo) {
       let records = Array.from(demoCrmStore.deals.values()).filter(
         (deal) => deal.organizationId === orgId,
       );
@@ -445,7 +495,10 @@ export function createApp() {
   });
 
   app.post("/api/v1/deals", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body?.name || !body?.value) {
       return c.json({ error: "Name and value are required" }, 400);
@@ -489,7 +542,10 @@ export function createApp() {
 
   // Get deal by ID
   app.get("/api/v1/deals/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const dealId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { deals } = schema;
@@ -506,7 +562,10 @@ export function createApp() {
 
   // Update deal
   app.patch("/api/v1/deals/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const dealId = c.req.param("id");
     const body = await c.req.json().catch(() => null);
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
@@ -538,7 +597,10 @@ export function createApp() {
 
   // Delete deal
   app.delete("/api/v1/deals/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const dealId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { deals } = schema;
@@ -558,7 +620,10 @@ export function createApp() {
 
   // Contacts endpoints
   app.get("/api/v1/contacts", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const { search, sortBy, sortOrder, page, limit } = c.req.query();
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
@@ -638,7 +703,10 @@ export function createApp() {
   });
 
   app.post("/api/v1/contacts", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body?.firstName || !body?.lastName) {
       return c.json({ error: "First and last name are required" }, 400);
@@ -678,7 +746,10 @@ export function createApp() {
 
   // Get contact by ID
   app.get("/api/v1/contacts/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const contactId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { contacts } = schema;
@@ -695,7 +766,10 @@ export function createApp() {
 
   // Update contact
   app.patch("/api/v1/contacts/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const contactId = c.req.param("id");
     const body = await c.req.json().catch(() => null);
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
@@ -732,7 +806,10 @@ export function createApp() {
 
   // Delete contact
   app.delete("/api/v1/contacts/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const contactId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { contacts } = schema;
@@ -752,7 +829,10 @@ export function createApp() {
 
   // Leads endpoints
   app.get("/api/v1/leads", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const { search, status, source, sortBy, sortOrder, page, limit } =
       c.req.query();
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -846,7 +926,10 @@ export function createApp() {
   });
 
   app.post("/api/v1/leads", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body?.email) {
       return c.json({ error: "Email is required" }, 400);
@@ -890,7 +973,10 @@ export function createApp() {
 
   // Convert lead to contact
   app.post("/api/v1/leads/:id/convert", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const leadId = c.req.param("id");
     const body = await c.req.json().catch(() => null);
 
@@ -957,7 +1043,10 @@ export function createApp() {
 
   // Get lead by ID
   app.get("/api/v1/leads/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const leadId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { leads } = schema;
@@ -974,7 +1063,10 @@ export function createApp() {
 
   // Update lead
   app.patch("/api/v1/leads/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const leadId = c.req.param("id");
     const body = await c.req.json().catch(() => null);
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
@@ -1012,7 +1104,10 @@ export function createApp() {
 
   // Delete lead
   app.delete("/api/v1/leads/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const leadId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { leads } = schema;
@@ -1032,7 +1127,10 @@ export function createApp() {
 
   // Activities endpoints
   app.get("/api/v1/activities", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const { type, contactId, dealId, page, limit } = c.req.query();
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
@@ -1112,7 +1210,10 @@ export function createApp() {
   });
 
   app.post("/api/v1/activities", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body?.type) {
       return c.json({ error: "Activity type is required" }, 400);
@@ -1151,7 +1252,10 @@ export function createApp() {
 
   // Get activity by ID
   app.get("/api/v1/activities/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const activityId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { activities } = schema;
@@ -1168,7 +1272,10 @@ export function createApp() {
 
   // Update activity
   app.patch("/api/v1/activities/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const activityId = c.req.param("id");
     const body = await c.req.json().catch(() => null);
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
@@ -1203,7 +1310,10 @@ export function createApp() {
 
   // Delete activity
   app.delete("/api/v1/activities/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const activityId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { activities } = schema;
@@ -1223,7 +1333,10 @@ export function createApp() {
 
   // Assets endpoints
   app.get("/api/v1/assets", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const { search, contactId, dealId, page, limit } = c.req.query();
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
@@ -1302,8 +1415,11 @@ export function createApp() {
   });
 
   app.post("/api/v1/assets", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const contentType = c.req.header("content-type") || "";
-    const orgId = c.req.header("x-organization-id") || "demo-org";
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const userId = await getDemoUserId(db);
 
@@ -1383,7 +1499,10 @@ export function createApp() {
   });
 
   app.post("/api/v1/assets/:id/tags", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const assetId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const [asset] = await db
@@ -1468,7 +1587,10 @@ export function createApp() {
   });
 
   app.get("/api/v1/assets/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const assetId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const [asset] = await db
@@ -1501,7 +1623,10 @@ export function createApp() {
   });
 
   app.delete("/api/v1/assets/:id", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const assetId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const [asset] = await db
@@ -1534,7 +1659,10 @@ export function createApp() {
 
   // Download asset
   app.get("/api/v1/assets/:id/download", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const assetId = c.req.param("id");
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const [asset] = await db
@@ -1583,7 +1711,10 @@ export function createApp() {
 
   // Dashboard stats endpoint
   app.get("/api/v1/dashboard/stats", async (c: any) => {
-    const orgId = c.req.header("x-organization-id") || "demo-org";
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
     const { contacts, deals, leads, activities } = schema;
 
@@ -1962,12 +2093,15 @@ export function createApp() {
   });
 
   app.post("/api/enterprise/audit/ingest", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body.action !== "string" || !body.action.trim()) {
       return c.json({ error: "action is required" }, 400);
     }
 
-    const orgId = c.req.header("x-organization-id") || "demo-org";
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
 
     const [event] = await db
@@ -1993,8 +2127,11 @@ export function createApp() {
   });
 
   app.post("/api/enterprise/scim/sync", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
-    const orgId = c.req.header("x-organization-id") || "demo-org";
     const db = getDb({ env: c.env, headers: c.req.raw.headers } as any);
 
     const [syncJob] = await db

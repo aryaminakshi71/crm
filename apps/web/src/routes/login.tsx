@@ -37,7 +37,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const searchParams = new URLSearchParams(router.state.location.search as unknown as string);
-  const redirect = searchParams.get("redirect") || undefined;
+  const rawRedirect = searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -50,19 +50,22 @@ function LoginPage() {
   const isDemoModeEnabled = Boolean(DEMO_EMAIL && DEMO_PASSWORD);
   const isDemoCredential = isDemoModeEnabled && email.trim() === DEMO_EMAIL && password === DEMO_PASSWORD;
 
+  // Validate redirect URL is same-origin to prevent open redirect attacks
+  const isSafeRedirect = (redirect: string | null | undefined): string => {
+    if (!redirect) return "/app";
+    // Only allow relative paths starting with / (not absolute URLs or protocol-relative)
+    if (redirect.startsWith("/") && !redirect.startsWith("//")) {
+      return redirect;
+    }
+    return "/app";
+  };
+
+  const safeRedirect = isSafeRedirect(rawRedirect);
+
   const activateDemoMode = () => {
+    // Only store demo flags, not sensitive tokens — Better Auth uses httpOnly cookies
     localStorage.setItem("demo_mode", "true");
     localStorage.setItem("isDemo", "true");
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: "demo-user-login",
-        name: "Demo User",
-        email: DEMO_EMAIL || "demo@example.com",
-      }),
-    );
-    localStorage.setItem("accessToken", "demo-token");
-    localStorage.setItem("companyId", "demo-company");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,7 +84,7 @@ function LoginPage() {
         if (isDemoCredential) {
           activateDemoMode();
           toast.success("Demo mode activated");
-          navigate({ to: redirect || "/app" });
+          navigate({ to: safeRedirect });
           return;
         }
         setError(result.error.message || "Invalid email or password");
@@ -97,10 +100,8 @@ function LoginPage() {
       localStorage.removeItem("companyId");
 
       // Successful login - redirect
-      const redirectPath = redirect || "/app";
-      navigate({ to: redirectPath });
+      navigate({ to: safeRedirect });
     } catch (err) {
-      console.error("Login error:", err);
       if (err instanceof Error) {
         if (
           err.message.includes("fetch") ||
@@ -144,7 +145,6 @@ function LoginPage() {
       // If no URL but no error, it might have redirected already
       console.log("No redirect URL in result, checking if redirected...");
     } catch (err) {
-      console.error("Social login error:", err);
       // Only auto-activate demo mode if demo credentials are configured
       if (isDemoModeEnabled && typeof window !== "undefined") {
         activateDemoMode();

@@ -128,8 +128,9 @@ export function rateLimitRedis(options: Partial<RateLimitOptions> = {}) {
         c.header("X-RateLimit-Reset", result.reset.toString());
       } catch (err) {
         if (err instanceof RateLimitError) throw err;
-        // Fail open if Redis fails
-        console.error("Rate limit error (fail open):", err);
+        // Fail closed — deny request if rate limiting is unavailable
+        console.error("Rate limit error (fail closed):", err);
+        throw new RateLimitError("Rate limiting unavailable", 60);
       }
 
       await next();
