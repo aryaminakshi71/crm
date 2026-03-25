@@ -17,11 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/products/new")({
   component: AddProductPage,
@@ -49,9 +45,11 @@ function AddProductPage() {
 
   const createProductMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const res = await fetch(`${API_BASE}/ecommerce/products`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/ecommerce/products`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify({
           name: data.name,
           shortDescription: data.shortDescription,

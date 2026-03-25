@@ -24,11 +24,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/products")({
   component: ProductsPage,
@@ -41,16 +37,7 @@ function ProductsPage() {
 
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-products", searchQuery, filterStatus],
-    queryFn: async () => {
-      const params = new URLSearchParams({ limit: "100" });
-      if (searchQuery) params.set("search", searchQuery);
-      if (filterStatus !== "all") params.set("status", filterStatus);
-      const res = await fetch(`${API_BASE}/ecommerce/products?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch products");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.products.list(),
     placeholderData: (prev) => prev,
   });
 

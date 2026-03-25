@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/deployments")({
   component: Deployments,
@@ -31,23 +26,18 @@ function Deployments() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "deployments", environmentFilter, statusFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: "1", limit: "50" });
-      if (environmentFilter) params.set("environment", environmentFilter);
-      if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`${API_BASE}/devops/deployments?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch deployments");
-      return res.json();
-    },
+    queryFn: () => devopsApi.deployments.list(),
+    placeholderData: (prev) => prev,
   });
 
   const rollbackMutation = useMutation({
     mutationFn: async (deploymentId: string) => {
-      const res = await fetch(`${API_BASE}/devops/deployments/${deploymentId}/rollback`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (orgId) headers["x-organization-id"] = orgId;
+      const res = await fetch(`/api/v1/devops/deployments/${deploymentId}/rollback`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Rollback failed");
       return res.json();

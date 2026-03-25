@@ -24,11 +24,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 // Churn by segment bar chart data
 const CHURN_BY_SEGMENT = [
@@ -85,13 +81,7 @@ function ChurnPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "churn"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/churn`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.churn.get(),
     placeholderData: (prev) => prev,
     refetchInterval: 30000,
   });
@@ -100,13 +90,9 @@ function ChurnPage() {
 
   const outreachMutation = useMutation({
     mutationFn: async ({ customerId, channel }: { customerId: string; channel: "email" | "call" }) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/churn/${customerId}/outreach`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify({ channel }),
-      });
-      if (!res.ok) throw new Error("Failed to schedule outreach");
-      return res.json();
+      const result = await intelligenceApi.churn.outreach(customerId);
+      if (!result) throw new Error("Failed to schedule outreach");
+      return result;
     },
     onSuccess: (_, vars) => {
       toast.success(`${vars.channel === "email" ? "Email" : "Call"} outreach scheduled`);

@@ -18,12 +18,7 @@ import {
   Globe,
   Settings,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/pipelines/new")({
   component: NewPipeline,
@@ -41,15 +36,7 @@ function NewPipeline() {
   const [form, setForm] = useState({ name: "", repository: "", branch: "main" });
 
   const createPipeline = useMutation({
-    mutationFn: async (data: typeof form) => {
-      const res = await fetch(`${API_BASE}/v1/devops/pipelines`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error(`Failed to create pipeline: ${res.status}`);
-      return res.json();
-    },
+    mutationFn: (data: typeof form) => devopsApi.pipelines.create(data),
     onSuccess: (created) => {
       const id = (created as any)?.id ?? (created as any)?.data?.id;
       if (id) {

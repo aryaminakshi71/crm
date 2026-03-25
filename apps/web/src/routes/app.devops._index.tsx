@@ -42,17 +42,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/_index")({
   component: DevOpsDashboard,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const ENV_BADGE_COLORS: Record<string, string> = {
   Production: "bg-red-100 text-red-800",
@@ -94,37 +88,19 @@ function DevOpsDashboard() {
 
   const { data: pipelinesData, isLoading: pipelinesLoading, isError: pipelinesError, refetch: pipelinesRefetch } = useQuery({
     queryKey: ["devops", "pipelines"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/devops/pipelines?limit=5`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => devopsApi.pipelines.list(),
     placeholderData: (prev) => prev,
   });
 
   const { data: environmentsData, isLoading: envsLoading } = useQuery({
     queryKey: ["devops", "environments"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/devops/environments`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryFn: () => devopsApi.environments.list(),
     placeholderData: (prev) => prev,
   });
 
   const { data: deploymentsData } = useQuery({
     queryKey: ["devops", "deployments"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/devops/deployments?limit=10`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => devopsApi.deployments.list(),
     placeholderData: (prev) => prev,
   });
 

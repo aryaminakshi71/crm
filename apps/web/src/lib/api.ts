@@ -3860,6 +3860,114 @@ export const hrmApi = {
       },
     },
   },
+
+  // OKRs
+  okrs: {
+    list: async (params?: { quarter?: string; status?: string }) => {
+      try {
+        const query = new URLSearchParams();
+        if (params?.quarter) query.set("quarter", params.quarter);
+        if (params?.status) query.set("status", params.status);
+        const res = await fetch(`${API_BASE}/hrm/okrs?${query}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch OKRs");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.list error:", e);
+        return { data: [] };
+      }
+    },
+    get: async (id: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs/${id}`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to get OKR");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.get error:", e);
+        return null;
+      }
+    },
+    create: async (data: {
+      title: string;
+      ownerId?: string;
+      quarter?: string;
+      keyResults?: Array<{ title: string; target?: number }>;
+    }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to create OKR");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.create error:", e);
+        return null;
+      }
+    },
+    update: async (id: string, data: Partial<{
+      title: string;
+      status: string;
+      progress: number;
+      keyResults: Array<{ id?: string; title: string; progress?: number; status?: string }>;
+    }>) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to update OKR");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.update error:", e);
+        return null;
+      }
+    },
+    delete: async (id: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs/${id}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to delete OKR");
+        return { success: true };
+      } catch (e) {
+        console.error("hrmApi.okrs.delete error:", e);
+        return null;
+      }
+    },
+    addKeyResult: async (okrId: string, data: { title: string; target?: number }) => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs/${okrId}/key-results`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to add key result");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.addKeyResult error:", e);
+        return null;
+      }
+    },
+    company: async () => {
+      try {
+        const res = await fetch(`${API_BASE}/hrm/okrs/company`, {
+          headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        });
+        if (!res.ok) throw new Error("Failed to fetch company OKRs");
+        return res.json();
+      } catch (e) {
+        console.error("hrmApi.okrs.company error:", e);
+        return { data: {} };
+      }
+    },
+  },
 };
 
 // ============ ADVERTISING ============
@@ -4097,6 +4205,153 @@ export const marketingApi = {
         return await rpc.marketing?.deleteTemplate?.({ id });
       } catch (error) {
         console.error("marketingApi.templates.delete error:", error);
+        throw error;
+      }
+    },
+  },
+
+  // Landing Pages
+  landingPages: {
+    list: async (params?: { page?: number; limit?: number; search?: string; status?: string }): Promise<any> => {
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 50;
+      try {
+        return await withRpcTimeout(
+          rpc.marketing?.listLandingPages?.({ page, limit, search: params?.search, status: params?.status }),
+          "marketing.listLandingPages",
+        );
+      } catch (error) {
+        console.error("marketingApi.landingPages.list error:", error);
+        return { data: [], page, limit, total: 0 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.getLandingPage?.({ id });
+      } catch (error) {
+        console.error("marketingApi.landingPages.get error:", error);
+        return null;
+      }
+    },
+    create: async (data: { title: string; slug?: string; html?: string; status?: string }): Promise<any> => {
+      try {
+        return await rpc.marketing?.createLandingPage?.(data);
+      } catch (error) {
+        console.error("marketingApi.landingPages.create error:", error);
+        throw error;
+      }
+    },
+    update: async (id: string, data: { title?: string; html?: string; status?: string }): Promise<any> => {
+      try {
+        return await rpc.marketing?.updateLandingPage?.({ id, ...data });
+      } catch (error) {
+        console.error("marketingApi.landingPages.update error:", error);
+        throw error;
+      }
+    },
+    delete: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.deleteLandingPage?.({ id });
+      } catch (error) {
+        console.error("marketingApi.landingPages.delete error:", error);
+        throw error;
+      }
+    },
+  },
+
+  // A/B Tests
+  abTests: {
+    list: async (params?: { page?: number; limit?: number; search?: string; status?: string }): Promise<any> => {
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 50;
+      try {
+        return await withRpcTimeout(
+          rpc.marketing?.listAbTests?.({ page, limit, search: params?.search, status: params?.status }),
+          "marketing.listAbTests",
+        );
+      } catch (error) {
+        console.error("marketingApi.abTests.list error:", error);
+        return { data: [], page, limit, total: 0 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.getAbTest?.({ id });
+      } catch (error) {
+        console.error("marketingApi.abTests.get error:", error);
+        return null;
+      }
+    },
+    create: async (data: { name: string; metric: string; variantA: string; variantB: string; status?: string }): Promise<any> => {
+      try {
+        return await rpc.marketing?.createAbTest?.(data);
+      } catch (error) {
+        console.error("marketingApi.abTests.create error:", error);
+        throw error;
+      }
+    },
+    update: async (id: string, data: { name?: string; status?: string }): Promise<any> => {
+      try {
+        return await rpc.marketing?.updateAbTest?.({ id, ...data });
+      } catch (error) {
+        console.error("marketingApi.abTests.update error:", error);
+        throw error;
+      }
+    },
+    delete: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.deleteAbTest?.({ id });
+      } catch (error) {
+        console.error("marketingApi.abTests.delete error:", error);
+        throw error;
+      }
+    },
+  },
+
+  // Lead Scoring
+  leadScoring: {
+    list: async (params?: { page?: number; limit?: number; search?: string; category?: string }): Promise<any> => {
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 50;
+      try {
+        return await withRpcTimeout(
+          rpc.marketing?.listScoringRules?.({ page, limit, search: params?.search, category: params?.category }),
+          "marketing.listScoringRules",
+        );
+      } catch (error) {
+        console.error("marketingApi.leadScoring.list error:", error);
+        return { data: [], page, limit, total: 0 };
+      }
+    },
+    get: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.getScoringRule?.({ id });
+      } catch (error) {
+        console.error("marketingApi.leadScoring.get error:", error);
+        return null;
+      }
+    },
+    create: async (data: { name: string; condition: string; points: number; category: string }): Promise<any> => {
+      try {
+        return await rpc.marketing?.createScoringRule?.(data);
+      } catch (error) {
+        console.error("marketingApi.leadScoring.create error:", error);
+        throw error;
+      }
+    },
+    update: async (id: string, data: { name?: string; condition?: string; points?: number; active?: boolean }): Promise<any> => {
+      try {
+        return await rpc.marketing?.updateScoringRule?.({ id, ...data });
+      } catch (error) {
+        console.error("marketingApi.leadScoring.update error:", error);
+        throw error;
+      }
+    },
+    delete: async (id: string): Promise<any> => {
+      try {
+        return await rpc.marketing?.deleteScoringRule?.({ id });
+      } catch (error) {
+        console.error("marketingApi.leadScoring.delete error:", error);
         throw error;
       }
     },
@@ -5087,6 +5342,8 @@ export const socialApi = {
   accounts: {
     list: () => fetch(`${API_BASE}/social/accounts`, { headers: getOrgHeader() }).then(r => r.json()),
     get: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/accounts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    delete: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
   },
   campaigns: {
     list: () => fetch(`${API_BASE}/social/campaigns`, { headers: getOrgHeader() }).then(r => r.json()),
@@ -5109,6 +5366,7 @@ export const socialApi = {
   },
   influencers: {
     list: () => fetch(`${API_BASE}/social/influencers`, { headers: getOrgHeader() }).then(r => r.json()),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/influencers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
   },
   listening: {
     list: () => fetch(`${API_BASE}/social/listening`, { headers: getOrgHeader() }).then(r => r.json()),
@@ -5174,6 +5432,119 @@ export const notificationsApi = {
     fetch(`${API_BASE}/notifications/read-all`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json()),
   unreadCount: () =>
     fetch(`${API_BASE}/notifications/unread-count`, { headers: getOrgHeader() }).then(r => r.json()),
+};
+
+// ── Intelligence API ────────────────────────────────────────────────────────────
+
+const INT_BASE = import.meta.env.VITE_API_URL ?? "/api";
+
+function getIntOrgHeader(): Record<string, string> {
+  const orgId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("activeOrganizationId") ?? ""
+      : "";
+  return { "x-organization-id": orgId, "Content-Type": "application/json" };
+}
+
+async function intFetch(path: string, opts?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(`${INT_BASE}/v1${path}`, {
+      ...opts,
+      headers: { ...getIntOrgHeader(), ...(opts?.headers ?? {}) },
+    });
+    if (!res.ok) throw new Error(`Intelligence fetch failed: ${res.status}`);
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function intFetchNoBody(path: string, opts?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(`${INT_BASE}${path}`, {
+      ...opts,
+      headers: { ...getIntOrgHeader(), ...(opts?.headers ?? {}) },
+    });
+    if (!res.ok) throw new Error(`Intelligence fetch failed: ${res.status}`);
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export const intelligenceApi = {
+  queries: {
+    list: () => intFetch("/intelligence/queries"),
+    execute: (query: string) =>
+      intFetch("/intelligence/queries", {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      }),
+    run: (query: string) =>
+      intFetch("/intelligence/queries/run", {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      }),
+  },
+  churn: {
+    get: () => intFetch("/intelligence/churn"),
+    outreach: (customerId: string) =>
+      intFetch(`/intelligence/churn/${customerId}/outreach`, { method: "POST" }),
+  },
+  funnel: {
+    get: () => intFetch("/intelligence/funnel"),
+  },
+  sources: {
+    list: () => intFetch("/intelligence/sources"),
+    sync: (id: string) =>
+      intFetch(`/intelligence/sources/${id}/sync`, { method: "POST" }),
+  },
+  rfm: {
+    get: () => intFetch("/intelligence/rfm"),
+  },
+  cohort: {
+    get: () => intFetch("/intelligence/cohort"),
+  },
+  clv: {
+    get: () => intFetch("/intelligence/clv"),
+  },
+  retention: {
+    get: () => intFetch("/intelligence/retention"),
+  },
+  anomalies: {
+    list: () => intFetch("/intelligence/anomalies"),
+    dismiss: (anomalyId: string) =>
+      intFetch(`/intelligence/anomalies/${anomalyId}/dismiss`, { method: "POST" }),
+    watchlist: (anomalyId: string) =>
+      intFetch(`/intelligence/anomalies/${anomalyId}/watchlist`, { method: "POST" }),
+    acknowledge: (anomalyId: string) =>
+      intFetch(`/intelligence/anomalies/${anomalyId}/acknowledge`, { method: "POST" }),
+  },
+  predictive: {
+    get: () => intFetch("/intelligence/predictive"),
+  },
+  reports: {
+    list: () => intFetchNoBody("/intelligence/reports"),
+    get: (id: string) => intFetchNoBody(`/intelligence/reports/${id}`),
+    create: (data: Record<string, unknown>) =>
+      intFetchNoBody("/intelligence/reports", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      intFetchNoBody(`/intelligence/reports/${id}`, { method: "DELETE" }),
+    export: (id: string) =>
+      intFetchNoBody(`/intelligence/reports/${id}/export`, { method: "POST" }),
+    generate: (data: Record<string, unknown> = {}) =>
+      intFetchNoBody("/intelligence/reports/generate", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+  agentRuns: {
+    list: (limit = 50) =>
+      intFetchNoBody(`/intelligence/agent-runs?limit=${limit}`),
+  },
 };
 
 export const devopsApi = {

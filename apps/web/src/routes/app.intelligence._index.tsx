@@ -30,18 +30,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/_index")({
   component: IntelligenceDashboard,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const EMPTY_KPI_DATA: { label: string; value: string; change: string; trend: string }[] = [];
 
@@ -80,13 +73,7 @@ function IntelligenceDashboard() {
   const summaryQuery = useQuery({
     queryKey: ["intelligence", "summary"],
     retry: false,
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/intelligence/summary`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch intelligence summary");
-      return res.json();
-    },
+    queryFn: () => nucleoApi.intelligence.summary(),
     placeholderData: (prev) => prev,
   });
 

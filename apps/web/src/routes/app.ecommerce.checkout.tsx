@@ -16,11 +16,7 @@ import {
   Truck,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/checkout")({
   component: CheckoutSettingsPage,
@@ -29,9 +25,11 @@ export const Route = createFileRoute("/app/ecommerce/checkout")({
 function CheckoutSettingsPage() {
   const createOrderMutation = useMutation({
     mutationFn: async (orderPayload: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/ecommerce/orders`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/ecommerce/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify(orderPayload),
       });
       if (!res.ok) throw new Error("Failed to create order");

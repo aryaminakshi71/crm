@@ -18,11 +18,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 // Heatmap-style bar chart: retention % for each cohort at M1, M2, M3
 const COHORT_BAR_DATA = [
@@ -80,13 +76,7 @@ function retentionFill(value: number | null): string {
 function CohortPage() {
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "cohort"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/cohort`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { cohorts: [], retentionMatrix: [] };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.cohort.get(),
     placeholderData: (prev) => prev,
     refetchInterval: 30000,
   });

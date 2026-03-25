@@ -34,13 +34,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { socialApi } from "@/lib/api";
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -155,29 +149,14 @@ function SocialCampaignsPage() {
 
   const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
     queryKey: ["social", "campaigns"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/social/campaigns`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch campaigns");
-      const json = await res.json();
-      return (json as any).data ?? json;
-    },
+    queryFn: () => socialApi.campaigns.list(),
     placeholderData: DEMO_CAMPAIGNS,
   });
 
   // ── Mutations ────────────────────────────────────────────────────────────
 
   const createCampaignMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/social/campaigns`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => socialApi.campaigns.create(data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "campaigns"] });
       toast.success("Campaign created successfully");
@@ -190,14 +169,7 @@ function SocialCampaignsPage() {
   });
 
   const deleteCampaignMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/social/campaigns/${id}`, {
-        method: "DELETE",
-        headers: getOrgHeader(),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (id: string) => socialApi.campaigns.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "campaigns"] });
       toast.success("Campaign deleted");

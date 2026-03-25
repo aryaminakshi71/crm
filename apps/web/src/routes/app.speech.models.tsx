@@ -10,16 +10,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/models")({
   component: ModelsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Model {
   id: string;
@@ -36,13 +31,7 @@ function ModelsPage() {
 
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["speech", "models"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/models`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch models");
-      return res.json();
-    },
+    queryFn: () => speechApi.models.list(),
     placeholderData: (prev) => prev,
   });
 

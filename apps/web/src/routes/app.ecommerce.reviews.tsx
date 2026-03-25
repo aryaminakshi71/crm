@@ -7,12 +7,6 @@
 import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Star,
   Search,
@@ -25,6 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/reviews")({
   component: ReviewsPage,
@@ -38,23 +33,17 @@ function ReviewsPage() {
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-reviews", filterStatus],
-    queryFn: async () => {
-      const params = new URLSearchParams({ limit: "100" });
-      if (filterStatus !== "all") params.set("status", filterStatus);
-      const res = await fetch(`${API_BASE}/ecommerce/reviews?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch reviews");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.reviews.list(),
     placeholderData: (prev) => prev,
   });
 
   const updateReviewMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const res = await fetch(`${API_BASE}/ecommerce/reviews/${id}`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/ecommerce/reviews/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify({ id: String(id), status }),
       });
       if (!res.ok) throw new Error("Failed to update review");

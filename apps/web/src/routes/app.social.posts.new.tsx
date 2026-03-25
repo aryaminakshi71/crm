@@ -16,17 +16,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/posts/new")({
   component: NewPostPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const PLATFORMS = [
   { id: "instagram", name: "Instagram", icon: Instagram, color: "text-pink-500" },
@@ -52,19 +46,11 @@ function NewPostPage() {
   };
 
   const createPost = useMutation({
-    mutationFn: async (payload: {
+    mutationFn: (payload: {
       content: string;
       platforms: string[];
       scheduledAt?: string;
-    }) => {
-      const res = await fetch(`${API_BASE}/social/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Failed to create post");
-      return res.json();
-    },
+    }) => socialApi.posts.create(payload as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
       toast.success(schedule === "now" ? "Post published!" : "Post scheduled!");

@@ -20,6 +20,7 @@ import {
   Trash2,
   AlertCircle
 } from "lucide-react";
+import { hrmApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm/okrs")({
   component: OKRTracking,
@@ -130,15 +131,10 @@ function OKRTracking() {
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [expandedOKR, setExpandedOKR] = useState<string | null>(null);
 
+  // OKRs API — load from HRM API
   const okrsQuery = useQuery({
     queryKey: ["hrm", "okrs"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/hrm/okrs`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch OKRs");
-      return res.json();
-    },
+    queryFn: () => hrmApi.okrs.list(),
     placeholderData: (prev) => prev,
     retry: false,
   });
@@ -152,13 +148,7 @@ function OKRTracking() {
 
   const companyOKRsQuery = useQuery({
     queryKey: ["hrm", "company-okrs"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/hrm/okrs/company`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch company OKRs");
-      return res.json();
-    },
+    queryFn: () => hrmApi.okrs.company(),
     placeholderData: (prev) => prev,
     retry: false,
   });
@@ -188,12 +178,12 @@ function OKRTracking() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold text-foreground">OKR Tracking</h2>
-          <p className="text-sm text-muted-foreground">
-            Objectives and Key Results for the organization
-          </p>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Objectives and Key Results for the organization
+        </p>
         <div className="flex gap-2">
           <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50">
             <Download className="h-4 w-4" />

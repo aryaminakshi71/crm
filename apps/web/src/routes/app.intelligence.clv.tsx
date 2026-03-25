@@ -25,11 +25,7 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 // CLV distribution over time (12-month area chart)
 const CLV_DISTRIBUTION_TREND = [
@@ -80,13 +76,7 @@ export const Route = createFileRoute("/app/intelligence/clv")({
 function ClvPage() {
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "clv"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/clv`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.clv.get(),
     placeholderData: (prev) => prev,
     refetchInterval: 30000,
   });

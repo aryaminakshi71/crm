@@ -22,11 +22,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 // 30-day anomaly trend data
 const ANOMALY_TREND_DATA = [
@@ -80,13 +76,7 @@ function AnomaliesPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "anomalies"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/anomalies`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.anomalies.list(),
     placeholderData: (prev) => prev,
     refetchInterval: 60000,
   });
@@ -99,14 +89,7 @@ function AnomaliesPage() {
     .filter((a) => !severity || severity === "all" || a.severity === severity);
 
   const dismissMutation = useMutation({
-    mutationFn: async (anomalyId: string) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/anomalies/${anomalyId}/dismiss`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to dismiss");
-      return res.json();
-    },
+    mutationFn: (anomalyId: string) => intelligenceApi.anomalies.dismiss(anomalyId),
     onSuccess: () => {
       toast.success("Anomaly dismissed");
       queryClient.invalidateQueries({ queryKey: ["intelligence", "anomalies"] });
@@ -115,27 +98,13 @@ function AnomaliesPage() {
   });
 
   const watchlistMutation = useMutation({
-    mutationFn: async (anomalyId: string) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/anomalies/${anomalyId}/watchlist`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to add to watchlist");
-      return res.json();
-    },
+    mutationFn: (anomalyId: string) => intelligenceApi.anomalies.watchlist(anomalyId),
     onSuccess: () => toast.success("Added to watchlist"),
     onError: () => toast.error("Failed to add to watchlist"),
   });
 
   const acknowledgeMutation = useMutation({
-    mutationFn: async (anomalyId: string) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/anomalies/${anomalyId}/acknowledge`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to acknowledge");
-      return res.json();
-    },
+    mutationFn: (anomalyId: string) => intelligenceApi.anomalies.acknowledge(anomalyId),
     onSuccess: () => {
       toast.success("Anomaly acknowledged");
       queryClient.invalidateQueries({ queryKey: ["intelligence", "anomalies"] });

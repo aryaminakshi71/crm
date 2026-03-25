@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/runs")({
   component: Runs,
@@ -30,22 +25,18 @@ function Runs() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "runs", statusFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: "1", limit: "50" });
-      if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`${API_BASE}/devops/runs?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch runs");
-      return res.json();
-    },
+    queryFn: () => devopsApi.runs.list(),
+    placeholderData: (prev) => prev,
   });
 
   const cancelMutation = useMutation({
     mutationFn: async (runId: string) => {
-      const res = await fetch(`${API_BASE}/devops/runs/${runId}/cancel`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (orgId) headers["x-organization-id"] = orgId;
+      const res = await fetch(`/api/v1/devops/runs/${runId}/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Failed to cancel run");
       return res.json();

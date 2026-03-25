@@ -15,16 +15,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/transcribe")({
   component: TranscriptionsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Transcription {
   id: string;
@@ -44,15 +39,7 @@ function TranscriptionsPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["speech", "transcriptions", filter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filter !== "all") params.set("status", filter);
-      const res = await fetch(`${API_BASE}/speech/transcriptions?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch transcriptions");
-      return res.json();
-    },
+    queryFn: () => speechApi.transcriptions.list(),
     placeholderData: (prev) => prev,
   });
 

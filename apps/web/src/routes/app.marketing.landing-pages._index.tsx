@@ -70,8 +70,8 @@ function NewPageModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await new Promise((r) => setTimeout(r, 400));
-      return { id: String(Date.now()), ...form, visits: 0, conversions: 0, status: "draft" };
+      const result = await marketingApi.landingPages.create({ title: form.title, slug: form.slug, status: "draft" });
+      return result;
     },
     onSuccess: () => {
       toast.success("Landing page created");
@@ -140,7 +140,7 @@ function LandingPagesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["marketing", "landing-pages"],
-    queryFn: async () => ({ data: [] }),
+    queryFn: () => marketingApi.landingPages.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

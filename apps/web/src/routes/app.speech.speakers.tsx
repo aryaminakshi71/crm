@@ -13,16 +13,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/speakers")({
   component: SpeakersPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Speaker {
   id: string;
@@ -40,13 +35,7 @@ function SpeakersPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["speech", "speakers"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/speakers`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch speakers");
-      return res.json();
-    },
+    queryFn: () => speechApi.speakers.list(),
     placeholderData: (prev) => prev,
   });
 

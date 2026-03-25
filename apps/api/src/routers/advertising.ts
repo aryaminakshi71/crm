@@ -497,7 +497,7 @@ export const advertisingRouter = {
         .where(and(eq(schema.deals.organizationId, orgId), eq(schema.deals.stage, "won")));
 
       const totalWonValue = Number(wonDealsResult?.totalValue ?? 0);
-      const totalConversions = conversions.reduce((sum, c) => sum + c.count, 0);
+      const totalConversions = conversions.reduce((sum: number, c: typeof conversions[number]) => sum + c.count, 0);
 
       return conversions.map((c: typeof conversions[number]) => {
         const conversionCount = c.count;

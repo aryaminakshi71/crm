@@ -5,16 +5,11 @@ import { ArrowLeft, Hash, Search, TrendingUp, Plus, Copy,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/hashtags")({
   component: HashtagsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Hashtag {
   tag: string;
@@ -30,13 +25,7 @@ function HashtagsPage() {
   // Hashtags come from the social analytics/listening alerts filtered by alertType=hashtag
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "hashtags"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/listening/alerts?alertType=hashtag`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch hashtags");
-      return res.json();
-    },
+    queryFn: () => socialApi.hashtags.list(),
     placeholderData: (prev) => prev,
   });
 

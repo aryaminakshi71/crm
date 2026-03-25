@@ -23,6 +23,7 @@ import { z } from "zod";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -67,14 +68,7 @@ function PredictivePage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "predictive"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/predictive", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.predictive.get(),
   });
 
   const predictive: any = data ?? {};

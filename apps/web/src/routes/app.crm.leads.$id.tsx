@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { leadsApi } from "@/lib/api";
+import { leadsApi, aiApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/crm/leads/$id")({
   component: LeadDetail,
@@ -130,6 +130,23 @@ function LeadDetail() {
       navigate({ to: "/app/crm/leads" });
     },
     onError: () => toast.error("Failed to delete lead"),
+  });
+
+  // ── recalculateScore mutation ─────────────────────────────────────────────
+  const recalculateScore = useMutation({
+    mutationFn: () =>
+      aiApi.scoreLead({
+        email: lead.email,
+        companyName: lead.company,
+        jobTitle: lead.jobTitle,
+        notes: lead.notes,
+        tags: lead.tags,
+      }),
+    onSuccess: (data) => {
+      toast.success("Lead score recalculated");
+      queryClient.invalidateQueries({ queryKey: ["leads", id] });
+    },
+    onError: () => toast.error("Failed to recalculate score"),
   });
 
   if (isLoading) {
@@ -321,9 +338,15 @@ function LeadDetail() {
                   <p className="text-sm text-muted-foreground mt-1">
                     Based on engagement, firmographics, and demographic factors
                   </p>
-                  <Button variant="outline" size="sm" className="mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => recalculateScore.mutate()}
+                    disabled={recalculateScore.isPending}
+                  >
                     <Star className="h-4 w-4 mr-2" />
-                    Recalculate Score
+                    {recalculateScore.isPending ? "Recalculating..." : "Recalculate Score"}
                   </Button>
                 </div>
               </div>

@@ -13,17 +13,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/accounts/connect")({
   component: ConnectAccountPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const PLATFORMS = [
   { name: "Instagram", icon: Instagram, color: "bg-pink-500", description: "Connect your Instagram Business account" },
@@ -39,15 +33,7 @@ function ConnectAccountPage() {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
 
   const connectAccount = useMutation({
-    mutationFn: async (platform: string) => {
-      const res = await fetch(`${API_BASE}/social/accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify({ platform: platform.toLowerCase(), status: "connected" }),
-      });
-      if (!res.ok) throw new Error("Failed to connect account");
-      return res.json();
-    },
+    mutationFn: (platform: string) => socialApi.accounts.create({ platform: platform.toLowerCase(), status: "connected" }),
     onSuccess: (_, platform) => {
       setConnectedPlatforms((prev) => [...prev, platform]);
       queryClient.invalidateQueries({ queryKey: ["social", "accounts"] });

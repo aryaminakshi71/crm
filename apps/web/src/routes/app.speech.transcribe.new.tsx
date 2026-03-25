@@ -13,17 +13,11 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/transcribe/new")({
   component: NewTranscriptionPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -79,9 +73,13 @@ function NewTranscriptionPage() {
       formData.append("language", language);
       formData.append("settings", JSON.stringify(settings));
 
-      const res = await fetch(`${API_BASE}/speech/transcriptions`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = {};
+      if (orgId) headers["x-organization-id"] = orgId;
+
+      const res = await fetch(`/api/v1/speech/transcriptions`, {
         method: "POST",
-        headers: getOrgHeader(),
+        headers,
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to start transcription");

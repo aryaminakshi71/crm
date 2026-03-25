@@ -17,16 +17,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/accounts")({
   component: AccountsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Account {
   id: string;
@@ -51,25 +46,12 @@ function AccountsPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["social", "accounts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/accounts`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch accounts");
-      return res.json();
-    },
+    queryFn: () => socialApi.accounts.list(),
     placeholderData: (prev) => prev,
   });
 
   const disconnectMutation = useMutation({
-    mutationFn: async (accountId: string) => {
-      const res = await fetch(`${API_BASE}/social/accounts/${accountId}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to disconnect account");
-      return res.json();
-    },
+    mutationFn: (accountId: string) => socialApi.accounts.delete(accountId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "accounts"] });
     },

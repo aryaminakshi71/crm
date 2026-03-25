@@ -14,11 +14,7 @@ import { Database, History, Send,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/queries")({
   component: QueriesPage,
@@ -31,24 +27,14 @@ function QueriesPage() {
 
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "queries"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/queries`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.queries.list(),
     placeholderData: (prev) => prev,
   });
 
   const executeMutation = useMutation({
     mutationFn: async (query: string) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/queries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify({ query }),
-      });
-      if (!res.ok) {
+      const result = await intelligenceApi.queries.execute(query);
+      if (!result) {
         return {
           result: `Processed query: "${query}"`,
           sql: `SELECT * FROM analytics WHERE org_id = $1 LIMIT 100`,
@@ -60,7 +46,7 @@ function QueriesPage() {
           executionTimeMs: 42,
         };
       }
-      return res.json();
+      return result;
     },
     onSuccess: (result) => {
       setLastResult(result);

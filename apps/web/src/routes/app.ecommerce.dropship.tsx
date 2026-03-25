@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Truck,
   Search,
@@ -31,6 +26,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/dropship")({
   component: DropshippingPage,
@@ -42,9 +38,11 @@ function DropshippingPage() {
 
   const createDropshipMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/dropship`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/dropship`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
@@ -55,9 +53,11 @@ function DropshippingPage() {
 
   const deleteDropshipMutation = useMutation({
     mutationFn: async (id: string | number) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/dropship/${id}`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/dropship/${id}`, {
         method: "DELETE",
-        headers: { ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Failed");
       return res.json();
@@ -67,13 +67,7 @@ function DropshippingPage() {
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-dropship-shipping"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/shipping?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch suppliers");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.dropship.list(),
     placeholderData: (prev) => prev,
   });
 

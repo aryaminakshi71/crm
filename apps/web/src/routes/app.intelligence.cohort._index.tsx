@@ -25,6 +25,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const retentionCurveData = [
   { week: "W0", rate: 100 }, { week: "W1", rate: 72 }, { week: "W2", rate: 58 },
@@ -57,14 +58,7 @@ function CohortPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "cohort"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/cohort?period=month", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.cohort.get(),
   });
 
   const cohortData: any = data ?? {};

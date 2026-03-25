@@ -75,6 +75,15 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     environments: {
+      ssr: {
+        optimizeDeps: {
+          exclude: [
+            "@tanstack/router-core",
+            "@tanstack/react-start",
+            "@tanstack/react-router",
+          ],
+        },
+      },
       client: {
         build: {
           rollupOptions: {

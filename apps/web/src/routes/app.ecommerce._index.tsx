@@ -23,12 +23,6 @@ import {
   Star,
   Percent,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Area,
   AreaChart,
@@ -45,6 +39,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/_index")({
   component: EcommerceDashboard,
@@ -53,25 +48,13 @@ export const Route = createFileRoute("/app/ecommerce/_index")({
 function EcommerceDashboard() {
   const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: statsRefetch } = useQuery({
     queryKey: ["ecommerce-stats"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/stats`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch stats");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.stats(),
     placeholderData: (prev) => prev,
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ["ecommerce-orders-recent"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/orders?limit=4`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch orders");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.orders.list({ limit: 4 }),
     placeholderData: (prev) => prev,
   });
 

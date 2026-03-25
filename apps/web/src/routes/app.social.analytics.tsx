@@ -17,42 +17,24 @@ import {
   Facebook,
   ArrowRight,
 } from "lucide-react";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/analytics")({
   component: AnalyticsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 function AnalyticsPage() {
   const navigate = useNavigate();
 
   const { data: analyticsData } = useQuery({
     queryKey: ["social", "analytics"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/analytics`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => socialApi.analytics.get(""),
     placeholderData: (prev) => prev,
   });
 
   const { data: postsData } = useQuery({
     queryKey: ["social", "posts", "top"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/posts?limit=5&sort=likes`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => socialApi.posts.list(),
     placeholderData: (prev) => prev,
   });
 

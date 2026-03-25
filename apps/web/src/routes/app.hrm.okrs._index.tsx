@@ -58,9 +58,11 @@ function OkrsIndexPage() {
   const setQuarterFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : v, page: 1 }) });
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  // OKRs API — load from HRM API
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["hrm-okrs-index"],
-    queryFn: () => (hrmApi as any).okrs.list(),
+    queryKey: ["hrm", "okrs"],
+    queryFn: () => hrmApi.okrs.list(),
+    placeholderData: (prev) => prev,
   });
 
   const objectives: any[] = (data?.data as any[]) ?? [];
@@ -119,7 +121,9 @@ function OkrsIndexPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-bold text-xl text-foreground">OKRs</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-xl text-foreground">OKRs</h2>
+          </div>
           <p className="text-muted-foreground text-sm">
             Objectives and Key Results — track goals and progress
           </p>

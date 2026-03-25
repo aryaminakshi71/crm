@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Store,
   Palette,
@@ -27,6 +22,7 @@ import {
   Settings,
   AlertCircle
 } from "lucide-react";
+import { ecommerceApi } from "@/lib/api";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/ecommerce/store")({
@@ -39,27 +35,13 @@ function StoreCustomizerPage() {
   const queryClient = useQueryClient();
 
   const updateStoreMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/store`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => ecommerceApi.store.update(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-stats-store"] }),
   });
 
   const { data: statsData, isError, refetch} = useQuery({
     queryKey: ["ecommerce-stats-store"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/stats`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch stats");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.store.get(),
   });
 
   const storeSettings = {

@@ -90,8 +90,8 @@ function NewRuleModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await new Promise((r) => setTimeout(r, 400));
-      return { id: String(Date.now()), ...form, points: Number(form.points), active: true };
+      const result = await marketingApi.leadScoring.create({ name: form.name, condition: form.condition, points: Number(form.points), category: form.category });
+      return result;
     },
     onSuccess: () => {
       toast.success("Scoring rule created");
@@ -181,7 +181,7 @@ function LeadScoringPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["marketing", "lead-scoring"],
-    queryFn: async () => ({ data: [] }),
+    queryFn: () => marketingApi.leadScoring.list(),
     placeholderData: (prev) => prev,
     retry: false,
   });

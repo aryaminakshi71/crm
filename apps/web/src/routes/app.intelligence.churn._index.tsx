@@ -33,6 +33,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const churnTrend = [
   { month: "Oct", rate: 4.2 }, { month: "Nov", rate: 3.8 }, { month: "Dec", rate: 5.1 },
@@ -81,14 +82,7 @@ function ChurnPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "churn"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/churn", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.churn.get(),
   });
 
   const contactMutation = useMutation({

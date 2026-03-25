@@ -8,15 +8,10 @@ import {
   Minus,
   Calendar,
 } from "lucide-react";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/sentiment")({
   component: SentimentPage,
-});
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-  "Content-Type": "application/json",
 });
 
 const SENTIMENT_DATA = [
@@ -34,11 +29,7 @@ function SentimentPage() {
 
   const { data: postsData } = useQuery({
     queryKey: ["social-posts-sentiment"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/influencers`, { headers: getOrgHeader() });
-      if (!res.ok) throw new Error("Failed to fetch social data");
-      return res.json();
-    },
+    queryFn: () => socialApi.influencers.list(),
   });
 
   // Derive aggregate sentiment from posts data when available, else use SENTIMENT_DATA averages

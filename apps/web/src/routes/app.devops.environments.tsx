@@ -12,12 +12,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/environments")({
   component: Environments,
@@ -35,13 +30,7 @@ function Environments() {
 
   const { data: environments, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "environments"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/devops/environments`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch environments");
-      return res.json();
-    },
+    queryFn: () => devopsApi.environments.list(),
   });
 
   if (isError) return (

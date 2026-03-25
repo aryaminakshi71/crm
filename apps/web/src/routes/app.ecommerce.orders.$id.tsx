@@ -8,11 +8,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { ecommerceApi } from "@/lib/api";
 import {
   ArrowLeft,
   ShoppingBag,
@@ -36,27 +32,13 @@ function OrderDetailPage() {
   const queryClient = useQueryClient();
 
   const updateOrderStatusMutation = useMutation({
-    mutationFn: async (data: { status: string }) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/orders/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: { status: string }) => ecommerceApi.orders.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-order", id] }),
   });
 
   const { data: orderData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-order", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/orders/${id}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch order");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.orders.get(id),
     placeholderData: (prev) => prev,
   });
 

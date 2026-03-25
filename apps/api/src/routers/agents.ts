@@ -15,7 +15,7 @@ const workflowStepSchema = z.object({
   id: z.string(),
   type: z.string(),
   agentId: z.string().optional(),
-  config: z.record(z.unknown()),
+  config: z.record(z.string(), z.unknown()),
 });
 
 export const agentsRouter = {
@@ -107,7 +107,7 @@ export const agentsRouter = {
         triggerType: z
           .enum(["schedule", "event", "manual", "webhook"])
           .optional(),
-        triggerConfig: z.record(z.unknown()).optional(),
+        triggerConfig: z.record(z.string(), z.unknown()).optional(),
         steps: z.array(workflowStepSchema).optional(),
       }),
     )
@@ -211,7 +211,7 @@ export const agentsRouter = {
         triggerType: z
           .enum(["schedule", "event", "manual", "webhook"])
           .optional(),
-        triggerConfig: z.record(z.unknown()).optional(),
+        triggerConfig: z.record(z.string(), z.unknown()).optional(),
         steps: z.array(workflowStepSchema).optional(),
       }),
     )
@@ -322,7 +322,7 @@ export const agentsRouter = {
     .input(
       z.object({
         id: z.string().uuid(),
-        input: z.record(z.unknown()).optional(),
+        input: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(
@@ -432,7 +432,7 @@ export const agentsRouter = {
           .limit(50);
 
         return {
-          messages: rows.map((m) => ({
+          messages: rows.map((m: typeof rows[number]) => ({
             id: m.id,
             role: m.role as "user" | "assistant",
             content: m.content,
@@ -517,7 +517,7 @@ export const agentsRouter = {
           .orderBy(asc(agentChatMessages.createdAt))
           .limit(10);
 
-        const historyMessages = history.map((h) => ({
+        const historyMessages = history.map((h: typeof history[number]) => ({
           role: h.role as "user" | "assistant",
           content: h.content,
         }));
@@ -742,7 +742,7 @@ export const agentsRouter = {
         description: z.string().optional(),
         agentType: z.string().optional(),
         status: z.enum(["active", "paused", "draft"]).default("draft"),
-        config: z.record(z.unknown()).optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.any())

@@ -23,11 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/products/$id")({
   component: ProductEditor,
@@ -40,26 +36,12 @@ function ProductEditor() {
 
   const { data: productData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-product", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/products/${id}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch product");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.products.get(id),
     placeholderData: (prev) => prev,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/ecommerce/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify({ id, ...updates }),
-      });
-      if (!res.ok) throw new Error("Failed to update product");
-      return res.json();
-    },
+    mutationFn: (updates: Record<string, unknown>) => ecommerceApi.products.update(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ecommerce-product", id] });
       queryClient.invalidateQueries({ queryKey: ["ecommerce-products"] });

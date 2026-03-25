@@ -12,17 +12,11 @@ import {
   Brain,
   Play,
 } from "lucide-react";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/_index")({
   component: SpeechDashboard,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const QUICK_ACTIONS = [
   { name: "Upload Audio", description: "Transcribe audio file", href: "/app/speech/transcribe/new", icon: Upload, color: "bg-blue-500" },
@@ -34,13 +28,7 @@ const QUICK_ACTIONS = [
 function SpeechDashboard() {
   const { data: transcriptionsData, isError, refetch } = useQuery({
     queryKey: ["speech", "transcriptions"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/transcriptions?limit=10`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => speechApi.transcriptions.list(),
     placeholderData: (prev) => prev,
   });
 

@@ -32,19 +32,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/competitors")({
   component: CompetitorsPage,
 });
-
-// ─── API helpers ──────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
-
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,34 +92,17 @@ function CompetitorsPage() {
   // ── Fetch competitors ────────────────────────────────────────────────────
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["social", "competitors"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/competitors`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch competitors");
-      return res.json();
-    },
+    queryFn: () => socialApi.competitors.list(),
   });
   const competitors: Competitor[] = (data as any)?.data ?? [];
 
   // ── Create competitor ────────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: async (payload: typeof newCompetitor) => {
-      const res = await fetch(`${API_BASE}/social/competitors`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getOrgHeader(),
-        },
-        body: JSON.stringify({
-          ...payload,
-          handle: payload.handle || undefined,
-          notes: payload.notes || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add competitor");
-      return res.json();
-    },
+    mutationFn: (payload: typeof newCompetitor) => socialApi.competitors.create({
+      ...payload,
+      handle: payload.handle || undefined,
+      notes: payload.notes || undefined,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "competitors"] });
       setIsCreateOpen(false);

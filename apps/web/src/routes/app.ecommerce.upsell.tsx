@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Percent,
   Plus,
@@ -24,6 +19,7 @@ import {
   Package,
   AlertCircle
 } from "lucide-react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/upsell")({
   component: UpsellPage,
@@ -34,9 +30,11 @@ function UpsellPage() {
 
   const createUpsellMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/upsell`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/upsell`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
@@ -47,9 +45,11 @@ function UpsellPage() {
 
   const deleteUpsellMutation = useMutation({
     mutationFn: async (id: string | number) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/upsell/${id}`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/upsell/${id}`, {
         method: "DELETE",
-        headers: { ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Failed");
       return res.json();
@@ -59,13 +59,7 @@ function UpsellPage() {
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-upsell"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/upsell?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch upsell rules");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.upsell.list(),
     placeholderData: (prev) => prev,
   });
 

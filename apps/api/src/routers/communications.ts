@@ -260,7 +260,7 @@ export const communicationsRouter = {
               id: z.string(),
               type: z.enum(["greeting", "menu", "action", "transfer", "voicemail"]),
               label: z.string(),
-              config: z.record(z.unknown()),
+              config: z.record(z.string(), z.unknown()),
               children: z.array(z.string()).optional(),
             }),
           )
@@ -315,7 +315,7 @@ export const communicationsRouter = {
         name: z.string().optional(),
         description: z.string().optional(),
         status: z.enum(["draft", "active", "inactive"]).optional(),
-        nodes: z.array(z.record(z.unknown())).optional(),
+        nodes: z.array(z.record(z.string(), z.unknown())).optional(),
       }),
     )
     .output(z.any())

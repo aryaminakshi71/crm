@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
+import { intelligenceApi } from "@/lib/api";
 
 const PAGE_SIZE = 50;
 
@@ -46,27 +47,11 @@ function QueriesPage() {
 
   const { data: savedData, isLoading: savedLoading, refetch } = useQuery({
     queryKey: ["intelligence", "queries", page],
-    queryFn: () =>
-      fetch(`/api/v1/intelligence/queries?page=${page}&limit=${PAGE_SIZE}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.queries.list(),
   });
 
   const runMutation = useMutation({
-    mutationFn: (query: string) =>
-      fetch("/api/v1/intelligence/queries/run", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-        body: JSON.stringify({ query }),
-      }).then((r) => r.json()),
+    mutationFn: (query: string) => intelligenceApi.queries.run(query),
     onSuccess: (result) => {
       const rows: any[] = (result as any)?.data ?? (result as any)?.rows ?? (Array.isArray(result) ? result : []);
       setQueryResults(rows);

@@ -34,19 +34,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/influencers")({
   component: InfluencersPage,
 });
-
-// ─── API helpers ──────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
-
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,30 +103,13 @@ function InfluencersPage() {
   // ── Fetch influencers ────────────────────────────────────────────────────
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["social", "influencers"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/influencers`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch influencers");
-      return res.json();
-    },
+    queryFn: () => socialApi.influencers.list(),
   });
   const influencers: Influencer[] = (data as any)?.data ?? [];
 
   // ── Create influencer ────────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: async (payload: typeof newInfluencer) => {
-      const res = await fetch(`${API_BASE}/social/influencers`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getOrgHeader(),
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Failed to create influencer");
-      return res.json();
-    },
+    mutationFn: (payload: typeof newInfluencer) => socialApi.influencers.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "influencers"] });
       setIsCreateOpen(false);

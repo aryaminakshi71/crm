@@ -13,16 +13,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/meetings")({
   component: MeetingsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Meeting {
   id: string;
@@ -46,13 +41,7 @@ function MeetingsPage() {
 
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["speech", "meetings"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/meetings`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch meetings");
-      return res.json();
-    },
+    queryFn: () => speechApi.meetings.list(),
     placeholderData: (prev) => prev,
   });
 

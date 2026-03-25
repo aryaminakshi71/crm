@@ -112,7 +112,7 @@ export const leadsRouter = {
             // Get total count using SQL COUNT()
             const countResult = await trackQuery("listLeadsCount", () =>
               db.select({ count: count() }).from(leads).where(whereConditions),
-            );
+            ) as { count: number }[];
             const total = countResult[0]?.count ?? 0;
 
             // Get paginated results

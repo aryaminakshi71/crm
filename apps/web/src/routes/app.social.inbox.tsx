@@ -5,16 +5,11 @@ import { ArrowLeft, Search, Heart, MessageSquare, Share2, Mail, Instagram, Twitt
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/inbox")({
   component: InboxPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Message {
   id: string;
@@ -41,13 +36,7 @@ function InboxPage() {
 
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "mentions"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/listening/mentions`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch mentions");
-      return res.json();
-    },
+    queryFn: () => socialApi.inbox.list(),
     placeholderData: (prev) => prev,
   });
 

@@ -14,16 +14,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/listening")({
   component: ListeningPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 const TRENDING_TOPICS = [
   { topic: "#NucleoOne", mentions: 245, trend: "+15%" },
@@ -38,13 +33,7 @@ function ListeningPage() {
 
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["social", "listening", "alerts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/listening/alerts`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch listening alerts");
-      return res.json();
-    },
+    queryFn: () => socialApi.listening.list(),
     placeholderData: (prev) => prev,
   });
 

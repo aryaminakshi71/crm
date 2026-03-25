@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   DollarSign,
   Plus,
@@ -23,6 +18,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/taxes")({
   component: TaxesPage,
@@ -33,9 +29,11 @@ function TaxesPage() {
 
   const createTaxMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/taxes`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/taxes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
@@ -46,9 +44,11 @@ function TaxesPage() {
 
   const deleteTaxMutation = useMutation({
     mutationFn: async (id: string | number) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/taxes/${id}`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/taxes/${id}`, {
         method: "DELETE",
-        headers: { ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Failed");
       return res.json();
@@ -58,13 +58,7 @@ function TaxesPage() {
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-taxes"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/taxes?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch taxes");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.taxes.list(),
     placeholderData: (prev) => prev,
   });
 

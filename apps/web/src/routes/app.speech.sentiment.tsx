@@ -8,15 +8,10 @@ import {
   Minus,
   Calendar,
 } from "lucide-react";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/sentiment")({
   component: SentimentPage,
-});
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-  "Content-Type": "application/json",
 });
 
 const SENTIMENT_DATA = [
@@ -34,11 +29,7 @@ function SentimentPage() {
 
   const { data: transcriptionsData } = useQuery({
     queryKey: ["speech-transcriptions-sentiment"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/transcriptions`, { headers: getOrgHeader() });
-      if (!res.ok) throw new Error("Failed to fetch transcriptions");
-      return res.json();
-    },
+    queryFn: () => speechApi.sentiment.list(),
   });
 
   // Derive aggregate sentiment from transcription data when available, else use SENTIMENT_DATA averages

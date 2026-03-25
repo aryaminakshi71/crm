@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   AlertCircle,
   Percent,
@@ -26,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/discounts")({
   component: DiscountsPage,
@@ -37,9 +33,11 @@ function DiscountsPage() {
 
   const createDiscountMutation = useMutation({
     mutationFn: async (data: { code: string; type: string; value: number; minOrder: number }) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/discounts`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json", ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/discounts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create discount");
@@ -50,9 +48,11 @@ function DiscountsPage() {
 
   const deleteDiscountMutation = useMutation({
     mutationFn: async (id: string | number) => {
-      const res = await fetch(`${API_BASE}/v1/ecommerce/discounts/${id}`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { ...(orgId ? { "x-organization-id": orgId } : {}) };
+      const res = await fetch(`/api/v1/ecommerce/discounts/${id}`, {
         method: "DELETE",
-        headers: { ...getOrgHeader() },
+        headers,
       });
       if (!res.ok) throw new Error("Failed to delete discount");
       return res.json();
@@ -62,13 +62,7 @@ function DiscountsPage() {
 
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-discounts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/discounts?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch discounts");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.discounts.list(),
     placeholderData: (prev) => prev,
   });
 

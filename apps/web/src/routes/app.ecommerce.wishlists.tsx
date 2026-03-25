@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, Input } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   Heart,
   Search,
@@ -25,6 +20,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/wishlists")({
   component: WishlistsPage,
@@ -44,13 +40,7 @@ function WishlistsPage() {
 
   const { data: apiData, isLoading, isError, refetch} = useQuery({
     queryKey: ["ecommerce-wishlists"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/wishlists?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch wishlists");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.wishlists.list(),
     placeholderData: (prev) => prev,
   });
 

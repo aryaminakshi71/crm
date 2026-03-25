@@ -12,16 +12,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/commands")({
   component: CommandsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Command {
   id: string;
@@ -37,13 +32,7 @@ function CommandsPage() {
 
   const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["speech", "commands"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/commands`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch commands");
-      return res.json();
-    },
+    queryFn: () => speechApi.commands.list(),
     placeholderData: (prev) => prev,
   });
 

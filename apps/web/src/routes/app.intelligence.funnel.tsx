@@ -9,11 +9,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertCircle, Filter, TrendingDown } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 const STAGE_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#ec4899", "#f43f5e"];
 
@@ -24,13 +20,7 @@ export const Route = createFileRoute("/app/intelligence/funnel")({
 function FunnelPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "funnel"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/funnel`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { stages: [], overallConversion: 0, avgDealCycle: 0 };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.funnel.get(),
     placeholderData: (prev) => prev,
   });
 

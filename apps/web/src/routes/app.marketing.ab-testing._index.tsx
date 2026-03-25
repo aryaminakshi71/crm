@@ -143,8 +143,8 @@ function NewTestModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await new Promise((r) => setTimeout(r, 400));
-      return { id: String(Date.now()), ...form, status: "draft" };
+      const result = await marketingApi.abTests.create({ name: form.name, metric: form.metric, variantA: form.variantA, variantB: form.variantB, status: "draft" });
+      return result;
     },
     onSuccess: () => {
       toast.success("A/B test created");
@@ -232,7 +232,7 @@ function AbTestingPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["marketing", "ab-tests"],
-    queryFn: async () => ({ data: [] }),
+    queryFn: () => marketingApi.abTests.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

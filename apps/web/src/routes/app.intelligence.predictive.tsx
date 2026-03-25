@@ -11,11 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Sparkles, TrendingDown, TrendingUp,
   AlertCircle
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/predictive")({
   component: PredictivePage,
@@ -30,13 +26,7 @@ function confidenceBadge(confidence: number): string {
 function PredictivePage() {
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "predictive"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/predictive`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { forecasts: [] };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.predictive.get(),
     placeholderData: (prev) => prev,
   });
 

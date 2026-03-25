@@ -350,7 +350,7 @@ export const billingRouter = {
       const conditions = [eq(invoices.organizationId, context.organization.id)];
 
       if (input.status) {
-        conditions.push(eq(invoices.status, input.status));
+        conditions.push(eq(invoices.status, input.status as "draft" | "sent" | "cancelled" | "paid" | "viewed" | "overdue"));
       }
 
       const [results, total] = await Promise.all([

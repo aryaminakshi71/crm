@@ -19,16 +19,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/posts")({
   component: PostsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 interface Post {
   id: string;
@@ -50,42 +45,19 @@ function PostsPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["social", "posts", filter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filter !== "all") params.set("status", filter);
-      const res = await fetch(`${API_BASE}/social/posts?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch posts");
-      return res.json();
-    },
+    queryFn: () => socialApi.posts.list(),
     placeholderData: (prev) => prev,
   });
 
   const createPostMutation = useMutation({
-    mutationFn: async (post: { content: string; platform: string; status: string }) => {
-      const res = await fetch(`${API_BASE}/social/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(post),
-      });
-      if (!res.ok) throw new Error("Failed to create post");
-      return res.json();
-    },
+    mutationFn: (post: { content: string; platform: string; status: string }) => socialApi.posts.create(post),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
     },
   });
 
   const publishMutation = useMutation({
-    mutationFn: async (postId: string) => {
-      const res = await fetch(`${API_BASE}/social/posts/${postId}/publish`, {
-        method: "POST",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to publish post");
-      return res.json();
-    },
+    mutationFn: (postId: string) => socialApi.posts.publish(postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
     },

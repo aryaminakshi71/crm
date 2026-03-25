@@ -10,17 +10,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/settings")({
   component: SettingsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const DEFAULT_MODELS = [
   { id: "nova-2", name: "Nova 2 (Default)" },
@@ -45,13 +39,7 @@ function SettingsPage() {
 
   const { data: modelsData, isError, refetch} = useQuery({
     queryKey: ["speech", "models"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/models`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => speechApi.models.list(),
   });
 
   const models = (modelsData as any)?.data?.length

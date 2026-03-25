@@ -13,12 +13,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
+import { devopsApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/devops/pipelines")({
   component: Pipelines,
@@ -31,22 +26,18 @@ function Pipelines() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["devops", "pipelines", statusFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: "1", limit: "50" });
-      if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`${API_BASE}/devops/pipelines?${params}`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch pipelines");
-      return res.json();
-    },
+    queryFn: () => devopsApi.pipelines.list(),
+    placeholderData: (prev) => prev,
   });
 
   const triggerRunMutation = useMutation({
     mutationFn: async (pipelineId: string) => {
-      const res = await fetch(`${API_BASE}/devops/pipelines/${pipelineId}/run`, {
+      const orgId = localStorage.getItem("activeOrganizationId");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (orgId) headers["x-organization-id"] = orgId;
+      const res = await fetch(`/api/v1/devops/pipelines/${pipelineId}/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers,
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error("Failed to trigger run");

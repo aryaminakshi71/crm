@@ -27,6 +27,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const FUNNEL_BAR_COLORS = ["#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#ec4899", "#f43f5e"];
 
@@ -64,14 +65,7 @@ function FunnelPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "funnel"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/funnel?period=month", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.funnel.get(),
   });
 
   const funnel: any = data ?? {};

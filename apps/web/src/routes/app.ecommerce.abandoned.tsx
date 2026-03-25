@@ -8,11 +8,6 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from "
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 import {
   ShoppingCart,
   Search,
@@ -26,6 +21,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useState } from "react";
+import { ecommerceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/ecommerce/abandoned")({
   component: AbandonedCartsPage,
@@ -37,13 +33,7 @@ function AbandonedCartsPage() {
 
   const { data: apiData, isLoading, isError, refetch } = useQuery({
     queryKey: ["ecommerce-abandoned"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/ecommerce/abandoned?limit=100`, {
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch abandoned carts");
-      return res.json();
-    },
+    queryFn: () => ecommerceApi.abandoned.list(),
     placeholderData: (prev) => prev,
   });
 

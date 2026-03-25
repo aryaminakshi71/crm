@@ -11,15 +11,10 @@ import {
   FileText,
 } from "lucide-react";
 import { useState } from "react";
+import { speechApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/speech/streaming")({
   component: StreamingPage,
-});
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-  "Content-Type": "application/json",
 });
 
 function StreamingPage() {
@@ -29,26 +24,16 @@ function StreamingPage() {
 
   const { data: recentTranscriptions, isLoading } = useQuery({
     queryKey: ["speech-transcriptions-streaming"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/transcriptions`, { headers: getOrgHeader() });
-      if (!res.ok) throw new Error("Failed to fetch transcriptions");
-      return res.json();
-    },
+    queryFn: () => speechApi.transcriptions.list(),
   });
 
   const startSessionMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API_BASE}/speech/transcriptions`, {
-        method: "POST",
-        headers: getOrgHeader(),
-        body: JSON.stringify({
-          title: `Live Session ${new Date().toLocaleTimeString()}`,
-          language: "en",
-          isStreaming: true,
-        }),
+      return speechApi.transcriptions.create({
+        title: `Live Session ${new Date().toLocaleTimeString()}`,
+        language: "en",
+        isStreaming: true,
       });
-      if (!res.ok) throw new Error("Failed to start session");
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["speech-transcriptions-streaming"] });
