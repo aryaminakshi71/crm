@@ -26,7 +26,7 @@ const EMPTY_SUBSCRIPTION = {
 
 const EMPTY_USAGE = {
   apiCalls: { used: 0, limit: 50000, percent: 0 },
-  storage: { used: 0, limit: 100, percent: 0 },
+  storage: { used: 0, limit: 50, percent: 0 },
   users: { used: 0, limit: 25, percent: 0 },
 };
 
@@ -105,20 +105,21 @@ function SettingsBillingPage() {
     { key: "crm", name: "CRM", enabled: true, source: "base", description: "Contacts, deals, activities" },
     { key: "notifications", name: "Notifications", enabled: true, source: "base", description: "Email and in-app notifications" },
     { key: "rbac", name: "Access Control", enabled: true, source: "base", description: "Roles and permissions" },
-    { key: "projects", name: "Projects", enabled: true, source: "plan", description: "Project management" },
-    { key: "invoicing", name: "Invoicing", enabled: true, source: "plan", description: "Billing and payments" },
-    { key: "helpdesk", name: "Helpdesk", enabled: true, source: "plan", description: "Support tickets" },
-    { key: "ai", name: "AI", enabled: false, source: "addon", description: "AI agents and business intelligence" },
-    { key: "monitoring", name: "Monitoring", enabled: false, source: "addon", description: "Platform observability" },
+    { key: "projects", name: "Projects", enabled: true, source: "plan", description: "Task boards and kanban" },
+    { key: "helpdesk", name: "Helpdesk", enabled: true, source: "plan", description: "Support tickets and SLA" },
+    { key: "invoicing", name: "Invoicing", enabled: true, source: "plan", description: "Invoices and expenses" },
+    { key: "hrm", name: "HRM", enabled: true, source: "plan", description: "Employees and leave" },
+    { key: "marketing", name: "Marketing", enabled: true, source: "plan", description: "Campaigns and analytics" },
+    { key: "ai", name: "AI & BI", enabled: false, source: "business", description: "Intelligence and forecasting" },
     { key: "integrations", name: "Integrations", enabled: true, source: "plan", description: "Workflow automation" },
-    { key: "campaign_pro", name: "Marketing", enabled: false, source: "addon", description: "Campaign management" },
   ];
 
   const plans = [
-    { key: "starter", name: "Starter", price: 15, features: ["5 users", "10GB storage", "10K API calls"] },
-    { key: "growth", name: "Growth", price: 29, popular: true, features: ["25 users", "100GB storage", "50K API calls"] },
-    { key: "business", name: "Business", price: 49, features: ["100 users", "500GB storage", "200K API calls"] },
-    { key: "enterprise", name: "Enterprise", price: null, features: ["Unlimited users", "Unlimited storage", "Unlimited API calls"] },
+    { key: "free", name: "Free", price: 0, features: ["1 user", "100MB storage", "Core CRM only"] },
+    { key: "solo", name: "Solo", price: 5, features: ["3 users", "1GB storage", "Core modules"] },
+    { key: "starter", name: "Starter", price: 12, popular: true, features: ["25 users", "50GB storage", "All modules"] },
+    { key: "business", name: "Business", price: 25, features: ["200 users", "500GB storage", "All modules + BI"] },
+    { key: "enterprise", name: "Enterprise", price: null, features: ["Unlimited users", "Unlimited storage", "Everything + SLA"] },
   ];
 
   if (isLoading) {
@@ -268,7 +269,7 @@ function SettingsBillingPage() {
           <CardTitle>Available Plans</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {plans.map((plan) => (
               <div
                 key={plan.key}

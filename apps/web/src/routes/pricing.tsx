@@ -21,7 +21,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 
 export const Route = createFileRoute("/pricing")({
   head: () => {
@@ -46,18 +46,18 @@ export const Route = createFileRoute("/pricing")({
         {
           name: "description",
           content:
-            "Simple, transparent pricing for Nucleo One. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month.",
+            "Simple, transparent pricing for Nucleo One. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $5/user/month with a free forever plan.",
         },
         { name: "robots", content: "index, follow" },
         // Open Graph
         { property: "og:title", content: "Pricing | Nucleo One — AI-Powered Business OS" },
-        { property: "og:description", content: "Simple, transparent pricing. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month." },
+        { property: "og:description", content: "Simple, transparent pricing. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $5/user/month with a free forever plan." },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
         // Twitter
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: "Pricing | Nucleo One" },
-        { name: "twitter:description", content: "Simple, transparent pricing. From $15/user/month." },
+        { name: "twitter:description", content: "Simple, transparent pricing. From $5/user/month with a free forever plan." },
         // FAQPage Schema
         { "script:ld+json": JSON.stringify({
           "@context": "https://schema.org",
@@ -97,72 +97,90 @@ export const Route = createFileRoute("/pricing")({
 
 const PLANS = [
   {
-    id: "starter",
-    name: "Starter",
+    id: "free",
+    name: "Free",
     icon: Zap,
-    blurb: "Perfect for small teams consolidating tools.",
-    monthlyPrice: 15,
-    annualPrice: 12,
+    blurb: "Perfect for solo founders getting started.",
+    monthlyPrice: 0,
+    annualPrice: 0,
     color: "text-sky-400",
     bg: "bg-sky-400/10",
     border: "border-sky-400/20",
-    cta: "Start free trial",
+    cta: "Get started free",
     popular: false,
     features: [
-      "Up to 10 users",
+      "1 user",
       "CRM — contacts, leads, deals pipeline",
-      "Helpdesk — tickets & SLA tracking",
-      "Projects — tasks & kanban",
-      "Finance — invoices & expense tracking",
-      "5 GB storage",
-      "Email support (48hr response)",
-      "21-day free trial",
+      "Projects — tasks & kanban board",
+      "100 MB storage",
+      "Community support",
+      "Basic integrations",
     ],
   },
   {
-    id: "growth",
-    name: "Growth",
+    id: "solo",
+    name: "Solo",
     icon: Star,
-    blurb: "For scaling teams that need full ops coverage.",
-    monthlyPrice: 29,
-    annualPrice: 23,
+    blurb: "For freelancers and solo professionals.",
+    monthlyPrice: 5,
+    annualPrice: 4,
+    color: "text-sky-500",
+    bg: "bg-sky-500/10",
+    border: "border-sky-500/20",
+    cta: "Start free trial",
+    popular: false,
+    features: [
+      "Up to 3 users",
+      "Everything in Free",
+      "Helpdesk — tickets & SLA tracking",
+      "Finance — invoices & expenses",
+      "1 GB storage",
+      "Email support",
+      "14-day free trial",
+    ],
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    icon: Globe,
+    blurb: "For growing teams that need full coverage.",
+    monthlyPrice: 12,
+    annualPrice: 10,
     color: "text-primary",
     bg: "bg-primary/10",
     border: "border-primary/40",
     cta: "Start free trial",
     popular: true,
     features: [
-      "Up to 100 users",
-      "Everything in Starter",
-      "HRM — employees, leave, recruitment",
-      "Marketing — campaigns, audiences, analytics",
-      "Procurement & purchase orders",
-      "AI lead scoring & campaign planning",
-      "25 GB storage",
+      "Up to 25 users",
+      "Everything in Solo",
+      "HRM — employees & leave",
+      "Marketing — campaigns & analytics",
+      "Intelligence BI & AI agents",
+      "50 GB storage",
       "Priority email + chat support",
-      "21-day free trial",
+      "14-day free trial",
     ],
   },
   {
     id: "business",
     name: "Business",
-    icon: Globe,
+    icon: Shield,
     blurb: "For established companies with advanced needs.",
-    monthlyPrice: 49,
-    annualPrice: 39,
+    monthlyPrice: 25,
+    annualPrice: 20,
     color: "text-violet-400",
     bg: "bg-violet-400/10",
     border: "border-violet-400/20",
     cta: "Start free trial",
     popular: false,
     features: [
-      "Up to 500 users",
-      "Everything in Growth",
-      "Intelligence BI — AI agents & forecasting",
+      "Up to 200 users",
+      "Everything in Starter",
       "Compliance & audit trails",
       "Contracts & document lifecycle",
       "Enterprise SSO (SAML/OIDC)",
-      "Unlimited storage",
+      "500 GB storage",
       "Dedicated account manager",
       "SLA: 4hr response",
     ],
@@ -170,7 +188,7 @@ const PLANS = [
   {
     id: "enterprise",
     name: "Enterprise",
-    icon: Shield,
+    icon: Sparkles,
     blurb: "Custom contracts for regulated organizations.",
     monthlyPrice: null,
     annualPrice: null,
@@ -201,99 +219,88 @@ const COMPARISON = [
     rows: [
       {
         feature: "CRM (Contacts, Leads, Deals)",
+        free: true,
+        solo: true,
         starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Helpdesk & Ticketing",
-        starter: true,
-        growth: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Projects & Kanban",
+        free: true,
+        solo: true,
         starter: true,
-        growth: true,
+        business: true,
+        enterprise: true,
+      },
+      {
+        feature: "Helpdesk & Ticketing",
+        free: false,
+        solo: true,
+        starter: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Finance & Invoicing",
+        free: false,
+        solo: true,
         starter: true,
-        growth: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "HRM & Leave Management",
-        starter: false,
-        growth: true,
+        free: false,
+        solo: false,
+        starter: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Recruitment Module",
-        starter: false,
-        growth: true,
+        free: false,
+        solo: false,
+        starter: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Marketing & Campaigns",
-        starter: false,
-        growth: true,
+        free: false,
+        solo: false,
+        starter: true,
         business: true,
         enterprise: true,
       },
       {
-        feature: "Procurement & POs",
-        starter: false,
-        growth: true,
+        feature: "Intelligence BI & AI Agents",
+        free: false,
+        solo: false,
+        starter: true,
         business: true,
         enterprise: true,
       },
     ],
   },
   {
-    category: "AI & Intelligence",
+    category: "Storage & Users",
     rows: [
       {
-        feature: "AI Lead Scoring",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
+        feature: "Team members",
+        free: "1",
+        solo: "3",
+        starter: "25",
+        business: "200",
+        enterprise: "Unlimited",
       },
       {
-        feature: "Campaign Planning AI",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Revenue Forecasting",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Executive BI Dashboard",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Custom AI Agents",
-        starter: false,
-        growth: false,
-        business: false,
-        enterprise: true,
+        feature: "Storage",
+        free: "100 MB",
+        solo: "1 GB",
+        starter: "50 GB",
+        business: "500 GB",
+        enterprise: "Unlimited",
       },
     ],
   },
@@ -302,43 +309,49 @@ const COMPARISON = [
     rows: [
       {
         feature: "SSL & encryption at rest",
+        free: true,
+        solo: true,
         starter: true,
-        growth: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "GDPR-compliant data handling",
+        free: true,
+        solo: true,
         starter: true,
-        growth: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Audit logs",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: true,
         enterprise: true,
       },
       {
         feature: "SSO (SAML/OIDC)",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: true,
         enterprise: true,
       },
       {
         feature: "SOC 2 Type II",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: false,
         enterprise: true,
       },
       {
         feature: "Custom data residency",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: false,
         enterprise: true,
       },
@@ -348,37 +361,42 @@ const COMPARISON = [
     category: "Support",
     rows: [
       {
-        feature: "Email support",
+        feature: "Community support",
+        free: true,
+        solo: true,
         starter: true,
-        growth: true,
         business: true,
         enterprise: true,
       },
       {
-        feature: "Priority chat support",
-        starter: false,
-        growth: true,
+        feature: "Priority email + chat",
+        free: false,
+        solo: true,
+        starter: true,
         business: true,
         enterprise: true,
       },
       {
         feature: "Dedicated account manager",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: true,
         enterprise: true,
       },
       {
         feature: "Custom SLA",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: false,
         enterprise: true,
       },
       {
         feature: "Onboarding assistance",
+        free: false,
+        solo: false,
         starter: false,
-        growth: false,
         business: true,
         enterprise: true,
       },
@@ -390,8 +408,8 @@ const COMPARISON = [
 
 const FAQS = [
   {
-    q: "Do I need a credit card to start a free trial?",
-    a: "No. You get 21 days completely free with no credit card required. You only enter payment details if you choose to continue after the trial.",
+    q: "Is there really a free plan?",
+    a: "Yes! Our Free plan is free forever with up to 3 users, 1GB storage, and core CRM + Projects features. No credit card required.",
   },
   {
     q: "Can I change plans at any time?",
@@ -403,7 +421,7 @@ const FAQS = [
   },
   {
     q: "Do you offer discounts for annual billing?",
-    a: "Yes — annual plans are billed at roughly 20% less than monthly. Toggle the billing period above to see the discounted prices.",
+    a: "Yes — annual plans are billed at roughly 17-20% less than monthly. Toggle the billing period above to see the discounted prices.",
   },
   {
     q: "Can I use Nucleo One for multiple companies/workspaces?",
@@ -411,7 +429,7 @@ const FAQS = [
   },
   {
     q: "What payment methods do you accept?",
-    a: "We accept all major credit/debit cards (Visa, Mastercard, Amex) via Stripe. US customers can also pay via ACH bank transfer. Enterprise customers can pay via wire transfer.",
+    a: "We accept all major credit/debit cards (Visa, Mastercard, Amex) via Stripe. Indian customers can pay via UPI, Net Banking, and cards through our Indian payment gateway. Enterprise customers can pay via wire transfer.",
   },
   {
     q: "Is my data safe if I cancel?",
@@ -419,7 +437,7 @@ const FAQS = [
   },
   {
     q: "Do you have plans for startups or non-profits?",
-    a: "Yes — we offer 50% off for early-stage startups (pre-Series A) and non-profits. Email hello@nucleoone.com with proof of status.",
+    a: "Yes — we offer special pricing for early-stage startups (pre-Series A) and non-profits. Email hello@nucleoone.com with proof of status.",
   },
 ];
 
@@ -551,6 +569,13 @@ function PricingPage() {
                 <div className="mt-6">
                   {price === null ? (
                     <p className="font-bold text-3xl text-foreground">Custom</p>
+                  ) : price === 0 ? (
+                    <div className="flex items-end gap-1">
+                      <p className="font-bold text-3xl text-foreground">Free</p>
+                      <p className="text-muted-foreground text-sm mb-1">
+                        forever
+                      </p>
+                    </div>
                   ) : (
                     <div className="flex items-end gap-1">
                       <p className="font-bold text-3xl text-foreground">
@@ -611,7 +636,7 @@ function PricingPage() {
             {[
               {
                 icon: Users,
-                label: "Free for first 21 days",
+                label: "Free forever plan",
                 sub: "No credit card needed",
               },
               {
@@ -621,8 +646,8 @@ function PricingPage() {
               },
               {
                 icon: Globe,
-                label: "US company, global reach",
-                sub: "Data in your region",
+                label: "Built for India & global",
+                sub: "UPI, cards, wire accepted",
               },
               {
                 icon: Bot,
@@ -665,9 +690,11 @@ function PricingPage() {
                       <div className="text-muted-foreground text-xs font-normal mt-0.5">
                         {p.monthlyPrice === null
                           ? "Custom"
-                          : annual
-                            ? `$${p.annualPrice}/user`
-                            : `$${p.monthlyPrice}/user`}
+                          : p.monthlyPrice === 0
+                            ? "Free"
+                            : annual
+                              ? `$${p.annualPrice}/user`
+                              : `$${p.monthlyPrice}/user`}
                       </div>
                     </th>
                   ))}
@@ -675,8 +702,8 @@ function PricingPage() {
               </thead>
               <tbody>
                 {COMPARISON.map((cat) => (
-                  <>
-                    <tr key={cat.category} className="bg-muted/10">
+                  <Fragment key={cat.category}>
+                    <tr className="bg-muted/10">
                       <td
                         colSpan={5}
                         className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
@@ -691,10 +718,13 @@ function PricingPage() {
                       >
                         <td className="p-4 text-foreground">{row.feature}</td>
                         <td className="p-4">
-                          <CheckCell value={row.starter} />
+                          <CheckCell value={row.free} />
                         </td>
                         <td className="p-4">
-                          <CheckCell value={row.growth} />
+                          <CheckCell value={row.solo} />
+                        </td>
+                        <td className="p-4">
+                          <CheckCell value={row.starter} />
                         </td>
                         <td className="p-4">
                           <CheckCell value={row.business} />
@@ -704,7 +734,7 @@ function PricingPage() {
                         </td>
                       </tr>
                     ))}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -735,13 +765,12 @@ function PricingPage() {
             Ready to consolidate your stack?
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Start with a 21-day free trial. No credit card. Cancel anytime. Full
-            access to all Growth features from day one.
+            Start free, no credit card needed. Upgrade to Starter from $12/user/month when you're ready.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link to="/register">
               <Button variant="primary" size="lg">
-                Start free trial
+                Get started free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -752,8 +781,7 @@ function PricingPage() {
             </Link>
           </div>
           <p className="text-muted-foreground text-xs">
-            21-day free trial · No credit card · Full Growth access · Cancel
-            anytime
+            Free forever plan available · No credit card · Cancel anytime
           </p>
         </section>
       </main>
