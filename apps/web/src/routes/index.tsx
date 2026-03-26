@@ -74,16 +74,10 @@ const modules = [
     color: "text-blue-400",
     bg: "bg-blue-400/10",
     title: "CRM",
-    description:
-      "Contacts, deals, leads, pipeline, and activity tracking.",
+    description: "Contacts, deals, leads, pipeline, and activity tracking.",
     href: "/app/crm",
     price: 9,
-    features: [
-      "Contact database",
-      "Lead scoring",
-      "Deal pipeline",
-      "AI insights",
-    ],
+    features: ["Contact database", "Lead scoring", "Deal pipeline", "AI insights"],
   },
   {
     icon: UserRoundCog,
@@ -94,44 +88,28 @@ const modules = [
       "Employee directory, attendance, leave, recruitment, training, and payroll.",
     href: "/app/hrm",
     price: 9,
-    features: [
-      "Employee directory",
-      "Leave management",
-      "Recruitment ATS",
-      "Payroll runs",
-    ],
+    features: ["Employee directory", "Leave management", "Recruitment ATS", "Payroll runs"],
   },
   {
     icon: FolderKanban,
     color: "text-emerald-400",
     bg: "bg-emerald-400/10",
     title: "Projects",
-    description:
-      "Tasks, kanban, gantt, time tracking, and resource allocation.",
+    description: "Tasks, kanban, gantt, time tracking, and resource allocation.",
     href: "/app/projects",
     price: 9,
-    features: [
-      "Kanban boards",
-      "Gantt timelines",
-      "Milestones",
-      "Resource allocation",
-    ],
+    features: ["Kanban boards", "Gantt timelines", "Milestones", "Resource allocation"],
   },
   {
-    icon: FileText,
-    color: "text-green-400",
-    bg: "bg-green-400/10",
-    title: "Invoicing",
+    icon: CreditCard,
+    color: "text-yellow-400",
+    bg: "bg-yellow-400/10",
+    title: "Finance",
     description:
-      "Professional invoices, payment tracking, and billing management.",
-    href: "/app/invoicing",
-    price: 12,
-    features: [
-      "Invoice management",
-      "Payment tracking",
-      "Tax calculations",
-      "Financial reports",
-    ],
+      "Expenses, budget tracking, invoicing, payment tracking, and financial reporting.",
+    href: "/app/finance",
+    price: 9,
+    features: ["Expense tracking", "Budget management", "Invoicing & payments", "Financial reports"],
   },
   {
     icon: Megaphone,
@@ -139,31 +117,20 @@ const modules = [
     bg: "bg-purple-400/10",
     title: "Marketing",
     description:
-      "Campaigns, email automation, landing pages, and lead scoring.",
+      "Campaigns, email automation, advertising, social media, lead scoring, and A/B testing.",
     href: "/app/marketing",
     price: 9,
-    features: [
-      "Campaign builder",
-      "Audience targeting",
-      "AI planning",
-      "Budget analytics",
-    ],
+    features: ["Campaign builder", "Advertising & social", "AI planning", "Budget analytics"],
   },
   {
     icon: LifeBuoy,
     color: "text-cyan-400",
     bg: "bg-cyan-400/10",
     title: "Helpdesk",
-    description:
-      "Tickets, knowledge base, SLA tracking, and customer support.",
+    description: "Tickets, knowledge base, SLA tracking, and customer support.",
     href: "/app/helpdesk",
     price: 9,
-    features: [
-      "Smart triage",
-      "Queue management",
-      "SLA tracking",
-      "Knowledge base",
-    ],
+    features: ["Smart triage", "Queue management", "SLA tracking", "Knowledge base"],
   },
   {
     icon: Truck,
@@ -174,28 +141,17 @@ const modules = [
       "Smart dispatch, route optimization, technician tracking, and job scheduling.",
     href: "/app/field-service",
     price: 15,
-    features: [
-      "Smart dispatch",
-      "Route optimization",
-      "Technician tracking",
-      "Job scheduling",
-    ],
+    features: ["Smart dispatch", "Route optimization", "Technician tracking", "Job scheduling"],
   },
   {
     icon: GitBranch,
     color: "text-indigo-400",
     bg: "bg-indigo-400/10",
     title: "DevOps",
-    description:
-      "CI/CD pipelines, automated deployments, and infrastructure management.",
+    description: "CI/CD pipelines, automated deployments, and infrastructure management.",
     href: "/app/devops",
     price: 19,
-    features: [
-      "Pipeline builder",
-      "Automated testing",
-      "One-click deploy",
-      "Rollback capabilities",
-    ],
+    features: ["Pipeline builder", "Automated testing", "One-click deploy", "Rollback capabilities"],
   },
   {
     icon: Bot,
@@ -203,148 +159,45 @@ const modules = [
     bg: "bg-pink-400/10",
     title: "AI Agents",
     description:
-      "Autonomous AI agents for automation, support, and business intelligence.",
+      "Autonomous AI agents, speech transcription, meeting notes, and business intelligence.",
     href: "/app/agents",
     price: 19,
-    features: [
-      "AI agents for autonomous tasks",
-      "Custom reports & dashboards",
-      "Predictive analytics",
-      "KPI tracking",
-    ],
+    features: ["AI agents for autonomous tasks", "Speech & transcription", "Predictive analytics", "KPI tracking"],
   },
   {
     icon: Phone,
     color: "text-teal-400",
     bg: "bg-teal-400/10",
     title: "Communications",
-    description:
-      "Omnichannel messaging — SMS, voice, video, and chat.",
+    description: "Omnichannel messaging — SMS, voice, video, and chat.",
     href: "/app/communications",
     price: 15,
-    features: [
-      "SMS sending/receiving",
-      "Voice calls",
-      "Video meetings",
-      "Chat messaging",
-    ],
-  },
-  {
-    icon: Mic,
-    color: "text-rose-400",
-    bg: "bg-rose-400/10",
-    title: "Speech & Voice",
-    description:
-      "Audio transcription, real-time streaming, and meeting notes.",
-    href: "/app/speech",
-    price: 12,
-    features: [
-      "Audio transcription",
-      "Real-time streaming",
-      "Multi-speaker ID",
-      "Meeting notes",
-    ],
-  },
-  {
-    icon: Share2,
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
-    title: "Social Media",
-    description:
-      "Post scheduling, analytics, social listening, and inbox management.",
-    href: "/app/social",
-    price: 15,
-    features: [
-      "Post scheduling",
-      "Analytics dashboard",
-      "Social listening",
-      "Campaign management",
-    ],
+    features: ["SMS sending/receiving", "Voice calls", "Video meetings", "Chat messaging"],
   },
   {
     icon: Gauge,
     color: "text-sky-400",
     bg: "bg-sky-400/10",
     title: "Monitoring",
-    description:
-      "Error tracking, uptime checks, performance metrics, and log aggregation.",
+    description: "Error tracking, uptime checks, performance metrics, and log aggregation.",
     href: "/app/monitoring",
     price: 12,
-    features: [
-      "Error tracking",
-      "Uptime checks",
-      "Performance metrics",
-      "Log aggregation",
-    ],
+    features: ["Error tracking", "Uptime checks", "Performance metrics", "Log aggregation"],
   },
   {
     icon: Package,
     color: "text-lime-400",
     bg: "bg-lime-400/10",
     title: "Inventory",
-    description:
-      "Product catalog, stock management, warehouses, and transfers.",
+    description: "Product catalog, stock management, warehouses, and transfers.",
     href: "/app/inventory",
     price: 9,
-    features: [
-      "Product catalog",
-      "Stock levels",
-      "Warehouse management",
-      "Barcode scanning",
-    ],
-  },
-  {
-    icon: CreditCard,
-    color: "text-yellow-400",
-    bg: "bg-yellow-400/10",
-    title: "Finance",
-    description:
-      "Expenses, budget tracking, financial reporting, and cost control.",
-    href: "/app/finance",
-    price: 9,
-    features: [
-      "Expense tracking",
-      "Budget management",
-      "Financial reports",
-      "Cost control",
-    ],
-  },
-  {
-    icon: BarChart3,
-    color: "text-orange-400",
-    bg: "bg-orange-400/10",
-    title: "Advertising",
-    description:
-      "Ad campaigns across Google, Meta, and LinkedIn with AI-powered optimization.",
-    href: "/app/advertising",
-    price: 15,
-    features: [
-      "Multi-platform ads",
-      "AI optimization",
-      "Budget control",
-      "Performance analytics",
-    ],
-  },
-  {
-    icon: BarChart3,
-    color: "text-cyan-400",
-    bg: "bg-cyan-400/10",
-    title: "Campaign Pro",
-    description:
-      "Advanced campaign planning, A/B testing, and multi-channel automation.",
-    href: "/app/campaign_pro",
-    price: 15,
-    features: [
-      "A/B testing",
-      "Multi-channel automation",
-      "Campaign analytics",
-      "Audience segmentation",
-    ],
+    features: ["Product catalog", "Stock levels", "Warehouse management", "Barcode scanning"],
   },
 ];
 
 const stats = [
-  { value: "17", label: "Business Modules" },
+  { value: "12", label: "Business Modules" },
   { value: "Unified Platform", label: "CRM, HRM, Projects & More" },
   { value: "14-Day", label: "Free Trial" },
   { value: "24/7", label: "AI Assistance" },
@@ -618,7 +471,7 @@ const featureSpotlights = [
     eyebrow: "AI AGENTS",
     heading: "Autonomous AI That Works for You.",
     description:
-      "Deploy pre-built AI agents or build custom ones with our no-code agent builder. Automate repetitive tasks, analyze data with natural language, and get predictive insights across your entire business.",
+      "Deploy pre-built AI agents or build custom ones with our no-code agent builder. Automate tasks, transcribe speech, generate meeting notes, analyze data with natural language, and get predictive insights across your entire business.",
     color: "fuchsia",
     accentClass: "text-fuchsia-400",
     borderClass: "border-fuchsia-500/30",
@@ -656,27 +509,6 @@ const featureSpotlights = [
     ],
     mockUI: "communications",
   },
-  {
-    eyebrow: "INTEGRATIONS",
-    heading: "Connect Everything. Automate Anything.",
-    description:
-      "300+ pre-built connectors, a visual workflow builder, webhooks, and an event bus — so every tool in your stack talks to every other tool, automatically.",
-    color: "violet",
-    accentClass: "text-violet-400",
-    borderClass: "border-violet-500/30",
-    glowClass: "shadow-violet-500/10",
-    bgAccent: "bg-violet-500/5",
-    href: "/app/integrations",
-    features: [
-      { icon: Puzzle, text: "300+ pre-built connectors (Slack, Salesforce, Stripe, and more)" },
-      { icon: Workflow, text: "Visual workflow builder with conditions, loops, and branching" },
-      { icon: Webhook, text: "Webhook receiver with automatic payload parsing and routing" },
-      { icon: Network, text: "Event bus with pub/sub subscriptions across all modules" },
-      { icon: Database, text: "Data transformation with JSONata expressions and field mapping" },
-      { icon: AlertCircle, text: "Error tracking, retry logic, and audit logs for every run" },
-    ],
-    mockUI: "integrations",
-  },
 ];
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -688,7 +520,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Advertising, Social Media, Campaign Pro, Field Service, DevOps, Communications, Speech & Voice, Inventory, Monitoring, AI Agents, and Invoicing into a single unified platform. Replace 17 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Projects, Finance, Helpdesk, Marketing, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory into a single unified platform. Replace 12 tools with one. Start free.";
 
     return {
       meta: [
@@ -782,13 +614,8 @@ export const Route = createFileRoute("/")({
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Field Service" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "DevOps" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Invoicing" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Advertising" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Social Media" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Campaign Pro" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Speech & Voice" } }
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } }
             ]
           }
         })},
@@ -1282,7 +1109,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            17 powerful modules. One unified platform.
+            12 powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -1412,9 +1239,8 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              17 deeply integrated modules — CRM, HRM, Finance, Projects, Helpdesk,
-              Marketing, Advertising, Social Media, Campaign Pro, Field Service, DevOps,
-              Communications, Speech & Voice, Inventory, Monitoring, AI Agents, and Invoicing.
+              12 deeply integrated modules — CRM, HRM, Projects, Finance, Helpdesk,
+              Marketing, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory.
             </p>
           </div>
 

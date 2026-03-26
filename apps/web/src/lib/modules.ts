@@ -33,13 +33,8 @@ export type NucleoModuleKey =
   | "field_service"
   | "devops"
   | "finance"
-  | "invoicing"
   | "marketing"
-  | "advertising"
-  | "social"
-  | "campaign_pro"
-  | "agents"
-  | "speech";
+  | "agents";
 
 export type PlanTierKey = "free" | "starter" | "business" | "enterprise";
 
@@ -140,43 +135,17 @@ export const NUCLEO_MODULES: NucleoModule[] = [
   {
     key: "finance",
     name: "Finance",
-    description: "Expenses, budget tracking, financial reporting, and cost control",
+    description:
+      "Expenses, budget tracking, invoicing, payment tracking, financial reporting, and cost control",
     iconName: "CreditCard",
     phase: "ops",
   },
   // Growth
   {
-    key: "invoicing",
-    name: "Invoicing",
-    description: "Professional invoices, payment tracking, and billing management",
-    iconName: "CreditCard",
-    phase: "growth",
-  },
-  {
     key: "marketing",
     name: "Marketing",
-    description: "Campaign builder, email automation, landing pages, and lead scoring",
-    iconName: "BarChart3",
-    phase: "growth",
-  },
-  {
-    key: "advertising",
-    name: "Advertising",
-    description: "Ad campaigns across Google, Meta, and LinkedIn with AI optimization",
-    iconName: "BarChart3",
-    phase: "growth",
-  },
-  {
-    key: "social",
-    name: "Social Media",
-    description: "Post scheduling, analytics, social listening, and inbox management",
-    iconName: "BarChart3",
-    phase: "growth",
-  },
-  {
-    key: "campaign_pro",
-    name: "Campaign Pro",
-    description: "Advanced campaign planning, A/B testing, and multi-channel automation",
+    description:
+      "Campaign builder, email automation, advertising, social media, landing pages, lead scoring, and A/B testing",
     iconName: "BarChart3",
     phase: "growth",
   },
@@ -184,14 +153,8 @@ export const NUCLEO_MODULES: NucleoModule[] = [
   {
     key: "agents",
     name: "AI Agents",
-    description: "Autonomous AI agents for automation, support, and business intelligence",
-    iconName: "Bot",
-    phase: "ai",
-  },
-  {
-    key: "speech",
-    name: "Speech & Voice",
-    description: "Audio transcription, real-time streaming, and meeting notes",
+    description:
+      "Autonomous AI agents for automation, support, business intelligence, speech transcription, and meeting notes",
     iconName: "Bot",
     phase: "ai",
   },
@@ -246,7 +209,6 @@ export const PLAN_TIERS: PlanTier[] = [
       "crm",
       "projects",
       "helpdesk",
-      "invoicing",
       "hrm",
       "inventory",
       "monitoring",
@@ -264,7 +226,6 @@ export const PLAN_TIERS: PlanTier[] = [
       "crm",
       "projects",
       "helpdesk",
-      "invoicing",
       "hrm",
       "inventory",
       "monitoring",
@@ -273,9 +234,7 @@ export const PLAN_TIERS: PlanTier[] = [
       "field_service",
       "devops",
       "marketing",
-      "advertising",
-      "social",
-      "campaign_pro",
+      "agents",
     ],
   },
   {
@@ -285,7 +244,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: null,
     annualPrice: null,
     maxUsers: -1, // unlimited
-    modules: NUCLEO_MODULES.map((m) => m.key), // all 17 public modules
+    modules: NUCLEO_MODULES.map((m) => m.key), // all 12 public modules
   },
 ];
 
