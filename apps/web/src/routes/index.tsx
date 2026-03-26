@@ -510,7 +510,7 @@ const featureSpotlights = [
     mockUI: "hrm",
   },
   {
-    eyebrow: "PROJECT MANAGEMENT",
+    eyebrow: "PROJECTS",
     heading: "Ship Projects On Time, Every Time.",
     description:
       "Kanban boards, Gantt timelines, sprint planning, time tracking, and resource allocation — everything your team needs to plan, execute, and deliver projects at scale.",
@@ -573,7 +573,7 @@ const featureSpotlights = [
     mockUI: "marketing",
   },
   {
-    eyebrow: "HELPDESK & SUPPORT",
+    eyebrow: "HELPDESK",
     heading: "Delight Customers at Scale.",
     description:
       "AI-powered ticket triage, omnichannel inbox, SLA tracking, knowledge base, and canned responses — so your support team spends time solving problems, not sorting tickets.",
