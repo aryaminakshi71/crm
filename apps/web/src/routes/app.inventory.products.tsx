@@ -4,7 +4,7 @@
  * Browse and manage product catalog with real API integration.
  */
 
-import { Badge, Button, Card, CardContent, Input, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@crm/ui";
+import { Badge, Button, Card, CardContent, Input, ConfirmDialog } from "@crm/ui";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -268,25 +268,15 @@ function ProductsPage() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteProductId} onOpenChange={(open) => !open && setDeleteProductId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this product? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteProductId(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteProductId && deleteMutation.mutate(deleteProductId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        isOpen={!!deleteProductId}
+        onClose={() => setDeleteProductId(null)}
+        onConfirm={() => deleteProductId && deleteMutation.mutate(deleteProductId)}
+        title="Delete Product"
+        message="Are you sure you want to delete this product? This action cannot be undone."
+        confirmText={deleteMutation.isPending ? "Deleting..." : "Delete"}
+        variant="danger"
+      />
 
       {!isLoading && products.length === 0 && (
         <div className="text-center py-12">

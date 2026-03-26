@@ -237,10 +237,10 @@ function UptimePage() {
             <div className="divide-y divide-border/50">
               {[
                 { name: "API Gateway", status: "active", uptime: overallUptime, latency: avgResponseTime },
-                { name: "Database", status: "active", uptime: 99.99, latency: 12 },
-                { name: "Auth Service", status: "active", uptime: 99.95, latency: 35 },
-                { name: "File Storage", status: "active", uptime: 99.9, latency: 78 },
-                { name: "CDN", status: "active", uptime: 99.99, latency: 8 },
+                { name: "Database", status: "active", uptime: 0, latency: 12 },
+                { name: "Auth Service", status: "active", uptime: 0, latency: 35 },
+                { name: "File Storage", status: "active", uptime: 0, latency: 78 },
+                { name: "CDN", status: "active", uptime: 0, latency: 8 },
               ].map((svc) => (
                 <div key={svc.name} className="flex items-center justify-between p-4 hover:bg-muted/20">
                   <div className="flex items-center gap-3">
