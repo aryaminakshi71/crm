@@ -66,7 +66,7 @@ export const moduleSEO: Record<ModuleKey, {
     icon: "👔",
   },
   integrations: {
-    title: "Integration Hub",
+    title: "Integrations",
     description: "Connect your favorite apps with workflows, webhooks, and 50+ integrations.",
     keywords: ["integrations", "workflow automation", "webhooks", "API"],
     benefits: ["50+ connectors", "Visual workflow builder", "Real-time events"],

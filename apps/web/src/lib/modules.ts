@@ -285,7 +285,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: null,
     annualPrice: null,
     maxUsers: -1, // unlimited
-    modules: NUCLEO_MODULES.map((m) => m.key), // all 16 public modules
+    modules: NUCLEO_MODULES.map((m) => m.key), // all 17 public modules
   },
 ];
 

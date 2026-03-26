@@ -115,11 +115,10 @@ function SettingsBillingPage() {
   ];
 
   const plans = [
-    { key: "free", name: "Free", price: 0, features: ["1 user", "100MB storage", "Core CRM only"] },
-    { key: "solo", name: "Solo", price: 5, features: ["3 users", "1GB storage", "Core modules"] },
-    { key: "starter", name: "Starter", price: 12, popular: true, features: ["25 users", "50GB storage", "All modules"] },
-    { key: "business", name: "Business", price: 25, features: ["200 users", "500GB storage", "All modules + BI"] },
-    { key: "enterprise", name: "Enterprise", price: null, features: ["Unlimited users", "Unlimited storage", "Everything + SLA"] },
+    { key: "free", name: "Free", price: 0, features: ["1 user", "100MB storage", "CRM & Projects only"] },
+    { key: "starter", name: "Starter", price: 15, popular: true, features: ["Up to 25 users", "CRM, Projects, Helpdesk & more", "50GB storage"] },
+    { key: "business", name: "Business", price: 49, features: ["Up to 200 users", "All 15 growth + ops modules", "500GB storage"] },
+    { key: "enterprise", name: "Enterprise", price: null, features: ["Unlimited users", "All 17 modules", "Custom SLA & infrastructure"] },
   ];
 
   if (isLoading) {

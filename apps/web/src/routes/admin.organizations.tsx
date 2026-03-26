@@ -409,7 +409,7 @@ function AdminOrganizationsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {["enterprise", "business", "growth", "starter"].map((plan) => {
+                  {["enterprise", "business", "starter", "free"].map((plan) => {
                     const orgs = liveOrgs.filter((o: any) => o.plan === plan);
                     const revenue = orgs.reduce((sum: number, o: any) => sum + o.mrr, 0);
                     const percentage = liveMRR > 0 ? Math.round((revenue / liveMRR) * 100) : 0;
