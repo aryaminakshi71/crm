@@ -1784,9 +1784,15 @@ export function createApp() {
     });
   });
 
+  // Presence heartbeat — no auth required, before rate limiting
+  app.post("/api/v1/presence/heartbeat", async (c: any) => {
+    const body = await c.req.json().catch(() => null);
+    // Frontend sends { status: "online" | "away" | "offline" } — acknowledge silently
+    return c.json({ success: true });
+  });
+
   // Rate limiting middleware
   app.use("/api/*", rateLimitRedis({ limiterType: "api" }));
-  app.use("/api/auth/*", rateLimitRedis({ limiterType: "auth" }));
 
   // AI feature endpoints (P0 rollout: CRM) — require authentication
   app.post("/api/ai/lead/score", async (c: any) => {
