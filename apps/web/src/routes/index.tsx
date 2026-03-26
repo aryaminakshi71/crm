@@ -359,7 +359,7 @@ const pricingPlans = PLAN_TIERS.map((plan) => ({
   features: plan.key === "free"
     ? ["1 user", "CRM — contacts, leads, deals pipeline", "Projects — tasks & kanban board", "100 MB storage", "Community support"]
     : plan.key === "starter"
-    ? ["Up to 25 users", "CRM, Projects, Helpdesk", "Invoicing, HRM, Inventory", "Monitoring & Finance", "50 GB storage"]
+    ? ["Up to 25 users", "CRM, Projects, Helpdesk", "Invoicing, HRM, Inventory", "Monitoring, Finance", "50 GB storage"]
     : plan.key === "business"
     ? ["Up to 200 users", "Everything in Starter", "Marketing, Advertising, Social", "Communications, Field Service, DevOps", "Campaign Pro", "500 GB storage"]
     : ["Everything in Business", "Unlimited users", "AI Agents & Speech & Voice", "Custom SLA", "Dedicated infrastructure"],
@@ -428,22 +428,22 @@ const faqItems = [
   },
   {
     q: "How does modular pricing work?",
-    a: "With Pay-As-You-Go pricing, you only pay for the modules you need. Each module (like CRM, HRM, Projects) has its own monthly price. Alternatively, choose a plan tier that bundles modules together at a discount.",
+    a: "With Pay-As-You-Go pricing, you only pay for the modules you need. Each module (like CRM, HRM, Projects, Invoicing) has its own monthly price. Alternatively, choose a plan tier that bundles modules together at a discount.",
   },
   {
     q: "Can I migrate from my current tools?",
-    a: "Yes! We offer free migration assistance for all paid plans. Import contacts, deals, projects, and more from Salesforce, HubSpot, Zendesk, and 300+ other tools via our Integration Hub.",
+    a: "Yes! We offer free migration assistance for all paid plans. Import contacts, deals, projects, and more from Salesforce, HubSpot, Zendesk, and 300+ other tools via our integrations.",
   },
   {
     q: "What modules are included in each plan?",
-    a: "Starter includes CRM & Sales. Professional adds HRM, Projects, and Invoicing. Business adds all core modules plus AI & BI. Enterprise includes every module including DevOps, Communications, and Social Media.",
+    a: "Free includes CRM and Projects. Starter adds Helpdesk, Invoicing, HRM, Inventory, Monitoring, and Finance. Business adds Marketing, Advertising, Social Media, Campaign Pro, Communications, Field Service, and DevOps. Enterprise adds AI Agents and Speech & Voice.",
   },
   {
     q: "What are AI Agents?",
     a: "AI Agents are autonomous AI assistants that can handle coding tasks, data analysis, customer support, and more. Deploy pre-built agents or create custom ones with our no-code agent builder.",
   },
   {
-    q: "How does the Integration Hub work?",
+    q: "How does integrations and workflows work?",
     a: "Connect any app with our workflow automation engine. Build multi-step workflows with conditions, transformations, and compensation logic. Use webhooks to receive events from external systems.",
   },
   {
@@ -468,7 +468,7 @@ const faqItems = [
 
 const featureSpotlights = [
   {
-    eyebrow: "CRM & SALES",
+    eyebrow: "CRM",
     heading: "Close More Deals. Faster.",
     description:
       "A full-featured sales platform with intelligent lead scoring, visual pipeline management, and AI-powered insights that help your team hit quota every quarter.",
@@ -489,7 +489,7 @@ const featureSpotlights = [
     mockUI: "crm",
   },
   {
-    eyebrow: "HUMAN RESOURCES",
+    eyebrow: "HRM",
     heading: "Your People, Fully Managed.",
     description:
       "From hire to retire — an all-in-one HRM platform covering employee records, leave management, payroll, performance reviews, and an ATS for top-of-funnel recruitment.",
@@ -531,7 +531,7 @@ const featureSpotlights = [
     mockUI: "projects",
   },
   {
-    eyebrow: "FINANCE & INVOICING",
+    eyebrow: "FINANCE",
     heading: "Get Paid. Stay Compliant.",
     description:
       "Professional invoices, automated payment reminders, double-entry accounting, tax calculations, and real-time financial dashboards — so you always know where your money is.",
@@ -657,7 +657,7 @@ const featureSpotlights = [
     mockUI: "communications",
   },
   {
-    eyebrow: "INTEGRATION HUB",
+    eyebrow: "INTEGRATIONS",
     heading: "Connect Everything. Automate Anything.",
     description:
       "300+ pre-built connectors, a visual workflow builder, webhooks, and an event bus — so every tool in your stack talks to every other tool, automatically.",
@@ -688,7 +688,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Compliance, AI Agents, Integration Hub, and Observability into a single unified platform. Replace 16 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Advertising, Social Media, Campaign Pro, Field Service, DevOps, Communications, Speech & Voice, Inventory, Monitoring, AI Agents, and Invoicing into a single unified platform. Replace 17 tools with one. Start free.";
 
     return {
       meta: [
@@ -726,10 +726,10 @@ export const Route = createFileRoute("/")({
           "@type": "FAQPage",
           "mainEntity": [
             { "@type": "Question", "name": "How long does it take to set up Nucleo One?", "acceptedAnswer": { "@type": "Answer", "text": "Most teams are up and running within 15 minutes. Guided onboarding walks you through module selection and data import from CSV or via 300+ integrations." } },
-            { "@type": "Question", "name": "How does modular pricing work?", "acceptedAnswer": { "@type": "Answer", "text": "With Pay-As-You-Go pricing you only pay for the modules you need, starting at $9/module/month. Bundle plans start at $79/user/month for CRM, HRM, Projects, and Invoicing." } },
-            { "@type": "Question", "name": "Can I migrate from Salesforce, HubSpot, or Zendesk?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Nucleo One offers free migration assistance for all paid plans. Import data from Salesforce, HubSpot, Zendesk, and 300+ other tools via the Integration Hub." } },
+            { "@type": "Question", "name": "How does modular pricing work?", "acceptedAnswer": { "@type": "Answer", "text": "With Pay-As-You-Go pricing you only pay for the modules you need. Each module starts at $9/month. Alternatively, choose a bundle plan that includes multiple modules at a discount." } },
+            { "@type": "Question", "name": "Can I migrate from Salesforce, HubSpot, or Zendesk?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Nucleo One offers free migration assistance for all paid plans. Import data from Salesforce, HubSpot, Zendesk, and 300+ other tools via our integrations." } },
             { "@type": "Question", "name": "What are AI Agents in Nucleo One?", "acceptedAnswer": { "@type": "Answer", "text": "AI Agents are autonomous assistants that handle coding tasks, data analysis, customer support triage, and more. Deploy pre-built agents or create custom ones with the no-code agent builder." } },
-            { "@type": "Question", "name": "Is there a free plan?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The Starter plan is free forever for up to 5 users with CRM and basic integrations. Paid plans include a 14-day free trial — no credit card required." } },
+            { "@type": "Question", "name": "Is there a free plan?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The Free plan is free forever for up to 1 user with CRM and Projects. Paid plans include a 14-day free trial — no credit card required." } },
           ]
         })},
         { "script:ld+json": JSON.stringify({
@@ -1282,7 +1282,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            16 powerful modules. One unified platform.
+            17 powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -1296,7 +1296,8 @@ function LandingPage() {
 
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
             Nucleo One unifies CRM, HRM, Finance, Projects, Helpdesk, Marketing,
-            Compliance, AI Agents, Integration Hub, and Observability into one platform.
+            Advertising, Social Media, Campaign Pro, Field Service, DevOps, Communications,
+            Speech & Voice, Inventory, Monitoring, AI Agents, and Invoicing into one platform.
             Stop switching between tools — start moving faster.
           </p>
 
@@ -1411,8 +1412,9 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              16 deeply integrated modules — CRM, HRM, Projects, Invoicing, Marketing,
-              Helpdesk, Field Service, DevOps, AI, Communications, and more.
+              17 deeply integrated modules — CRM, HRM, Finance, Projects, Helpdesk,
+              Marketing, Advertising, Social Media, Campaign Pro, Field Service, DevOps,
+              Communications, Speech & Voice, Inventory, Monitoring, AI Agents, and Invoicing.
             </p>
           </div>
 
