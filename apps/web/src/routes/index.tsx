@@ -2,6 +2,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { LeadCaptureWidget } from "@/components/lead-capture-widget";
 import { leadsApi } from "@/lib/api";
+import { PLAN_TIERS } from "@/lib/modules";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import React, { useState } from "react";
 import {
@@ -349,73 +350,23 @@ const stats = [
   { value: "24/7", label: "AI Assistance" },
 ];
 
-const pricingPlans = [
-  {
-    name: "Free",
-    price: 0,
-    period: "Free forever",
-    description: "Perfect for solo founders getting started.",
-    features: [
-      "1 user",
-      "CRM — contacts, leads, deals pipeline",
-      "Projects — tasks & kanban board",
-      "100 MB storage",
-      "Community support",
-    ],
-    cta: "Get started free",
-    popular: false,
-    ctaVariant: "outline",
-  },
-  {
-    name: "Starter",
-    price: 12,
-    period: "per user / month",
-    description: "For growing teams that need full coverage.",
-    features: [
-      "Up to 25 users",
-      "CRM, Projects, Helpdesk",
-      "Invoicing, HRM, Inventory",
-      "Monitoring & Finance",
-      "50 GB storage",
-    ],
-    cta: "Start 14-Day Trial",
-    popular: true,
-    ctaVariant: "primary",
-  },
-  {
-    name: "Business",
-    price: 25,
-    period: "per user / month",
-    description: "For established companies with advanced needs.",
-    features: [
-      "Up to 200 users",
-      "Everything in Starter",
-      "Marketing, Advertising, Social",
-      "Communications, Field Service, DevOps",
-      "Campaign Pro",
-      "500 GB storage",
-    ],
-    cta: "Start 14-Day Trial",
-    popular: false,
-    ctaVariant: "outline",
-  },
-  {
-    name: "Enterprise",
-    price: 0,
-    period: "Custom pricing",
-    description: "Custom contracts for regulated organizations.",
-    features: [
-      "Everything in Business",
-      "Unlimited users",
-      "AI Agents & Speech & Voice",
-      "Custom SLA",
-      "Dedicated infrastructure",
-    ],
-    cta: "Talk to Sales",
-    popular: false,
-    ctaVariant: "outline",
-  },
-];
+// Derive plan metadata from PLAN_TIERS, keep marketing features copy
+const pricingPlans = PLAN_TIERS.map((plan) => ({
+  name: plan.name,
+  price: plan.monthlyPrice ?? 0,
+  period: plan.monthlyPrice === null ? "Custom pricing" : "per user / month",
+  description: plan.blurb,
+  features: plan.key === "free"
+    ? ["1 user", "CRM — contacts, leads, deals pipeline", "Projects — tasks & kanban board", "100 MB storage", "Community support"]
+    : plan.key === "starter"
+    ? ["Up to 25 users", "CRM, Projects, Helpdesk", "Invoicing, HRM, Inventory", "Monitoring & Finance", "50 GB storage"]
+    : plan.key === "business"
+    ? ["Up to 200 users", "Everything in Starter", "Marketing, Advertising, Social", "Communications, Field Service, DevOps", "Campaign Pro", "500 GB storage"]
+    : ["Everything in Business", "Unlimited users", "AI Agents & Speech & Voice", "Custom SLA", "Dedicated infrastructure"],
+  cta: plan.key === "free" ? "Get started free" : plan.key === "enterprise" ? "Talk to Sales" : "Start 14-Day Trial",
+  popular: plan.key === "starter",
+  ctaVariant: plan.key === "free" || plan.key === "enterprise" ? "outline" : "primary",
+}));
 
 // Module pricing for Pay-As-You-Go
 const testimonials = [

@@ -3,20 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useSession } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Users,
-  CreditCard,
-  Activity,
-  BarChart3,
-  Bot,
-  FileText,
-  Box,
   CheckCircle,
   XCircle,
   AlertCircle,
-  MessageSquare,
-  Truck,
-  LayoutGrid,
-  Globe,
 } from "lucide-react";
 import { NUCLEO_MODULES, getModuleIcon, MODULE_PLANS, PLAN_TIERS } from "@/lib/modules";
 
@@ -24,47 +13,44 @@ export const Route = createFileRoute("/admin/modules")({
   component: AdminModulesPage,
 });
 
-// Build admin module display data from shared NUCLEO_MODULES
-// Admin view uses growth plan (not in public pricing) so we include it here
-
 const PLAN_KEYS = ["starter", "business", "enterprise"] as const;
 
-const PHASE_LABELS: Record<string, string> = {
-  core: "Core",
-  ops: "Operations",
-  growth: "Growth",
-  ai: "AI & Intelligence",
+// Admin-specific metadata not in NUCLEO_MODULES (adoption rate, revenue)
+const ADMIN_MODULE_META: Record<string, { adoption: number; revenue: number }> = {
+  crm:            { adoption: 100, revenue: 156000 },
+  projects:       { adoption: 78,  revenue: 46800 },
+  helpdesk:       { adoption: 62,  revenue: 37200 },
+  hrm:            { adoption: 45,  revenue: 27000 },
+  inventory:      { adoption: 40,  revenue: 24000 },
+  monitoring:     { adoption: 52,  revenue: 31200 },
+  communications: { adoption: 30,  revenue: 18000 },
+  field_service:  { adoption: 25,  revenue: 15000 },
+  devops:         { adoption: 22,  revenue: 13200 },
+  finance:        { adoption: 55,  revenue: 33000 },
+  invoicing:      { adoption: 85,  revenue: 51000 },
+  marketing:       { adoption: 34,  revenue: 20400 },
+  advertising:    { adoption: 18,  revenue: 10800 },
+  social:         { adoption: 20,  revenue: 12000 },
+  campaign_pro:   { adoption: 15,  revenue: 9000 },
+  agents:         { adoption: 23,  revenue: 18400 },
+  speech:         { adoption: 12,  revenue: 7200 },
 };
 
-// Extended module details for admin view (with adoption/revenue data)
-// Derived from NUCLEO_MODULES — only the 16 canonical public product modules
-const moduleDetails: Record<string, {
-  name: string;
-  icon: any;
-  description: string;
-  category: "core" | "ops" | "growth" | "ai";
-  adoption: number;
-  revenue: number;
-  plans: string[];
-}> = {
-  crm:            { name: "CRM",              icon: Users,         description: "Contacts, deals, leads, pipeline, and activity tracking",    category: "core",   adoption: 100, revenue: 156000, plans: MODULE_PLANS.crm },
-  projects:       { name: "Projects",          icon: Box,           description: "Project planning, task tracking, kanban, and gantt",           category: "ops",    adoption: 78,  revenue: 46800,  plans: MODULE_PLANS.projects },
-  helpdesk:       { name: "Helpdesk",          icon: FileText,      description: "Ticketing, knowledge base, SLA workflows, and support",         category: "ops",    adoption: 62,  revenue: 37200,  plans: MODULE_PLANS.helpdesk },
-  hrm:            { name: "HRM",               icon: Users,          description: "Employee directory, leave, recruitment, training, and payroll",  category: "ops",    adoption: 45,  revenue: 27000,  plans: MODULE_PLANS.hrm },
-  inventory:      { name: "Inventory",          icon: LayoutGrid,    description: "Product catalog, stock management, warehouses, and transfers",  category: "ops",    adoption: 40,  revenue: 24000,  plans: MODULE_PLANS.inventory },
-  monitoring:     { name: "Monitoring",         icon: Activity,      description: "Error tracking, uptime checks, performance, and logs",        category: "ops",    adoption: 52,  revenue: 31200,  plans: MODULE_PLANS.monitoring },
-  communications: { name: "Communications",    icon: MessageSquare,  description: "Omnichannel messaging — SMS, voice, video, and chat",           category: "ops",    adoption: 30,  revenue: 18000,  plans: MODULE_PLANS.communications },
-  field_service:  { name: "Field Service",    icon: Truck,         description: "Smart dispatch, route optimization, and job scheduling",          category: "ops",    adoption: 25,  revenue: 15000,  plans: MODULE_PLANS.field_service },
-  devops:         { name: "DevOps",            icon: Globe,         description: "CI/CD pipelines, automated deployments, and infrastructure",     category: "ops",    adoption: 22,  revenue: 13200,  plans: MODULE_PLANS.devops },
-  finance:        { name: "Finance",            icon: CreditCard,    description: "Expenses, budget tracking, financial reporting, and cost control",category: "ops",    adoption: 55,  revenue: 33000,  plans: MODULE_PLANS.finance },
-  invoicing:      { name: "Invoicing",         icon: CreditCard,    description: "Professional invoices, payment tracking, and billing",          category: "growth", adoption: 85,  revenue: 51000,  plans: MODULE_PLANS.invoicing },
-  marketing:      { name: "Marketing",          icon: BarChart3,     description: "Campaign builder, email automation, landing pages, lead scoring", category: "growth", adoption: 34,  revenue: 20400,  plans: MODULE_PLANS.marketing },
-  advertising:    { name: "Advertising",        icon: BarChart3,     description: "Ad campaigns across Google, Meta, and LinkedIn with AI",         category: "growth", adoption: 18,  revenue: 10800,  plans: MODULE_PLANS.advertising },
-  social:         { name: "Social Media",      icon: BarChart3,     description: "Post scheduling, analytics, social listening, and inbox",       category: "growth", adoption: 20,  revenue: 12000,  plans: MODULE_PLANS.social },
-  campaign_pro:   { name: "Campaign Pro",     icon: BarChart3,     description: "Advanced campaign planning, A/B testing, and multi-channel",    category: "growth", adoption: 15,  revenue: 9000,   plans: MODULE_PLANS.campaign_pro },
-  agents:         { name: "AI Agents",         icon: Bot,           description: "Autonomous AI agents for automation, support, and BI",            category: "ai",    adoption: 23,  revenue: 18400,  plans: MODULE_PLANS.agents },
-  speech:         { name: "Speech & Voice",    icon: Bot,           description: "Audio transcription, real-time streaming, and meeting notes",    category: "ai",    adoption: 12,  revenue: 7200,   plans: MODULE_PLANS.speech },
-};
+// Derive admin module display data from NUCLEO_MODULES + admin metadata
+const moduleDetails = Object.fromEntries(
+  NUCLEO_MODULES.map((m) => [
+    m.key,
+    {
+      name: m.name,
+      icon: getModuleIcon(m.key),
+      description: m.description,
+      category: m.phase,
+      adoption: ADMIN_MODULE_META[m.key]?.adoption ?? 0,
+      revenue: ADMIN_MODULE_META[m.key]?.revenue ?? 0,
+      plans: MODULE_PLANS[m.key],
+    },
+  ])
+);
 
 const plans = PLAN_KEYS.map((key) => {
   const tier = PLAN_TIERS.find((t) => t.key === key);

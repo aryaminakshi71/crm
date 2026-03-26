@@ -9,13 +9,13 @@ import { Button } from "@crm/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Building2,
   Check,
   CheckCircle2,
   Cpu,
-  Activity,
   Database,
   FileText,
   Globe,
@@ -31,6 +31,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { NUCLEO_MODULES } from "@/lib/modules";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -95,144 +96,37 @@ const INDUSTRIES = [
   "Other",
 ];
 
-const MODULES = [
-  {
-    id: "crm",
-    label: "CRM",
-    description: "Contacts, leads, deals, and pipeline management",
-    icon: Target,
-    color: "cyan",
-    benefits: ["30% faster deal closing", "Complete customer history"],
-  },
-  {
-    id: "projects",
-    label: "Projects",
-    description: "Tasks, timelines, milestones, and resource planning",
-    icon: Telescope,
-    color: "violet",
-    benefits: ["40% faster delivery", "Real-time progress tracking"],
-  },
-  {
-    id: "helpdesk",
-    label: "Helpdesk",
-    description: "Tickets, knowledge base, and customer support",
-    icon: Sparkles,
-    color: "orange",
-    benefits: ["60% faster ticket resolution", "AI-powered triage"],
-  },
-  {
-    id: "hrm",
-    label: "HRM",
-    description: "Employees, payroll, attendance, and performance",
-    icon: Users,
-    color: "indigo",
-    benefits: ["5 hrs saved per admin weekly", "Automated onboarding"],
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    description: "Product catalog, stock, warehouses, and transfers",
-    icon: Palette,
-    color: "lime",
-    benefits: ["Real-time stock levels", "Barcode scanning"],
-  },
-  {
-    id: "monitoring",
-    label: "Monitoring",
-    description: "Error tracking, uptime, performance, and logs",
-    icon: Activity,
-    color: "sky",
-    benefits: ["Real-time alerts", "Error tracking"],
-  },
-  {
-    id: "communications",
-    label: "Communications",
-    description: "SMS, voice, video, and chat messaging",
-    icon: Zap,
-    color: "teal",
-    benefits: ["Omnichannel messaging", "Video meetings"],
-  },
-  {
-    id: "field_service",
-    label: "Field Service",
-    description: "Smart dispatch, route optimization, and scheduling",
-    icon: Truck,
-    color: "emerald",
-    benefits: ["Smart dispatch", "Route optimization"],
-  },
-  {
-    id: "devops",
-    label: "DevOps",
-    description: "CI/CD pipelines, deployments, and infrastructure",
-    icon: Globe,
-    color: "blue",
-    benefits: ["One-click deploy", "Pipeline builder"],
-  },
-  {
-    id: "finance",
-    label: "Finance",
-    description: "Budgeting, accounting, and financial reporting",
-    icon: FileText,
-    color: "amber",
-    benefits: ["Real-time financial insights", "Automated reconciliation"],
-  },
-  {
-    id: "invoicing",
-    label: "Invoicing",
-    description: "Professional invoices, payments, and billing",
-    icon: Truck,
-    color: "yellow",
-    benefits: ["50% faster invoice creation", "Automated payment reminders"],
-  },
-  {
-    id: "marketing",
-    label: "Marketing",
-    description: "Campaigns, email automation, and lead nurturing",
-    icon: TrendingUp,
-    color: "pink",
-    benefits: ["2x more qualified leads", "Automated drip campaigns"],
-  },
-  {
-    id: "advertising",
-    label: "Advertising",
-    description: "Multi-platform ad campaigns with AI optimization",
-    icon: TrendingUp,
-    color: "rose",
-    benefits: ["Multi-platform ads", "AI budget optimization"],
-  },
-  {
-    id: "social",
-    label: "Social Media",
-    description: "Post scheduling, analytics, and social listening",
-    icon: Zap,
-    color: "violet",
-    benefits: ["Post scheduling", "Social analytics"],
-  },
-  {
-    id: "campaign_pro",
-    label: "Campaign Pro",
-    description: "Advanced planning, A/B testing, multi-channel automation",
-    icon: Target,
-    color: "purple",
-    benefits: ["A/B testing", "Multi-channel automation"],
-  },
-  {
-    id: "agents",
-    label: "AI Agents",
-    description: "Autonomous AI agents for automation and analysis",
-    icon: Cpu,
-    color: "fuchsia",
-    benefits: ["70% task automation", "24/7 AI assistance"],
-  },
-  {
-    id: "speech",
-    label: "Speech & Voice",
-    description: "Audio transcription, streaming, and meeting notes",
-    icon: Cpu,
-    color: "red",
-    benefits: ["Real-time transcription", "Meeting notes"],
-  },
-];
+// Onboarding-specific UI metadata — color, benefits — keyed by module key
+// Canonical module data (name, description) comes from NUCLEO_MODULES
+const MODULE_UI: Record<string, { icon: any; color: string; benefits: string[] }> = {
+  crm:           { icon: Target,      color: "cyan",    benefits: ["30% faster deal closing", "Complete customer history"] },
+  projects:      { icon: Telescope,    color: "violet",  benefits: ["40% faster delivery", "Real-time progress tracking"] },
+  helpdesk:      { icon: Sparkles,    color: "orange",  benefits: ["60% faster ticket resolution", "AI-powered triage"] },
+  hrm:           { icon: Users,       color: "indigo",   benefits: ["5 hrs saved per admin weekly", "Automated onboarding"] },
+  inventory:     { icon: Palette,     color: "lime",    benefits: ["Real-time stock levels", "Barcode scanning"] },
+  monitoring:    { icon: Activity,    color: "sky",     benefits: ["Real-time alerts", "Error tracking"] },
+  communications:{ icon: Zap,         color: "teal",    benefits: ["Omnichannel messaging", "Video meetings"] },
+  field_service: { icon: Truck,       color: "emerald", benefits: ["Smart dispatch", "Route optimization"] },
+  devops:        { icon: Globe,       color: "blue",    benefits: ["One-click deploy", "Pipeline builder"] },
+  finance:       { icon: FileText,    color: "amber",   benefits: ["Real-time financial insights", "Automated reconciliation"] },
+  invoicing:     { icon: Truck,       color: "yellow",  benefits: ["50% faster invoice creation", "Automated payment reminders"] },
+  marketing:     { icon: TrendingUp,  color: "pink",    benefits: ["2x more qualified leads", "Automated drip campaigns"] },
+  advertising:   { icon: TrendingUp,  color: "rose",    benefits: ["Multi-platform ads", "AI budget optimization"] },
+  social:        { icon: Zap,         color: "violet",  benefits: ["Post scheduling", "Social analytics"] },
+  campaign_pro:  { icon: Target,      color: "purple",  benefits: ["A/B testing", "Multi-channel automation"] },
+  agents:        { icon: Cpu,         color: "fuchsia", benefits: ["70% task automation", "24/7 AI assistance"] },
+  speech:        { icon: Cpu,         color: "red",     benefits: ["Real-time transcription", "Meeting notes"] },
+};
+
+// Derive MODULES from NUCLEO_MODULES + onboarding UI metadata
+const MODULES = NUCLEO_MODULES.map((m) => ({
+  id: m.key,
+  label: m.name,
+  description: m.description,
+  icon: MODULE_UI[m.key]?.icon ?? Target,
+  color: MODULE_UI[m.key]?.color ?? "cyan",
+  benefits: MODULE_UI[m.key]?.benefits ?? [],
+}));
 
 const ROLE_OPTIONS = [
   "Admin",
