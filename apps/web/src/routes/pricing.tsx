@@ -22,6 +22,16 @@ import {
   Zap,
 } from "lucide-react";
 import { useState, Fragment } from "react";
+import {
+  NUCLEO_MODULES,
+  PLAN_TIERS,
+  MODULE_PLANS,
+  PHASE_LABELS,
+  MODULES_BY_PHASE,
+  getModuleIcon,
+  type NucleoModuleKey,
+  type PlanTierKey,
+} from "@/lib/modules";
 
 export const Route = createFileRoute("/pricing")({
   head: () => {
@@ -94,313 +104,88 @@ export const Route = createFileRoute("/pricing")({
 });
 
 // ─── Plan data ────────────────────────────────────────────────────────────────
+// Uses shared PLAN_TIERS from @/lib/modules
 
-const PLANS = [
-  {
-    id: "free",
-    name: "Free",
-    icon: Zap,
-    blurb: "Perfect for solo founders getting started.",
-    monthlyPrice: 0,
-    annualPrice: 0,
-    color: "text-sky-400",
-    bg: "bg-sky-400/10",
-    border: "border-sky-400/20",
-    cta: "Get started free",
-    popular: false,
-    features: [
-      "1 user",
-      "CRM — contacts, leads, deals pipeline",
-      "Projects — tasks & kanban board",
-      "100 MB storage",
-      "Community support",
-      "Basic integrations",
-    ],
-  },
-  {
-    id: "solo",
-    name: "Solo",
-    icon: Star,
-    blurb: "For freelancers and solo professionals.",
-    monthlyPrice: 5,
-    annualPrice: 4,
-    color: "text-sky-500",
-    bg: "bg-sky-500/10",
-    border: "border-sky-500/20",
-    cta: "Start free trial",
-    popular: false,
-    features: [
-      "Up to 3 users",
-      "Everything in Free",
-      "Helpdesk — tickets & SLA tracking",
-      "Finance — invoices & expenses",
-      "1 GB storage",
-      "Email support",
-      "14-day free trial",
-    ],
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    icon: Globe,
-    blurb: "For growing teams that need full coverage.",
-    monthlyPrice: 12,
-    annualPrice: 10,
-    color: "text-primary",
-    bg: "bg-primary/10",
-    border: "border-primary/40",
-    cta: "Start free trial",
-    popular: true,
-    features: [
-      "Up to 25 users",
-      "Everything in Solo",
-      "HRM — employees & leave",
-      "Marketing — campaigns & analytics",
-      "Intelligence BI & AI agents",
-      "50 GB storage",
-      "Priority email + chat support",
-      "14-day free trial",
-    ],
-  },
-  {
-    id: "business",
-    name: "Business",
-    icon: Shield,
-    blurb: "For established companies with advanced needs.",
-    monthlyPrice: 25,
-    annualPrice: 20,
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
-    border: "border-violet-400/20",
-    cta: "Start free trial",
-    popular: false,
-    features: [
-      "Up to 200 users",
-      "Everything in Starter",
-      "Compliance & audit trails",
-      "Contracts & document lifecycle",
-      "Enterprise SSO (SAML/OIDC)",
-      "500 GB storage",
-      "Dedicated account manager",
-      "SLA: 4hr response",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    icon: Sparkles,
-    blurb: "Custom contracts for regulated organizations.",
-    monthlyPrice: null,
-    annualPrice: null,
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
-    border: "border-amber-400/20",
-    cta: "Book a demo",
-    popular: false,
-    features: [
-      "Unlimited users",
-      "Everything in Business",
-      "Custom AI agent configuration",
-      "Security review & compliance assistance",
-      "Data residency (US / EU / India / UAE)",
-      "Custom integrations & API access",
-      "RBAC + approval workflows",
-      "Custom SLA",
-      "Dedicated infrastructure",
-    ],
-  },
-];
+const PLAN_ICONS: Record<PlanTierKey, any> = {
+  free: Zap,
+  starter: Globe,
+  business: Shield,
+  enterprise: Sparkles,
+};
+
+const PLAN_COLORS: Record<PlanTierKey, { color: string; bg: string; border: string }> = {
+  free:   { color: "text-sky-400",    bg: "bg-sky-400/10",      border: "border-sky-400/20" },
+  starter:{ color: "text-primary",    bg: "bg-primary/10",       border: "border-primary/40" },
+  business:{ color: "text-violet-400",bg: "bg-violet-400/10",    border: "border-violet-400/20" },
+  enterprise:{ color: "text-amber-400",bg: "bg-amber-400/10",   border: "border-amber-400/20" },
+};
 
 // ─── Feature comparison table ─────────────────────────────────────────────────
+// Built from shared PLAN_TIERS and MODULE_PLANS
 
-const COMPARISON = [
+// Non-module rows (storage, users, support, security)
+const metaRows: Array<{
+  feature: string;
+  free: boolean | string;
+  starter: boolean | string;
+  business: boolean | string;
+  enterprise: boolean | string;
+}> = [
   {
-    category: "Core Platform",
-    rows: [
-      {
-        feature: "CRM (Contacts, Leads, Deals)",
-        free: true,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Projects & Kanban",
-        free: true,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Helpdesk & Ticketing",
-        free: false,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Finance & Invoicing",
-        free: false,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "HRM & Leave Management",
-        free: false,
-        solo: false,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Recruitment Module",
-        free: false,
-        solo: false,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Marketing & Campaigns",
-        free: false,
-        solo: false,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Intelligence BI & AI Agents",
-        free: false,
-        solo: false,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-    ],
+    feature: "Team members",
+    free: "1",
+    starter: "25",
+    business: "200",
+    enterprise: "Unlimited",
   },
   {
-    category: "Storage & Users",
-    rows: [
-      {
-        feature: "Team members",
-        free: "1",
-        solo: "3",
-        starter: "25",
-        business: "200",
-        enterprise: "Unlimited",
-      },
-      {
-        feature: "Storage",
-        free: "100 MB",
-        solo: "1 GB",
-        starter: "50 GB",
-        business: "500 GB",
-        enterprise: "Unlimited",
-      },
-    ],
+    feature: "Storage",
+    free: "100 MB",
+    starter: "50 GB",
+    business: "500 GB",
+    enterprise: "Unlimited",
   },
   {
-    category: "Security & Compliance",
-    rows: [
-      {
-        feature: "SSL & encryption at rest",
-        free: true,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "GDPR-compliant data handling",
-        free: true,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Audit logs",
-        free: false,
-        solo: false,
-        starter: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "SSO (SAML/OIDC)",
-        free: false,
-        solo: false,
-        starter: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Security review & compliance assistance",
-        free: false,
-        solo: false,
-        starter: false,
-        business: false,
-        enterprise: true,
-      },
-      {
-        feature: "Custom data residency",
-        free: false,
-        solo: false,
-        starter: false,
-        business: false,
-        enterprise: true,
-      },
-    ],
+    feature: "Audit logs",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
   },
   {
-    category: "Support",
-    rows: [
-      {
-        feature: "Community support",
-        free: true,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Priority email + chat",
-        free: false,
-        solo: true,
-        starter: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Dedicated account manager",
-        free: false,
-        solo: false,
-        starter: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Custom SLA",
-        free: false,
-        solo: false,
-        starter: false,
-        business: false,
-        enterprise: true,
-      },
-      {
-        feature: "Onboarding assistance",
-        free: false,
-        solo: false,
-        starter: false,
-        business: true,
-        enterprise: true,
-      },
-    ],
+    feature: "SSO (SAML/OIDC)",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
+  },
+  {
+    feature: "Custom data residency",
+    free: false,
+    starter: false,
+    business: false,
+    enterprise: true,
+  },
+  {
+    feature: "Custom SLA",
+    free: false,
+    starter: false,
+    business: false,
+    enterprise: true,
+  },
+  {
+    feature: "Dedicated account manager",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
+  },
+  {
+    feature: "Priority email + chat support",
+    free: false,
+    starter: true,
+    business: true,
+    enterprise: true,
   },
 ];
 
@@ -528,24 +313,29 @@ function PricingPage() {
 
         {/* Pricing cards */}
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => {
+          {PLAN_TIERS.map((plan) => {
             const price =
               plan.monthlyPrice === null
                 ? null
                 : annual
                   ? plan.annualPrice
                   : plan.monthlyPrice;
-            const Icon = plan.icon;
+            const Icon = PLAN_ICONS[plan.key];
+            const { color, bg, border } = PLAN_COLORS[plan.key];
+            const isPopular = plan.key === "starter";
+            const planModuleNames = plan.modules
+              .slice(0, 6)
+              .map((k) => NUCLEO_MODULES.find((m) => m.key === k)?.name ?? k);
             return (
               <article
-                key={plan.id}
+                key={plan.key}
                 className={`relative flex flex-col rounded-2xl border p-6 transition-all hover:shadow-lg hover:shadow-primary/5 ${
-                  plan.popular
+                  isPopular
                     ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : `${plan.border} bg-card`
+                    : `${border} bg-card`
                 }`}
               >
-                {plan.popular && (
+                {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-primary-foreground text-xs font-semibold">
                       <Star className="h-3 w-3" /> Most Popular
@@ -553,13 +343,11 @@ function PricingPage() {
                   </div>
                 )}
 
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${plan.bg} mb-4`}
-                >
-                  <Icon className={`h-5 w-5 ${plan.color}`} />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg} mb-4`}>
+                  <Icon className={`h-5 w-5 ${color}`} />
                 </div>
 
-                <h2 className={`font-bold text-xl ${plan.color}`}>
+                <h2 className={`font-bold text-xl ${color}`}>
                   {plan.name}
                 </h2>
                 <p className="mt-1 text-muted-foreground text-sm">
@@ -586,40 +374,46 @@ function PricingPage() {
                       </p>
                     </div>
                   )}
-                  {annual && price !== null && (
+                  {annual && price !== null && price > 0 && (
                     <p className="text-muted-foreground text-xs mt-1">
-                      Billed annually · ${plan.annualPrice! * 12}/user/year
+                      Billed annually · ${(plan.annualPrice ?? plan.monthlyPrice) * 12}/user/year
                     </p>
                   )}
                 </div>
 
                 <ul className="mt-6 space-y-2.5 flex-1">
-                  {plan.features.map((f) => (
+                  {planModuleNames.map((name) => (
                     <li
-                      key={f}
+                      key={name}
                       className="flex items-start gap-2 text-sm text-foreground"
                     >
                       <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-                      {f}
+                      {name}
                     </li>
                   ))}
+                  {plan.modules.length > 6 && (
+                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                      +{plan.modules.length - 6} more modules
+                    </li>
+                  )}
                 </ul>
 
                 <div className="mt-8">
-                  {plan.id === "enterprise" ? (
+                  {plan.key === "enterprise" ? (
                     <Link to="/contact">
                       <Button variant="outline" className="w-full">
-                        {plan.cta}
+                        Book a demo
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
                   ) : (
                     <Link to="/register">
                       <Button
-                        variant={plan.popular ? "primary" : "outline"}
+                        variant={isPopular ? "primary" : "outline"}
                         className="w-full"
                       >
-                        {plan.cta}
+                        {plan.key === "free" ? "Get started free" : "Start free trial"}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -682,11 +476,11 @@ function PricingPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left p-4 font-medium text-muted-foreground w-1/2">
-                    Feature
+                    Module
                   </th>
-                  {PLANS.map((p) => (
-                    <th key={p.id} className="p-4 text-center font-semibold">
-                      <span className={p.color}>{p.name}</span>
+                  {PLAN_TIERS.map((p) => (
+                    <th key={p.key} className="p-4 text-center font-semibold">
+                      <span className={PLAN_COLORS[p.key].color}>{p.name}</span>
                       <div className="text-muted-foreground text-xs font-normal mt-0.5">
                         {p.monthlyPrice === null
                           ? "Custom"
@@ -701,40 +495,63 @@ function PricingPage() {
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map((cat) => (
-                  <Fragment key={cat.category}>
-                    <tr className="bg-muted/10">
-                      <td
-                        colSpan={5}
-                        className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
-                      >
-                        {cat.category}
-                      </td>
-                    </tr>
-                    {cat.rows.map((row) => (
-                      <tr
-                        key={row.feature}
-                        className="border-t border-border/50 hover:bg-muted/10 transition-colors"
-                      >
-                        <td className="p-4 text-foreground">{row.feature}</td>
-                        <td className="p-4">
-                          <CheckCell value={row.free} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.solo} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.starter} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.business} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.enterprise} />
+                {/* Module rows */}
+                {(["core", "ops", "growth", "ai"] as const).map((phase) => {
+                  const phaseModules = MODULES_BY_PHASE[phase] ?? [];
+                  if (phaseModules.length === 0) return null;
+                  return (
+                    <Fragment key={phase}>
+                      <tr className="bg-muted/10">
+                        <td
+                          colSpan={5}
+                          className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
+                        >
+                          {PHASE_LABELS[phase]}
                         </td>
                       </tr>
+                      {phaseModules.map((mod) => {
+                        const plans = MODULE_PLANS[mod.key] ?? [];
+                        return (
+                          <tr
+                            key={mod.key}
+                            className="border-t border-border/50 hover:bg-muted/10 transition-colors"
+                          >
+                            <td className="p-4 text-foreground">{mod.name}</td>
+                            {PLAN_TIERS.map((plan) => {
+                              const included = plan.modules.includes(mod.key as NucleoModuleKey);
+                              return (
+                                <td key={plan.key} className="p-4 text-center">
+                                  <CheckCell value={included} />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
+                {/* Meta rows (users, storage, support, security) */}
+                <tr className="bg-muted/10">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
+                  >
+                    Storage, Security &amp; Support
+                  </td>
+                </tr>
+                {metaRows.map((row) => (
+                  <tr
+                    key={row.feature}
+                    className="border-t border-border/50 hover:bg-muted/10 transition-colors"
+                  >
+                    <td className="p-4 text-foreground">{row.feature}</td>
+                    {(["free", "starter", "business", "enterprise"] as const).map((tier) => (
+                      <td key={tier} className="p-4 text-center">
+                        <CheckCell value={row[tier] as boolean | string} />
+                      </td>
                     ))}
-                  </Fragment>
+                  </tr>
                 ))}
               </tbody>
             </table>

@@ -4,7 +4,7 @@
  * UTM parameter parsing, lead scoring, and conversion tracking.
  */
 
-import { industries, moduleSEO, pricingTiers } from "./seo";
+import { industries, pricingTiers } from "./seo";
 
 // UTM Parameter Types
 export interface UTMParams {

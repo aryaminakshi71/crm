@@ -4,19 +4,10 @@
  * Dynamic meta tags, structured data, and Open Graph support.
  */
 
-type ModuleKey =
-  | "crm"
-  | "projects"
-  | "invoicing"
-  | "helpdesk"
-  | "marketing"
-  | "hrm"
-  | "integrations"
-  | "agents"
-  | "monitoring"
-  | "advertising";
+import type { NucleoModuleKey, PlanTierKey } from "./modules";
 
-type PlanTier = "starter" | "growth" | "business" | "enterprise";
+type ModuleKey = NucleoModuleKey;
+type PlanTier = PlanTierKey;
 
 interface OrganizationData {
   name: string;
@@ -189,81 +180,8 @@ export const industries = {
   },
 };
 
-// Pricing tiers
-export const pricingTiers = [
-  {
-    key: "starter" as PlanTier,
-    name: "Starter",
-    price: 15,
-    description: "Perfect for small teams getting started",
-    maxUsers: 5,
-    modules: ["crm", "notifications", "rbac"] as ModuleKey[],
-    features: [
-      "5 users",
-      "10GB storage",
-      "Basic CRM",
-      "Email support",
-      "API access",
-    ],
-  },
-  {
-    key: "growth" as PlanTier,
-    name: "Growth",
-    price: 29,
-    description: "For growing teams that need more power",
-    maxUsers: 25,
-    modules: ["crm", "notifications", "rbac", "projects", "invoicing", "helpdesk", "integrations"] as ModuleKey[],
-    features: [
-      "25 users",
-      "100GB storage",
-      "All Starter features",
-      "Project management",
-      "Invoicing & billing",
-      "Helpdesk tickets",
-      "Workflow automation",
-      "Priority support",
-    ],
-  },
-  {
-    key: "business" as PlanTier,
-    name: "Business",
-    price: 49,
-    description: "For established businesses at scale",
-    maxUsers: 100,
-    modules: ["crm", "notifications", "rbac", "projects", "invoicing", "helpdesk", "integrations", "marketing", "hrm", "monitoring"] as ModuleKey[],
-    features: [
-      "100 users",
-      "500GB storage",
-      "All Growth features",
-      "Marketing campaigns",
-      "HR management",
-      "Platform monitoring",
-      "Advanced analytics",
-      "Custom integrations",
-      "Dedicated support",
-    ],
-  },
-  {
-    key: "enterprise" as PlanTier,
-    name: "Enterprise",
-    price: 0,
-    description: "For large organizations with custom needs",
-    maxUsers: -1,
-    modules: ["crm", "notifications", "rbac", "projects", "invoicing", "helpdesk", "integrations", "marketing", "hrm", "monitoring", "agents", "advertising"] as ModuleKey[],
-    features: [
-      "Unlimited users",
-      "Unlimited storage",
-      "All Business features",
-      "AI Agents",
-      "Advertising management",
-      "Custom development",
-      "SLA guarantee",
-      "24/7 phone support",
-      "On-premise option",
-      "Custom contracts",
-    ],
-  },
-];
+// Pricing tiers — imported from shared modules.ts
+export { PLAN_TIERS as pricingTiers } from "./modules";
 
 // Generate structured data for SaaS
 export function generateSoftwareSchema(options: {

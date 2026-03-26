@@ -4,7 +4,6 @@ import { useSession } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users,
-  Layers,
   CreditCard,
   Activity,
   BarChart3,
@@ -16,12 +15,31 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  MessageSquare,
+  Truck,
+  Sparkles,
+  LayoutGrid,
+  Globe,
 } from "lucide-react";
+import { NUCLEO_MODULES, getModuleIcon, MODULE_PLANS, PLAN_TIERS } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin/modules")({
   component: AdminModulesPage,
 });
 
+// Build admin module display data from shared NUCLEO_MODULES
+// Admin view uses growth plan (not in public pricing) so we include it here
+
+const PLAN_KEYS = ["starter", "growth", "business", "enterprise"] as const;
+
+const PHASE_LABELS: Record<string, string> = {
+  core: "Core",
+  ops: "Operations",
+  growth: "Growth",
+  ai: "AI & Intelligence",
+};
+
+// Extended module details for admin view (with adoption/revenue data)
 const moduleDetails: Record<string, {
   name: string;
   icon: any;
@@ -31,122 +49,39 @@ const moduleDetails: Record<string, {
   revenue: number;
   plans: string[];
 }> = {
-  crm: {
-    name: "CRM",
-    icon: Users,
-    description: "Contacts, deals, leads, and activity tracking",
-    category: "core",
-    adoption: 100,
-    revenue: 156000,
-    plans: ["starter", "growth", "business", "enterprise"],
-  },
-  notifications: {
-    name: "Notifications",
-    icon: Activity,
-    description: "Email and in-app notifications",
-    category: "core",
-    adoption: 100,
-    revenue: 0,
-    plans: ["starter", "growth", "business", "enterprise"],
-  },
-  rbac: {
-    name: "Access Control",
-    icon: Settings,
-    description: "Roles, permissions, and team management",
-    category: "core",
-    adoption: 100,
-    revenue: 0,
-    plans: ["starter", "growth", "business", "enterprise"],
-  },
-  projects: {
-    name: "Projects",
-    icon: Box,
-    description: "Project management with tasks, milestones, resources",
-    category: "ops",
-    adoption: 78,
-    revenue: 46800,
-    plans: ["growth", "business", "enterprise"],
-  },
-  invoicing: {
-    name: "Invoicing",
-    icon: CreditCard,
-    description: "Invoice generation and payment tracking",
-    category: "ops",
-    adoption: 85,
-    revenue: 51000,
-    plans: ["growth", "business", "enterprise"],
-  },
-  helpdesk: {
-    name: "Helpdesk",
-    icon: FileText,
-    description: "Support tickets, queues, and SLAs",
-    category: "ops",
-    adoption: 62,
-    revenue: 37200,
-    plans: ["growth", "business", "enterprise"],
-  },
-  integrations: {
-    name: "Integrations",
-    icon: Puzzle,
-    description: "Workflow automation and webhooks",
-    category: "growth",
-    adoption: 67,
-    revenue: 40200,
-    plans: ["growth", "business", "enterprise"],
-  },
-  marketing: {
-    name: "Marketing",
-    icon: BarChart3,
-    description: "Campaign management and analytics",
-    category: "growth",
-    adoption: 34,
-    revenue: 20400,
-    plans: ["business", "enterprise"],
-  },
-  hrm: {
-    name: "HRM",
-    icon: Users,
-    description: "Employee management and payroll",
-    category: "ops",
-    adoption: 45,
-    revenue: 27000,
-    plans: ["business", "enterprise"],
-  },
-  monitoring: {
-    name: "Monitoring",
-    icon: Activity,
-    description: "Platform observability and alerts",
-    category: "ops",
-    adoption: 52,
-    revenue: 31200,
-    plans: ["business", "enterprise"],
-  },
-  agents: {
-    name: "AI",
-    icon: Bot,
-    description: "AI agents and business intelligence",
-    category: "ai",
-    adoption: 23,
-    revenue: 18400,
-    plans: ["enterprise"],
-  },
-  advertising: {
-    name: "Advertising",
-    icon: BarChart3,
-    description: "Ad campaign management",
-    category: "growth",
-    adoption: 18,
-    revenue: 10800,
-    plans: ["business", "enterprise"],
-  },
+  crm:            { name: "Core Workspace", icon: Users,         description: "Contacts, deals, leads, activity tracking", category: "core",   adoption: 100, revenue: 156000, plans: ["starter", "growth", "business", "enterprise"] },
+  notifications:  { name: "Notifications",  icon: Activity,     description: "Email and in-app notifications",          category: "core",   adoption: 100, revenue: 0,       plans: ["starter", "growth", "business", "enterprise"] },
+  rbac:           { name: "Access Control", icon: Settings,      description: "Roles, permissions, and team management", category: "core",   adoption: 100, revenue: 0,       plans: ["starter", "growth", "business", "enterprise"] },
+  projects:       { name: "Projects",       icon: Box,          description: "Project management with tasks, milestones",category: "ops",    adoption: 78,  revenue: 46800, plans: ["growth", "business", "enterprise"] },
+  helpdesk:       { name: "Helpdesk",       icon: FileText,     description: "Support tickets, queues, and SLAs",       category: "ops",    adoption: 62,  revenue: 37200, plans: ["growth", "business", "enterprise"] },
+  hrm:            { name: "HRM",            icon: Users,        description: "Employee management and payroll",          category: "ops",    adoption: 45,  revenue: 27000, plans: ["business", "enterprise"] },
+  inventory:      { name: "Inventory",       icon: LayoutGrid,   description: "Stock management and product catalog",     category: "ops",    adoption: 40,  revenue: 24000, plans: ["business", "enterprise"] },
+  monitoring:     { name: "Monitoring",      icon: Activity,     description: "Platform observability and alerts",       category: "ops",    adoption: 52,  revenue: 31200, plans: ["business", "enterprise"] },
+  communications: { name: "Communications", icon: MessageSquare,  description: "Omnichannel messaging, SMS, voice, video", category: "ops",    adoption: 30,  revenue: 18000, plans: ["business", "enterprise"] },
+  field_service:  { name: "Field Service", icon: Truck,        description: "Dispatch and field operations",           category: "ops",    adoption: 25,  revenue: 15000, plans: ["business", "enterprise"] },
+  queue:           { name: "Queue",          icon: FileText,     description: "Queue counters and service desk",         category: "ops",    adoption: 20,  revenue: 12000, plans: ["business", "enterprise"] },
+  devops:          { name: "DevOps",         icon: Globe,       description: "CI/CD pipelines and deployments",           category: "ops",    adoption: 22,  revenue: 13200, plans: ["business", "enterprise"] },
+  finance:         { name: "Finance",         icon: CreditCard,   description: "Expenses, budget tracking",                category: "ops",    adoption: 55,  revenue: 33000, plans: ["business", "enterprise"] },
+  invoicing:       { name: "Invoicing",      icon: CreditCard,   description: "Invoice generation and payment tracking",  category: "growth", adoption: 85,  revenue: 51000, plans: ["growth", "business", "enterprise"] },
+  marketing:       { name: "Marketing",       icon: BarChart3,    description: "Campaign management and analytics",         category: "growth", adoption: 34,  revenue: 20400, plans: ["business", "enterprise"] },
+  advertising:     { name: "Advertising",     icon: BarChart3,    description: "Ad campaign management",                   category: "growth", adoption: 18,  revenue: 10800, plans: ["business", "enterprise"] },
+  social:          { name: "Social Media",   icon: BarChart3,    description: "Social media scheduling and analytics",    category: "growth", adoption: 20,  revenue: 12000, plans: ["business", "enterprise"] },
+  campaign_pro:    { name: "Campaign Pro",   icon: BarChart3,    description: "Advanced campaign planning and A/B testing",category: "growth",adoption: 15, revenue: 9000,  plans: ["business", "enterprise"] },
+  assetlayer:      { name: "AssetLayer",    icon: Box,          description: "Digital asset storage and lifecycle",     category: "ops",    adoption: 28,  revenue: 16800, plans: ["business", "enterprise"] },
+  agents:          { name: "AI Agents",      icon: Bot,          description: "Autonomous AI agents",                    category: "ai",    adoption: 23,  revenue: 18400, plans: ["enterprise"] },
+  speech:          { name: "Speech & Voice", icon: Bot,          description: "Speech recognition and transcription",     category: "ai",    adoption: 12,  revenue: 7200,  plans: ["enterprise"] },
+  doclattice:      { name: "Doclattice AI",  icon: Sparkles,    description: "Document intake, OCR, extraction",        category: "ai",    adoption: 10,  revenue: 6000,  plans: ["enterprise"] },
 };
 
-const plans = [
-  { key: "starter", name: "Starter", price: 15, users: 5 },
-  { key: "growth", name: "Growth", price: 29, users: 25 },
-  { key: "business", name: "Business", price: 49, users: 100 },
-  { key: "enterprise", name: "Enterprise", price: 0, users: -1 },
-];
+const plans = PLAN_KEYS.map((key) => {
+  const tier = PLAN_TIERS.find((t) => t.key === key);
+  return {
+    key,
+    name: tier?.name ?? key,
+    price: tier?.monthlyPrice ?? 0,
+    users: tier?.maxUsers ?? 0,
+  };
+});
 
 function AdminModulesPage() {
   const { data: session, isPending } = useSession();

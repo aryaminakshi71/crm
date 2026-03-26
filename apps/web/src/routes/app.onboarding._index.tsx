@@ -9,6 +9,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Building2, Check, Database, Mail, Puzzle, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { NUCLEO_MODULES } from "@/lib/modules";
 
 export const Route = createFileRoute("/app/onboarding/_index")({
   component: OnboardingPage,
@@ -30,10 +31,8 @@ const INTEGRATION_OPTIONS = [
   "Microsoft 365", "Shopify", "Zendesk", "Mailchimp",
 ];
 
-const MODULE_OPTIONS = [
-  "CRM", "eCommerce", "Invoicing", "Projects", "HRM", "Helpdesk",
-  "Field Service", "DevOps", "Marketing", "Inventory",
-];
+// All 21 modules available for selection (uses NUCLEO_MODULES from modules.ts)
+const MODULE_OPTIONS = NUCLEO_MODULES.map((m) => m.name);
 
 function OnboardingPage() {
   const navigate = useNavigate();
