@@ -199,32 +199,16 @@ const modules = [
     icon: Brain,
     color: "text-pink-400",
     bg: "bg-pink-400/10",
-    title: "AI & BI",
+    title: "AI",
     description:
-      "Analytics, forecasting, KPIs, and business intelligence.",
+      "AI agents, analytics, forecasting, KPIs, and business intelligence.",
     href: "/app/intelligence",
     price: 19,
     features: [
-      "Custom reports",
-      "Predictive analytics",
-      "KPI dashboards",
-      "Data warehouse",
-    ],
-  },
-  {
-    icon: Bot,
-    color: "text-fuchsia-400",
-    bg: "bg-fuchsia-400/10",
-    title: "AI",
-    description:
-      "AI agents, business intelligence, analytics dashboards, and predictive insights.",
-    href: "/app/agents",
-    price: 29,
-    features: [
       "AI agents for autonomous tasks",
-      "Business intelligence dashboards",
-      "Natural language data queries",
+      "Custom reports & dashboards",
       "Predictive analytics",
+      "KPI tracking",
     ],
   },
   {
@@ -342,41 +326,57 @@ const modules = [
 ];
 
 const stats = [
-  { value: "500+", label: "Organizations" },
-  { value: "17+", label: "Business Modules" },
-  { value: "99.9%", label: "Uptime SLA" },
+  { value: "16", label: "Business Modules" },
+  { value: "Unified Platform", label: "CRM, HRM, Projects & More" },
+  { value: "14-Day", label: "Free Trial" },
   { value: "24/7", label: "AI Assistance" },
 ];
 
 const pricingPlans = [
   {
-    name: "Starter",
+    name: "Free",
     price: 0,
     period: "Free forever",
-    description: "Perfect for solo founders and small teams getting started.",
+    description: "Perfect for solo founders getting started.",
     features: [
-      "Up to 5 users",
-      "CRM + Sales Pipeline",
-      "10GB storage",
-      "Basic integrations",
+      "1 user",
+      "CRM — contacts, leads, deals pipeline",
+      "Projects — tasks & kanban board",
+      "100 MB storage",
       "Community support",
     ],
-    cta: "Get Started Free",
+    cta: "Get started free",
     popular: false,
     ctaVariant: "outline",
   },
   {
-    name: "Professional",
-    price: 79,
+    name: "Solo",
+    price: 5,
     period: "per user / month",
-    description:
-      "Full suite for growing businesses with HR, projects, and invoicing.",
+    description: "For freelancers and solo professionals.",
+    features: [
+      "Up to 3 users",
+      "Everything in Free",
+      "Helpdesk — tickets & SLA tracking",
+      "Finance — invoices & expenses",
+      "1 GB storage",
+    ],
+    cta: "Start free trial",
+    popular: false,
+    ctaVariant: "outline",
+  },
+  {
+    name: "Starter",
+    price: 12,
+    period: "per user / month",
+    description: "For growing teams that need full coverage.",
     features: [
       "Up to 25 users",
-      "CRM + HRM + Projects + Invoicing",
-      "100GB storage",
-      "Integration Hub",
-      "Priority support",
+      "Everything in Solo",
+      "HRM — employees & leave",
+      "Marketing — campaigns & analytics",
+      "Intelligence BI & AI agents",
+      "50 GB storage",
     ],
     cta: "Start 14-Day Trial",
     popular: true,
@@ -384,16 +384,16 @@ const pricingPlans = [
   },
   {
     name: "Business",
-    price: 149,
+    price: 25,
     period: "per user / month",
-    description:
-      "All core modules with AI for data-driven decisions.",
+    description: "For established companies with advanced needs.",
     features: [
-      "Unlimited users",
-      "All core modules included",
-      "AI (agents + business intelligence)",
-      "500GB storage",
-      "Dedicated support",
+      "Up to 200 users",
+      "Everything in Starter",
+      "Compliance & audit trails",
+      "Contracts & document lifecycle",
+      "Enterprise SSO (SAML/OIDC)",
+      "500 GB storage",
     ],
     cta: "Start 14-Day Trial",
     popular: false,
@@ -401,16 +401,16 @@ const pricingPlans = [
   },
   {
     name: "Enterprise",
-    price: 299,
-    period: "per user / month",
-    description: "All modules including DevOps, Communications, and custom solutions.",
+    price: 0,
+    period: "Custom pricing",
+    description: "Custom contracts for regulated organizations.",
     features: [
       "Everything in Business",
+      "Unlimited users",
       "DevOps CI/CD + Field Service",
       "Communications + Social Media",
-      "2TB storage",
-      "Custom integrations",
-      "99.99% SLA",
+      "Custom SLA",
+      "Dedicated infrastructure",
     ],
     cta: "Talk to Sales",
     popular: false,
@@ -419,29 +419,10 @@ const pricingPlans = [
 ];
 
 // Module pricing for Pay-As-You-Go
-const modulePricing = [
-  { name: "CRM & Sales", price: 9 },
-  { name: "HRM", price: 9 },
-  { name: "Projects", price: 9 },
-  { name: "Invoicing & Accounting", price: 12 },
-  { name: "Marketing", price: 9 },
-  { name: "Helpdesk & Support", price: 9 },
-  { name: "Field Service", price: 15 },
-  { name: "DevOps CI/CD", price: 19 },
-  { name: "AI (Agents + BI)", price: 29 },
-  { name: "Communications (Samva)", price: 15 },
-  { name: "Speech-to-Text (Avaan)", price: 12 },
-  { name: "Social Media (Fanbean)", price: 15 },
-  { name: "Integration Hub", price: 12 },
-  { name: "Monitoring", price: 12 },
-  { name: "Inventory & Stock", price: 9 },
-  { name: "eCommerce", price: 19 },
-];
-
 const testimonials = [
   {
     quote:
-      "Nucleo One replaced 7 separate tools for us. The HRM + Finance + CRM integration alone saved us 20 hours a week.",
+      "Nucleo One replaced our old tool stack. The HRM + Finance + CRM integration alone saved us 20 hours a week.",
     name: "Sarah Chen",
     role: "COO, FinScale",
     rating: 5,
@@ -487,12 +468,7 @@ const customerLogos = [
 ];
 
 // Security & compliance badges
-const securityBadges = [
-  { name: "SOC 2 Type II", icon: "🛡️" },
-  { name: "GDPR Compliant", icon: "🇪🇺" },
-  { name: "ISO 27001", icon: "🔒" },
-  { name: "HIPAA Ready", icon: "⚕️" },
-];
+const securityBadges: { name: string; icon: string }[] = [];
 
 // FAQ items
 const faqItems = [
@@ -762,7 +738,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Compliance, AI Agents, Integration Hub, and Observability into a single unified platform. Replace 17 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Finance, Projects, Helpdesk, Marketing, Compliance, AI Agents, Integration Hub, and Observability into a single unified platform. Replace 16 tools with one. Start free.";
 
     return {
       meta: [
@@ -837,11 +813,6 @@ export const Route = createFileRoute("/")({
               "contactType": "Customer Support",
               "availableLanguage": ["English"]
             }
-          },
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "reviewCount": "2847"
           },
           "areaServed": {
             "@type": "Place",
@@ -1355,7 +1326,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            17+ powerful modules. One unified platform.
+            16 powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -1410,13 +1381,13 @@ function LandingPage() {
                 ))}
               </div>
               <span className="text-muted-foreground">
-                <span className="font-semibold text-foreground">500+ teams</span> joined this month
+                <span className="font-semibold text-foreground">Free 14-day trial</span> — no credit card required
               </span>
             </div>
             <div className="flex items-center gap-1 text-amber-400">
               <Star className="h-4 w-4 fill-amber-400" />
-              <span className="font-semibold text-foreground">4.8/5</span>
-              <span className="text-muted-foreground">from 2,847 reviews</span>
+              <span className="font-semibold text-foreground">Loved by</span>
+              <span className="text-muted-foreground">growing teams</span>
             </div>
           </div>
         </div>
@@ -1484,7 +1455,7 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              17+ deeply integrated modules — CRM, HRM, Projects, Invoicing, Marketing,
+              16 deeply integrated modules — CRM, HRM, Projects, Invoicing, Marketing,
               Helpdesk, Field Service, DevOps, AI, Communications, and more.
             </p>
           </div>
@@ -1767,34 +1738,6 @@ function LandingPage() {
             All plans include a 14-day free trial. No credit card required.
             Cancel anytime.
           </p>
-
-          {/* Pay-As-You-Go Section */}
-          <div className="mt-16">
-            <div className="mb-8 text-center">
-              <h3 className="mb-2 font-bold text-2xl text-foreground">
-                Or Pay-As-You-Go
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Subscribe to only the modules you need. Starting at $9/module/month.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {modulePricing.map((mod) => (
-                <div
-                  key={mod.name}
-                  className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3"
-                >
-                  <span className="text-sm font-medium text-foreground">{mod.name}</span>
-                  <span className="text-sm text-muted-foreground">${mod.price}/mo</span>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-6 text-center text-muted-foreground text-xs">
-              Pay-As-You-Go allows 1-10 users per module. For more users, consider our Professional plan.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -1808,7 +1751,7 @@ function LandingPage() {
             Ready to Replace Your Entire Stack?
           </h2>
           <p className="mb-10 text-muted-foreground text-lg">
-            Join 500+ organizations who consolidated their tools into Nucleo One
+            Join growing teams who consolidated their tools into Nucleo One
             and gained back hours every week.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
