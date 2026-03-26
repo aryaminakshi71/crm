@@ -47,60 +47,49 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/_index")({
   component: FinanceOverview,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
-
-const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
-
-const revenueData = [
-  { month: "Jan", revenue: 45000, expenses: 32000 },
-  { month: "Feb", revenue: 52000, expenses: 35000 },
-  { month: "Mar", revenue: 48000, expenses: 33000 },
-  { month: "Apr", revenue: 61000, expenses: 38000 },
-  { month: "May", revenue: 55000, expenses: 36000 },
-  { month: "Jun", revenue: 67000, expenses: 40000 },
-];
-
-const invoiceStatusData = [
-  { status: "Paid", count: 45, color: "#34d399" },
-  { status: "Sent", count: 23, color: "#22d3ee" },
-  { status: "Overdue", count: 12, color: "#f472b6" },
-  { status: "Draft", count: 8, color: "#a78bfa" },
-];
-
-const recentInvoices = [
-  { id: "INV-2026-001", client: "Acme Corp", amount: 12500, status: "paid", date: "2026-03-15" },
-  { id: "INV-2026-002", client: "TechStart Inc", amount: 8750, status: "sent", date: "2026-03-18" },
-  { id: "INV-2026-003", client: "Global Solutions", amount: 15200, status: "overdue", date: "2026-03-10" },
-  { id: "INV-2026-004", client: "Innovate Co", amount: 6800, status: "draft", date: "2026-03-20" },
-];
-
-const recentExpenses = [
-  { id: "EXP-001", description: "Office Supplies", category: "Operations", amount: 450, date: "2026-03-18" },
-  { id: "EXP-002", description: "Software Subscription", category: "Software", amount: 1200, date: "2026-03-15" },
-  { id: "EXP-003", description: "Marketing Campaign", category: "Marketing", amount: 3500, date: "2026-03-12" },
-  { id: "EXP-004", description: "Travel Expenses", category: "Travel", amount: 890, date: "2026-03-10" },
-];
 
 function FinanceOverview() {
   const statsQuery = useQuery({
     queryKey: ["invoicing/stats"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/stats`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.stats(),
     retry: false,
   });
 
-  const stats = statsQuery.data;
+  const reportsQuery = useQuery({
+    queryKey: ["invoicing/reports/pl"],
+    queryFn: () => invoicingApi.reports.profitLoss({ dateRange: "ytd" }),
+    retry: false,
+  });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["invoicing/invoices"],
+    queryFn: () => invoicingApi.invoices.list({ limit: 5 }),
+    retry: false,
+  });
+
+  const expensesQuery = useQuery({
+    queryKey: ["invoicing/expenses"],
+    queryFn: () => invoicingApi.expenses.list({ limit: 5 }),
+    retry: false,
+  });
+
+  const stats = statsQuery.data as any;
+  const reports = reportsQuery.data as any;
+  const invoices = (invoicesQuery.data as any)?.data ?? [];
+  const expenses = (expensesQuery.data as any)?.data ?? [];
+
+  const isLoading = statsQuery.isLoading || reportsQuery.isLoading || invoicesQuery.isLoading || expensesQuery.isLoading;
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   if (statsQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -116,29 +105,29 @@ function FinanceOverview() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <MetricCard
           title="Total Revenue"
-          value="$327.5K"
-          trend="+18.2% vs last month"
+          value={stats?.totalRevenue != null ? `$${Number(stats.totalRevenue).toLocaleString()}` : "—"}
+          trend={stats?.revenueTrend ? `${stats.revenueTrend > 0 ? "+" : ""}${stats.revenueTrend.toFixed(1)}% vs last month` : "—"}
           icon={<DollarSign className="h-4 w-4" />}
           color="text-emerald-400"
         />
         <MetricCard
           title="Outstanding"
-          value="$128.4K"
-          trend="-5.3% vs last month"
+          value={stats?.outstanding != null ? `$${Number(stats.outstanding).toLocaleString()}` : "—"}
+          trend={stats?.outstandingTrend ? `${stats.outstandingTrend > 0 ? "+" : ""}${stats.outstandingTrend.toFixed(1)}% vs last month` : "—"}
           icon={<Wallet className="h-4 w-4" />}
           color="text-primary"
         />
         <MetricCard
           title="Overdue"
-          value="$23.5K"
-          trend="+12.1% vs last month"
+          value={stats?.overdue != null ? `$${Number(stats.overdue).toLocaleString()}` : "—"}
+          trend={stats?.overdueTrend ? `${stats.overdueTrend > 0 ? "+" : ""}${stats.overdueTrend.toFixed(1)}% vs last month` : "—"}
           icon={<AlertCircle className="h-4 w-4" />}
           color="text-rose-400"
         />
         <MetricCard
           title="Expenses"
-          value="$89.2K"
-          trend="+3.4% vs last month"
+          value={stats?.expenses != null ? `$${Number(stats.expenses).toLocaleString()}` : "—"}
+          trend={stats?.expenseTrend ? `${stats.expenseTrend > 0 ? "+" : ""}${stats.expenseTrend.toFixed(1)}% vs last month` : "—"}
           icon={<Receipt className="h-4 w-4" />}
           color="text-amber-400"
         />
@@ -156,7 +145,7 @@ function FinanceOverview() {
           <CardContent>
             <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
+                <AreaChart data={reports?.monthlyRevenue ?? []}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#34d399" stopOpacity={0.2} />
@@ -177,6 +166,7 @@ function FinanceOverview() {
                       borderRadius: "12px",
                       fontSize: "11px",
                     }}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, ""]}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#34d399" fillOpacity={1} fill="url(#colorRevenue)" strokeWidth={2} />
                   <Area type="monotone" dataKey="expenses" stroke="#f472b6" fillOpacity={1} fill="url(#colorExpenses)" strokeWidth={2} />
@@ -198,7 +188,12 @@ function FinanceOverview() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={invoiceStatusData}
+                    data={[
+                      { status: "Paid", count: stats?.paidInvoices ?? 0, color: "#34d399" },
+                      { status: "Sent", count: stats?.sentInvoices ?? 0, color: "#22d3ee" },
+                      { status: "Overdue", count: stats?.overdueInvoices ?? 0, color: "#f472b6" },
+                      { status: "Draft", count: stats?.draftInvoices ?? 0, color: "#a78bfa" },
+                    ]}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -206,7 +201,12 @@ function FinanceOverview() {
                     paddingAngle={2}
                     dataKey="count"
                   >
-                    {invoiceStatusData.map((entry, index) => (
+                    {[
+                      { status: "Paid", count: stats?.paidInvoices ?? 0, color: "#34d399" },
+                      { status: "Sent", count: stats?.sentInvoices ?? 0, color: "#22d3ee" },
+                      { status: "Overdue", count: stats?.overdueInvoices ?? 0, color: "#f472b6" },
+                      { status: "Draft", count: stats?.draftInvoices ?? 0, color: "#a78bfa" },
+                    ].map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -222,7 +222,12 @@ function FinanceOverview() {
               </ResponsiveContainer>
             </div>
             <div className="mt-4 space-y-2">
-              {invoiceStatusData.map((item) => (
+              {[
+                { status: "Paid", count: stats?.paidInvoices ?? 0, color: "#34d399" },
+                { status: "Sent", count: stats?.sentInvoices ?? 0, color: "#22d3ee" },
+                { status: "Overdue", count: stats?.overdueInvoices ?? 0, color: "#f472b6" },
+                { status: "Draft", count: stats?.draftInvoices ?? 0, color: "#a78bfa" },
+              ].map((item) => (
                 <div key={item.status} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -259,13 +264,17 @@ function FinanceOverview() {
                 </tr>
               </thead>
               <tbody>
-                {recentInvoices.map((invoice) => (
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">No invoices yet</td>
+                  </tr>
+                ) : invoices.map((invoice: any) => (
                   <tr key={invoice.id} className="border-b border-border">
-                    <td className="px-4 py-3 text-sm font-medium">{invoice.id}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{invoice.client}</td>
-                    <td className="px-4 py-3 text-sm font-medium">${invoice.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{invoice.invoiceNumber ?? invoice.id}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{invoice.clientName ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm font-medium">${Number(invoice.total ?? 0).toLocaleString()}</td>
                     <td className="px-4 py-3">
-                      <Badge variant={invoice.status === "paid" ? "success" : invoice.status === "sent" ? "primary" : invoice.status === "overdue" ? "danger" : "outline"}>
+                      <Badge variant={invoice.status === "paid" ? "success" : invoice.status === "sent" || invoice.status === "viewed" ? "primary" : invoice.status === "overdue" ? "danger" : "outline"}>
                         {invoice.status}
                       </Badge>
                     </td>
@@ -296,11 +305,15 @@ function FinanceOverview() {
                 </tr>
               </thead>
               <tbody>
-                {recentExpenses.map((expense) => (
+                {expenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">No expenses yet</td>
+                  </tr>
+                ) : expenses.map((expense: any) => (
                   <tr key={expense.id} className="border-b border-border">
                     <td className="px-4 py-3 text-sm font-medium">{expense.description}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{expense.category}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-rose-400">-${expense.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{expense.category ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-rose-400">-${Number(expense.amount ?? 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

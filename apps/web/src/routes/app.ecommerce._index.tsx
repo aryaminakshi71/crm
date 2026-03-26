@@ -58,6 +58,12 @@ function EcommerceDashboard() {
     placeholderData: (prev) => prev,
   });
 
+  const { data: productsData } = useQuery({
+    queryKey: ["ecommerce-products-top"],
+    queryFn: () => ecommerceApi.products.list({ limit: 5 }),
+    placeholderData: (prev) => prev,
+  });
+
   const stats = {
     revenue: (statsData as any)?.totalRevenue ?? (statsData as any)?.revenue ?? 0,
     revenueChange: (statsData as any)?.revenueChange ?? 0,
@@ -71,31 +77,13 @@ function EcommerceDashboard() {
     cartAbandonment: (statsData as any)?.cartAbandonment ?? 0,
   };
   const recentOrders = (ordersData as any)?.data ?? [];
-
-  const revenueData = [
-    { month: "Jan", revenue: 32000, orders: 245 },
-    { month: "Feb", revenue: 38000, orders: 289 },
-    { month: "Mar", revenue: 42000, orders: 312 },
-    { month: "Apr", revenue: 39500, orders: 298 },
-    { month: "May", revenue: 45000, orders: 334 },
-    { month: "Jun", revenue: 48750, orders: 342 },
-  ];
-
-  const salesByCategory = [
-    { name: "Electronics", value: 45, color: "#2172cd" },
-    { name: "Apparel", value: 25, color: "#8b5cf6" },
-    { name: "Home & Garden", value: 15, color: "#22c55e" },
-    { name: "Sports", value: 10, color: "#f59e0b" },
-    { name: "Other", value: 5, color: "#6b7280" },
-  ];
-
-  const topProducts = [
-    { id: "1", name: '55" 4K Smart TV', sales: 45, revenue: 22495.55, trend: "up" },
-    { id: "2", name: "Laptop 15\" Pro", sales: 32, revenue: 31996.68, trend: "up" },
-    { id: "3", name: "3-Seater Sofa", sales: 18, revenue: 17982.00, trend: "down" },
-    { id: "4", name: "Mountain Bike", sales: 15, revenue: 8999.85, trend: "up" },
-    { id: "5", name: "Winter Jacket", sales: 28, revenue: 4199.72, trend: "up" },
-  ];
+  const topProducts = ((productsData as any)?.data ?? []).slice(0, 5).map((p: any) => ({
+    id: p.id,
+    name: p.name ?? "Product",
+    sales: p.stock ?? 0,
+    revenue: (p.price ?? 0) * (p.stock ?? 0),
+    trend: "up",
+  }));
 
   if (statsError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -198,78 +186,25 @@ function EcommerceDashboard() {
             <CardTitle className="text-base font-semibold">Revenue (6 months)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2172cd" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#2172cd" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(v) => `$${v / 1000}k`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#2172cd"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+              {recentOrders.length > 0 ? `${recentOrders.length} recent orders loaded` : "No order data available"}
             </div>
           </CardContent>
         </Card>
 
-        {/* Sales by Category */}
+        {/* Top Products */}
         <Card className="border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Sales by Category</CardTitle>
+            <CardTitle className="text-base font-semibold">Top Products</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[160px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={salesByCategory}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {salesByCategory.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {salesByCategory.map((item) => (
-                <div key={item.name} className="flex items-center gap-2 text-xs">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-muted-foreground">{item.name}</span>
-                  <span className="font-medium ml-auto">{item.value}%</span>
+            <div className="space-y-3">
+              {topProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No products yet</p>
+              ) : topProducts.map((product: any) => (
+                <div key={product.id} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground font-medium">{product.name}</span>
+                  <span className="text-muted-foreground">{product.stock ?? 0} in stock</span>
                 </div>
               ))}
             </div>

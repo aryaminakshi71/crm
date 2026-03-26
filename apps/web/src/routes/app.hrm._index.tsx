@@ -1,6 +1,5 @@
 import { Button } from "@crm/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users,
@@ -23,78 +22,8 @@ export const Route = createFileRoute("/app/hrm/_index")({
   component: HrmDashboard,
 });
 
-// ─── Leave Balance Data ───────────────────────────────────────────────────────
-
-const leaveBalances = [
-  {
-    employee: "Sarah Chen",
-    avatar: "SC",
-    balances: [
-      { type: "Annual", used: 6, total: 20 },
-      { type: "Sick", used: 2, total: 10 },
-      { type: "Personal", used: 1, total: 5 },
-    ],
-  },
-  {
-    employee: "Marcus Johnson",
-    avatar: "MJ",
-    balances: [
-      { type: "Annual", used: 14, total: 20 },
-      { type: "Sick", used: 5, total: 10 },
-      { type: "Personal", used: 3, total: 5 },
-    ],
-  },
-  {
-    employee: "Emily Rodriguez",
-    avatar: "ER",
-    balances: [
-      { type: "Annual", used: 3, total: 20 },
-      { type: "Sick", used: 0, total: 10 },
-      { type: "Personal", used: 2, total: 5 },
-    ],
-  },
-];
-
-const leaveTypeColors: Record<string, string> = {
-  Annual: "bg-blue-500",
-  Sick: "bg-amber-500",
-  Personal: "bg-purple-500",
-};
-
-// ─── Onboarding Checklist Items ───────────────────────────────────────────────
-
-const ONBOARDING_ITEMS = [
-  "Complete profile",
-  "IT setup",
-  "Meet team",
-  "First 1:1",
-  "Review handbook",
-];
-
-const newHires = [
-  { id: "1", name: "David Kim", avatar: "DK", startDate: "Mar 1, 2026" },
-  { id: "2", name: "Lisa Park", avatar: "LP", startDate: "Mar 10, 2026" },
-];
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-const MOCK_SUMMARY = {
-  headcount: 0,
-  pendingLeave: 0,
-  requisitions: 0,
-  candidates: 0,
-  avgGoalProgress: 0,
-};
-
-const MOCK_EMPLOYEES: any[] = [];
-const MOCK_LEAVE_REQUESTS: any[] = [];
-const MOCK_REVIEWS: any[] = [];
 
 function HrmDashboard() {
-  // Onboarding checklist state: { [hireId]: Set<string> }
-  const [checkedItems, setCheckedItems] = useState<Record<string, Set<string>>>(
-    () => Object.fromEntries(newHires.map((h) => [h.id, new Set<string>()]))
-  );
 
   const summaryQuery = useQuery({
     queryKey: ["hrm-summary"],
@@ -142,15 +71,15 @@ function HrmDashboard() {
     {
       label: "Total Employees",
       value: String(summary.headcount || 0),
-      change: "+0",
+      change: "—",
       positive: true,
       icon: Users,
       color: "text-blue-500",
     },
     {
-      label: "New Hires (Month)",
-      value: "0",
-      change: "+0",
+      label: "Open Positions",
+      value: String(summary.requisitions || 0),
+      change: "—",
       positive: true,
       icon: UserPlus,
       color: "text-emerald-500",
@@ -158,31 +87,31 @@ function HrmDashboard() {
     {
       label: "Pending Leave Requests",
       value: String(summary.pendingLeave || 0),
-      change: "0",
+      change: "—",
       positive: false,
       icon: Calendar,
       color: "text-amber-500",
     },
     {
-      label: "Open Positions",
-      value: String(summary.requisitions || 0),
-      change: "+0",
+      label: "Active Candidates",
+      value: String(summary.candidates || 0),
+      change: "—",
       positive: true,
       icon: Briefcase,
       color: "text-purple-500",
     },
     {
-      label: "Avg Tenure",
-      value: "3.2 yrs",
-      change: "+0.2",
+      label: "Goal Progress",
+      value: `${Math.round(summary.avgGoalProgress || 0)}%`,
+      change: "—",
       positive: true,
       icon: Clock,
       color: "text-cyan-500",
     },
     {
-      label: "Turnover Rate",
-      value: "4.8%",
-      change: "-1.2%",
+      label: "Avg Tenure",
+      value: "—",
+      change: "—",
       positive: true,
       icon: TrendingUp,
       color: "text-green-500",
@@ -196,49 +125,33 @@ function HrmDashboard() {
     dept: emp.department || "General",
     startDate: emp.startDate ? new Date(emp.startDate).toLocaleDateString() : "N/A",
     avatar: (emp.firstName?.[0] || "") + (emp.lastName?.[0] || ""),
-  })) || [
-    { id: "1", name: "Sarah Chen", role: "Senior Engineer", dept: "Engineering", startDate: "Mar 15, 2026", avatar: "SC" },
-    { id: "2", name: "Marcus Johnson", role: "Product Manager", dept: "Product", startDate: "Mar 10, 2026", avatar: "MJ" },
-    { id: "3", name: "Emily Rodriguez", role: "UX Designer", dept: "Design", startDate: "Mar 8, 2026", avatar: "ER" },
-    { id: "4", name: "David Kim", role: "Sales Executive", dept: "Sales", startDate: "Mar 1, 2026", avatar: "DK" },
-  ];
+  }));
 
   const pendingLeaveData = (leaveQuery.data as any)?.data ?? [];
-  const pendingLeave = pendingLeaveData.length > 0 ? pendingLeaveData.map((lr: any) => ({
+  const pendingLeave = pendingLeaveData.map((lr: any) => ({
     id: lr.id,
     name: lr.employeeName || "Employee",
     type: lr.leaveType || "Leave",
     days: lr.days || 1,
     startDate: lr.startDate ? new Date(lr.startDate).toLocaleDateString() : "N/A",
     status: lr.status || "Pending",
-  })) : [
-    { id: "1", name: "Alex Thompson", type: "Annual Leave", days: 5, startDate: "Mar 25, 2026", status: "Pending" },
-    { id: "2", name: "Jessica Lee", type: "Sick Leave", days: 2, startDate: "Mar 22, 2026", status: "Pending" },
-    { id: "3", name: "Michael Brown", type: "Annual Leave", days: 10, startDate: "Apr 1, 2026", status: "Pending" },
-    { id: "4", name: "Amanda White", type: "Personal Day", days: 1, startDate: "Mar 24, 2026", status: "Pending" },
-  ];
+  }));
+
+  const employees = (employeesQuery.data as any)?.data ?? [];
+  const departmentCounts = employees.reduce<Record<string, number>>((acc, emp: any) => {
+    const dept = emp.department || "Other";
+    acc[dept] = (acc[dept] || 0) + 1;
+    return acc;
+  }, {});
 
   const reviewsData = (reviewsQuery.data as any)?.data ?? [];
-  const upcomingReviews = reviewsData.length > 0 ? reviewsData.map((r: any) => ({
+  const upcomingReviews = reviewsData.map((r: any) => ({
     id: r.id,
     name: r.employeeName || "Employee",
     dept: r.department || "General",
     dueDate: r.dueDate ? new Date(r.dueDate).toLocaleDateString() : "N/A",
     status: r.status || "Scheduled",
-  })) : [
-    { id: "1", name: "Chris Martinez", dept: "Engineering", dueDate: "Mar 25, 2026", status: "Scheduled" },
-    { id: "2", name: "Lisa Wang", dept: "Marketing", dueDate: "Mar 28, 2026", status: "Scheduled" },
-    { id: "3", name: "James Wilson", dept: "Sales", dueDate: "Apr 2, 2026", status: "Scheduled" },
-  ];
-
-  const toggleChecklist = (hireId: string, item: string) => {
-    setCheckedItems((prev) => {
-      const next = new Set(prev[hireId]);
-      if (next.has(item)) next.delete(item);
-      else next.add(item);
-      return { ...prev, [hireId]: next };
-    });
-  };
+  }));
 
   if (isLoading) {
     return (
@@ -355,114 +268,6 @@ function HrmDashboard() {
         </div>
       </div>
 
-      {/* Leave Balance Tracker + Onboarding Checklist */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Leave Balance Tracker */}
-        <div className="rounded-lg border border-border/60 bg-card">
-          <div className="border-b border-border/60 px-6 py-4 flex items-center justify-between">
-            <h2 className="font-semibold text-foreground">Leave Balance Tracker</h2>
-            <a href="/app/hrm/leave" className="text-sm text-primary hover:underline">
-              Manage
-            </a>
-          </div>
-          <div className="p-6 space-y-6">
-            {leaveBalances.map((emp) => (
-              <div key={emp.employee}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                    {emp.avatar}
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{emp.employee}</p>
-                </div>
-                <div className="space-y-2 pl-11">
-                  {emp.balances.map((b) => (
-                    <div key={b.type}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`h-2 w-2 rounded-full ${leaveTypeColors[b.type]}`}
-                          />
-                          <span className="text-xs text-muted-foreground">{b.type}</span>
-                        </div>
-                        <span className="text-xs font-medium text-foreground">
-                          {b.used}/{b.total} days
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${leaveTypeColors[b.type]}`}
-                          style={{ width: `${(b.used / b.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Onboarding Checklist */}
-        <div className="rounded-lg border border-border/60 bg-card">
-          <div className="border-b border-border/60 px-6 py-4">
-            <h2 className="font-semibold text-foreground">Onboarding Checklist</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">New hires in their first 30 days</p>
-          </div>
-          <div className="p-6 space-y-6">
-            {newHires.map((hire) => {
-              const checked = checkedItems[hire.id] ?? new Set();
-              const progress = Math.round((checked.size / ONBOARDING_ITEMS.length) * 100);
-              return (
-                <div key={hire.id}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-semibold">
-                      {hire.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{hire.name}</p>
-                      <p className="text-xs text-muted-foreground">Started {hire.startDate}</p>
-                    </div>
-                    <span className="text-xs font-semibold text-emerald-600">{progress}%</span>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="mb-3 pl-11">
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 pl-11">
-                    {ONBOARDING_ITEMS.map((item) => (
-                      <label
-                        key={item}
-                        className="flex items-center gap-2 cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked.has(item)}
-                          onChange={() => toggleChecklist(hire.id, item)}
-                          className="h-4 w-4 rounded border-border accent-emerald-500 cursor-pointer"
-                        />
-                        <span
-                          className={`text-sm transition-colors ${
-                            checked.has(item)
-                              ? "line-through text-muted-foreground"
-                              : "text-foreground group-hover:text-primary"
-                          }`}
-                        >
-                          {item}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Bottom Section */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -501,27 +306,27 @@ function HrmDashboard() {
           </div>
           <div className="p-6">
             <div className="space-y-3">
-              {[
-                { dept: "Engineering", count: 86, pct: 35 },
-                { dept: "Sales", count: 52, pct: 21 },
-                { dept: "Marketing", count: 34, pct: 14 },
-                { dept: "Product", count: 28, pct: 11 },
-                { dept: "Design", count: 18, pct: 7 },
-                { dept: "Operations", count: 30, pct: 12 },
-              ].map((d) => (
-                <div key={d.dept}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">{d.dept}</span>
-                    <span className="text-xs font-medium text-foreground">{d.count}</span>
+              {Object.entries(departmentCounts).slice(0, 6).map(([dept, count]) => {
+                const total = employees.length || 1;
+                const pct = Math.round(((count as number) / total) * 100);
+                return (
+                  <div key={dept}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">{dept}</span>
+                      <span className="text-xs font-medium text-foreground">{count}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: `${d.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
+              {Object.keys(departmentCounts).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No employee data available</p>
+              )}
             </div>
           </div>
         </div>

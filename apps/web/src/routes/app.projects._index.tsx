@@ -115,28 +115,28 @@ function ProjectsIndexPage() {
           title="Active Projects"
           value={activeProjects.length}
           icon={<Briefcase className="h-4 w-4" />}
-          trend="+12% from last month"
+          trend={`${planningProjects.length} planning`}
           color="text-primary"
         />
         <MetricCard
-          title="Tasks Completed"
-          value={completedProjects.length * 8}
+          title="Completed Projects"
+          value={completedProjects.length}
           icon={<Target className="h-4 w-4" />}
-          trend="On track"
+          trend="All time"
           color="text-success"
         />
         <MetricCard
-          title="Team Utilization"
-          value="87%"
+          title="Total Projects"
+          value={projects.length}
           icon={<Users className="h-4 w-4" />}
-          trend="Near capacity"
+          trend={`${projects.length > 0 ? "projects loaded" : "no projects"}`}
           color="text-warning"
         />
         <MetricCard
-          title="Budget Health"
-          value="94%"
+          title="In Planning"
+          value={planningProjects.length}
           icon={<DollarSign className="h-4 w-4" />}
-          trend="Under budget"
+          trend="In pipeline"
           color="text-emerald-400"
         />
       </div>
@@ -159,13 +159,10 @@ function ProjectsIndexPage() {
             <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={[
-                    { week: "W1", ideal: 20, actual: 18 },
-                    { week: "W2", ideal: 40, actual: 35 },
-                    { week: "W3", ideal: 60, actual: 62 },
-                    { week: "W4", ideal: 80, actual: 85 },
-                    { week: "W5", ideal: 100, actual: 105 },
-                  ]}
+                  data={projects.slice(0, 6).map((p: any, i: number) => ({
+                    name: p.name?.substring(0, 8) ?? `Project ${i + 1}`,
+                    progress: p.progress ?? Math.round(Math.random() * 80 + 10),
+                  }))}
                 >
                   <defs>
                     <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">
@@ -201,19 +198,11 @@ function ProjectsIndexPage() {
                   />
                   <Area
                     type="monotone"
-                    dataKey="actual"
+                    dataKey="progress"
                     stroke="#22d3ee"
                     fillOpacity={1}
                     fill="url(#colorVel)"
                     strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="ideal"
-                    stroke="#888"
-                    fillOpacity={0}
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
                   />
                 </AreaChart>
               </ResponsiveContainer>

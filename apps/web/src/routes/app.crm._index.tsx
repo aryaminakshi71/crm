@@ -85,18 +85,6 @@ function CrmOverview() {
     queryFn: () => dashboardApi.getStats(),
   });
 
-  // Fetch chart data from real API
-  const { data: chartsData } = useQuery({
-    queryKey: ["dashboard", "charts"],
-    queryFn: async () => {
-      const res = await fetch("/api/dashboard/charts", {
-        headers: { "Content-Type": "application/json" }
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
-  });
-
   // Fetch top deals from API
   const { data: topDealsData } = useQuery({
     queryKey: ["deals", "top"],
@@ -106,17 +94,17 @@ function CrmOverview() {
 
   // Map API response to display values with safe fallbacks
   const stats = {
-    totalLeads: dashboardStats?.totalContacts ?? 1247,
-    newLeadsThisWeek: 89,
-    leadsChange: dashboardStats?.contactsChange ?? 12.5,
-    activeDeals: dashboardStats?.activeDeals ?? 156,
-    dealsValue: 2450000,
-    dealsChange: dashboardStats?.dealsChange ?? 8.2,
-    wonDealsThisMonth: 23,
-    wonValue: dashboardStats?.revenue ?? 892000,
-    wonChange: dashboardStats?.revenueChange ?? 15.3,
-    conversionRate: dashboardStats?.conversionRate ?? 3.2,
-    conversionChange: dashboardStats?.conversionChange ?? 0.4,
+    totalLeads: dashboardStats?.totalContacts ?? 0,
+    newLeadsThisWeek: dashboardStats?.newLeadsThisWeek ?? 0,
+    leadsChange: dashboardStats?.contactsChange ?? 0,
+    activeDeals: dashboardStats?.activeDeals ?? 0,
+    dealsValue: dashboardStats?.dealsValue ?? 0,
+    dealsChange: dashboardStats?.dealsChange ?? 0,
+    wonDealsThisMonth: dashboardStats?.wonDealsThisMonth ?? 0,
+    wonValue: dashboardStats?.revenue ?? 0,
+    wonChange: dashboardStats?.revenueChange ?? 0,
+    conversionRate: dashboardStats?.conversionRate ?? 0,
+    conversionChange: dashboardStats?.conversionChange ?? 0,
   };
 
   // Static fallback pipeline data
@@ -124,8 +112,8 @@ function CrmOverview() {
   const EMPTY_REVENUE_DATA: any[] = [];
 
   // Use real data; show empty chart when no API data
-  const pipelineData = (chartsData as any)?.pipeline?.length ? (chartsData as any).pipeline : EMPTY_PIPELINE_DATA;
-  const revenueData = (chartsData as any)?.revenue?.length ? (chartsData as any).revenue : EMPTY_REVENUE_DATA;
+  const pipelineData = (dashboardStats as any)?.pipeline?.length ? (dashboardStats as any).pipeline : EMPTY_PIPELINE_DATA;
+  const revenueData = (dashboardStats as any)?.revenue?.length ? (dashboardStats as any).revenue : EMPTY_REVENUE_DATA;
 
   // Use API recent activities, fall back to empty array (shown only when loaded)
   const recentActivities = ((dashboardStats as any)?.recentActivities ?? []).map((a: { id: string; type: string; message: string; time: string }) => ({

@@ -10,64 +10,15 @@ import {
   Brain,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  Users,
-  Target,
-  AlertTriangle,
   BarChart3,
-  ArrowRight,
   Sparkles,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/_index")({
   component: IntelligenceDashboard,
 });
 
-const EMPTY_KPI_DATA: { label: string; value: string; change: string; trend: string }[] = [];
-
-const revenueData = [
-  { month: "Jan", revenue: 85000, target: 80000 },
-  { month: "Feb", revenue: 92000, target: 85000 },
-  { month: "Mar", revenue: 88000, target: 90000 },
-  { month: "Apr", revenue: 105000, target: 95000 },
-  { month: "May", revenue: 112000, target: 100000 },
-  { month: "Jun", revenue: 118000, target: 105000 },
-];
-
-const customerData = [
-  { month: "Jan", new: 420, returning: 1200 },
-  { month: "Feb", new: 480, returning: 1350 },
-  { month: "Mar", new: 510, returning: 1420 },
-  { month: "Apr", new: 580, returning: 1580 },
-  { month: "May", new: 620, returning: 1720 },
-  { month: "Jun", new: 710, returning: 1890 },
-];
-
-const topMetrics = [
-  { label: "Customer Acquisition", value: "2,320", change: "+18%", icon: Users, color: "text-blue-500" },
-  { label: "Monthly Recurring Revenue", value: "$124K", change: "+12%", icon: DollarSign, color: "text-green-500" },
-  { label: "Churn Rate", value: "2.1%", change: "-0.3%", icon: AlertTriangle, color: "text-amber-500" },
-  { label: "NPS Score", value: "72", change: "+4", icon: Target, color: "text-purple-500" },
-];
-
-const quickInsights = [
-  { type: "success", message: "Revenue up 12% vs last month - on track to exceed Q2 target" },
-  { type: "warning", message: "Churn rate increased 0.3% - consider retention campaign" },
-  { type: "info", message: "New customer acquisition cost down 8% due to SEO improvements" },
-];
 
 function IntelligenceDashboard() {
   const summaryQuery = useQuery({
@@ -77,16 +28,21 @@ function IntelligenceDashboard() {
     placeholderData: (prev) => prev,
   });
 
-  const summary = summaryQuery.data;
+  const summary = summaryQuery.data as any;
 
   const kpiData = summary
     ? [
-        { label: "Total Revenue", value: "$1.24M", change: "+12.5%", trend: "up" },
-        { label: "Customers", value: "8,432", change: "+5.2%", trend: "up" },
-        { label: "Agent Runs", value: String((summary as any).agentRuns ?? 0), change: "", trend: "up" },
-        { label: "Forecasts", value: String((summary as any).forecasts ?? 0), change: "", trend: "up" },
+        { label: "Agent Runs", value: String(summary.agentRuns ?? 0), change: "", trend: "up" },
+        { label: "Forecasts", value: String(summary.forecasts ?? 0), change: "", trend: "up" },
+        { label: "KPIs Tracked", value: String(summary.kpis ?? 0), change: "", trend: "up" },
+        { label: "Latest Forecast", value: summary.latestForecast ? "Active" : "—", change: "", trend: summary.latestForecast ? "up" : "neutral" },
       ]
-    : EMPTY_KPI_DATA;
+    : [
+        { label: "Agent Runs", value: "—", change: "", trend: "neutral" },
+        { label: "Forecasts", value: "—", change: "", trend: "neutral" },
+        { label: "KPIs Tracked", value: "—", change: "", trend: "neutral" },
+        { label: "Latest Forecast", value: "—", change: "", trend: "neutral" },
+      ];
 
   if (summaryQuery.isError) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -176,56 +132,23 @@ function IntelligenceDashboard() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card className="border-border/60">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-foreground mb-4">Revenue vs Target</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={revenueData}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#888" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#888" />
-                <Tooltip />
-                <Area type="monotone" dataKey="target" stroke="#ccc" fill="#f0f0f0" name="Target" />
-                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f620" name="Revenue" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Customer Acquisition */}
-        <Card className="border-border/60">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-foreground mb-4">Customer Acquisition</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={customerData}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#888" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#888" />
-                <Tooltip />
-                <Bar dataKey="new" fill="#3b82f6" name="New Customers" />
-                <Bar dataKey="returning" fill="#10b981" name="Returning" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Quick Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {topMetrics.map((metric) => (
-          <Card key={metric.label} className="border-border/60 hover:border-primary/30 transition-colors">
+        {kpiData.map((kpi) => (
+          <Card key={kpi.label} className="border-border/60">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <metric.icon className={`h-5 w-5 ${metric.color}`} />
+              <p className="text-muted-foreground text-xs">{kpi.label}</p>
+              <p className="font-black text-2xl text-foreground mt-1">{kpi.value}</p>
+              <div className="flex items-center gap-1 mt-1">
+                {kpi.trend === "up" ? (
+                  <TrendingUp className="h-3 w-3 text-green-500" />
+                ) : kpi.trend === "down" ? (
+                  <TrendingDown className="h-3 w-3 text-red-500" />
+                ) : null}
                 <span className={`text-xs ${
-                  metric.change.startsWith("+") ? "text-green-500" :
-                  metric.change.startsWith("-") && metric.label !== "Churn Rate" ? "text-red-500" :
-                  "text-green-500"
-                }`}>{metric.change}</span>
+                  kpi.trend === "up" ? "text-green-500" : kpi.trend === "down" ? "text-red-500" : "text-muted-foreground"
+                }`}>{kpi.change || "—"}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{metric.value}</p>
-              <p className="text-xs text-muted-foreground">{metric.label}</p>
             </CardContent>
           </Card>
         ))}

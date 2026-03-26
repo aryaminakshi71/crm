@@ -409,7 +409,7 @@ const COMPARISON = [
 const FAQS = [
   {
     q: "Is there really a free plan?",
-    a: "Yes! Our Free plan is free forever with up to 3 users, 1GB storage, and core CRM + Projects features. No credit card required.",
+    a: "Yes! Our Free plan is free forever with 1 user, 100MB storage, and core CRM + Projects features. No credit card required.",
   },
   {
     q: "Can I change plans at any time?",

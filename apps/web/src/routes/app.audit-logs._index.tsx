@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { nucleoApi } from "@/lib/api";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -29,10 +30,6 @@ export const Route = createFileRoute("/app/audit-logs/_index")({
   validateSearch: searchSchema,
   component: AuditLogsPage,
 });
-
-const ORG_HEADER = {
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-};
 
 const actionColors: Record<string, string> = {
   create: "bg-green-100 text-green-800",
@@ -58,23 +55,7 @@ function AuditLogsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["audit-logs", page, dateRange, action, moduleFilter],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        limit: String(LIMIT),
-        page: String(page),
-      });
-      if (dateRange !== "all") {
-        const now = new Date();
-        const from = new Date(now);
-        if (dateRange === "today") from.setHours(0, 0, 0, 0);
-        else if (dateRange === "7d") from.setDate(from.getDate() - 7);
-        else if (dateRange === "30d") from.setDate(from.getDate() - 30);
-        params.set("from", from.toISOString());
-      }
-      if (action !== "all") params.set("action", action);
-      if (moduleFilter !== "all") params.set("module", moduleFilter);
-      const res = await fetch(`/api/v1/audit-logs?${params}`, { headers: ORG_HEADER });
-      if (!res.ok) throw new Error("Failed to fetch audit logs");
-      return res.json();
+      return nucleoApi.enterprise.auditEvents.list({ page, limit: LIMIT });
     },
     refetchInterval: 60000,
   });

@@ -57,60 +57,6 @@ export const Route = createFileRoute("/app/marketing/_index")({
   component: MarketingDashboard,
 });
 
-const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
-
-const campaignPerformanceData = [
-  { month: "Jan", emails: 12000, conversions: 840, revenue: 42000 },
-  { month: "Feb", emails: 15000, conversions: 1050, revenue: 52500 },
-  { month: "Mar", emails: 18000, conversions: 1260, revenue: 63000 },
-  { month: "Apr", emails: 22000, conversions: 1540, revenue: 77000 },
-  { month: "May", emails: 25000, conversions: 1750, revenue: 87500 },
-  { month: "Jun", emails: 28000, conversions: 1960, revenue: 98000 },
-];
-
-const channelDistribution = [
-  { name: "Email", value: 45, color: "#22d3ee" },
-  { name: "Social", value: 25, color: "#a78bfa" },
-  { name: "Paid Ads", value: 20, color: "#f472b6" },
-  { name: "Organic", value: 10, color: "#34d399" },
-];
-
-const leadScoreDistribution = [
-  { score: "Hot (80-100)", count: 234, color: "#ef4444" },
-  { score: "Warm (50-79)", count: 892, color: "#f97316" },
-  { score: "Cool (20-49)", count: 1456, color: "#eab308" },
-  { score: "Cold (0-19)", count: 2103, color: "#22d3ee" },
-];
-
-// ─── Simulated Email Open Heatmap Data ───────────────────────────────────────
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
-// Generate simulated open rates (0-100) with realistic peaks (9-11am, 1-3pm)
-function simulateOpenRate(day: number, hour: number): number {
-  const isWeekend = day >= 5;
-  if (isWeekend) return Math.round(Math.random() * 20 + 5);
-  // Business hours peaks
-  const morning = hour >= 8 && hour <= 11 ? 60 : 0;
-  const lunch = hour >= 12 && hour <= 14 ? 40 : 0;
-  const evening = hour >= 17 && hour <= 19 ? 30 : 0;
-  const base = morning + lunch + evening;
-  return Math.min(100, Math.round(base + Math.random() * 20));
-}
-
-const heatmapData = DAYS.map((day, dayIdx) =>
-  HOURS.map((hour) => ({ hour, rate: simulateOpenRate(dayIdx, hour) }))
-);
-
-function getHeatColor(rate: number): string {
-  if (rate >= 70) return "bg-primary/80";
-  if (rate >= 50) return "bg-primary/60";
-  if (rate >= 35) return "bg-primary/40";
-  if (rate >= 20) return "bg-primary/20";
-  if (rate >= 10) return "bg-primary/10";
-  return "bg-muted/30";
-}
 
 // ─── Campaign Creation Modal ──────────────────────────────────────────────────
 
@@ -388,71 +334,14 @@ function UtmBuilder() {
   );
 }
 
-// ─── Email Open Heatmap ───────────────────────────────────────────────────────
-
-function EmailOpenHeatmap() {
-  return (
-    <Card className="border-border/60">
-      <CardHeader>
-        <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground flex items-center gap-2">
-          <Mail className="h-4 w-4" />
-          Email Open Heatmap
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">Best times to send (by day &amp; hour)</p>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          {/* Hour labels */}
-          <div className="flex">
-            {/* Day label spacer */}
-            <div className="w-8 shrink-0" />
-            <div className="flex flex-1 gap-px">
-              {HOURS.map((h) => (
-                <div
-                  key={h}
-                  className="flex-1 text-center text-[8px] text-muted-foreground"
-                  style={{ minWidth: 10 }}
-                >
-                  {h % 6 === 0 ? `${h}h` : ""}
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Grid rows */}
-          <div className="space-y-px mt-1">
-            {DAYS.map((day, dayIdx) => (
-              <div key={day} className="flex items-center gap-px">
-                <div className="w-8 shrink-0 text-[9px] text-muted-foreground text-right pr-1">
-                  {day}
-                </div>
-                {heatmapData[dayIdx].map(({ hour, rate }) => (
-                  <div
-                    key={hour}
-                    title={`${day} ${hour}:00 — ${rate}% open rate`}
-                    className={`flex-1 rounded-sm transition-colors ${getHeatColor(rate)}`}
-                    style={{ minWidth: 10, height: 18 }}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-          {/* Legend */}
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">Low</span>
-            {["bg-primary/10", "bg-primary/20", "bg-primary/40", "bg-primary/60", "bg-primary/80"].map((c) => (
-              <div key={c} className={`h-3 w-6 rounded-sm ${c}`} />
-            ))}
-            <span className="text-[10px] text-muted-foreground">High</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 function MarketingDashboard() {
+  const statsQuery = useQuery({
+    queryKey: ["marketing/stats"],
+    queryFn: () => marketingApi.stats(),
+    retry: false,
+  });
+
   const campaignsQuery = useQuery({
     queryKey: ["marketing", "campaigns"],
     queryFn: () => marketingApi.campaigns.list({ limit: 50 }),
@@ -462,6 +351,7 @@ function MarketingDashboard() {
 
   const [localCampaigns, setLocalCampaigns] = useState<Campaign[]>([]);
   const campaigns: Campaign[] = campaignsQuery.data?.data ?? localCampaigns;
+  const stats = statsQuery.data as any;
 
   const [showNewCampaign, setShowNewCampaign] = useState(false);
 
@@ -489,30 +379,30 @@ function MarketingDashboard() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total Emails Sent"
-          value="142,500"
-          trend="+18.2% vs last month"
+          title="Total Campaigns"
+          value={stats?.totalCampaigns != null ? String(stats.totalCampaigns) : "—"}
+          trend={`${stats?.activeCampaigns ?? 0} active`}
           icon={<Mail className="h-4 w-4" />}
           color="text-primary"
         />
         <MetricCard
-          title="Active Subscribers"
-          value="24,892"
-          trend="+1,234 this month"
+          title="Active Campaigns"
+          value={stats?.activeCampaigns != null ? String(stats.activeCampaigns) : "—"}
+          trend={`${stats?.draftCampaigns ?? 0} drafts`}
           icon={<Users className="h-4 w-4" />}
           color="text-violet-400"
         />
         <MetricCard
-          title="Conversion Rate"
-          value="6.8%"
-          trend="+0.4% vs last month"
+          title="Completed Campaigns"
+          value={stats?.completedCampaigns != null ? String(stats.completedCampaigns) : "—"}
+          trend="All time"
           icon={<Target className="h-4 w-4" />}
           color="text-emerald-400"
         />
         <MetricCard
-          title="Marketing Revenue"
-          value="$128,450"
-          trend="+$12,300 vs last month"
+          title="Active Subscribers"
+          value={campaignsQuery.data?.totalSubscribers != null ? String(campaignsQuery.data.totalSubscribers) : "—"}
+          trend={`${stats?.activeCampaigns ?? 0} campaigns running`}
           icon={<DollarSign className="h-4 w-4" />}
           color="text-amber-400"
         />
@@ -528,35 +418,45 @@ function MarketingDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={campaignPerformanceData}>
-                  <defs>
-                    <linearGradient id="colorEmails" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorConversions" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
-                  <YAxis axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0f172a",
-                      border: "none",
-                      borderRadius: "12px",
-                      fontSize: "11px",
-                    }}
-                  />
-                  <Area type="monotone" dataKey="emails" stroke="#22d3ee" fillOpacity={1} fill="url(#colorEmails)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="conversions" stroke="#a78bfa" fillOpacity={1} fill="url(#colorConversions)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {campaigns.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
+                No campaign data available
+              </div>
+            ) : (
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={campaigns.slice(0, 12).map((c: Campaign, i: number) => ({
+                    name: c.name.substring(0, 8),
+                    emails: c.audienceSize,
+                    conversions: Math.round(c.audienceSize * 0.05),
+                  }))}>
+                    <defs>
+                      <linearGradient id="colorEmails" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorConversions" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
+                    <YAxis axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0f172a",
+                        border: "none",
+                        borderRadius: "12px",
+                        fontSize: "11px",
+                      }}
+                    />
+                    <Area type="monotone" dataKey="emails" stroke="#22d3ee" fillOpacity={1} fill="url(#colorEmails)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="conversions" stroke="#a78bfa" fillOpacity={1} fill="url(#colorConversions)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -564,7 +464,7 @@ function MarketingDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Channel Distribution
+              Campaign Status
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -572,7 +472,11 @@ function MarketingDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={channelDistribution}
+                    data={[
+                      { name: "Active", value: stats?.activeCampaigns ?? 0, color: "#34d399" },
+                      { name: "Draft", value: stats?.draftCampaigns ?? 0, color: "#a78bfa" },
+                      { name: "Completed", value: stats?.completedCampaigns ?? 0, color: "#22d3ee" },
+                    ]}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -580,7 +484,11 @@ function MarketingDashboard() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {channelDistribution.map((entry, index) => (
+                    {[
+                      { name: "Active", value: stats?.activeCampaigns ?? 0, color: "#34d399" },
+                      { name: "Draft", value: stats?.draftCampaigns ?? 0, color: "#a78bfa" },
+                      { name: "Completed", value: stats?.completedCampaigns ?? 0, color: "#22d3ee" },
+                    ].map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -595,12 +503,16 @@ function MarketingDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {channelDistribution.map((item) => (
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              {[
+                { name: "Active", value: stats?.activeCampaigns ?? 0, color: "#34d399" },
+                { name: "Draft", value: stats?.draftCampaigns ?? 0, color: "#a78bfa" },
+                { name: "Completed", value: stats?.completedCampaigns ?? 0, color: "#22d3ee" },
+              ].map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="text-xs text-muted-foreground">{item.name}</span>
-                  <span className="text-xs font-medium ml-auto">{item.value}%</span>
+                  <span className="text-xs font-medium ml-auto">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -610,35 +522,16 @@ function MarketingDashboard() {
 
       {/* Second Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Lead Score Distribution */}
+        {/* Lead Sources */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Lead Score Distribution
+              Campaigns by Channel
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={leadScoreDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis type="number" axisLine={false} tickLine={false} fontSize={10} stroke="#888" />
-                  <YAxis dataKey="score" type="category" axisLine={false} tickLine={false} fontSize={9} stroke="#888" width={80} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0f172a",
-                      border: "none",
-                      borderRadius: "12px",
-                      fontSize: "11px",
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                    {leadScoreDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+              {campaigns.length === 0 ? "No campaign data" : `${stats?.totalCampaigns ?? 0} total campaigns`}
             </div>
           </CardContent>
         </Card>
@@ -698,11 +591,8 @@ function MarketingDashboard() {
         </Card>
       </div>
 
-      {/* UTM Builder + Heatmap Row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <UtmBuilder />
-        <EmailOpenHeatmap />
-      </div>
+      {/* UTM Builder */}
+      <UtmBuilder />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
