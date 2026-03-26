@@ -318,7 +318,7 @@ function CompareIndexPage() {
             ))}
           </div>
           <p className="text-foreground text-xl font-medium italic mb-4">
-            "We saved $40,000/year switching from Salesforce and got better features.
+            "We switched from Salesforce and got better features at a fraction of the cost.
             Nucleo One is what Salesforce should have been."
           </p>
           <p className="text-muted-foreground text-sm">

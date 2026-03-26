@@ -422,28 +422,28 @@ const pricingPlans = [
 const testimonials = [
   {
     quote:
-      "Nucleo One replaced our old tool stack. The HRM + Finance + CRM integration alone saved us 20 hours a week.",
+      "Nucleo One replaced our old tool stack. The HRM + Finance + CRM integration alone has been a game changer for our operations.",
     name: "Sarah Chen",
     role: "COO, FinScale",
     rating: 5,
   },
   {
     quote:
-      "The AI triage on Helpdesk is phenomenal. Our first-response time dropped from 4 hours to under 20 minutes.",
+      "The AI triage on Helpdesk is phenomenal. Our team can now focus on solving complex customer issues instead of triaging tickets.",
     name: "Marcus Webb",
     role: "Head of Support, Lyra",
     rating: 5,
   },
   {
     quote:
-      "The Integration Hub connected all our apps automatically. Our Zapier bill went to zero in month 2.",
+      "The Integration Hub connected all our apps automatically. We consolidated our tool stack and simplified our workflow.",
     name: "James Liu",
     role: "CTO, DataSync",
     rating: 5,
   },
   {
     quote:
-      "AI Agents handle 60% of our Level 1 support tickets. Our team now focuses on complex customer issues only.",
+      "AI Agents handle a significant portion of our Level 1 support tickets. Our team now focuses on complex customer issues only.",
     name: "Elena Rodriguez",
     role: "VP Support, TechFlow",
     rating: 5,
