@@ -12,6 +12,7 @@ import {
   Check,
   ChevronRight,
   Cpu,
+  CreditCard,
   FileText,
   FolderKanban,
   Gauge,
@@ -71,9 +72,9 @@ const modules = [
     icon: Building2,
     color: "text-blue-400",
     bg: "bg-blue-400/10",
-    title: "CRM & Sales",
+    title: "CRM",
     description:
-      "Leads, deals, pipeline, forecasts, and sales automation.",
+      "Contacts, deals, leads, pipeline, and activity tracking.",
     href: "/app/crm",
     price: 9,
     features: [
@@ -119,9 +120,9 @@ const modules = [
     icon: FileText,
     color: "text-green-400",
     bg: "bg-green-400/10",
-    title: "Invoicing & Accounting",
+    title: "Invoicing",
     description:
-      "Invoices, payments, double-entry accounting, and tax calculations.",
+      "Professional invoices, payment tracking, and billing management.",
     href: "/app/invoicing",
     price: 12,
     features: [
@@ -169,7 +170,7 @@ const modules = [
     bg: "bg-orange-400/10",
     title: "Field Service",
     description:
-      "Dispatch, routing, technician management, and SLA tracking.",
+      "Smart dispatch, route optimization, technician tracking, and job scheduling.",
     href: "/app/field-service",
     price: 15,
     features: [
@@ -183,9 +184,9 @@ const modules = [
     icon: GitBranch,
     color: "text-indigo-400",
     bg: "bg-indigo-400/10",
-    title: "DevOps CI/CD",
+    title: "DevOps",
     description:
-      "Pipelines, deployments, infrastructure as code.",
+      "CI/CD pipelines, automated deployments, and infrastructure management.",
     href: "/app/devops",
     price: 19,
     features: [
@@ -196,13 +197,13 @@ const modules = [
     ],
   },
   {
-    icon: Brain,
+    icon: Bot,
     color: "text-pink-400",
     bg: "bg-pink-400/10",
-    title: "AI",
+    title: "AI Agents",
     description:
-      "AI agents, analytics, forecasting, KPIs, and business intelligence.",
-    href: "/app/intelligence",
+      "Autonomous AI agents for automation, support, and business intelligence.",
+    href: "/app/agents",
     price: 19,
     features: [
       "AI agents for autonomous tasks",
@@ -217,7 +218,7 @@ const modules = [
     bg: "bg-teal-400/10",
     title: "Communications",
     description:
-      "SMS, Voice, Video, Chat - unified communications (Samva API).",
+      "Omnichannel messaging — SMS, voice, video, and chat.",
     href: "/app/communications",
     price: 15,
     features: [
@@ -231,9 +232,9 @@ const modules = [
     icon: Mic,
     color: "text-rose-400",
     bg: "bg-rose-400/10",
-    title: "Speech-to-Text",
+    title: "Speech & Voice",
     description:
-      "Transcription, voice commands, meeting notes (Avaan API).",
+      "Audio transcription, real-time streaming, and meeting notes.",
     href: "/app/speech",
     price: 12,
     features: [
@@ -249,7 +250,7 @@ const modules = [
     bg: "bg-violet-400/10",
     title: "Social Media",
     description:
-      "Scheduling, analytics, social listening (Fanbean API).",
+      "Post scheduling, analytics, social listening, and inbox management.",
     href: "/app/social",
     price: 15,
     features: [
@@ -260,28 +261,12 @@ const modules = [
     ],
   },
   {
-    icon: Puzzle,
-    color: "text-cyan-400",
-    bg: "bg-cyan-400/10",
-    title: "Integration Hub",
-    description:
-      "Connect any app with workflow automation, webhooks, and event bus.",
-    href: "/app/integrations",
-    price: 12,
-    features: [
-      "300+ connectors",
-      "Workflow builder",
-      "Webhook receiver",
-      "Event subscriptions",
-    ],
-  },
-  {
     icon: Gauge,
     color: "text-sky-400",
     bg: "bg-sky-400/10",
     title: "Monitoring",
     description:
-      "Analytics, errors, uptime, performance, and observability.",
+      "Error tracking, uptime checks, performance metrics, and log aggregation.",
     href: "/app/monitoring",
     price: 12,
     features: [
@@ -295,9 +280,9 @@ const modules = [
     icon: Package,
     color: "text-lime-400",
     bg: "bg-lime-400/10",
-    title: "Inventory & Stock",
+    title: "Inventory",
     description:
-      "Products, warehouses, orders, and stock management.",
+      "Product catalog, stock management, warehouses, and transfers.",
     href: "/app/inventory",
     price: 9,
     features: [
@@ -308,25 +293,57 @@ const modules = [
     ],
   },
   {
-    icon: ShoppingCart,
-    color: "text-amber-500",
-    bg: "bg-amber-500/10",
-    title: "eCommerce",
+    icon: CreditCard,
+    color: "text-yellow-400",
+    bg: "bg-yellow-400/10",
+    title: "Finance",
     description:
-      "Store, cart, orders, payments, and shipping.",
-    href: "/app/ecommerce",
-    price: 19,
+      "Expenses, budget tracking, financial reporting, and cost control.",
+    href: "/app/finance",
+    price: 9,
     features: [
-      "Store builder",
-      "Shopping cart",
-      "Payment processing",
-      "Shipping integration",
+      "Expense tracking",
+      "Budget management",
+      "Financial reports",
+      "Cost control",
+    ],
+  },
+  {
+    icon: BarChart3,
+    color: "text-orange-400",
+    bg: "bg-orange-400/10",
+    title: "Advertising",
+    description:
+      "Ad campaigns across Google, Meta, and LinkedIn with AI-powered optimization.",
+    href: "/app/advertising",
+    price: 15,
+    features: [
+      "Multi-platform ads",
+      "AI optimization",
+      "Budget control",
+      "Performance analytics",
+    ],
+  },
+  {
+    icon: BarChart3,
+    color: "text-cyan-400",
+    bg: "bg-cyan-400/10",
+    title: "Campaign Pro",
+    description:
+      "Advanced campaign planning, A/B testing, and multi-channel automation.",
+    href: "/app/campaign_pro",
+    price: 15,
+    features: [
+      "A/B testing",
+      "Multi-channel automation",
+      "Campaign analytics",
+      "Audience segmentation",
     ],
   },
 ];
 
 const stats = [
-  { value: "16", label: "Business Modules" },
+  { value: "17", label: "Business Modules" },
   { value: "Unified Platform", label: "CRM, HRM, Projects & More" },
   { value: "14-Day", label: "Free Trial" },
   { value: "24/7", label: "AI Assistance" },
@@ -350,32 +367,15 @@ const pricingPlans = [
     ctaVariant: "outline",
   },
   {
-    name: "Solo",
-    price: 5,
-    period: "per user / month",
-    description: "For freelancers and solo professionals.",
-    features: [
-      "Up to 3 users",
-      "Everything in Free",
-      "Helpdesk — tickets & SLA tracking",
-      "Finance — invoices & expenses",
-      "1 GB storage",
-    ],
-    cta: "Start free trial",
-    popular: false,
-    ctaVariant: "outline",
-  },
-  {
     name: "Starter",
     price: 12,
     period: "per user / month",
     description: "For growing teams that need full coverage.",
     features: [
       "Up to 25 users",
-      "Everything in Solo",
-      "HRM — employees & leave",
-      "Marketing — campaigns & analytics",
-      "Intelligence BI & AI agents",
+      "CRM, Projects, Helpdesk",
+      "Invoicing, HRM, Inventory",
+      "Monitoring & Finance",
       "50 GB storage",
     ],
     cta: "Start 14-Day Trial",
@@ -390,9 +390,9 @@ const pricingPlans = [
     features: [
       "Up to 200 users",
       "Everything in Starter",
-      "Compliance & audit trails",
-      "Contracts & document lifecycle",
-      "Enterprise SSO (SAML/OIDC)",
+      "Marketing, Advertising, Social",
+      "Communications, Field Service, DevOps",
+      "Campaign Pro",
       "500 GB storage",
     ],
     cta: "Start 14-Day Trial",
@@ -407,8 +407,7 @@ const pricingPlans = [
     features: [
       "Everything in Business",
       "Unlimited users",
-      "DevOps CI/CD + Field Service",
-      "Communications + Social Media",
+      "AI Agents & Speech & Voice",
       "Custom SLA",
       "Dedicated infrastructure",
     ],
@@ -823,16 +822,22 @@ export const Route = createFileRoute("/")({
             "name": "Business Management Software",
             "itemListElement": [
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "CRM" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "HRM" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Projects" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Helpdesk" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "HRM" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Inventory" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Monitoring" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Communications" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Field Service" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "DevOps" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Invoicing" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Compliance" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI & BI" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Integration Hub" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Advertising" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Social Media" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Campaign Pro" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Observability" } }
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Speech & Voice" } }
             ]
           }
         })},
@@ -1850,8 +1855,8 @@ function LandingPage() {
 // ─── Lead Capture Section ─────────────────────────────────────────────────────
 
 const interestOptions = [
-  "CRM & Sales", "HRM & People", "Project Management",
-  "Finance & Invoicing", "Helpdesk & Support", "AI Agents", "All modules",
+  "CRM", "HRM", "Projects", "Invoicing", "Finance",
+  "Helpdesk", "Marketing", "AI Agents", "All modules",
 ];
 
 function LeadCaptureSection() {

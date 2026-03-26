@@ -46,8 +46,8 @@ export function Footer() {
                 { label: "CRM", to: "/app/crm" },
                 { label: "Helpdesk", to: "/app/helpdesk" },
                 { label: "Projects", to: "/app/projects" },
-                { label: "HRM & Payroll", to: "/app/hrm" },
-                { label: "Intelligence", to: "/app/intelligence" },
+                { label: "HRM", to: "/app/hrm" },
+                { label: "AI Agents", to: "/app/agents" },
               ].map((l) => (
                 <li key={l.label}>
                   <Link

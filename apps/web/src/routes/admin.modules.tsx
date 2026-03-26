@@ -7,9 +7,7 @@ import {
   CreditCard,
   Activity,
   BarChart3,
-  Puzzle,
   Bot,
-  Settings,
   FileText,
   Box,
   CheckCircle,
@@ -17,7 +15,6 @@ import {
   AlertCircle,
   MessageSquare,
   Truck,
-  Sparkles,
   LayoutGrid,
   Globe,
 } from "lucide-react";
@@ -30,7 +27,7 @@ export const Route = createFileRoute("/admin/modules")({
 // Build admin module display data from shared NUCLEO_MODULES
 // Admin view uses growth plan (not in public pricing) so we include it here
 
-const PLAN_KEYS = ["starter", "growth", "business", "enterprise"] as const;
+const PLAN_KEYS = ["starter", "business", "enterprise"] as const;
 
 const PHASE_LABELS: Record<string, string> = {
   core: "Core",
@@ -40,6 +37,7 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 // Extended module details for admin view (with adoption/revenue data)
+// Derived from NUCLEO_MODULES — only the 16 canonical public product modules
 const moduleDetails: Record<string, {
   name: string;
   icon: any;
@@ -49,28 +47,23 @@ const moduleDetails: Record<string, {
   revenue: number;
   plans: string[];
 }> = {
-  crm:            { name: "Core Workspace", icon: Users,         description: "Contacts, deals, leads, activity tracking", category: "core",   adoption: 100, revenue: 156000, plans: ["starter", "growth", "business", "enterprise"] },
-  notifications:  { name: "Notifications",  icon: Activity,     description: "Email and in-app notifications",          category: "core",   adoption: 100, revenue: 0,       plans: ["starter", "growth", "business", "enterprise"] },
-  rbac:           { name: "Access Control", icon: Settings,      description: "Roles, permissions, and team management", category: "core",   adoption: 100, revenue: 0,       plans: ["starter", "growth", "business", "enterprise"] },
-  projects:       { name: "Projects",       icon: Box,          description: "Project management with tasks, milestones",category: "ops",    adoption: 78,  revenue: 46800, plans: ["growth", "business", "enterprise"] },
-  helpdesk:       { name: "Helpdesk",       icon: FileText,     description: "Support tickets, queues, and SLAs",       category: "ops",    adoption: 62,  revenue: 37200, plans: ["growth", "business", "enterprise"] },
-  hrm:            { name: "HRM",            icon: Users,        description: "Employee management and payroll",          category: "ops",    adoption: 45,  revenue: 27000, plans: ["business", "enterprise"] },
-  inventory:      { name: "Inventory",       icon: LayoutGrid,   description: "Stock management and product catalog",     category: "ops",    adoption: 40,  revenue: 24000, plans: ["business", "enterprise"] },
-  monitoring:     { name: "Monitoring",      icon: Activity,     description: "Platform observability and alerts",       category: "ops",    adoption: 52,  revenue: 31200, plans: ["business", "enterprise"] },
-  communications: { name: "Communications", icon: MessageSquare,  description: "Omnichannel messaging, SMS, voice, video", category: "ops",    adoption: 30,  revenue: 18000, plans: ["business", "enterprise"] },
-  field_service:  { name: "Field Service", icon: Truck,        description: "Dispatch and field operations",           category: "ops",    adoption: 25,  revenue: 15000, plans: ["business", "enterprise"] },
-  queue:           { name: "Queue",          icon: FileText,     description: "Queue counters and service desk",         category: "ops",    adoption: 20,  revenue: 12000, plans: ["business", "enterprise"] },
-  devops:          { name: "DevOps",         icon: Globe,       description: "CI/CD pipelines and deployments",           category: "ops",    adoption: 22,  revenue: 13200, plans: ["business", "enterprise"] },
-  finance:         { name: "Finance",         icon: CreditCard,   description: "Expenses, budget tracking",                category: "ops",    adoption: 55,  revenue: 33000, plans: ["business", "enterprise"] },
-  invoicing:       { name: "Invoicing",      icon: CreditCard,   description: "Invoice generation and payment tracking",  category: "growth", adoption: 85,  revenue: 51000, plans: ["growth", "business", "enterprise"] },
-  marketing:       { name: "Marketing",       icon: BarChart3,    description: "Campaign management and analytics",         category: "growth", adoption: 34,  revenue: 20400, plans: ["business", "enterprise"] },
-  advertising:     { name: "Advertising",     icon: BarChart3,    description: "Ad campaign management",                   category: "growth", adoption: 18,  revenue: 10800, plans: ["business", "enterprise"] },
-  social:          { name: "Social Media",   icon: BarChart3,    description: "Social media scheduling and analytics",    category: "growth", adoption: 20,  revenue: 12000, plans: ["business", "enterprise"] },
-  campaign_pro:    { name: "Campaign Pro",   icon: BarChart3,    description: "Advanced campaign planning and A/B testing",category: "growth",adoption: 15, revenue: 9000,  plans: ["business", "enterprise"] },
-  assetlayer:      { name: "AssetLayer",    icon: Box,          description: "Digital asset storage and lifecycle",     category: "ops",    adoption: 28,  revenue: 16800, plans: ["business", "enterprise"] },
-  agents:          { name: "AI Agents",      icon: Bot,          description: "Autonomous AI agents",                    category: "ai",    adoption: 23,  revenue: 18400, plans: ["enterprise"] },
-  speech:          { name: "Speech & Voice", icon: Bot,          description: "Speech recognition and transcription",     category: "ai",    adoption: 12,  revenue: 7200,  plans: ["enterprise"] },
-  doclattice:      { name: "Doclattice AI",  icon: Sparkles,    description: "Document intake, OCR, extraction",        category: "ai",    adoption: 10,  revenue: 6000,  plans: ["enterprise"] },
+  crm:            { name: "CRM",              icon: Users,         description: "Contacts, deals, leads, pipeline, and activity tracking",    category: "core",   adoption: 100, revenue: 156000, plans: MODULE_PLANS.crm },
+  projects:       { name: "Projects",          icon: Box,           description: "Project planning, task tracking, kanban, and gantt",           category: "ops",    adoption: 78,  revenue: 46800,  plans: MODULE_PLANS.projects },
+  helpdesk:       { name: "Helpdesk",          icon: FileText,      description: "Ticketing, knowledge base, SLA workflows, and support",         category: "ops",    adoption: 62,  revenue: 37200,  plans: MODULE_PLANS.helpdesk },
+  hrm:            { name: "HRM",               icon: Users,          description: "Employee directory, leave, recruitment, training, and payroll",  category: "ops",    adoption: 45,  revenue: 27000,  plans: MODULE_PLANS.hrm },
+  inventory:      { name: "Inventory",          icon: LayoutGrid,    description: "Product catalog, stock management, warehouses, and transfers",  category: "ops",    adoption: 40,  revenue: 24000,  plans: MODULE_PLANS.inventory },
+  monitoring:     { name: "Monitoring",         icon: Activity,      description: "Error tracking, uptime checks, performance, and logs",        category: "ops",    adoption: 52,  revenue: 31200,  plans: MODULE_PLANS.monitoring },
+  communications: { name: "Communications",    icon: MessageSquare,  description: "Omnichannel messaging — SMS, voice, video, and chat",           category: "ops",    adoption: 30,  revenue: 18000,  plans: MODULE_PLANS.communications },
+  field_service:  { name: "Field Service",    icon: Truck,         description: "Smart dispatch, route optimization, and job scheduling",          category: "ops",    adoption: 25,  revenue: 15000,  plans: MODULE_PLANS.field_service },
+  devops:         { name: "DevOps",            icon: Globe,         description: "CI/CD pipelines, automated deployments, and infrastructure",     category: "ops",    adoption: 22,  revenue: 13200,  plans: MODULE_PLANS.devops },
+  finance:        { name: "Finance",            icon: CreditCard,    description: "Expenses, budget tracking, financial reporting, and cost control",category: "ops",    adoption: 55,  revenue: 33000,  plans: MODULE_PLANS.finance },
+  invoicing:      { name: "Invoicing",         icon: CreditCard,    description: "Professional invoices, payment tracking, and billing",          category: "growth", adoption: 85,  revenue: 51000,  plans: MODULE_PLANS.invoicing },
+  marketing:      { name: "Marketing",          icon: BarChart3,     description: "Campaign builder, email automation, landing pages, lead scoring", category: "growth", adoption: 34,  revenue: 20400,  plans: MODULE_PLANS.marketing },
+  advertising:    { name: "Advertising",        icon: BarChart3,     description: "Ad campaigns across Google, Meta, and LinkedIn with AI",         category: "growth", adoption: 18,  revenue: 10800,  plans: MODULE_PLANS.advertising },
+  social:         { name: "Social Media",      icon: BarChart3,     description: "Post scheduling, analytics, social listening, and inbox",       category: "growth", adoption: 20,  revenue: 12000,  plans: MODULE_PLANS.social },
+  campaign_pro:   { name: "Campaign Pro",     icon: BarChart3,     description: "Advanced campaign planning, A/B testing, and multi-channel",    category: "growth", adoption: 15,  revenue: 9000,   plans: MODULE_PLANS.campaign_pro },
+  agents:         { name: "AI Agents",         icon: Bot,           description: "Autonomous AI agents for automation, support, and BI",            category: "ai",    adoption: 23,  revenue: 18400,  plans: MODULE_PLANS.agents },
+  speech:         { name: "Speech & Voice",    icon: Bot,           description: "Audio transcription, real-time streaming, and meeting notes",    category: "ai",    adoption: 12,  revenue: 7200,   plans: MODULE_PLANS.speech },
 };
 
 const plans = PLAN_KEYS.map((key) => {
