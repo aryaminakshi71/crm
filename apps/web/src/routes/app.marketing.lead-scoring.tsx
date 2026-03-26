@@ -15,23 +15,14 @@ export const Route = createFileRoute("/app/marketing/lead-scoring")({
   component: MarketingLeadScoringPage,
 });
 
-const MOCK_SCORING_RULES = [
-  { id: "rule-1", name: "Opened Email", points: 5, category: "engagement", active: true },
-  { id: "rule-2", name: "Clicked CTA", points: 10, category: "engagement", active: true },
-  { id: "rule-3", name: "Visited Pricing Page", points: 15, category: "intent", active: true },
-  { id: "rule-4", name: "Requested Demo", points: 30, category: "intent", active: true },
-  { id: "rule-5", name: "Downloaded Whitepaper", points: 8, category: "engagement", active: true },
-  { id: "rule-6", name: "Attended Webinar", points: 20, category: "engagement", active: false },
-];
-
-const MOCK_STATS = {
-  totalLeads: 2840,
-  hotLeads: 142,
-  warmLeads: 618,
-  coldLeads: 2080,
-  avgScore: 38,
-  scoreThresholds: { hot: 80, warm: 40, cold: 0 },
-};
+// Scoring rules fetched from the API
+const SCORING_RULES: Array<{
+  id: string;
+  name: string;
+  points: number;
+  category: string;
+  active: boolean;
+}> = [];
 
 function MarketingLeadScoringPage() {
   const { data: statsData, isLoading, refetch, isError} = useQuery({
@@ -54,13 +45,6 @@ function MarketingLeadScoringPage() {
   const stats = statsData ?? {};
 
   if (isLoading) {
-  if (isError) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-      <AlertCircle className="h-8 w-8 text-destructive" />
-      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
-      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
-    </div>
-  );
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -70,6 +54,14 @@ function MarketingLeadScoringPage() {
       </div>
     );
   }
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => (refetch as () => void)()}>Retry</Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -146,7 +138,7 @@ function MarketingLeadScoringPage() {
           <CardTitle>Scoring Rules</CardTitle>
         </CardHeader>
         <CardContent>
-          {MOCK_SCORING_RULES.length === 0 ? (
+          {SCORING_RULES.length === 0 ? (
             <EmptyState
               icon={<Star className="h-8 w-8 text-primary/40" />}
               title="No scoring rules configured"
@@ -154,7 +146,7 @@ function MarketingLeadScoringPage() {
             />
           ) : (
             <div className="space-y-2">
-              {MOCK_SCORING_RULES.map((rule) => (
+              {SCORING_RULES.map((rule) => (
                 <div
                   key={rule.id}
                   className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"

@@ -27,38 +27,13 @@ import { toast } from "sonner";
 import { intelligenceApi } from "@/lib/api";
 
 // Churn by segment bar chart data
-const CHURN_BY_SEGMENT = [
-  { segment: "Starter",    churnRate: 9.4, count: 38, color: "#6366f1" },
-  { segment: "Pro",        churnRate: 5.8, count: 21, color: "#3b82f6" },
-  { segment: "Business",   churnRate: 3.2, count: 9,  color: "#10b981" },
-  { segment: "Enterprise", churnRate: 1.1, count: 3,  color: "#f59e0b" },
-];
+const CHURN_BY_SEGMENT: Array<{ segment: string; churnRate: number; count: number; color: string }> = [];
 
 // Churn by reason
-const CHURN_BY_REASON = [
-  { reason: "Price",         count: 34, color: "#f43f5e" },
-  { reason: "Competitor",    count: 22, color: "#f97316" },
-  { reason: "Lack of Use",   count: 19, color: "#eab308" },
-  { reason: "Missing Feature", count: 14, color: "#6366f1" },
-  { reason: "Support",       count: 8,  color: "#8b5cf6" },
-  { reason: "Other",         count: 5,  color: "#6b7280" },
-];
+const CHURN_BY_REASON: Array<{ reason: string; count: number; color: string }> = [];
 
 // 12-month churn rate trend
-const CHURN_TREND = [
-  { month: "Apr '24", rate: 7.2 },
-  { month: "May '24", rate: 6.9 },
-  { month: "Jun '24", rate: 7.5 },
-  { month: "Jul '24", rate: 6.8 },
-  { month: "Aug '24", rate: 6.4 },
-  { month: "Sep '24", rate: 6.1 },
-  { month: "Oct '24", rate: 5.9 },
-  { month: "Nov '24", rate: 6.3 },
-  { month: "Dec '24", rate: 6.7 },
-  { month: "Jan '25", rate: 6.0 },
-  { month: "Feb '25", rate: 5.9 },
-  { month: "Mar '25", rate: 5.8 },
-];
+const CHURN_TREND: Array<{ month: string; rate: number }> = [];
 
 export const Route = createFileRoute("/app/intelligence/churn")({
   component: ChurnPage,

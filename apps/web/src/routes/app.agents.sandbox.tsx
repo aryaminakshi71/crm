@@ -111,11 +111,7 @@ FROM sales_data
 ORDER BY revenue DESC;`,
 };
 
-const EXECUTION_LOGS_MOCK = [
-  { level: "info", message: "Compiling code...", timestamp: "10:24:01.234" },
-  { level: "info", message: "Executing in sandbox environment...", timestamp: "10:24:01.456" },
-  { level: "success", message: "Execution completed successfully", timestamp: "10:24:01.789" },
-];
+const EXECUTION_LOGS_MOCK: Array<{ level: string; message: string; timestamp: string }> = [];
 
 function SandboxPage() {
   const navigate = useNavigate();

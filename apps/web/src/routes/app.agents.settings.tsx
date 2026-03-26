@@ -34,11 +34,7 @@ const getOrgHeader = (): Record<string, string> => {
   return orgId ? { "x-organization-id": orgId } : {};
 };
 
-const API_KEYS_MOCK = [
-  { id: "key-1", name: "Production API Key", keyPrefix: "sk-agent-prod-xxxx", createdAt: "Jan 15, 2024", lastUsedAt: "2 min ago" },
-  { id: "key-2", name: "Development API Key", keyPrefix: "sk-agent-dev-xxxx", createdAt: "Feb 20, 2024", lastUsedAt: "1 hour ago" },
-  { id: "key-3", name: "Testing API Key", keyPrefix: "sk-agent-test-xxxx", createdAt: "Mar 1, 2024", lastUsedAt: "3 days ago" },
-];
+// API keys fetched from the API
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -125,7 +121,7 @@ function SettingsPage() {
     },
   });
 
-  const apiKeys = apiKeysData?.data ?? API_KEYS_MOCK;
+  const apiKeys = apiKeysData?.data ?? [];
 
   const handleCopy = (keyId: string, prefix: string) => {
     navigator.clipboard.writeText(prefix);
