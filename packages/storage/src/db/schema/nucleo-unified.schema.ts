@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./auth.schema.js";
 import { contacts, files } from "./crm.schema.js";
-import { invoices } from "./invoicing.schema.js";
+import * as invoicing from "./invoicing.schema.js";
 
 export const customers = pgTable(
   "customers",
@@ -1492,7 +1492,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   }),
   projects: many(projects),
   tickets: many(tickets),
-  invoices: many(invoices),
+  invoices: many(invoicing.invoices),
   assets: many(digitalAssets),
   documents: many(documents),
 }));
