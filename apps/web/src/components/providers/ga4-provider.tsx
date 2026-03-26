@@ -32,7 +32,7 @@ export function initGA(): void {
 
     // Initialize gtag
     if (window.gtag) {
-      window.gtag("js", new Date());
+      window.gtag("js", new Date().toISOString());
       window.gtag("config", GA_MEASUREMENT_ID, {
         transport_type: "beacon",
       });

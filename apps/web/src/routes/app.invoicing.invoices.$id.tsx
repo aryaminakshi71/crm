@@ -25,16 +25,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/invoices/$id")({
   component: InvoiceDetail,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 function InvoiceDetail() {
   const { id } = Route.useParams();
@@ -42,36 +37,18 @@ function InvoiceDetail() {
   const [status, setStatus] = useState("sent");
 
   const sendMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to send invoice");
-      return res.json();
-    },
+    mutationFn: () => invoicingApi.invoices.send(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/invoices", id] }),
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/invoices/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
-    },
+    mutationFn: (newStatus: string) => invoicingApi.invoices.update(id, { status: newStatus }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/invoices", id] }),
   });
 
   const invoiceQuery = useQuery({
     queryKey: ["invoicing/invoices", id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/invoices/${id}`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.invoices.get(id),
     placeholderData: (prev) => prev,
     retry: false,
   });

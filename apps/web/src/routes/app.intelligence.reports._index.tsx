@@ -28,6 +28,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -73,27 +74,11 @@ function ReportsPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "reports"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/reports", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.reports.list(),
   });
 
   const generateMutation = useMutation({
-    mutationFn: () =>
-      fetch("/api/v1/intelligence/reports/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-        body: JSON.stringify({ type: "custom" }),
-      }).then((r) => r.json()),
+    mutationFn: () => intelligenceApi.reports.generate({ type: "custom" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] });
     },

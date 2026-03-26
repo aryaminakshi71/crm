@@ -6,7 +6,11 @@
  */
 
 import { and, count, desc, eq, gte, ilike, isNull, lte, sql } from "drizzle-orm";
-import {
+import { z } from "zod";
+import type { OrgContext } from "../context";
+import { getDb, orgAuthed, schema } from "../procedures";
+
+const {
   invoiceAccounts,
   invoiceExpenses,
   invoicePayments,
@@ -15,10 +19,7 @@ import {
   invoices,
   invoiceTaxRates,
   invoiceVendors,
-} from "@crm/storage/schema";
-import { z } from "zod";
-import type { OrgContext } from "../context";
-import { getDb, orgAuthed } from "../procedures";
+} = schema;
 
 // Helper: resolve date boundaries for a given dateRange token
 function getDateBounds(dateRange: string): { start: Date; end: Date } {

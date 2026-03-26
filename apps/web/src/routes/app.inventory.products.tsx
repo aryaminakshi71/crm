@@ -24,12 +24,6 @@ import {
 import { useState } from "react";
 import { inventoryApi } from "@/lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
-
 export const Route = createFileRoute("/app/inventory/products")({
   component: ProductsPage,
 });

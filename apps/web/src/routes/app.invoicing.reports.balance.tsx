@@ -23,16 +23,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/reports/balance")({
   component: BalanceSheet,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 const EMPTY_ASSETS: any[] = [];
 const EMPTY_LIABILITIES: any[] = [];
@@ -43,10 +38,7 @@ function BalanceSheet() {
 
   const balanceQuery = useQuery({
     queryKey: ["invoicing/reports/balance", dateRange],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/reports/balance`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.reports.balanceSheet({ asOf: dateRange }),
     retry: false,
     placeholderData: (prev) => prev,
   });

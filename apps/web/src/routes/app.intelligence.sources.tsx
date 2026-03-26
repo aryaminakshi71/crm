@@ -13,11 +13,7 @@ import { Database, RefreshCw, Wifi, WifiOff,
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/sources")({
   component: SourcesPage,
@@ -42,24 +38,15 @@ function SourcesPage() {
 
   const { data, isLoading, isError, refetch} = useQuery({
     queryKey: ["intelligence", "sources"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/sources`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { sources: [] };
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.sources.list(),
     placeholderData: (prev) => prev,
   });
 
   const syncMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/sources/${id}/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { success: true, sourceId: id, message: "Sync initiated" };
-      return res.json();
+      const result = await intelligenceApi.sources.sync(id);
+      if (!result) return { success: true, sourceId: id, message: "Sync initiated" };
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["intelligence", "sources"] });

@@ -16,18 +16,11 @@ import {
   Facebook,
   AlertCircle
 } from "lucide-react";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/analytics/$accountId")({
   component: AccountAnalyticsPage,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 function AccountAnalyticsPage() {
   const { accountId } = Route.useParams();
@@ -36,13 +29,7 @@ function AccountAnalyticsPage() {
   const analyticsQuery = useQuery({
     queryKey: ["social", "analytics", accountId],
     retry: false,
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/accounts/${accountId}/analytics`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch social analytics");
-      return res.json();
-    },
+    queryFn: () => socialApi.analytics.get(accountId),
     placeholderData: (prev) => prev,
   });
   if (analyticsQuery.isError) return (

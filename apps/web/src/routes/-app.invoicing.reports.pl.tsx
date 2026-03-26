@@ -42,18 +42,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-export const Route = createFileRoute("/app/invoicing/reports/pl")({
-  component: PLReports,
-});
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
-
-const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
+import { invoicingApi } from "@/lib/api";
 
 const EMPTY_REVENUE_BREAKDOWN: any[] = [];
 const EMPTY_PL_DATA: any[] = [];
@@ -64,10 +53,7 @@ function PLReports() {
 
   const plQuery = useQuery({
     queryKey: ["invoicing/reports/pl", dateRange],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/reports/pl?dateRange=${dateRange}`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.reports.profitLoss({ dateRange }),
     retry: false,
     placeholderData: (prev) => prev,
   });

@@ -28,16 +28,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/accounts")({
   component: ChartOfAccounts,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 type Account = {
   id: string;
@@ -66,25 +61,14 @@ function ChartOfAccounts() {
   const queryClient = useQueryClient();
 
   const createAccountMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => invoicingApi.accounts.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/accounts"] }),
   });
 
   const deleteAccountMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/accounts/${id}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed");
+      const res = await fetch(`/api/invoicing/accounts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete account");
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/accounts"] }),
@@ -92,10 +76,7 @@ function ChartOfAccounts() {
 
   const accountsQuery = useQuery({
     queryKey: ["invoicing/accounts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/accounts`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.accounts.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

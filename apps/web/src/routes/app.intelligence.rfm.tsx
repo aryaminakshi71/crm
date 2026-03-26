@@ -10,11 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 const MOCK_RFM = {
   segments: [
@@ -47,13 +43,7 @@ function ScoreDot({ score }: { score: number }) {
 function RfmPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "rfm"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/rfm`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.rfm.get(),
     placeholderData: (prev) => prev,
   });
 

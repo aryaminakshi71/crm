@@ -5,11 +5,6 @@ import { Zap, Plus, Play, Pause, Users,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 export const Route = createFileRoute("/app/marketing/automation")({
   component: MarketingAutomationPage,
@@ -68,8 +63,8 @@ function MarketingAutomationPage() {
     queryFn: async () => {
       try {
         const res = await fetch(
-          `${API_BASE}/v1/marketing/campaigns?type=automation&limit=50`,
-          { headers: { "Content-Type": "application/json", ...getOrgHeader() } },
+          `/api/v1/marketing/campaigns?type=automation&limit=50`,
+          { headers: { "Content-Type": "application/json" } },
         );
         if (!res.ok) return null;
         return res.json();

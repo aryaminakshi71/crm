@@ -31,16 +31,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/quotes")({
   component: QuoteBuilder,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 type Quote = {
   id: string;
@@ -62,25 +57,14 @@ function QuoteBuilder() {
   const queryClient = useQueryClient();
 
   const createQuoteMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/quotes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => invoicingApi.quotes.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/quotes"] }),
   });
 
   const deleteQuoteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/quotes/${id}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed");
+      const res = await fetch(`/api/invoicing/quotes/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete quote");
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/quotes"] }),
@@ -88,10 +72,7 @@ function QuoteBuilder() {
 
   const quotesQuery = useQuery({
     queryKey: ["invoicing/quotes"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/quotes`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.quotes.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

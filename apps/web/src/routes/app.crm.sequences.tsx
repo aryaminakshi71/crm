@@ -15,14 +15,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
-
 export const Route = createFileRoute("/app/crm/sequences")({
   validateSearch: z.object({
     search: z.string().optional(),
@@ -52,8 +44,8 @@ function CrmSequencesPage() {
   const query = useQuery({
     queryKey: ["crm/sequences"],
     queryFn: () =>
-      fetch(`${API_BASE}/crm/sequences`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+      fetch(`/api/crm/sequences`, {
+        headers: { "Content-Type": "application/json" },
       }).then((r) => {
         if (!r.ok) throw new Error("Failed to fetch sequences");
         return r.json();
@@ -70,9 +62,9 @@ function CrmSequencesPage() {
   const createSequence = useMutation({
     mutationFn: () => {
       if (!newName.trim()) throw new Error("Sequence name is required");
-      return fetch(`${API_BASE}/crm/sequences`, {
+      return fetch(`/api/crm/sequences`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim(), description: newDescription.trim() || undefined }),
       }).then((r) => {
         if (!r.ok) throw new Error("Failed to create sequence");
@@ -92,9 +84,9 @@ function CrmSequencesPage() {
   // ── Toggle active mutation ─────────────────────────────────────────────────
   const toggleActive = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      fetch(`${API_BASE}/crm/sequences/${id}`, {
+      fetch(`/api/crm/sequences/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive }),
       }).then((r) => {
         if (!r.ok) throw new Error("Failed to update sequence");
@@ -110,9 +102,8 @@ function CrmSequencesPage() {
   // ── Delete mutation ────────────────────────────────────────────────────────
   const deleteSequence = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_BASE}/crm/sequences/${id}`, {
+      fetch(`/api/crm/sequences/${id}`, {
         method: "DELETE",
-        headers: getOrgHeader(),
       }).then((r) => {
         if (!r.ok) throw new Error("Failed to delete sequence");
       }),

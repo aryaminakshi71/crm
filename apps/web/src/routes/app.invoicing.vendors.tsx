@@ -31,16 +31,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/vendors")({
   component: VendorManagement,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 type Vendor = {
   id: string;
@@ -62,25 +57,14 @@ function VendorManagement() {
   const queryClient = useQueryClient();
 
   const createVendorMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/vendors`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => invoicingApi.vendors.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/vendors"] }),
   });
 
   const deleteVendorMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/vendors/${id}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed");
+      const res = await fetch(`/api/invoicing/vendors/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete vendor");
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/vendors"] }),
@@ -88,10 +72,7 @@ function VendorManagement() {
 
   const vendorsQuery = useQuery({
     queryKey: ["invoicing/vendors"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/vendors`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.vendors.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

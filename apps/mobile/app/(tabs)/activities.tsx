@@ -23,13 +23,23 @@ import { useCrmClient } from "../../src/lib/api";
 import { useMobileConfig } from "../../src/lib/mobile-config";
 import { formatRelativeDate, theme } from "../../src/lib/theme";
 
+const ACTIVITY_TYPES = ["call", "email", "meeting", "note"];
+
+function typeTone(type: string): "accent" | "muted" | "danger" {
+  if (type === "call") return "accent";
+  if (type === "meeting") return "danger";
+  return "muted";
+}
+
 export default function ActivitiesScreen() {
   const client = useCrmClient();
   const { apiBaseUrl, demoMode, organizationId } = useMobileConfig();
   const cacheScope = [apiBaseUrl, demoMode, organizationId];
   const queryClient = useQueryClient();
+
+  const [search, setSearch] = useState("");
   const [showComposer, setShowComposer] = useState(false);
-  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
   const [type, setType] = useState("call");
   const [description, setDescription] = useState("");
 
@@ -42,7 +52,7 @@ export default function ActivitiesScreen() {
     mutationFn: client.activities.create,
     onSuccess: async () => {
       setShowComposer(false);
-      setTitle("");
+      setSubject("");
       setType("call");
       setDescription("");
       await queryClient.invalidateQueries({
@@ -54,12 +64,20 @@ export default function ActivitiesScreen() {
     },
   });
 
-  const activities = activitiesQuery.data?.data ?? [];
+  const allActivities = activitiesQuery.data?.data ?? [];
+
+  const filtered = allActivities.filter((item) => {
+    const haystack = [item.title, item.subject, item.type, item.description]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(search.trim().toLowerCase());
+  });
 
   return (
     <Screen>
       <FlatList
-        data={activities}
+        data={filtered}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl
@@ -73,7 +91,7 @@ export default function ActivitiesScreen() {
             <HeaderBlock
               eyebrow="Signal log"
               title="Activity feed"
-              subtitle="Calls, emails, and notes stay visible for teams working from the field."
+              subtitle="Calls, emails, meetings, and notes stay visible for teams working from the field."
               sidecar={
                 <PrimaryButton
                   label="New activity"
@@ -81,29 +99,38 @@ export default function ActivitiesScreen() {
                 />
               }
             />
-            <SectionLabel title="Recent motion" />
+            <Field
+              label="Filter"
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search by subject, type, or note"
+            />
+            <SectionLabel title={`${filtered.length} activities in view`} />
           </View>
         }
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <Panel accent={theme.colors.gold}>
-            <View style={styles.row}>
-              <View style={styles.flex}>
-                <Text style={styles.title}>
-                  {item.title || item.subject || "Untitled activity"}
-                </Text>
-                <Text style={styles.meta}>
-                  {formatRelativeDate(item.createdAt)} ·{" "}
-                  {(item.type || "note").toUpperCase()}
-                </Text>
+        renderItem={({ item }) => {
+          const activityType = item.type || "note";
+          return (
+            <Panel accent={theme.colors.gold}>
+              <View style={styles.row}>
+                <View style={styles.flex}>
+                  <Text style={styles.title}>
+                    {item.title || item.subject || "Untitled activity"}
+                  </Text>
+                  <Text style={styles.meta}>
+                    {formatRelativeDate(item.createdAt)} ·{" "}
+                    {activityType.toUpperCase()}
+                  </Text>
+                </View>
+                <Pill label={activityType} tone={typeTone(activityType)} />
               </View>
-              <Pill label={item.type || "note"} tone="accent" />
-            </View>
-            {item.description ? (
-              <Text style={styles.description}>{item.description}</Text>
-            ) : null}
-          </Panel>
-        )}
+              {item.description ? (
+                <Text style={styles.description}>{item.description}</Text>
+              ) : null}
+            </Panel>
+          );
+        }}
         ListEmptyComponent={
           activitiesQuery.isLoading ? (
             <Panel accent={theme.colors.mint}>
@@ -122,33 +149,44 @@ export default function ActivitiesScreen() {
       <Sheet
         visible={showComposer}
         title="Capture field activity"
-        subtitle="Keep the mobile timeline alive with notes, calls, or meetings."
+        subtitle="Keep the mobile timeline alive with notes, calls, meetings, or emails."
         onClose={() => setShowComposer(false)}
       >
         <Field
-          label="Title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Investor callback"
+          label="Subject"
+          value={subject}
+          onChangeText={setSubject}
+          placeholder="Investor callback · Demo scheduled"
         />
+        <View style={styles.typeRow}>
+          {ACTIVITY_TYPES.map((t) => (
+            <View key={t} style={styles.typeButtonWrap}>
+              <PrimaryButton
+                label={t}
+                onPress={() => setType(t)}
+              />
+              {type === t ? <View style={styles.typeUnderline} /> : null}
+            </View>
+          ))}
+        </View>
         <Field
           label="Type"
           value={type}
           onChangeText={setType}
-          placeholder="call, meeting, note"
+          placeholder="call, email, meeting, note"
         />
         <Field
           label="Description"
           value={description}
           onChangeText={setDescription}
-          placeholder="What happened?"
+          placeholder="What happened? Key outcomes, follow-ups, blockers..."
           multiline
         />
         <PrimaryButton
           label={createMutation.isPending ? "Saving..." : "Save activity"}
           onPress={() =>
             createMutation.mutate({
-              title,
+              title: subject,
               type,
               description,
             })
@@ -185,5 +223,21 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     color: theme.colors.muted,
     lineHeight: 20,
+  },
+  typeRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    flexWrap: "wrap",
+  },
+  typeButtonWrap: {
+    flex: 1,
+    minWidth: "22%",
+  },
+  typeUnderline: {
+    height: 3,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius.pill,
+    marginTop: 4,
   },
 });

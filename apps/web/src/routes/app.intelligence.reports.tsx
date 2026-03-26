@@ -18,18 +18,11 @@ import {
   PieChart,
   AlertCircle
 } from "lucide-react";
+import { intelligenceApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/intelligence/reports")({
   component: Reports,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
-
-function getOrgHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const chartTypes = [
   { type: "bar", icon: BarChart3, label: "Bar Chart" },
@@ -41,40 +34,20 @@ function Reports() {
   const queryClient = useQueryClient();
 
   const createReportMutation = useMutation({
-    mutationFn: async (data: { name: string; type: string }) => {
-      const res = await fetch(`${API_BASE}/intelligence/reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to create report");
-      return res.json();
-    },
+    mutationFn: (data: { name: string; type: string }) =>
+      intelligenceApi.reports.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] }),
   });
 
   const deleteReportMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/intelligence/reports/${id}`, {
-        method: "DELETE",
-        headers: getOrgHeader(),
-      });
-      if (!res.ok) throw new Error("Failed to delete report");
-      return res.json();
-    },
+    mutationFn: (id: string) => intelligenceApi.reports.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["intelligence", "reports"] }),
   });
 
   const agentRunsQuery = useQuery({
     queryKey: ["intelligence", "agent-runs"],
     retry: false,
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/intelligence/agent-runs?limit=50`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed to fetch agent runs");
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.agentRuns.list(50),
     placeholderData: (prev) => prev,
   });
   if (agentRunsQuery.isError) return (

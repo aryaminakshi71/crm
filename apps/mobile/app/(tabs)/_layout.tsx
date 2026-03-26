@@ -74,6 +74,66 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="helpdesk"
+        options={{
+          title: "Support",
+          tabBarAccessibilityLabel: "Support - Helpdesk Tickets",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>HD</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="invoicing"
+        options={{
+          title: "Billing",
+          tabBarAccessibilityLabel: "Billing - Invoicing",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>IV</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="field-service"
+        options={{
+          title: "Field",
+          tabBarAccessibilityLabel: "Field - Field Service Jobs",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>FS</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="hrm"
+        options={{
+          title: "People",
+          tabBarAccessibilityLabel: "People - HR Management",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>HR</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: "Inventory",
+          tabBarAccessibilityLabel: "Inventory - Products and Stock",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>IN</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Inbox",
+          tabBarAccessibilityLabel: "Inbox - Notifications",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 16, color, fontFamily: "Menlo" }}>NF</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Setup",

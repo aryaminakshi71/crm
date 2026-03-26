@@ -15,17 +15,11 @@ import {
   Linkedin,
   Facebook,
 } from "lucide-react";
+import { socialApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/social/_index")({
   component: SocialDashboard,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-function getOrgHeader(): Record<string, string> {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-}
 
 const QUICK_ACTIONS = [
   { name: "Create Post", href: "/app/social/posts/new", icon: Share2 },
@@ -37,25 +31,13 @@ const QUICK_ACTIONS = [
 function SocialDashboard() {
   const { data: postsData, isError: postsError, refetch: postsRefetch } = useQuery({
     queryKey: ["social", "posts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/posts?limit=10`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => socialApi.posts.list(),
     placeholderData: (prev) => prev,
   });
 
   const { data: accountsData } = useQuery({
     queryKey: ["social", "accounts"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/social/accounts`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return { data: [] };
-      return res.json();
-    },
+    queryFn: () => socialApi.accounts.list(),
     placeholderData: (prev) => prev,
   });
 

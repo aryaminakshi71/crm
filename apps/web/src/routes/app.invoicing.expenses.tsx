@@ -39,18 +39,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/expenses")({
   component: ExpenseManagement,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
-
-const CHART_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
 type Expense = {
   id: string;
@@ -80,36 +73,18 @@ function ExpenseManagement() {
   const queryClient = useQueryClient();
 
   const createExpenseMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/expenses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => invoicingApi.expenses.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/expenses"] }),
   });
 
   const deleteExpenseMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/expenses/${id}`, {
-        method: "DELETE",
-        headers: { ...getOrgHeader() },
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (id: string) => invoicingApi.expenses.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/expenses"] }),
   });
 
   const expensesQuery = useQuery({
     queryKey: ["invoicing/expenses"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/expenses`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.expenses.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

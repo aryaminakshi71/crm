@@ -37,16 +37,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/reports/cashflow")({
   component: CashFlowStatement,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 const EMPTY_CASHFLOW_DATA: any[] = [];
 
@@ -55,10 +50,7 @@ function CashFlowStatement() {
 
   const cashflowQuery = useQuery({
     queryKey: ["invoicing/reports/cashflow", dateRange],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/reports/cashflow?dateRange=${dateRange}`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.reports.cashFlow({ dateRange }),
     retry: false,
     placeholderData: (prev) => prev,
   });

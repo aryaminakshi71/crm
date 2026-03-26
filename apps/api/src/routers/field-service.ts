@@ -8,7 +8,7 @@ import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
-import { getDb, requireModule, schema } from "../procedures";
+import { getDb, orgAuthed, schema } from "../procedures";
 
 const {
   technicians,
@@ -18,8 +18,8 @@ const {
   partsUsed,
 } = schema;
 
-// Field-service scoped procedure with module check
-const fieldServiceAuthed = requireModule("field_service");
+// Field-service scoped procedure
+const fieldServiceAuthed = orgAuthed;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

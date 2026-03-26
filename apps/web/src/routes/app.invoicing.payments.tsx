@@ -29,16 +29,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/payments")({
   component: PaymentTracking,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 type Payment = {
   id: string;
@@ -60,10 +55,7 @@ function PaymentTracking() {
 
   const paymentsQuery = useQuery({
     queryKey: ["invoicing/payments"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/payments`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.payments.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

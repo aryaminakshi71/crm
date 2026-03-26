@@ -6,9 +6,17 @@ import type {
   AuthSessionPayload,
   Contact,
   Deal,
+  Employee,
+  FieldServiceJob,
   HealthResponse,
+  InventoryProduct,
+  Invoice,
   Lead,
   ListResponse,
+  Notification,
+  Project,
+  Task,
+  Ticket,
 } from "./types";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -38,6 +46,18 @@ type CreateActivityInput = Pick<
   Activity,
   "type" | "title" | "description" | "contactId" | "dealId"
 >;
+
+type CreateTicketInput = Pick<Ticket, "subject" | "priority"> & {
+  description?: string | null;
+};
+
+type CreateInvoiceInput = Pick<Invoice, "status" | "total"> & {
+  dueAt?: string | null;
+};
+
+type ListTasksInput = {
+  projectId?: string;
+};
 
 function cleanBaseUrl(url: string) {
   return url.trim().replace(/\/+$/, "");
@@ -111,6 +131,94 @@ export function createCrmClient(config: ClientConfig) {
         request<Activity>(config, "/api/v1/activities", {
           method: "POST",
           body: JSON.stringify(input),
+        }),
+    },
+    tickets: {
+      list: () =>
+        request<ListResponse<Ticket>>(config, "/api/v1/helpdesk/tickets"),
+      get: (id: string) =>
+        request<Ticket>(config, `/api/v1/helpdesk/tickets/${id}`),
+      create: (input: CreateTicketInput) =>
+        request<Ticket>(config, "/api/v1/helpdesk/tickets", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+    },
+    employees: {
+      list: (params?: { search?: string; status?: string }) => {
+        const qs = new URLSearchParams();
+        if (params?.search) qs.set("search", params.search);
+        if (params?.status) qs.set("status", params.status);
+        const query = qs.toString() ? `?${qs.toString()}` : "";
+        return request<ListResponse<Employee>>(config, `/api/v1/hrm/employees${query}`);
+      },
+    },
+    inventoryProducts: {
+      list: (params?: { search?: string; lowStock?: boolean; outOfStock?: boolean }) => {
+        const qs = new URLSearchParams();
+        if (params?.search) qs.set("search", params.search);
+        if (params?.lowStock) qs.set("lowStock", "true");
+        if (params?.outOfStock) qs.set("outOfStock", "true");
+        const query = qs.toString() ? `?${qs.toString()}` : "";
+        return request<ListResponse<InventoryProduct>>(config, `/api/v1/inventory/products${query}`);
+      },
+    },
+    invoices: {
+      list: () =>
+        request<ListResponse<Invoice>>(config, "/api/v1/invoicing/invoices"),
+      create: (input: CreateInvoiceInput) =>
+        request<Invoice>(config, "/api/v1/invoicing/invoices", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+    },
+    projects: {
+      list: () => request<ListResponse<Project>>(config, "/api/v1/projects"),
+    },
+    tasks: {
+      list: (input?: ListTasksInput) => {
+        const params = input?.projectId
+          ? `?projectId=${encodeURIComponent(input.projectId)}`
+          : "";
+        return request<ListResponse<Task>>(
+          config,
+          `/api/v1/projects/tasks${params}`,
+        );
+      },
+    },
+    notifications: {
+      list: (params?: { unreadOnly?: boolean }) => {
+        const qs = new URLSearchParams();
+        if (params?.unreadOnly) qs.set("unreadOnly", "true");
+        const query = qs.toString() ? `?${qs.toString()}` : "";
+        return request<ListResponse<Notification>>(config, `/api/v1/notifications${query}`);
+      },
+      markRead: (id: string) =>
+        request<Notification>(config, `/api/v1/notifications/${id}/read`, {
+          method: "PATCH",
+        }),
+      markAllRead: () =>
+        request<{ success: boolean }>(config, "/api/v1/notifications/read-all", {
+          method: "PATCH",
+        }),
+    },
+    fieldServiceJobs: {
+      list: (params?: { date?: string }) => {
+        const qs = params?.date
+          ? `?scheduledStart=${encodeURIComponent(params.date)}`
+          : "";
+        return request<ListResponse<FieldServiceJob>>(
+          config,
+          `/api/v1/field-service/jobs${qs}`,
+        );
+      },
+      start: (id: string) =>
+        request<FieldServiceJob>(config, `/api/v1/field-service/jobs/${id}/start`, {
+          method: "POST",
+        }),
+      complete: (id: string) =>
+        request<FieldServiceJob>(config, `/api/v1/field-service/jobs/${id}/complete`, {
+          method: "POST",
         }),
     },
   };

@@ -24,7 +24,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
       api_host: POSTHOG_HOST,
       person_profiles: "identified_only",
       capture_pageview: false,
-      session_recording: { consentMode: "requires_consent" },
+      session_recording: {},
       enable_heatmaps: false,
       loaded: (posthog) => {
         console.log("[PostHog] initialized");

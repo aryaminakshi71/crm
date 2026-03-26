@@ -29,16 +29,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { invoicingApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/invoicing/recurring")({
   component: RecurringInvoices,
 });
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = (): Record<string, string> => {
-  const orgId = localStorage.getItem("activeOrganizationId");
-  return orgId ? { "x-organization-id": orgId } : {};
-};
 
 type RecurringInvoice = {
   id: string;
@@ -60,37 +55,18 @@ function RecurringInvoices() {
   const queryClient = useQueryClient();
 
   const createRecurringMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/recurring`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: (data: Record<string, unknown>) => invoicingApi.recurring.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/recurring"] }),
   });
 
   const updateRecurringMutation = useMutation({
-    mutationFn: async ({ id, ...data }: { id: string } & Record<string, unknown>) => {
-      const res = await fetch(`${API_BASE}/v1/invoicing/recurring/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    mutationFn: ({ id, ...data }: { id: string } & Record<string, unknown>) => invoicingApi.recurring.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/recurring"] }),
   });
 
   const recurringQuery = useQuery({
     queryKey: ["invoicing/recurring"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/invoicing/recurring`, { headers: { ...getOrgHeader() } });
-      return res.json();
-    },
+    queryFn: () => invoicingApi.recurring.list(),
     retry: false,
     placeholderData: (prev) => prev,
   });

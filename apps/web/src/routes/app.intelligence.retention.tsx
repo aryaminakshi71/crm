@@ -21,11 +21,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
-const getOrgHeader = () => ({
-  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
-});
+import { intelligenceApi } from "@/lib/api";
 
 const MOCK_RETENTION = {
   periods: [
@@ -85,13 +81,7 @@ export const Route = createFileRoute("/app/intelligence/retention")({
 function RetentionPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "retention"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/v1/intelligence/retention`, {
-        headers: { "Content-Type": "application/json", ...getOrgHeader() },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+    queryFn: () => intelligenceApi.retention.get(),
     placeholderData: (prev) => prev,
     refetchInterval: 30000,
   });

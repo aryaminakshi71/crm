@@ -25,6 +25,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { intelligenceApi } from "@/lib/api";
 
 const fallbackRfmData = [
   { segment: "Champions", count: 142, color: "#22c55e" },
@@ -92,14 +93,7 @@ function RFMPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["intelligence", "rfm"],
-    queryFn: () =>
-      fetch("/api/v1/intelligence/rfm", {
-        headers: {
-          "Content-Type": "application/json",
-          "x-organization-id":
-            localStorage.getItem("activeOrganizationId") ?? "",
-        },
-      }).then((r) => r.json()),
+    queryFn: () => intelligenceApi.rfm.get(),
   });
 
   const rfm: any = data ?? {};
