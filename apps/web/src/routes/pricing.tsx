@@ -201,11 +201,11 @@ const PLANS = [
       "Unlimited users",
       "Everything in Business",
       "Custom AI agent configuration",
-      "SOC 2 Type II compliance",
+      "Security review & compliance assistance",
       "Data residency (US / EU / India / UAE)",
       "Custom integrations & API access",
       "RBAC + approval workflows",
-      "99.99% SLA uptime guarantee",
+      "Custom SLA",
       "Dedicated infrastructure",
     ],
   },
@@ -340,7 +340,7 @@ const COMPARISON = [
         enterprise: true,
       },
       {
-        feature: "SOC 2 Type II",
+        feature: "Security review & compliance assistance",
         free: false,
         solo: false,
         starter: false,
@@ -496,7 +496,7 @@ function PricingPage() {
             One platform.
             <br />
             <span className="bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent">
-              Replace seven tools.
+              Replace all your tools.
             </span>
           </h1>
           <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
@@ -641,7 +641,7 @@ function PricingPage() {
               },
               {
                 icon: Shield,
-                label: "SOC 2 in progress",
+                label: "Security-first design",
                 sub: "Enterprise-ready security",
               },
               {

@@ -84,7 +84,7 @@ const MODULES = [
 ];
 
 const TRIAL_PERKS = [
-  "21 days free — no credit card",
+  "14 days free — no credit card",
   "Full Growth plan access from day one",
   "Your data stays yours, always",
   "Cancel or downgrade anytime",
@@ -258,7 +258,7 @@ function RegisterPage() {
               Start your free trial
             </h1>
             <p className="mt-1.5 text-muted-foreground text-sm">
-              21 days free · No credit card · Full Growth access
+              14 days free · No credit card · Full Growth access
             </p>
           </div>
 
@@ -403,7 +403,7 @@ function RegisterPage() {
           {/* Trust signals */}
           <div className="flex items-center justify-center gap-4 pt-2">
             {[
-              { icon: Shield, label: "SOC 2 in progress" },
+              { icon: Shield, label: "GDPR Compliant" },
               { icon: Lock, label: "256-bit SSL" },
               { icon: Globe, label: "US company" },
             ].map((item) => (

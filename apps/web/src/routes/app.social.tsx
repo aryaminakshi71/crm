@@ -1,5 +1,7 @@
 import { Card, CardContent, Button } from "@crm/ui";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { socialApi } from "@/lib/api";
 import {
   Share2,
   Users,
@@ -38,11 +40,18 @@ function SocialLayout() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  const { data: accountsData } = useQuery({
+    queryKey: ["social-accounts"],
+    queryFn: () => socialApi.accounts.list(),
+  });
+
+  const connectedAccounts = (accountsData as any)?.data ?? [];
+
   const stats = [
-    { label: "Total Followers", value: "45.2K", icon: Users, color: "text-blue-500" },
-    { label: "Posts This Week", value: "28", icon: Share2, color: "text-emerald-500" },
-    { label: "Engagement Rate", value: "4.8%", icon: BarChart3, color: "text-amber-500" },
-    { label: "New Mentions", value: "156", icon: Bell, color: "text-purple-500" },
+    { label: "Connected Accounts", value: String(connectedAccounts.length), icon: Users, color: "text-blue-500" },
+    { label: "Posts This Week", value: "—", icon: Share2, color: "text-emerald-500" },
+    { label: "Engagement Rate", value: "—", icon: BarChart3, color: "text-amber-500" },
+    { label: "New Mentions", value: "—", icon: Bell, color: "text-purple-500" },
   ];
 
   return (

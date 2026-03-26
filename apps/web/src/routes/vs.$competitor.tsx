@@ -73,7 +73,7 @@ export const Route = createFileRoute("/vs/$competitor")({
               name: `Is Nucleo One cheaper than ${name}?`,
               acceptedAnswer: {
                 "@type": "Answer",
-                text: `Nucleo One starts free and scales from $9/module/month, or $79/user/month for the full Professional suite. This typically represents significant savings vs ${name} when accounting for all modules needed to match equivalent functionality.`,
+                text: `Nucleo One starts free and scales to plans from $12/user/month for Starter, which includes CRM, HRM, Projects, Finance, and more. This represents significant savings vs ${name} when accounting for all modules needed to match equivalent functionality.`,
               },
             },
             {
@@ -503,8 +503,8 @@ function ComparisonPage() {
               Stop juggling. Start winning.
             </h2>
             <p className="text-white/70">
-              Join 1,200+ companies that migrated from {comp.name} to Nucleo One
-              in 2024. Your data migration is free and handled by our engineers.
+              Join growing companies switching from {comp.name} to Nucleo One.
+              Your data migration is free and handled by our engineers.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <Link

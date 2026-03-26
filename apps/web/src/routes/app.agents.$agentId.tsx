@@ -50,7 +50,7 @@ const CONTEXT_VARIABLES_MOCK = [
   { name: "company_name", value: "Acme Corp", type: "string" },
   { name: "user_plan", value: "enterprise", type: "string" },
   { name: "total_tasks", value: "47", type: "number" },
-  { name: "satisfaction_score", value: "4.8/5", type: "number" },
+  { name: "satisfaction_score", value: "—", type: "number" },
 ];
 
 function AgentDetailPage() {

@@ -87,14 +87,14 @@ function getCompetitorFAQs(competitor: string) {
         name: `Why is Nucleo One better than Salesforce?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Nucleo One offers all-in-one functionality including CRM, HRM, Projects, Helpdesk, and AI at a fraction of Salesforce's cost. While Salesforce charges $150+/user/month for basic features and requires expensive add-ons for everything, Nucleo One includes everything in every plan starting at $15/user/month."
+          text: "Nucleo One offers all-in-one functionality including CRM, HRM, Projects, Helpdesk, and AI at a fraction of Salesforce's cost. While Salesforce charges $150+/user/month for basic features and requires expensive add-ons for everything, Nucleo One includes everything in every plan starting at $12/user/month."
         }
       },
       {
         name: "How much can I save switching from Salesforce to Nucleo One?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Most companies save 50-80% on their CRM costs. A company with 100 users paying Salesforce's enterprise pricing can save over $150,000/year by switching to Nucleo One, while getting more features."
+          text: "Nucleo One offers significant savings compared to Salesforce. While exact savings depend on your team size and current plan, Nucleo One includes more features at a lower price point, with no expensive add-ons required."
         }
       },
       {
@@ -110,7 +110,7 @@ function getCompetitorFAQs(competitor: string) {
         name: "How does Nucleo One compare to HubSpot's pricing?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "HubSpot's 'free' CRM is severely limited, and their paid plans add up quickly with expensive add-ons for essential features. Nucleo One includes all core modules in every plan at $15/user/month, compared to HubSpot's $50-500+/user/month."
+          text: "HubSpot's 'free' CRM is severely limited, and their paid plans add up quickly with expensive add-ons for essential features. Nucleo One includes all core modules in every plan at $12/user/month, compared to HubSpot's $50-500+/user/month."
         }
       },
       {
@@ -133,7 +133,7 @@ function getCompetitorFAQs(competitor: string) {
         name: "Is Nucleo One more expensive than Zoho?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Nucleo One starts at $15/user/month vs Zoho's $12/user/month. However, Nucleo One includes AI agents, better integrations, and priority support that Zoho charges extra for."
+          text: "Nucleo One starts at $12/user/month for Starter, the same as Zoho's base tier. However, Nucleo One includes AI agents, modern UX, and priority support built into every plan."
         }
       }
     ],
@@ -283,20 +283,20 @@ function CompetitorComparePage() {
         <div className="mx-auto max-w-4xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <p className="text-3xl font-black text-primary">80%</p>
-              <p className="text-muted-foreground text-sm">Cost Savings vs {competitor.name}</p>
+              <p className="text-3xl font-black text-primary">16</p>
+              <p className="text-muted-foreground text-sm">Business Modules</p>
             </div>
             <div>
-              <p className="text-3xl font-black text-green-600">10,000+</p>
-              <p className="text-muted-foreground text-sm">Businesses Switched</p>
+              <p className="text-3xl font-black text-green-600">$12</p>
+              <p className="text-muted-foreground text-sm">Per User/Month (Starter)</p>
             </div>
             <div>
-              <p className="text-3xl font-black text-foreground">4.8/5</p>
-              <p className="text-muted-foreground text-sm">Customer Rating</p>
-            </div>
-            <div>
-              <p className="text-3xl font-black text-primary">21</p>
+              <p className="text-3xl font-black text-foreground">14</p>
               <p className="text-muted-foreground text-sm">Days Free Trial</p>
+            </div>
+            <div>
+              <p className="text-3xl font-black text-primary">1</p>
+              <p className="text-muted-foreground text-sm">Unified Platform</p>
             </div>
           </div>
         </div>

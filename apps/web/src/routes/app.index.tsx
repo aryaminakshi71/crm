@@ -246,7 +246,7 @@ const ONBOARDING_STEPS = [
   {
     id: "setup_billing",
     label: "Choose a plan before trial ends",
-    sub: "Lock in your price — 21 days free, no disruption",
+    sub: "Lock in your price — 14 days free, no disruption",
     href: "/app/settings",
     ctaLabel: "Choose plan",
   },

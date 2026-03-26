@@ -96,7 +96,7 @@ const comparisonMatrix = [
   { feature: "Marketing automation", nucleo: true, salesforce: true, hubspot: true, zoho: true, pipedrive: false },
   { feature: "Free trial", nucleo: true, salesforce: false, hubspot: true, zoho: true, pipedrive: true },
   { feature: "Setup in minutes", nucleo: true, salesforce: false, hubspot: true, zoho: true, pipedrive: true },
-  { feature: "Starting price", nucleo: "$15/user", salesforce: "$150/user", hubspot: "$50/user", zoho: "$12/user", pipedrive: "$15/user" },
+  { feature: "Starting price", nucleo: "$12/user", salesforce: "$150/user", hubspot: "$50/user", zoho: "$12/user", pipedrive: "$15/user" },
 ];
 
 function CompareIndexPage() {
@@ -113,7 +113,7 @@ function CompareIndexPage() {
             <span className="text-primary">Switch to Nucleo One</span>
           </h1>
           <p className="mb-8 text-muted-foreground text-xl max-w-2xl mx-auto">
-            See why 10,000+ businesses switched from Salesforce, HubSpot, Zoho, and Pipedrive
+            See why growing businesses switch from Salesforce, HubSpot, Zoho, and Pipedrive
             to get all their business tools in one place — at a fraction of the cost.
           </p>
           <div className="flex justify-center gap-4">

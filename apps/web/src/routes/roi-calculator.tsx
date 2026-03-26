@@ -370,7 +370,7 @@ function ROICalculator() {
                       <div>
                         <p className="font-medium text-foreground">Tool Consolidation</p>
                         <p className="text-xs text-muted-foreground">
-                          Replace 3+ tools with one platform
+                          Replace your tools with one platform
                         </p>
                       </div>
                     </div>
