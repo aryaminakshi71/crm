@@ -73,11 +73,11 @@ interface FormState {
 }
 
 const interests = [
-  "CRM & Sales",
-  "HRM & People",
-  "Project Management",
-  "Finance & Invoicing",
-  "Helpdesk & Support",
+  "CRM",
+  "HRM",
+  "Projects",
+  "Finance",
+  "Helpdesk",
   "AI Agents",
   "All modules",
 ];

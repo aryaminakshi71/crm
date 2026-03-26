@@ -240,7 +240,7 @@ const COMPARISON_FEATURES = [
     detail: "Native AI that handles both autonomous tasks and business analytics.",
   },
   {
-    label: "Integrated HRM & Payroll",
+    label: "Integrated HRM",
     nucleo: true,
     competitor: "Var",
     detail: "Manage your people and your customers in one login.",

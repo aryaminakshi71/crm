@@ -452,7 +452,7 @@ function useNavigationGroups(badges: {
     // Merged: Marketing (absorbs Campaign Pro + Search Ads) + Social Media.
     // Was previously split across two nav groups.
     {
-      label: "Sales & Marketing",
+      label: "Marketing",
       items: [
         {
           name: "Marketing",

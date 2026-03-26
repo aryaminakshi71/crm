@@ -49,7 +49,7 @@ const FALLBACK_CHART = [
 ];
 
 const MODULE_LINKS = [
-  { label: "CRM & Contacts", href: "/app/activities", color: "bg-blue-100 text-blue-600" },
+  { label: "CRM", href: "/app/crm", color: "bg-blue-100 text-blue-600" },
   { label: "eCommerce", href: "/app/ecommerce", color: "bg-purple-100 text-purple-600" },
   { label: "Invoicing", href: "/app/invoicing", color: "bg-green-100 text-green-600" },
   { label: "Projects", href: "/app/projects", color: "bg-orange-100 text-orange-600" },

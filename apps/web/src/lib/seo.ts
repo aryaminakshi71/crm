@@ -45,7 +45,7 @@ export const moduleSEO: Record<ModuleKey, {
     icon: "💳",
   },
   helpdesk: {
-    title: "Helpdesk & Support",
+    title: "Helpdesk",
     description: "Resolve customer tickets faster with AI-powered triage and SLA management.",
     keywords: ["helpdesk", "support tickets", "customer service", "SLA"],
     benefits: ["AI ticket triage", "SLA monitoring", "Knowledge base"],
