@@ -61,23 +61,23 @@ const DEFAULT_INPUTS: CalculatorInputs = {
 // ─── Savings Calculations ─────────────────────────────────────────────────────
 
 function calculateSavings(inputs: CalculatorInputs) {
-  // CRM consolidation savings (30% time savings on data entry)
-  const crmTimeSavingsHours = inputs.teamSize * 2 * 4 * 0.3; // 2 hrs/week * 4 weeks * 30%
+  // CRM consolidation savings (estimate based on team size)
+  const crmTimeSavingsHours = inputs.teamSize * 0.5 * 4; // 0.5 hrs/week * 4 weeks
   const crmTimeSavingsDollars = crmTimeSavingsHours * inputs.hourlyRate;
 
-  // Tool consolidation savings (average 3 tools eliminated)
-  const toolConsolidationSavings = Math.min(inputs.monthlyToolSpend * 0.4, 800);
+  // Tool consolidation savings (estimate: 1-2 tools replaced)
+  const toolConsolidationSavings = Math.min(inputs.monthlyToolSpend * 0.15, 300);
 
-  // Sales improvements (15% faster deal closing, 10% more deals)
-  const salesTimeSavings = inputs.monthlyDeals * inputs.avgDealValue * 0.1 * 0.15;
-  const additionalRevenue = inputs.monthlyDeals * inputs.avgDealValue * 0.1;
+  // Sales improvements (conservative estimate)
+  const salesTimeSavings = inputs.monthlyDeals * inputs.avgDealValue * 0.05 * 0.08;
+  const additionalRevenue = inputs.monthlyDeals * inputs.avgDealValue * 0.05;
 
-  // Support savings (AI triage reduces tickets by 40%, speeds resolution by 30%)
-  const supportTicketsReduced = inputs.supportTicketsPerMonth * 0.4;
-  const supportTimeSaved = supportTicketsReduced * inputs.avgSupportHoursPerTicket * 0.3 * inputs.hourlyRate;
+  // Support savings (AI triage helps, but results vary)
+  const supportTicketsReduced = inputs.supportTicketsPerMonth * 0.15;
+  const supportTimeSaved = supportTicketsReduced * inputs.avgSupportHoursPerTicket * 0.15 * inputs.hourlyRate;
 
-  // HR/Finance automation savings (5 hours/month per admin)
-  const adminTimeSavings = Math.floor(inputs.teamSize / 5) * 5 * 12 * inputs.hourlyRate;
+  // HR/Finance automation savings (conservative estimate)
+  const adminTimeSavings = Math.floor(inputs.teamSize / 10) * 3 * 12 * inputs.hourlyRate;
 
   return {
     crmTimeSavingsHours,
@@ -353,7 +353,7 @@ function ROICalculator() {
                       <div>
                         <p className="font-medium text-foreground">Sales Efficiency</p>
                         <p className="text-xs text-muted-foreground">
-                          15% faster closing, 10% more deals
+                          Improved deal tracking and follow-ups
                         </p>
                       </div>
                     </div>
@@ -387,7 +387,7 @@ function ROICalculator() {
                       <div>
                         <p className="font-medium text-foreground">Support Automation</p>
                         <p className="text-xs text-muted-foreground">
-                          AI triage reduces workload by 40%
+                          AI triage helps route and prioritize tickets
                         </p>
                       </div>
                     </div>
@@ -467,19 +467,19 @@ function ROICalculator() {
           </h3>
           <div className="grid gap-6 sm:grid-cols-3">
             <div className="text-center">
-              <p className="mb-2 font-bold text-3xl text-primary">7x</p>
+              <p className="mb-2 font-bold text-3xl text-primary">—</p>
               <p className="text-muted-foreground text-sm">
-                Average time saved per week on admin tasks
+                Time saved per week on admin tasks
               </p>
             </div>
             <div className="text-center">
-              <p className="mb-2 font-bold text-3xl text-primary">40%</p>
+              <p className="mb-2 font-bold text-3xl text-primary">—</p>
               <p className="text-muted-foreground text-sm">
                 Reduction in support ticket handling time
               </p>
             </div>
             <div className="text-center">
-              <p className="mb-2 font-bold text-3xl text-primary">3 weeks</p>
+              <p className="mb-2 font-bold text-3xl text-primary">—</p>
               <p className="text-muted-foreground text-sm">
                 Average payback period on Nucleo One investment
               </p>
