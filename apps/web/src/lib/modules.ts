@@ -16,10 +16,6 @@ import {
   Globe,
   LayoutGrid,
   MessageSquare,
-  Puzzle,
-  Settings,
-  ShoppingCart,
-  Sparkles,
   Truck,
   Users,
 } from "lucide-react";
@@ -29,24 +25,21 @@ import {
 export type NucleoModuleKey =
   | "crm"
   | "projects"
-  | "assetlayer"
   | "helpdesk"
-  | "queue"
-  | "invoicing"
-  | "campaign_pro"
-  | "doclattice"
   | "hrm"
-  | "devops"
-  | "agents"
-  | "communications"
-  | "social"
-  | "speech"
   | "inventory"
-  | "marketing"
   | "monitoring"
+  | "communications"
   | "field_service"
+  | "devops"
+  | "finance"
+  | "invoicing"
+  | "marketing"
   | "advertising"
-  | "finance";
+  | "social"
+  | "campaign_pro"
+  | "agents"
+  | "speech";
 
 export type PlanTierKey = "free" | "starter" | "business" | "enterprise";
 
@@ -57,17 +50,13 @@ type IconComponent = typeof Users;
 const iconMap: Record<string, IconComponent> = {
   Users,
   Activity,
-  Settings,
   Box,
   CreditCard,
   FileText,
-  Puzzle,
   BarChart3,
   Bot,
   Globe,
   MessageSquare,
-  ShoppingCart,
-  Sparkles,
   Truck,
   LayoutGrid,
 };
@@ -83,96 +72,75 @@ export interface NucleoModule {
 }
 
 export const NUCLEO_MODULES: NucleoModule[] = [
-  // Core — always available
+  // Core
   {
     key: "crm",
-    name: "Core Workspace",
-    description: "Contacts, deals, leads, and activity tracking",
+    name: "CRM",
+    description: "Contacts, deals, leads, pipeline, and activity tracking",
     iconName: "Users",
-    phase: "core",
-  },
-  {
-    key: "notifications",
-    name: "Notifications",
-    description: "Email and in-app notifications",
-    iconName: "Activity",
-    phase: "core",
-  },
-  {
-    key: "rbac",
-    name: "Access Control",
-    description: "Roles, permissions, and team management",
-    iconName: "Settings",
     phase: "core",
   },
   // Operations
   {
     key: "projects",
     name: "Projects",
-    description: "Project planning, task tracking, and delivery workflows",
+    description: "Project planning, task tracking, kanban, gantt, and delivery workflows",
     iconName: "Box",
     phase: "ops",
   },
   {
     key: "helpdesk",
     name: "Helpdesk",
-    description: "Ticketing, SLA workflows, and support operations",
+    description: "Ticketing, knowledge base, SLA workflows, and support operations",
     iconName: "FileText",
     phase: "ops",
   },
   {
     key: "hrm",
     name: "HRM",
-    description: "Employee management, leave, payroll, and performance",
+    description: "Employee directory, attendance, leave, recruitment, training, and payroll",
     iconName: "Users",
     phase: "ops",
   },
   {
     key: "inventory",
     name: "Inventory",
-    description: "Stock management, products, warehouses, and transfers",
+    description: "Product catalog, stock management, warehouses, and transfers",
     iconName: "LayoutGrid",
     phase: "ops",
   },
   {
     key: "monitoring",
     name: "Monitoring",
-    description: "System observability, alerts, and uptime tracking",
+    description: "Error tracking, uptime checks, performance metrics, and log aggregation",
     iconName: "Activity",
     phase: "ops",
   },
   {
     key: "communications",
     name: "Communications",
-    description: "Omnichannel messaging, SMS, voice, and video",
+    description: "Omnichannel messaging — SMS, voice, video, and chat",
     iconName: "MessageSquare",
     phase: "ops",
   },
   {
     key: "field_service",
     name: "Field Service",
-    description: "Dispatch, routing, and field technician management",
+    description: "Smart dispatch, route optimization, technician tracking, and job scheduling",
     iconName: "Truck",
-    phase: "ops",
-  },
-  {
-    key: "queue",
-    name: "Queue",
-    description: "Queue counters, token flow, and service desk operations",
-    iconName: "FileText",
     phase: "ops",
   },
   {
     key: "devops",
     name: "DevOps",
-    description: "CI/CD pipelines, deployments, and infrastructure",
+    description: "CI/CD pipelines, automated deployments, and infrastructure management",
     iconName: "Globe",
     phase: "ops",
   },
   {
     key: "finance",
     name: "Finance",
-    description: "Expenses, budget tracking, and financial reporting",
+    description: "Expenses, budget tracking, financial reporting, and cost control",
     iconName: "CreditCard",
     phase: "ops",
   },
@@ -180,65 +148,51 @@ export const NUCLEO_MODULES: NucleoModule[] = [
   {
     key: "invoicing",
     name: "Invoicing",
-    description: "Invoice generation, payment tracking, and billing",
+    description: "Professional invoices, payment tracking, and billing management",
     iconName: "CreditCard",
     phase: "growth",
   },
   {
     key: "marketing",
     name: "Marketing",
-    description: "Campaign management, email automation, and analytics",
+    description: "Campaign builder, email automation, landing pages, and lead scoring",
     iconName: "BarChart3",
     phase: "growth",
   },
   {
     key: "advertising",
     name: "Advertising",
-    description: "Ad campaign management across Google, Meta, LinkedIn",
+    description: "Ad campaigns across Google, Meta, and LinkedIn with AI optimization",
     iconName: "BarChart3",
     phase: "growth",
   },
   {
     key: "social",
     name: "Social Media",
-    description: "Social media scheduling, analytics, and inbox",
+    description: "Post scheduling, analytics, social listening, and inbox management",
     iconName: "BarChart3",
     phase: "growth",
   },
   {
     key: "campaign_pro",
     name: "Campaign Pro",
-    description: "Advanced campaign planning, A/B testing, and automation",
+    description: "Advanced campaign planning, A/B testing, and multi-channel automation",
     iconName: "BarChart3",
     phase: "growth",
-  },
-  {
-    key: "assetlayer",
-    name: "AssetLayer",
-    description: "Digital asset storage, tagging, folders, and lifecycle",
-    iconName: "Box",
-    phase: "ops",
   },
   // AI
   {
     key: "agents",
     name: "AI Agents",
-    description: "Autonomous AI agents for coding, support, and analysis",
+    description: "Autonomous AI agents for automation, support, and business intelligence",
     iconName: "Bot",
     phase: "ai",
   },
   {
     key: "speech",
     name: "Speech & Voice",
-    description: "Speech recognition, transcription, and voice commands",
+    description: "Audio transcription, real-time streaming, and meeting notes",
     iconName: "Bot",
-    phase: "ai",
-  },
-  {
-    key: "doclattice",
-    name: "Doclattice AI",
-    description: "Document intake, OCR, extraction, review, and routing",
-    iconName: "Sparkles",
     phase: "ai",
   },
 ];
@@ -279,7 +233,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: 0,
     annualPrice: 0,
     maxUsers: 1,
-    modules: ["crm", "notifications", "rbac", "projects"],
+    modules: ["crm", "projects"],
   },
   {
     key: "starter",
@@ -290,8 +244,6 @@ export const PLAN_TIERS: PlanTier[] = [
     maxUsers: 25,
     modules: [
       "crm",
-      "notifications",
-      "rbac",
       "projects",
       "helpdesk",
       "invoicing",
@@ -310,8 +262,6 @@ export const PLAN_TIERS: PlanTier[] = [
     maxUsers: 200,
     modules: [
       "crm",
-      "notifications",
-      "rbac",
       "projects",
       "helpdesk",
       "invoicing",
@@ -321,13 +271,11 @@ export const PLAN_TIERS: PlanTier[] = [
       "finance",
       "communications",
       "field_service",
-      "queue",
       "devops",
       "marketing",
       "advertising",
       "social",
       "campaign_pro",
-      "assetlayer",
     ],
   },
   {
@@ -337,7 +285,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: null,
     annualPrice: null,
     maxUsers: -1, // unlimited
-    modules: NUCLEO_MODULES.map((m) => m.key), // all modules
+    modules: NUCLEO_MODULES.map((m) => m.key), // all 16 public modules
   },
 ];
 
