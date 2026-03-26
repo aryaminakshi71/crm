@@ -1788,8 +1788,12 @@ export function createApp() {
   app.use("/api/*", rateLimitRedis({ limiterType: "api" }));
   app.use("/api/auth/*", rateLimitRedis({ limiterType: "auth" }));
 
-  // AI feature endpoints (P0 rollout: CRM)
+  // AI feature endpoints (P0 rollout: CRM) — require authentication
   app.post("/api/ai/lead/score", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return c.json({ error: "Invalid JSON body" }, 400);
@@ -1799,6 +1803,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/email/suggest", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     const recipient = body?.recipient;
     const purpose = body?.purpose;
@@ -1823,6 +1831,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/meeting/summarize", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     const notes = body?.notes;
     if (typeof notes !== "string" || notes.trim().length === 0) {
@@ -1833,6 +1845,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/contact/enrich", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body?.name !== "string" || body.name.trim() === "") {
       return c.json({ error: "name is required" }, 400);
@@ -1842,6 +1858,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/helpdesk/triage", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     const subject = body?.subject;
     const description = body?.description;
@@ -1860,6 +1880,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/marketing/plan", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     const goal = body?.goal;
     const audience = body?.audience;
@@ -1878,6 +1902,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/invoicing/risk", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return c.json({ error: "Invalid JSON body" }, 400);
@@ -1895,6 +1923,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/projects/risk", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return c.json({ error: "Invalid JSON body" }, 400);
@@ -1912,6 +1944,10 @@ export function createApp() {
   });
 
   app.post("/api/ai/documents/insights", async (c: any) => {
+    const authResult = await requireAuth(c);
+    if (!authResult.authorized) return c.json({ error: "unauthorized" }, 401);
+    const orgId = await getOrgIdFromSession(c);
+    if (!orgId) return c.json({ error: "Organization ID required" }, 400);
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return c.json({ error: "Invalid JSON body" }, 400);
