@@ -500,7 +500,7 @@ function CompetitorComparePage() {
             Ready to Make the Switch?
           </h2>
           <p className="mb-8 text-primary-foreground/90 text-xl">
-            Join 10,000+ businesses who chose Nucleo One over {competitor.name}.
+            Join growing businesses who chose Nucleo One over {competitor.name}.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/register">

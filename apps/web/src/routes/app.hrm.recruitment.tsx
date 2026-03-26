@@ -31,14 +31,14 @@ export const Route = createFileRoute("/app/hrm/recruitment")({
 });
 
 const defaultCandidates = [
-  { id: "1", name: "Alex Rivera", role: "Senior Frontend Developer", dept: "Engineering", stage: "Technical Interview", status: "Active", rating: 4.5, appliedDate: "Mar 15, 2026", source: "LinkedIn", avatar: "AR" },
+  { id: "1", name: "Alex Rivera", role: "Senior Frontend Developer", dept: "Engineering", stage: "Technical Interview", status: "Active", rating: null, appliedDate: "Mar 15, 2026", source: "LinkedIn", avatar: "AR" },
   { id: "2", name: "Maya Patel", role: "Product Designer", dept: "Design", stage: "Design Challenge", status: "Active", rating: null, appliedDate: "Mar 12, 2026", source: "Referral", avatar: "MP" },
-  { id: "3", name: "Jordan Lee", role: "Backend Developer", dept: "Engineering", stage: "Phone Screen", status: "Active", rating: 4.2, appliedDate: "Mar 10, 2026", source: "Indeed", avatar: "JL" },
-  { id: "4", name: "Taylor Smith", role: "Sales Manager", dept: "Sales", stage: "Final Round", status: "Active", rating: 4.6, appliedDate: "Mar 5, 2026", source: "LinkedIn", avatar: "TS" },
-  { id: "5", name: "Casey Brown", role: "Marketing Specialist", dept: "Marketing", stage: "Offer", status: "Offer Sent", rating: 4.7, appliedDate: "Feb 28, 2026", source: "Website", avatar: "CB" },
-  { id: "6", name: "Morgan Davis", role: "DevOps Engineer", dept: "Engineering", stage: "Technical Interview", status: "Active", rating: 4.3, appliedDate: "Mar 8, 2026", source: "Referral", avatar: "MD" },
+  { id: "3", name: "Jordan Lee", role: "Backend Developer", dept: "Engineering", stage: "Phone Screen", status: "Active", rating: null, appliedDate: "Mar 10, 2026", source: "Indeed", avatar: "JL" },
+  { id: "4", name: "Taylor Smith", role: "Sales Manager", dept: "Sales", stage: "Final Round", status: "Active", rating: null, appliedDate: "Mar 5, 2026", source: "LinkedIn", avatar: "TS" },
+  { id: "5", name: "Casey Brown", role: "Marketing Specialist", dept: "Marketing", stage: "Offer", status: "Offer Sent", rating: null, appliedDate: "Feb 28, 2026", source: "Website", avatar: "CB" },
+  { id: "6", name: "Morgan Davis", role: "DevOps Engineer", dept: "Engineering", stage: "Technical Interview", status: "Active", rating: null, appliedDate: "Mar 8, 2026", source: "Referral", avatar: "MD" },
   { id: "7", name: "Riley Wilson", role: "Data Scientist", dept: "Engineering", stage: "Applied", status: "New", rating: null, appliedDate: "Mar 18, 2026", source: "LinkedIn", avatar: "RW" },
-  { id: "8", name: "Jamie Garcia", role: "Account Executive", dept: "Sales", stage: "Phone Screen", status: "Active", rating: 4.0, appliedDate: "Mar 14, 2026", source: "Website", avatar: "JG" },
+  { id: "8", name: "Jamie Garcia", role: "Account Executive", dept: "Sales", stage: "Phone Screen", status: "Active", rating: null, appliedDate: "Mar 14, 2026", source: "Website", avatar: "JG" },
 ];
 
 const defaultJobs = [

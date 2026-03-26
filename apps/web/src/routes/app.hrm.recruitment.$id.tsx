@@ -44,7 +44,7 @@ const _legacyCandidateData: Record<string, any> = {
     location: "San Francisco, CA",
     stage: "Technical Interview",
     status: "Active",
-    rating: 4.5,
+    rating: null,
     appliedDate: "Mar 15, 2026",
     source: "LinkedIn",
     avatar: "AR",
@@ -58,7 +58,7 @@ const _legacyCandidateData: Record<string, any> = {
       { date: "Mar 20, 2026", action: "Moved to Technical Interview", type: "progress" },
     ],
     interviews: [
-      { round: "Phone Screen", interviewer: "Sarah Chen", date: "Mar 19, 2026", status: "Completed", rating: 4.5, notes: "Good cultural fit, solid React expertise" },
+      { round: "Phone Screen", interviewer: "Sarah Chen", date: "Mar 19, 2026", status: "Completed", rating: null, notes: "Good cultural fit, solid React expertise" },
       { round: "Technical Interview", interviewer: "David Park", date: "Mar 22, 2026", status: "Scheduled", rating: null, notes: null },
     ],
     resume: { name: "Alex_Rivera_Resume.pdf", uploadedAt: "Mar 15, 2026" },
