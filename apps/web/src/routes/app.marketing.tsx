@@ -408,28 +408,28 @@ function MarketingPage() {
           title="Active Growth"
           value={campaigns.length}
           icon={<Megaphone className="h-4 w-4" />}
-          trend="+3 active"
+          trend="—"
           color="text-primary"
         />
         <Metric
           title="Total Audience"
           value={totalAudienceSize.toLocaleString()}
           icon={<Users className="h-4 w-4" />}
-          trend="+1.2k /mo"
+          trend="—"
           color="text-cyan-400"
         />
         <Metric
           title="Engagement rate"
-          value="4.8%"
+          value="—"
           icon={<MousePointer2 className="h-4 w-4" />}
-          trend="+0.4%"
+          trend="—"
           color="text-emerald-400"
         />
         <Metric
           title="ROAS"
-          value="5.2x"
+          value="—"
           icon={<DollarSign className="h-4 w-4" />}
-          trend="Stable"
+          trend="—"
           color="text-amber-400"
         />
       </div>

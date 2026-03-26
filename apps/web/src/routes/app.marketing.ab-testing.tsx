@@ -15,42 +15,6 @@ export const Route = createFileRoute("/app/marketing/ab-testing")({
   component: MarketingAbTestingPage,
 });
 
-const _MOCK_AB_TESTS = [
-  {
-    id: "ab-1",
-    name: "Subject Line Test: Personalization vs Generic",
-    status: "running",
-    campaignName: "Q1 Newsletter",
-    variantA: { name: "Personalized", openRate: 28.4, clickRate: 6.2, conversions: 142 },
-    variantB: { name: "Generic", openRate: 21.1, clickRate: 4.8, conversions: 98 },
-    winner: null,
-    startedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    endsAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "ab-2",
-    name: "CTA Button Color: Blue vs Green",
-    status: "completed",
-    campaignName: "Product Launch",
-    variantA: { name: "Blue CTA", openRate: 31.2, clickRate: 8.1, conversions: 210 },
-    variantB: { name: "Green CTA", openRate: 31.5, clickRate: 9.4, conversions: 256 },
-    winner: "B",
-    startedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    endsAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "ab-3",
-    name: "Send Time: Morning vs Evening",
-    status: "draft",
-    campaignName: "Weekly Digest",
-    variantA: { name: "9am", openRate: 0, clickRate: 0, conversions: 0 },
-    variantB: { name: "7pm", openRate: 0, clickRate: 0, conversions: 0 },
-    winner: null,
-    startedAt: null,
-    endsAt: null,
-  },
-];
-
 function MarketingAbTestingPage() {
   const { data: campaignsData, isLoading, refetch, isError} = useQuery({
     queryKey: ["marketing", "ab-tests"],

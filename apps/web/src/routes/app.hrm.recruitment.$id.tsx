@@ -85,7 +85,7 @@ const _legacyCandidateData: Record<string, any> = {
     location: "Remote",
     stage: "Design Challenge",
     status: "Active",
-    rating: 4.8,
+    rating: null,
     appliedDate: "Mar 12, 2026",
     source: "Referral",
     avatar: "MP",
@@ -100,7 +100,7 @@ const _legacyCandidateData: Record<string, any> = {
       { date: "Mar 19, 2026", action: "Moved to Design Challenge", type: "progress" },
     ],
     interviews: [
-      { round: "Phone Screen", interviewer: "Lisa Park", date: "Mar 17, 2026", status: "Completed", rating: 4.8, notes: "Outstanding portfolio, strong UX background" },
+      { round: "Phone Screen", interviewer: "Lisa Park", date: "Mar 17, 2026", status: "Completed", rating: null, notes: "Outstanding portfolio, strong UX background" },
       { round: "Design Challenge", interviewer: "TBD", date: "Mar 24 - 26, 2026", status: "In Progress", rating: null, notes: "Design a mobile checkout flow" },
     ],
     resume: { name: "Maya_Patel_Resume.pdf", uploadedAt: "Mar 12, 2026" },

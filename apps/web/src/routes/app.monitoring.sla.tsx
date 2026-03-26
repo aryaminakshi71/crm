@@ -53,7 +53,7 @@ function generateSlaComplianceHistory() {
   return Array.from({ length: 30 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (29 - i));
-    const compliance = 99 + Math.random() * 0.99; // 99–99.99%
+    const compliance = 0; // —
     return {
       date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       compliance: parseFloat(compliance.toFixed(2)),

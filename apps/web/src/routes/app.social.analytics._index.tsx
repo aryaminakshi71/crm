@@ -53,36 +53,13 @@ export const Route = createFileRoute("/app/social/analytics/_index")({
 
 // ─── Static chart data ────────────────────────────────────────────────────────
 
-const FOLLOWER_GROWTH = [
-  { month: "Oct", total: 52000 },
-  { month: "Nov", total: 55800 },
-  { month: "Dec", total: 57200 },
-  { month: "Jan", total: 59400 },
-  { month: "Feb", total: 61300 },
-  { month: "Mar", total: 62300 },
-];
+const FOLLOWER_GROWTH: { month: string; total: number }[] = [];
 
-const ENGAGEMENT_BY_PLATFORM = [
-  { platform: "Instagram", engagementRate: 4.8, color: "#f472b6" },
-  { platform: "LinkedIn", engagementRate: 3.2, color: "#60a5fa" },
-  { platform: "Twitter", engagementRate: 2.1, color: "#38bdf8" },
-  { platform: "Facebook", engagementRate: 1.4, color: "#818cf8" },
-];
+const ENGAGEMENT_BY_PLATFORM: { platform: string; engagementRate: number; color: string }[] = [];
 
-const TOP_POSTS = [
-  { id: "1", platform: "instagram", content: "We just hit 10,000 customers 🎉 Thank you for being part of this journey!", likes: 1204, comments: 156, shares: 340, reach: 45000 },
-  { id: "2", platform: "linkedin", content: "Join us for a free webinar on mastering B2B lead generation. April 10th, 2pm EST.", likes: 892, comments: 134, shares: 210, reach: 28000 },
-  { id: "3", platform: "twitter", content: "🌟 Customer spotlight: How Acme Corp reduced churn by 40% using our retention tools.", likes: 342, comments: 28, shares: 54, reach: 8900 },
-];
+const TOP_POSTS: { id: string; platform: string; content: string; likes: number; comments: number; shares: number; reach: number }[] = [];
 
-const POST_ENGAGEMENT_DATA = [
-  { post: "Post 1", impressions: 45000, likes: 1204, comments: 156 },
-  { post: "Post 2", impressions: 28000, likes: 892, comments: 134 },
-  { post: "Post 3", impressions: 8900, likes: 342, comments: 28 },
-  { post: "Post 4", impressions: 19500, likes: 620, comments: 74 },
-  { post: "Post 5", impressions: 34000, likes: 1050, comments: 98 },
-  { post: "Post 6", impressions: 12300, likes: 410, comments: 42 },
-];
+const POST_ENGAGEMENT_DATA: { post: string; impressions: number; likes: number; comments: number }[] = [];
 
 const PERIOD_OPTIONS = ["week", "month", "quarter"] as const;
 type Period = (typeof PERIOD_OPTIONS)[number];
@@ -154,9 +131,11 @@ function SocialAnalyticsPage() {
     return matchesQ && matchesPlatform;
   });
 
-  const latestFollowers = followerGrowth[followerGrowth.length - 1]?.total ?? 62300;
+  const latestFollowers = followerGrowth[followerGrowth.length - 1]?.total ?? 0;
   const followerGrowthNet = latestFollowers - (followerGrowth[0]?.total ?? 0);
-  const avgEngagement = (engagementByPlatform.reduce((s: number, p: any) => s + p.engagementRate, 0) / engagementByPlatform.length).toFixed(2);
+  const avgEngagement = engagementByPlatform.length > 0
+    ? (engagementByPlatform.reduce((s: number, p: any) => s + p.engagementRate, 0) / engagementByPlatform.length).toFixed(2)
+    : "0.00";
 
   return (
     <div className="space-y-6">

@@ -70,17 +70,17 @@ function StatusPage() {
     id: app.id,
     name: app.name,
     status: app.status === "healthy" ? "operational" : app.status === "degraded" ? "degraded" : "down",
-    uptime: app.metrics?.uptime || 99.9,
+    uptime: app.metrics?.uptime || 0,
     lastIncident: app.lastHealthCheck || "Unknown",
   })) || [
-    { id: 1, name: "API Services", status: "operational", uptime: 99.99, lastIncident: "15 days ago" },
-    { id: 2, name: "Web Application", status: "operational", uptime: 99.95, lastIncident: "8 days ago" },
-    { id: 3, name: "Database", status: "operational", uptime: 99.99, lastIncident: "22 days ago" },
-    { id: 4, name: "Authentication", status: "operational", uptime: 99.98, lastIncident: "12 days ago" },
-    { id: 5, name: "File Storage", status: "operational", uptime: 99.99, lastIncident: "30 days ago" },
-    { id: 6, name: "CDN", status: "degraded", uptime: 98.5, lastIncident: "2 hours ago" },
-    { id: 7, name: "Payment Processing", status: "operational", uptime: 99.97, lastIncident: "5 days ago" },
-    { id: 8, name: "Email Delivery", status: "operational", uptime: 99.9, lastIncident: "3 days ago" },
+    { id: 1, name: "API Services", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 2, name: "Web Application", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 3, name: "Database", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 4, name: "Authentication", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 5, name: "File Storage", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 6, name: "CDN", status: "degraded", uptime: 0, lastIncident: "—" },
+    { id: 7, name: "Payment Processing", status: "operational", uptime: 0, lastIncident: "—" },
+    { id: 8, name: "Email Delivery", status: "operational", uptime: 0, lastIncident: "—" },
   ];
 
   const { data: incidentsData } = useQuery({

@@ -59,12 +59,12 @@ function UptimePage() {
 
   // Default checks if no catalog data
   const defaultChecks = [
-    { id: "1", name: "API Gateway", url: "https://api.nucleo.one/health", interval: "1m", status: "up", latency: 45, uptime: 99.99, lastCheck: "30 sec ago" },
-    { id: "2", name: "Web Application", url: "https://nucleo.one", interval: "2m", status: "up", latency: 120, uptime: 99.95, lastCheck: "1 min ago" },
-    { id: "3", name: "Payment Gateway", url: "https://payments.nucleo.one/health", interval: "1m", status: "up", latency: 89, uptime: 99.97, lastCheck: "45 sec ago" },
-    { id: "4", name: "Auth Service", url: "https://auth.nucleo.one/health", interval: "1m", status: "down", latency: 0, uptime: 98.5, lastCheck: "5 min ago" },
-    { id: "5", name: "CDN Status", url: "https://cdn.nucleo.one/status", interval: "5m", status: "degraded", latency: 340, uptime: 99.2, lastCheck: "3 min ago" },
-    { id: "6", name: "Database Primary", url: "https://db.nucleo.one:5432/health", interval: "30s", status: "up", latency: 12, uptime: 99.99, lastCheck: "10 sec ago" },
+    { id: "1", name: "API Gateway", url: "https://api.nucleo.one/health", interval: "1m", status: "up", latency: 45, uptime: 0, lastCheck: "30 sec ago" },
+    { id: "2", name: "Web Application", url: "https://nucleo.one", interval: "2m", status: "up", latency: 120, uptime: 0, lastCheck: "1 min ago" },
+    { id: "3", name: "Payment Gateway", url: "https://payments.nucleo.one/health", interval: "1m", status: "up", latency: 89, uptime: 0, lastCheck: "45 sec ago" },
+    { id: "4", name: "Auth Service", url: "https://auth.nucleo.one/health", interval: "1m", status: "down", latency: 0, uptime: 0, lastCheck: "5 min ago" },
+    { id: "5", name: "CDN Status", url: "https://cdn.nucleo.one/status", interval: "5m", status: "degraded", latency: 340, uptime: 0, lastCheck: "3 min ago" },
+    { id: "6", name: "Database Primary", url: "https://db.nucleo.one:5432/health", interval: "30s", status: "up", latency: 12, uptime: 0, lastCheck: "10 sec ago" },
   ];
 
   const checks = (catalogData as any)?.data?.length > 0
@@ -330,11 +330,11 @@ function UptimePage() {
         <CardContent className="p-4">
           <h3 className="font-semibold text-foreground mb-4">Uptime History (7 days)</h3>
           <div className="h-32 flex items-end gap-1">
-            {[99.9, 99.95, 100, 99.98, 99.92, 99.99, 99.97, 99.99, 100, 99.95, 99.98, 99.99, 99.9, 99.97].map((val, i) => (
+            {Array(14).fill(0).map((_, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div
-                  className={`w-full rounded-t ${val >= 99.9 ? "bg-green-500" : val >= 99 ? "bg-yellow-500" : "bg-red-500"}`}
-                  style={{ height: `${val}%` }}
+                  className="w-full rounded-t bg-muted"
+                  style={{ height: "10%" }}
                 />
                 <span className="text-xs text-muted-foreground rotate-45 origin-top-left mt-2">
                   Day {i + 1}

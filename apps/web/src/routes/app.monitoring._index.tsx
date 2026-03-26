@@ -156,7 +156,7 @@ function MonitoringOverview() {
                   Uptime
                 </p>
                 <p className="font-black text-2xl text-foreground mt-0.5">
-                  {isLoading ? "..." : `${dashboard?.uptime?.uptimePercent?.toFixed(2) || "99.99"}%`}
+                  {isLoading ? "..." : `${dashboard?.uptime?.uptimePercent?.toFixed(2) || "—"}%`}
                 </p>
                 <p className="text-green-600 text-xs mt-1">Last 30 days</p>
               </div>

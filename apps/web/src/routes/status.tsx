@@ -47,47 +47,47 @@ const SERVICES = [
     name: "Web Application",
     icon: Globe,
     status: "operational" as const,
-    uptime: "99.98%",
-    latency: "142ms",
+    uptime: "—",
+    latency: "—",
     region: "Global (Cloudflare)",
   },
   {
     name: "API Gateway",
     icon: Server,
     status: "operational" as const,
-    uptime: "99.95%",
-    latency: "38ms",
+    uptime: "—",
+    latency: "—",
     region: "US-East-1 (AWS)",
   },
   {
     name: "AI / Intelligence Engine",
     icon: Zap,
     status: "operational" as const,
-    uptime: "99.91%",
-    latency: "280ms",
+    uptime: "—",
+    latency: "—",
     region: "US-East-1 (AWS)",
   },
   {
     name: "Authentication",
     icon: Shield,
     status: "operational" as const,
-    uptime: "100%",
-    latency: "22ms",
+    uptime: "—",
+    latency: "—",
     region: "Global",
   },
   {
     name: "Database Cluster",
     icon: Activity,
     status: "operational" as const,
-    uptime: "99.99%",
-    latency: "8ms",
+    uptime: "—",
+    latency: "—",
     region: "US-East-1 (AWS)",
   },
   {
     name: "Email & Notifications",
     icon: Wifi,
     status: "operational" as const,
-    uptime: "99.96%",
+    uptime: "—",
     latency: "—",
     region: "Global",
   },
@@ -95,14 +95,8 @@ const SERVICES = [
 
 // 90-day uptime bars — 1 = operational, 0.5 = degraded, 0 = incident
 function generateUptimeBars(): (1 | 0.5 | 0)[] {
-  const bars: (1 | 0.5 | 0)[] = [];
-  for (let i = 0; i < 90; i++) {
-    const r = Math.random();
-    if (r > 0.02) bars.push(1);
-    else if (r > 0.005) bars.push(0.5);
-    else bars.push(0);
-  }
-  return bars;
+  // No data available — return all 1s (operational) as placeholder
+  return Array(90).fill(1);
 }
 
 const INCIDENTS = [

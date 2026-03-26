@@ -292,11 +292,11 @@ function SupportMetrics() {
               </thead>
               <tbody>
                 {[
-                  { name: "Sarah Johnson", resolved: 156, avgTime: "28m", csat: 4.8 },
-                  { name: "Mike Chen", resolved: 142, avgTime: "32m", csat: 4.6 },
-                  { name: "Emily Davis", resolved: 138, avgTime: "35m", csat: 4.5 },
-                  { name: "Alex Kim", resolved: 125, avgTime: "38m", csat: 4.4 },
-                  { name: "Jordan Lee", resolved: 118, avgTime: "41m", csat: 4.3 },
+                  { name: "Sarah Johnson", resolved: 156, avgTime: "28m", csat: null },
+                  { name: "Mike Chen", resolved: 142, avgTime: "32m", csat: null },
+                  { name: "Emily Davis", resolved: 138, avgTime: "35m", csat: null },
+                  { name: "Alex Kim", resolved: 125, avgTime: "38m", csat: null },
+                  { name: "Jordan Lee", resolved: 118, avgTime: "41m", csat: null },
                 ].map((agent, i) => (
                   <tr key={i} className="border-b border-border">
                     <td className="px-4 py-3 text-sm font-medium">{agent.name}</td>

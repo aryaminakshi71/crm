@@ -147,21 +147,21 @@ function CampaignProPage() {
         />
         <Metric
           title="Total Reach"
-          value={(statsData as any)?.totalContacts ? `${((statsData as any).totalContacts / 1000).toFixed(1)}K` : "2.4M"}
+          value={(statsData as any)?.totalContacts ? `${((statsData as any).totalContacts / 1000).toFixed(1)}K` : "—"}
           icon={<Globe className="h-4 w-4" />}
           trend="+12% vs last month"
           color="text-info"
         />
         <Metric
           title="Engagement Rate"
-          value={(statsData as any)?.avgOpenRate ? `${(statsData as any).avgOpenRate.toFixed(1)}%` : "4.8%"}
+          value={(statsData as any)?.avgOpenRate ? `${(statsData as any).avgOpenRate.toFixed(1)}%` : "—"}
           icon={<MousePointerClick className="h-4 w-4" />}
           trend="+0.5% vs last month"
           color="text-success"
         />
         <Metric
           title="Conversions"
-          value={(statsData as any)?.totalSent?.toLocaleString() ?? "1,247"}
+          value={(statsData as any)?.totalSent?.toLocaleString() ?? "—"}
           icon={<Target className="h-4 w-4" />}
           trend="+23% vs last month"
           color="text-warning"
