@@ -9,16 +9,30 @@
 import {
   Activity,
   BarChart3,
+  Bell,
   Bot,
+  BookOpen,
   Box,
+  Brain,
   CreditCard,
   FileText,
   Globe,
+  Headphones,
+  Inbox,
   LayoutGrid,
   MessageSquare,
+  ScrollText,
+  Search,
+  Settings,
+  Share2,
+  ShieldCheck,
   ShoppingCart,
+  Sparkles,
+  Star,
+  Target,
   Truck,
   Users,
+  Workflow,
 } from "lucide-react";
 
 // ─── Module Key Types ─────────────────────────────────────────────────────────
@@ -34,9 +48,31 @@ export type NucleoModuleKey =
   | "field_service"
   | "devops"
   | "finance"
+  | "enterprise"
+  | "knowledge"
   | "marketing"
+  | "social"
+  | "speech"
+  | "campaign_pro"
+  | "search_advertising"
+  | "integrations"
   | "ecommerce"
-  | "agents";
+  | "agents"
+  | "intelligence"
+  | "activities"
+  | "analytics"
+  | "assets"
+  | "audit_logs"
+  | "billing"
+  | "compliance"
+  | "contracts"
+  | "notifications"
+  | "onboarding"
+  | "policies"
+  | "procurement"
+  | "queue"
+  | "rbac"
+  | "settings";
 
 export type PlanTierKey = "free" | "starter" | "business" | "enterprise";
 
@@ -47,16 +83,30 @@ type IconComponent = typeof Users;
 const iconMap: Record<string, IconComponent> = {
   Users,
   Activity,
+  BarChart3,
+  Bell,
+  Bot,
+  BookOpen,
   Box,
+  Brain,
   CreditCard,
   FileText,
-  BarChart3,
-  Bot,
   Globe,
-  MessageSquare,
-  Truck,
+  Headphones,
+  Inbox,
   LayoutGrid,
+  MessageSquare,
+  ScrollText,
+  Search,
+  Settings,
+  Share2,
+  ShieldCheck,
   ShoppingCart,
+  Sparkles,
+  Star,
+  Target,
+  Truck,
+  Workflow,
 };
 
 // ─── Module Definitions ───────────────────────────────────────────────────────
@@ -143,6 +193,20 @@ export const NUCLEO_MODULES: NucleoModule[] = [
     iconName: "CreditCard",
     phase: "ops",
   },
+  {
+    key: "enterprise",
+    name: "Enterprise",
+    description: "Advanced enterprise controls, compliance, contracts, and procurement workflows",
+    iconName: "Star",
+    phase: "ops",
+  },
+  {
+    key: "knowledge",
+    name: "Knowledge",
+    description: "Knowledge base, self-service articles, documentation, and team wikis",
+    iconName: "BookOpen",
+    phase: "ops",
+  },
   // Growth
   {
     key: "marketing",
@@ -153,10 +217,44 @@ export const NUCLEO_MODULES: NucleoModule[] = [
     phase: "growth",
   },
   {
+    key: "social",
+    name: "Social Media",
+    description: "Post scheduling, analytics, social listening, and inbox management",
+    iconName: "Share2",
+    phase: "growth",
+  },
+  {
+    key: "speech",
+    name: "Speech & Voice",
+    description: "Audio transcription, real-time streaming, and meeting notes",
+    iconName: "Headphones",
+    phase: "growth",
+  },
+  {
+    key: "campaign_pro",
+    name: "Campaign Pro",
+    description: "Advanced campaign planning, A/B testing, and multi-channel automation",
+    iconName: "Sparkles",
+    phase: "growth",
+  },
+  {
+    key: "search_advertising",
+    name: "Search Advertising",
+    description: "Ad campaigns across Google and LinkedIn with AI-powered optimization",
+    iconName: "Target",
+    phase: "growth",
+  },
+  {
+    key: "integrations",
+    name: "Integrations",
+    description: "300+ pre-built connectors, visual workflow builder, webhooks, and event bus",
+    iconName: "Workflow",
+    phase: "growth",
+  },
+  {
     key: "ecommerce",
     name: "eCommerce",
-    description:
-      "Online store, product catalog, cart, checkout, orders, payments, and inventory sync",
+    description: "Online store, product catalog, cart, checkout, orders, payments, and inventory sync",
     iconName: "ShoppingCart",
     phase: "growth",
   },
@@ -165,9 +263,115 @@ export const NUCLEO_MODULES: NucleoModule[] = [
     key: "agents",
     name: "AI Agents",
     description:
-      "Autonomous AI agents for automation, support, business intelligence, speech transcription, and meeting notes",
+      "Autonomous AI agents for automation, support, business intelligence, and analytics",
     iconName: "Bot",
     phase: "ai",
+  },
+  {
+    key: "intelligence",
+    name: "Intelligence",
+    description: "Churn analysis, CLV, cohort tracking, predictive analytics, and anomaly detection",
+    iconName: "Brain",
+    phase: "ai",
+  },
+  // Supporting (routes/API exist but cross-cutting — included in enterprise)
+  {
+    key: "activities",
+    name: "Activities",
+    description: "Track and log all customer-facing activities, calls, emails, and meetings",
+    iconName: "Activity",
+    phase: "ops",
+  },
+  {
+    key: "analytics",
+    name: "Analytics",
+    description: "Cross-module dashboards, custom reports, and business performance metrics",
+    iconName: "BarChart3",
+    phase: "ops",
+  },
+  {
+    key: "assets",
+    name: "Assets",
+    description: "Digital asset management — files, images, documents, and media library",
+    iconName: "Box",
+    phase: "ops",
+  },
+  {
+    key: "audit_logs",
+    name: "Audit Logs",
+    description: "Complete audit trail of all user actions and system changes",
+    iconName: "ScrollText",
+    phase: "ops",
+  },
+  {
+    key: "billing",
+    name: "Billing",
+    description: "Subscription management, invoices, payments, and revenue tracking",
+    iconName: "CreditCard",
+    phase: "ops",
+  },
+  {
+    key: "compliance",
+    name: "Compliance",
+    description: "GDPR, SOC 2, and HIPAA compliance controls, policies, and reporting",
+    iconName: "ShieldCheck",
+    phase: "ops",
+  },
+  {
+    key: "contracts",
+    name: "Contracts",
+    description: "Contract lifecycle management — create, sign, renew, and track agreements",
+    iconName: "FileText",
+    phase: "ops",
+  },
+  {
+    key: "notifications",
+    name: "Notifications",
+    description: "In-app notifications, email digests, SMS alerts, and push notifications",
+    iconName: "Bell",
+    phase: "ops",
+  },
+  {
+    key: "onboarding",
+    name: "Onboarding",
+    description: "Guided onboarding flows, checklists, and user setup wizards",
+    iconName: "Sparkles",
+    phase: "ops",
+  },
+  {
+    key: "policies",
+    name: "Policies",
+    description: "Company policies, SOPs, and document management with approval workflows",
+    iconName: "ScrollText",
+    phase: "ops",
+  },
+  {
+    key: "procurement",
+    name: "Procurement",
+    description: "Purchase orders, vendor management, and procurement approval workflows",
+    iconName: "ShoppingCart",
+    phase: "ops",
+  },
+  {
+    key: "queue",
+    name: "Queue",
+    description: "Shared team queues for ticket routing, task assignment, and workload balancing",
+    iconName: "Inbox",
+    phase: "ops",
+  },
+  {
+    key: "rbac",
+    name: "RBAC",
+    description: "Role-based access control — define roles, permissions, and team policies",
+    iconName: "Settings",
+    phase: "ops",
+  },
+  {
+    key: "settings",
+    name: "Settings",
+    description: "Organization settings, team management, API keys, and security controls",
+    iconName: "Settings",
+    phase: "ops",
   },
 ];
 
@@ -224,6 +428,8 @@ export const PLAN_TIERS: PlanTier[] = [
       "inventory",
       "monitoring",
       "finance",
+      "activities",
+      "analytics",
     ],
   },
   {
@@ -240,13 +446,35 @@ export const PLAN_TIERS: PlanTier[] = [
       "hrm",
       "inventory",
       "monitoring",
-      "finance",
       "communications",
       "field_service",
       "devops",
+      "finance",
+      "enterprise",
+      "knowledge",
       "marketing",
+      "social",
+      "speech",
+      "campaign_pro",
+      "search_advertising",
+      "integrations",
       "ecommerce",
       "agents",
+      "intelligence",
+      "activities",
+      "analytics",
+      "assets",
+      "audit_logs",
+      "billing",
+      "compliance",
+      "contracts",
+      "notifications",
+      "onboarding",
+      "policies",
+      "procurement",
+      "queue",
+      "rbac",
+      "settings",
     ],
   },
   {
@@ -256,7 +484,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: null,
     annualPrice: null,
     maxUsers: -1, // unlimited
-    modules: NUCLEO_MODULES.map((m) => m.key), // all 13 public modules
+    modules: NUCLEO_MODULES.map((m) => m.key), // all 34 modules
   },
 ];
 

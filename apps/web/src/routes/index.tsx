@@ -204,10 +204,230 @@ const modules = [
     price: 15,
     features: ["Online store & checkout", "Product catalog", "Order management", "Inventory sync"],
   },
+  {
+    icon: Star,
+    color: "text-violet-400",
+    bg: "bg-violet-400/10",
+    title: "Enterprise",
+    description: "Advanced enterprise controls, compliance, contracts, and procurement workflows.",
+    href: "/app/enterprise",
+    price: 49,
+    features: ["Compliance controls", "Contract management", "Procurement workflows", "Audit trails"],
+  },
+  {
+    icon: BookOpen,
+    color: "text-cyan-400",
+    bg: "bg-cyan-400/10",
+    title: "Knowledge",
+    description: "Knowledge base, self-service articles, documentation, and team wikis.",
+    href: "/app/knowledge",
+    price: 9,
+    features: ["Knowledge base", "Self-service articles", "Team wikis", "Version history"],
+  },
+  {
+    icon: Share2,
+    color: "text-pink-400",
+    bg: "bg-pink-400/10",
+    title: "Social Media",
+    description: "Post scheduling, analytics, social listening, and inbox management.",
+    href: "/app/social",
+    price: 15,
+    features: ["Post scheduling", "Analytics dashboard", "Social listening", "Inbox management"],
+  },
+  {
+    icon: Headphones,
+    color: "text-rose-400",
+    bg: "bg-rose-400/10",
+    title: "Speech & Voice",
+    description: "Audio transcription, real-time streaming, and meeting notes.",
+    href: "/app/speech",
+    price: 12,
+    features: ["Audio transcription", "Real-time streaming", "Multi-speaker ID", "Meeting notes"],
+  },
+  {
+    icon: Sparkles,
+    color: "text-amber-400",
+    bg: "bg-amber-400/10",
+    title: "Campaign Pro",
+    description: "Advanced campaign planning, A/B testing, and multi-channel automation.",
+    href: "/app/campaign_pro",
+    price: 15,
+    features: ["A/B testing", "Multi-channel automation", "Campaign analytics", "Audience segmentation"],
+  },
+  {
+    icon: Target,
+    color: "text-orange-400",
+    bg: "bg-orange-400/10",
+    title: "Search Advertising",
+    description: "Ad campaigns across Google and LinkedIn with AI-powered optimization.",
+    href: "/app/search-advertising",
+    price: 15,
+    features: ["Google Ads", "LinkedIn Ads", "AI optimization", "Budget control"],
+  },
+  {
+    icon: Workflow,
+    color: "text-teal-400",
+    bg: "bg-teal-400/10",
+    title: "Integrations",
+    description: "300+ pre-built connectors, visual workflow builder, webhooks, and event bus.",
+    href: "/app/integrations",
+    price: 9,
+    features: ["300+ connectors", "Workflow builder", "Webhooks", "Event bus"],
+  },
+  {
+    icon: Brain,
+    color: "text-fuchsia-400",
+    bg: "bg-fuchsia-400/10",
+    title: "Intelligence",
+    description: "Churn analysis, CLV, cohort tracking, predictive analytics, and anomaly detection.",
+    href: "/app/intelligence",
+    price: 19,
+    features: ["Churn analysis", "CLV tracking", "Cohort analysis", "Anomaly detection"],
+  },
+  {
+    icon: Activity,
+    color: "text-green-400",
+    bg: "bg-green-400/10",
+    title: "Activities",
+    description: "Track and log all customer-facing activities, calls, emails, and meetings.",
+    href: "/app/activities",
+    price: 5,
+    features: ["Activity tracking", "Call logging", "Email threads", "Meeting notes"],
+  },
+  {
+    icon: BarChart3,
+    color: "text-blue-400",
+    bg: "bg-blue-400/10",
+    title: "Analytics",
+    description: "Cross-module dashboards, custom reports, and business performance metrics.",
+    href: "/app/analytics",
+    price: 9,
+    features: ["Custom dashboards", "Cross-module reports", "Business metrics", "Data export"],
+  },
+  {
+    icon: Box,
+    color: "text-yellow-400",
+    bg: "bg-yellow-400/10",
+    title: "Assets",
+    description: "Digital asset management — files, images, documents, and media library.",
+    href: "/app/assets",
+    price: 5,
+    features: ["File management", "Image library", "Media storage", "Version control"],
+  },
+  {
+    icon: ScrollText,
+    color: "text-gray-400",
+    bg: "bg-gray-400/10",
+    title: "Audit Logs",
+    description: "Complete audit trail of all user actions and system changes.",
+    href: "/app/audit-logs",
+    price: 5,
+    features: ["Action audit trail", "System logs", "Compliance reporting", "Export logs"],
+  },
+  {
+    icon: CreditCard,
+    color: "text-emerald-400",
+    bg: "bg-emerald-400/10",
+    title: "Billing",
+    description: "Subscription management, invoices, payments, and revenue tracking.",
+    href: "/app/settings/billing",
+    price: 9,
+    features: ["Subscription management", "Invoice generation", "Payment tracking", "Revenue reporting"],
+  },
+  {
+    icon: ShieldCheck,
+    color: "text-indigo-400",
+    bg: "bg-indigo-400/10",
+    title: "Compliance",
+    description: "GDPR, SOC 2, and HIPAA compliance controls, policies, and reporting.",
+    href: "/app/compliance",
+    price: 19,
+    features: ["GDPR controls", "SOC 2 reporting", "Policy management", "Risk assessments"],
+  },
+  {
+    icon: FileText,
+    color: "text-sky-400",
+    bg: "bg-sky-400/10",
+    title: "Contracts",
+    description: "Contract lifecycle management — create, sign, renew, and track agreements.",
+    href: "/app/contracts",
+    price: 9,
+    features: ["Contract creation", "E-signatures", "Renewal tracking", "Approval workflows"],
+  },
+  {
+    icon: Bell,
+    color: "text-amber-400",
+    bg: "bg-amber-400/10",
+    title: "Notifications",
+    description: "In-app notifications, email digests, SMS alerts, and push notifications.",
+    href: "/app/notifications",
+    price: 5,
+    features: ["In-app alerts", "Email digests", "SMS notifications", "Push notifications"],
+  },
+  {
+    icon: Sparkles,
+    color: "text-purple-400",
+    bg: "bg-purple-400/10",
+    title: "Onboarding",
+    description: "Guided onboarding flows, checklists, and user setup wizards.",
+    href: "/app/onboarding",
+    price: 5,
+    features: ["Guided flows", "Setup checklists", "User wizards", "Progress tracking"],
+  },
+  {
+    icon: ScrollText,
+    color: "text-teal-400",
+    bg: "bg-teal-400/10",
+    title: "Policies",
+    description: "Company policies, SOPs, and document management with approval workflows.",
+    href: "/app/policies",
+    price: 9,
+    features: ["Policy documents", "SOP management", "Approvals", "Version control"],
+  },
+  {
+    icon: ShoppingCart,
+    color: "text-orange-400",
+    bg: "bg-orange-400/10",
+    title: "Procurement",
+    description: "Purchase orders, vendor management, and procurement approval workflows.",
+    href: "/app/procurement",
+    price: 9,
+    features: ["Purchase orders", "Vendor management", "Approval workflows", "Budget limits"],
+  },
+  {
+    icon: Inbox,
+    color: "text-cyan-400",
+    bg: "bg-cyan-400/10",
+    title: "Queue",
+    description: "Shared team queues for ticket routing, task assignment, and workload balancing.",
+    href: "/app/queue",
+    price: 5,
+    features: ["Shared queues", "Workload balancing", "Auto-assignment", "Queue analytics"],
+  },
+  {
+    icon: Settings,
+    color: "text-gray-400",
+    bg: "bg-gray-400/10",
+    title: "RBAC",
+    description: "Role-based access control — define roles, permissions, and team policies.",
+    href: "/app/rbac",
+    price: 5,
+    features: ["Role definitions", "Permission sets", "Team policies", "Access audit"],
+  },
+  {
+    icon: Settings,
+    color: "text-slate-400",
+    bg: "bg-slate-400/10",
+    title: "Settings",
+    description: "Organization settings, team management, API keys, and security controls.",
+    href: "/app/settings",
+    price: 0,
+    features: ["Org settings", "Team management", "API keys", "Security controls"],
+  },
 ];
 
 const stats = [
-  { value: "13", label: "Business Modules" },
+  { value: "35", label: "Business Modules" },
   { value: "Unified Platform", label: "CRM, HRM, Projects & More" },
   { value: "14-Day", label: "Free Trial" },
   { value: "24/7", label: "AI Assistance" },
@@ -530,7 +750,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Projects, Finance, Helpdesk, Marketing, eCommerce, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory into a single unified platform. Replace 13 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Projects, Finance, Helpdesk, Marketing, eCommerce, Field Service, DevOps, AI Agents, and 25 more modules into a single unified platform. Replace 35 tools with one. Start free.";
 
     return {
       meta: [
@@ -624,9 +844,31 @@ export const Route = createFileRoute("/")({
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Field Service" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "DevOps" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Enterprise" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Knowledge" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Social Media" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Speech & Voice" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Campaign Pro" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Search Advertising" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Integrations" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "eCommerce" } },
-              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } }
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Intelligence" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Activities" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Analytics" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Assets" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Audit Logs" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Billing" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Compliance" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Contracts" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Notifications" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Onboarding" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Policies" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Procurement" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Queue" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "RBAC" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Settings" } }
             ]
           }
         })},
@@ -1120,7 +1362,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            13 powerful modules. One unified platform.
+            35 powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -1250,8 +1492,8 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              13 deeply integrated modules — CRM, HRM, Projects, Finance, Helpdesk,
-              Marketing, eCommerce, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory.
+              35 deeply integrated modules — CRM, HRM, Projects, Finance, Helpdesk,
+              Marketing, eCommerce, Field Service, DevOps, AI Agents, Intelligence, and 25 more.
             </p>
           </div>
 
