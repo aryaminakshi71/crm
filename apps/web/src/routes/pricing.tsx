@@ -26,8 +26,6 @@ import {
   NUCLEO_MODULES,
   PLAN_TIERS,
   MODULE_PLANS,
-  PHASE_LABELS,
-  MODULES_BY_PHASE,
   getModuleIcon,
   type NucleoModuleKey,
   type PlanTierKey,
@@ -496,39 +494,22 @@ function PricingPage() {
               </thead>
               <tbody>
                 {/* Module rows */}
-                {(["core", "ops", "growth", "ai"] as const).map((phase) => {
-                  const phaseModules = MODULES_BY_PHASE[phase] ?? [];
-                  if (phaseModules.length === 0) return null;
+                {NUCLEO_MODULES.map((mod) => {
                   return (
-                    <Fragment key={phase}>
-                      <tr className="bg-muted/10">
-                        <td
-                          colSpan={5}
-                          className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
-                        >
-                          {PHASE_LABELS[phase]}
-                        </td>
-                      </tr>
-                      {phaseModules.map((mod) => {
-                        const plans = MODULE_PLANS[mod.key] ?? [];
+                    <tr
+                      key={mod.key}
+                      className="border-t border-border/50 hover:bg-muted/10 transition-colors"
+                    >
+                      <td className="p-4 text-foreground">{mod.name}</td>
+                      {PLAN_TIERS.map((plan) => {
+                        const included = plan.modules.includes(mod.key as NucleoModuleKey);
                         return (
-                          <tr
-                            key={mod.key}
-                            className="border-t border-border/50 hover:bg-muted/10 transition-colors"
-                          >
-                            <td className="p-4 text-foreground">{mod.name}</td>
-                            {PLAN_TIERS.map((plan) => {
-                              const included = plan.modules.includes(mod.key as NucleoModuleKey);
-                              return (
-                                <td key={plan.key} className="p-4 text-center">
-                                  <CheckCell value={included} />
-                                </td>
-                              );
-                            })}
-                          </tr>
+                          <td key={plan.key} className="p-4 text-center">
+                            <CheckCell value={included} />
+                          </td>
                         );
                       })}
-                    </Fragment>
+                    </tr>
                   );
                 })}
                 {/* Meta rows (users, storage, support, security) */}
