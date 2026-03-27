@@ -7,6 +7,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import React, { useState } from "react";
 import {
   ArrowRight,
+  Award,
   Bell,
   Bot,
   BookOpen,
