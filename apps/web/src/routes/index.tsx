@@ -194,10 +194,20 @@ const modules = [
     price: 9,
     features: ["Product catalog", "Stock levels", "Warehouse management", "Barcode scanning"],
   },
+  {
+    icon: ShoppingCart,
+    color: "text-indigo-400",
+    bg: "bg-indigo-400/10",
+    title: "eCommerce",
+    description: "Online store, product catalog, cart, checkout, orders, and payments.",
+    href: "/app/ecommerce",
+    price: 15,
+    features: ["Online store & checkout", "Product catalog", "Order management", "Inventory sync"],
+  },
 ];
 
 const stats = [
-  { value: "12", label: "Business Modules" },
+  { value: "13", label: "Business Modules" },
   { value: "Unified Platform", label: "CRM, HRM, Projects & More" },
   { value: "14-Day", label: "Free Trial" },
   { value: "24/7", label: "AI Assistance" },
@@ -520,7 +530,7 @@ export const Route = createFileRoute("/")({
     const canonical = baseUrl.replace(/\/$/, "") + "/";
     const title = "Nucleo One — All-in-One Business Management Platform";
     const description =
-      "Nucleo One brings CRM, HRM, Projects, Finance, Helpdesk, Marketing, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory into a single unified platform. Replace 12 tools with one. Start free.";
+      "Nucleo One brings CRM, HRM, Projects, Finance, Helpdesk, Marketing, eCommerce, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory into a single unified platform. Replace 13 tools with one. Start free.";
 
     return {
       meta: [
@@ -615,6 +625,7 @@ export const Route = createFileRoute("/")({
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "DevOps" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "eCommerce" } },
               { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "AI Agents" } }
             ]
           }
@@ -1109,7 +1120,7 @@ function LandingPage() {
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-primary text-sm font-medium">
             <Zap className="h-3.5 w-3.5" />
-            12 powerful modules. One unified platform.
+            13 powerful modules. One unified platform.
           </div>
 
           <h1 className="mb-6 font-bold text-5xl leading-tight tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -1239,8 +1250,8 @@ function LandingPage() {
               Every Tool Your Business Needs
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground text-lg">
-              12 deeply integrated modules — CRM, HRM, Projects, Finance, Helpdesk,
-              Marketing, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory.
+              13 deeply integrated modules — CRM, HRM, Projects, Finance, Helpdesk,
+              Marketing, eCommerce, Field Service, DevOps, AI Agents, Communications, Monitoring, and Inventory.
             </p>
           </div>
 

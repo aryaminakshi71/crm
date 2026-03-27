@@ -16,6 +16,7 @@ import {
   Globe,
   LayoutGrid,
   MessageSquare,
+  ShoppingCart,
   Truck,
   Users,
 } from "lucide-react";
@@ -34,6 +35,7 @@ export type NucleoModuleKey =
   | "devops"
   | "finance"
   | "marketing"
+  | "ecommerce"
   | "agents";
 
 export type PlanTierKey = "free" | "starter" | "business" | "enterprise";
@@ -54,6 +56,7 @@ const iconMap: Record<string, IconComponent> = {
   MessageSquare,
   Truck,
   LayoutGrid,
+  ShoppingCart,
 };
 
 // ─── Module Definitions ───────────────────────────────────────────────────────
@@ -149,6 +152,14 @@ export const NUCLEO_MODULES: NucleoModule[] = [
     iconName: "BarChart3",
     phase: "growth",
   },
+  {
+    key: "ecommerce",
+    name: "eCommerce",
+    description:
+      "Online store, product catalog, cart, checkout, orders, payments, and inventory sync",
+    iconName: "ShoppingCart",
+    phase: "growth",
+  },
   // AI
   {
     key: "agents",
@@ -234,6 +245,7 @@ export const PLAN_TIERS: PlanTier[] = [
       "field_service",
       "devops",
       "marketing",
+      "ecommerce",
       "agents",
     ],
   },
@@ -244,7 +256,7 @@ export const PLAN_TIERS: PlanTier[] = [
     monthlyPrice: null,
     annualPrice: null,
     maxUsers: -1, // unlimited
-    modules: NUCLEO_MODULES.map((m) => m.key), // all 12 public modules
+    modules: NUCLEO_MODULES.map((m) => m.key), // all 13 public modules
   },
 ];
 
