@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Bell,
   Bot,
+  BookOpen,
   Brain,
   Box,
   Building2,
