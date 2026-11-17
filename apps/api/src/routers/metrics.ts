@@ -16,6 +16,14 @@ const PLAN_PRICES: Record<string, number> = {
   enterprise: 499,
 }
 
+function assertAdmin(context: any) {
+  const token = context?.request?.headers?.get?.('x-admin-token') ?? ''
+  const env = context?.env ?? process.env ?? {}
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+    throw new ORPCError('UNAUTHORIZED', { message: 'Invalid admin token' })
+  }
+}
+
 export const metricsRouter = {
   get: pub
     .route({
@@ -26,13 +34,7 @@ export const metricsRouter = {
     })
     .output(z.any())
     .handler(async ({ context }) => {
-      const ctx = context as any
-      const token = ctx.request?.headers?.get?.('x-admin-token') ?? ''
-      const env = ctx.env ?? process.env ?? {}
-      if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
-        throw new ORPCError('UNAUTHORIZED', { message: 'Invalid admin token' })
-      }
-
+      assertAdmin(context)
       const db = getDb(context as any)
       const [tenants] = await db
         .select({ n: count() })
@@ -65,6 +67,38 @@ export const metricsRouter = {
         activeSubscriptions,
         mrr,
         currency: 'USD',
+        timestamp: new Date().toISOString(),
+      }
+    }),
+
+  funnel: pub
+    .route({
+      method: 'GET',
+      path: '/metrics/funnel',
+      summary: 'Marketing funnel (leads → deals → won)',
+      tags: ['Admin'],
+    })
+    .output(z.any())
+    .handler(async ({ context }) => {
+      assertAdmin(context)
+      const db = getDb(context as any)
+
+      const [leadCount] = await db.select({ n: count() }).from(schema.leads)
+      const [dealCount] = await db.select({ n: count() }).from(schema.deals)
+      const stages = await db
+        .select({ stage: schema.deals.stage, n: count() })
+        .from(schema.deals)
+        .groupBy(schema.deals.stage)
+
+      const byStage: Record<string, number> = {}
+      for (const s of stages) byStage[s.stage] = Number(s.n)
+
+      return {
+        app: 'nucleo-one',
+        leads: leadCount?.n ?? 0,
+        deals: dealCount?.n ?? 0,
+        byStage,
+        won: byStage['won'] ?? byStage['closed_won'] ?? 0,
         timestamp: new Date().toISOString(),
       }
     }),
