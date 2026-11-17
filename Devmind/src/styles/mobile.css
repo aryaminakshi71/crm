@@ -1,0 +1,118 @@
+/* Mobile-specific styles for DevMind */
+
+:root {
+  /* Safe area insets for notched devices */
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+/* Prevent pull-to-refresh on mobile */
+html {
+  overscroll-behavior: none;
+}
+
+/* Better touch scrolling */
+body {
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-optimized button sizes */
+@media (max-width: 768px) {
+  button,
+  .btn {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Larger touch targets */
+  input,
+  select,
+  textarea {
+    min-height: 48px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Adjust padding for mobile */
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* PWA install prompt styling */
+@media (display-mode: standalone) {
+  /* Hide elements not needed in PWA */
+  .pwa-hide {
+    display: none !important;
+  }
+
+  /* Adjust layout for standalone mode */
+  body {
+    padding-top: var(--sat, 0);
+    padding-bottom: var(--sab, 0);
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Capacitor status bar styling */
+body.capacitor {
+  padding-top: var(--sat, 0);
+}
+
+/* Dark mode for native feel */
+@media (prefers-color-scheme: dark) {
+  /* Already dark themed, but ensure native elements match */
+  select,
+  input {
+    background-color: #121214;
+    color: #fafafa;
+  }
+}
+
+/* Fix for iOS keyboard appearing */
+@media (max-height: 450px) {
+  .keyboard-hidden {
+    display: none;
+  }
+}
+
+/* Loading spinner for mobile */
+.mobile-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+/* Offline indicator */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #f59e0b;
+  color: black;
+  text-align: center;
+  padding: 8px;
+  z-index: 9999;
+  font-size: 14px;
+}
+
+/* Pull to refresh indicator */
+.ptr-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  color: #a1a1aa;
+}

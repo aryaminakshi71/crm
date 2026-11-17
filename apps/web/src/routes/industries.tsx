@@ -83,6 +83,25 @@ export const Route = createFileRoute("/industries")({
           content:
             "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations. Streamline your sales process and grow your business.",
         },
+        // BreadcrumbList schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": baseUrl
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Industries",
+              "item": canonical
+            }
+          ]
+        })}
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

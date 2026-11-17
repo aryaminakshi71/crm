@@ -8,7 +8,7 @@ import { getOrCache, invalidateCache } from "@crm/storage/redis";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import { getDb, orgAuthed, schema } from "../procedures";
 
 const { deals } = schema;
@@ -152,7 +152,7 @@ export const dealsRouter = {
           .limit(1);
 
         if (!deal) {
-          throw new APIError("Deal not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Deal not found", 404);
         }
 
         return deal;
@@ -287,7 +287,7 @@ export const dealsRouter = {
           .returning();
 
         if (!deal) {
-          throw new APIError("Deal not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Deal not found", 404);
         }
 
         return deal;
@@ -335,7 +335,7 @@ export const dealsRouter = {
           )
           .returning();
         if (!deal) {
-          throw new APIError("Deal not found", 404);
+          throw new APIError(ErrorCode.NOT_FOUND, "Deal not found", 404);
         }
         return deal;
       },

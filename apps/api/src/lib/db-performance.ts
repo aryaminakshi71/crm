@@ -19,10 +19,10 @@ const MAX_METRICS = 1000; // Keep last 1000 queries
 /**
  * Track a database query execution
  */
-export async function trackQuery<T>(
+export async function trackQuery(
   queryName: string,
-  queryFn: () => Promise<T>,
-): Promise<T> {
+  queryFn: () => Promise<any>,
+): Promise<any> {
   const startTime = Date.now();
   let error: string | undefined;
 

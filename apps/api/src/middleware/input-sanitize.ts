@@ -4,7 +4,9 @@
  * Sanitizes and validates incoming request inputs.
  */
 
-import type { Request, Response, NextFunction } from "express";
+type Request = any;
+type Response = any;
+type NextFunction = any;
 
 /**
  * Maximum input length for string fields

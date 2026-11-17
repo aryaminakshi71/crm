@@ -1,0 +1,2 @@
+# Proxy API requests to the API worker
+/api/:path https://devmind-api.aryalabs.workers.dev/api/:path 200

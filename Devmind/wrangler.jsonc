@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "devmind",
+  "main": "./src/server.ts",
+  "compatibility_date": "2025-01-10",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/client"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "devmind-db",
+      "database_id": "b8486ebf-d0cb-4c75-9eb6-0417f5a52f41"
+    }
+  ],
+  "vars": {
+    "NODE_ENV": "development",
+    "VITE_PUBLIC_SITE_URL": "http://localhost:3000"
+  },
+  "dev": {
+    "port": 3100
+  }
+}

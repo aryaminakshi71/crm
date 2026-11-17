@@ -14,7 +14,7 @@ import * as authSchema from "@crm/storage/schema";
 import bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { apiKey, openAPI, organization } from "better-auth/plugins";
+import { openAPI, organization } from "better-auth/plugins";
 import { createKVStorage } from "./kv-storage";
 
 export interface AuthConfig {
@@ -75,12 +75,6 @@ export function createAuth(config: AuthConfig) {
           `Invitation to ${email} for org ${organization.name} from ${inviter.user.name}`,
         );
       },
-    }),
-
-    // API key authentication
-    apiKey({
-      enableMetadata: true,
-      apiKeyHeaders: "x-api-key",
     }),
 
     // OpenAPI documentation

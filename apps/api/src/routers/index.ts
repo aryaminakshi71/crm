@@ -6,6 +6,7 @@
  */
 
 import { activitiesRouter } from "./activities";
+import { advertisingRouter } from "./advertising";
 import { contactsRouter } from "./contacts";
 import { dashboardRouter } from "./dashboard";
 import { dealsRouter } from "./deals";
@@ -34,6 +35,7 @@ export const appRouter = {
   enterprise: enterpriseRouter,
   intelligence: intelligenceRouter,
   operations: operationsRouter,
+  advertising: advertisingRouter,
 };
 
 export type AppRouter = typeof appRouter;

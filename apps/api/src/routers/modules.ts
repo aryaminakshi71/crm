@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { APIError } from "../lib/errors";
+import { APIError, ErrorCode } from "../lib/errors";
 import {
   MODULE_CATALOG,
   MODULE_KEYS,
@@ -89,7 +89,7 @@ export const modulesRouter = {
       const db = getDb(context);
 
       if (input.key === "crm" && input.enabled === false) {
-        throw new APIError("Core workspace cannot be disabled", 400);
+        throw new APIError(ErrorCode.BAD_REQUEST, "Core workspace cannot be disabled", 400);
       }
 
       const [existing] = await db

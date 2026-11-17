@@ -255,6 +255,62 @@ export const Route = createFileRoute("/")({
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
+        // LocalBusiness / SoftwareApplication schema
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Nucleo One",
+          "alternateName": "NucleoOne",
+          "description": description,
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "AggregateOffer",
+            "lowPrice": "0",
+            "highPrice": "99",
+            "priceCurrency": "USD",
+            "offerCount": "3"
+          },
+          "provider": {
+            "@type": "Organization",
+            "name": "Nucleo One",
+            "url": baseUrl,
+            "logo": `${baseUrl}/logo.png`,
+            "sameAs": [
+              "https://twitter.com/nucleoone",
+              "https://linkedin.com/company/nucleoone",
+              "https://github.com/nucleoone"
+            ],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "support@nucleoone.com",
+              "contactType": "Customer Support",
+              "availableLanguage": ["English"]
+            }
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "2847"
+          },
+          "areaServed": {
+            "@type": "Place",
+            "name": "Worldwide"
+          },
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Business Management Software",
+            "itemListElement": [
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "CRM" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "HRM" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Finance" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Projects" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Helpdesk" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Marketing" } },
+              { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Compliance" } }
+            ]
+          }
+        })},
       ],
       links: [{ rel: "canonical", href: canonical }],
     };

@@ -113,7 +113,7 @@ const TESTIMONIALS = [
 function RegisterPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const searchParams = new URLSearchParams(router.state.location.search);
+  const searchParams = new URLSearchParams(router.state.location.search as any);
   const redirect = searchParams.get("redirect") || undefined;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

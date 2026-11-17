@@ -250,21 +250,21 @@ function ProjectsPage() {
     queryFn: () => nucleoApi.projects.tasks.list(selectedProject!.id),
     enabled: !!selectedProject,
   });
-  const tasks = rawTasks?.data || [];
+  const tasks = (rawTasks as any)?.data || [];
 
   const { data: rawMilestones } = useQuery({
     queryKey: ["nucleo-project-milestones", selectedProject?.id],
     queryFn: () => nucleoApi.projects.milestones.list(selectedProject!.id),
     enabled: !!selectedProject,
   });
-  const milestones = rawMilestones?.data || [];
+  const milestones = (rawMilestones as any)?.data || [];
 
   const { data: rawResources } = useQuery({
     queryKey: ["nucleo-project-resources", selectedProject?.id],
     queryFn: () => nucleoApi.projects.resources.list(selectedProject!.id),
     enabled: !!selectedProject,
   });
-  const resources = rawResources?.data || [];
+  const resources = (rawResources as any)?.data || [];
 
   const projects = (data?.data as any[]) || [];
   const filtered = useMemo(
@@ -773,7 +773,7 @@ function ProjectsPage() {
                 <div className="grid gap-3 xl:grid-cols-5 lg:grid-cols-3 md:grid-cols-2">
                   {KANBAN_COLS.map((col) => {
                     const colTasks = projectTasks(selectedProject.id).filter(
-                      (t) => t.status === col.id,
+                      (t: any) => t.status === col.id,
                     );
                     return (
                       <div
@@ -783,7 +783,7 @@ function ProjectsPage() {
                         <p className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground px-1">
                           {col.label}
                         </p>
-                        {colTasks.map((t) => (
+                        {colTasks.map((t: any) => (
                           <div
                             key={t.id}
                             className="rounded-lg border border-border bg-card p-2.5 shadow-sm space-y-2"
@@ -827,7 +827,7 @@ function ProjectsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {projectTasks(selectedProject.id).map((t) => (
+                      {projectTasks(selectedProject.id).map((t: any) => (
                         <tr key={t.id} className="hover:bg-muted/10">
                           <td className="px-4 py-2.5 font-medium">{t.title}</td>
                           <td className="px-4 py-2.5 text-muted-foreground">
@@ -864,7 +864,7 @@ function ProjectsPage() {
 
               {view === "milestones" && (
                 <div className="space-y-3">
-                  {projectMilestones(selectedProject.id).map((m) => (
+                  {projectMilestones(selectedProject.id).map((m: any) => (
                     <div
                       key={m.id}
                       className="flex gap-3 items-start p-3 border border-border rounded-xl bg-card"
@@ -899,7 +899,7 @@ function ProjectsPage() {
 
               {view === "resources" && (
                 <div className="grid grid-cols-1 gap-3">
-                  {projectResources(selectedProject.id).map((r) => (
+                  {projectResources(selectedProject.id).map((r: any) => (
                     <div
                       key={r.id}
                       className="p-3 border border-border rounded-xl bg-card flex items-center justify-between"

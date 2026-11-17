@@ -52,6 +52,10 @@ function SettingsPage() {
   const { tab: activeTabParam } = Route.useSearch();
   const [activeTab, setActiveTab] = useState(activeTabParam || "profile");
   const [saving, setSaving] = useState(false);
+  const { data: session } = authClient.useSession();
+  const activeOrganization = (session as any)?.session?.activeOrganizationId
+    ? { id: (session as any).session.activeOrganizationId }
+    : null;
   const [profileData, setProfileData] = useState({
     firstName: "John",
     lastName: "Doe",

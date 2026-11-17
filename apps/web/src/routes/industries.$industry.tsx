@@ -2,6 +2,7 @@
  * Industry Detail Route
  *
  * Dynamic route for individual industry pages.
+ * Includes SEO optimization with unique meta tags and structured data.
  */
 
 import { Footer } from "@/components/footer";
@@ -18,6 +19,91 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/industries/$industry")({
+  head: ({ params }) => {
+    const industryKey = params.industry.replace(/-/g, "-");
+    const industryData = industryFeatures[industryKey] || {
+      title: `${params.industry
+        .split("-")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ")} CRM`,
+      description: `Tailored CRM solutions for ${params.industry.replace(/-/g, " ")} businesses. Streamline operations and grow relationships.`,
+    };
+
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://nucleo.one";
+    const canonical = `${baseUrl}/industries/${params.industry}`;
+    const pageTitle = `${industryData.title} - Nucleo One`;
+    const pageDescription = industryData.description;
+
+    return {
+      meta: [
+        { title: pageTitle },
+        { name: "description", content: pageDescription },
+        { name: "robots", content: "index, follow" },
+        // Open Graph
+        { property: "og:title", content: pageTitle },
+        { property: "og:description", content: pageDescription },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: canonical },
+        { property: "og:image", content: `${baseUrl}/og-image.png` },
+        // Twitter
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: pageTitle },
+        { name: "twitter:description", content: pageDescription },
+        // Schema.org structured data
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": industryData.title,
+          "description": pageDescription,
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Free trial available"
+          },
+          "provider": {
+            "@type": "Organization",
+            "name": "Nucleo One",
+            "url": baseUrl
+          }
+        })},
+        // BreadcrumbList schema for navigation
+        { "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": baseUrl
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Industries",
+              "item": `${baseUrl}/industries`
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": industryData.title,
+              "item": canonical
+            }
+          ]
+        })}
+      ],
+      links: [
+        { rel: "canonical", href: canonical },
+        { rel: "alternate", hreflang: "en", href: canonical }
+      ]
+    };
+  },
   component: IndustryDetailPage,
 });
 

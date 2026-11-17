@@ -8,6 +8,8 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import type { RouterClient } from "@orpc/server";
+import type { AppRouter } from "../../../api/src/routers";
 import { useAppStore } from "../stores/app-store";
 import { platformFetch } from "./platform-api-client";
 
@@ -47,8 +49,8 @@ const rpcLink = new RPCLink({
 /**
  * Keep client typing permissive to avoid breakage during API evolution.
  */
-export const api = createORPCClient(rpcLink) as any;
-export const orpc = createTanstackQueryUtils(api as any);
+export const api: RouterClient<AppRouter> = createORPCClient(rpcLink);
+export const orpc = createTanstackQueryUtils(api);
 
 /**
  * Export specific routers for convenience

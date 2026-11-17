@@ -28,7 +28,7 @@
     "@sentry/cloudflare": "^10.36.0",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.36.1",
-    "better-auth": "1.4.18",
+    "better-auth": "1.7.7",
     "dd-trace": "^5.0.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.7",

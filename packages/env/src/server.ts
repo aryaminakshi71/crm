@@ -59,6 +59,15 @@ const serverSchema = clientSchema
     GITHUB_CLIENT_SECRET: z.string().optional(),
 
     // ============================================================================
+    // GOOGLE ADS API
+    // ============================================================================
+
+    GOOGLE_ADS_CLIENT_ID: z.string().optional(),
+    GOOGLE_ADS_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
+    GOOGLE_ADS_MANAGER_ACCOUNT_ID: z.string().optional(),
+
+    // ============================================================================
     // REDIS (Upstash)
     // Uses REST API naming convention expected by @upstash/redis fromEnv()
     // ============================================================================

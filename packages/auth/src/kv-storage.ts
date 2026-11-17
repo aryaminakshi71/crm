@@ -48,5 +48,19 @@ export function createKVStorage(kv: KVNamespace): SecondaryStorage {
         console.error(`[Auth] Failed to delete key from KV: ${key}`, error);
       }
     },
+
+    async getAndDelete(key: string): Promise<string | null> {
+      const value = await kv.get(`${AUTH_PREFIX}${key}`);
+      await kv.delete(`${AUTH_PREFIX}${key}`);
+      return value;
+    },
+
+    async increment(key: string, ttl?: number): Promise<number> {
+      const current = Number((await kv.get(`${AUTH_PREFIX}${key}`)) ?? "0") + 1;
+      const options: KVNamespacePutOptions = {};
+      if (ttl && ttl > 0) options.expirationTtl = Math.max(ttl, 60);
+      await kv.put(`${AUTH_PREFIX}${key}`, String(current), options);
+      return current;
+    },
   };
 }
