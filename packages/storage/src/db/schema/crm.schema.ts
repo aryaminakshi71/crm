@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 // CRM Schema - contacts, deals, leads, activities
 import {
   index,
+  integer,
   jsonb,
   numeric,
   pgTable,
@@ -315,3 +316,32 @@ export type Activity = typeof activities.$inferSelect;
 export type NewActivity = typeof activities.$inferInsert;
 export type File = typeof files.$inferSelect;
 export type NewFile = typeof files.$inferInsert;
+
+// ── AI marketing bot ──────────────────────────────────────────────
+export const marketingCampaigns = pgTable("marketing_campaigns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 180 }).notNull(),
+  product: varchar("product", { length: 60 }).notNull().default("schoolai"),
+  channel: varchar("channel", { length: 20 }).notNull().default("whatsapp"),
+  sequence: jsonb("sequence").notNull().default([]),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const marketingEnrollments = pgTable("marketing_enrollments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .notNull()
+    .references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+  leadId: uuid("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  step: integer("step").notNull().default(0),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+  repliedAt: timestamp("replied_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
