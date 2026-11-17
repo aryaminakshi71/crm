@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Nucleo One",
+    "name": "NucleoAI",
     "slug": "nucleo-one-mobile",
     "description": "Field-ready access for Nucleo One teams on Android and iPhone.",
     "scheme": "nucleoone",
@@ -15,7 +15,10 @@
     "experiments": {
       "autolinkingModuleResolution": true
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -28,7 +31,10 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserTrackingUsageDescription": "Nucleo One uses analytics to improve onboarding and mobile workflows.",
-        "LSApplicationQueriesSchemes": ["https", "http"]
+        "LSApplicationQueriesSchemes": [
+          "https",
+          "http"
+        ]
       }
     },
     "android": {

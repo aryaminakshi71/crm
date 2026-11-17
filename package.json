@@ -1,5 +1,5 @@
 {
-  "name": "nucleo-one",
+  "name": "nucleoai",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.5",
