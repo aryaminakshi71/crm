@@ -12,6 +12,7 @@ import { dashboardRouter } from "./dashboard";
 import { dealsRouter } from "./deals";
 import { enterpriseRouter } from "./enterprise";
 import { healthRouter } from "./health";
+import { metricsRouter } from "./metrics";
 import { hrmRouter } from "./hrm";
 import { intelligenceRouter } from "./intelligence";
 import { leadsRouter } from "./leads";
@@ -23,6 +24,7 @@ import { assetsRouter } from "./assets";
 
 export const appRouter = {
   health: healthRouter,
+  metrics: metricsRouter,
   contacts: contactsRouter,
   deals: dealsRouter,
   leads: leadsRouter,
