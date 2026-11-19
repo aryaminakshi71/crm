@@ -66,6 +66,40 @@ export function createAuth(config: AuthConfig) {
     organization({
       allowUserToCreateOrganization: true,
       organizationLimit: 3, // Free tier limit
+      organizationCreation: {
+        afterCreate: async ({
+          organization,
+          user,
+        }: {
+          organization: any;
+          user: any;
+        }) => {
+          try {
+            await fetch(
+              `${process.env.REGISTRY_URL ?? "http://127.0.0.1:4100"}/api/registry/company`,
+              {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  app: "nucleoai",
+                  orgId: organization.id,
+                  name: organization.name,
+                  slug: organization.slug,
+                  plan: "free",
+                  status: "active",
+                  email: user.email,
+                  isDemo: false,
+                  mrr: 0,
+                  currency: "INR",
+                }),
+                signal: AbortSignal.timeout(3000),
+              },
+            );
+          } catch {
+            // registry is optional
+          }
+        },
+      },
       sendInvitationEmail: async ({
         email,
         organization,
