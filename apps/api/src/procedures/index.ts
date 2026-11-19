@@ -11,7 +11,12 @@
 
 import { os, ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
-import type { AuthContext, InitialContext, OrgContext } from "../context";
+import type {
+  AppEnv,
+  AuthContext,
+  InitialContext,
+  OrgContext,
+} from "../context";
 import { createAuthFromEnv } from "../lib/create-auth-from-env";
 import { getDb, schema } from "../lib/db";
 
@@ -19,6 +24,13 @@ import { getDb, schema } from "../lib/db";
  * Base procedure with initial context (env, headers, requestId, logger)
  */
 export const base = os.$context<InitialContext>();
+
+/**
+ * Demo mode is a development affordance only. In production the
+ * `x-demo-mode` header would otherwise be an unauthenticated auth bypass,
+ * so it is ignored there regardless of what the client sends.
+ */
+const demoModeAllowed = (env: AppEnv) => env.NODE_ENV !== "production";
 
 /**
  * Public procedure - no auth required
@@ -37,8 +49,10 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
     });
   }
 
-  // Check for demo mode
-  const isDemo = context.headers.get("x-demo-mode") === "true";
+  // Check for demo mode (development only)
+  const isDemo =
+    demoModeAllowed(context.env) &&
+    context.headers.get("x-demo-mode") === "true";
   if (isDemo) {
     // Create a mock auth context for demo mode
     const db = getDb(context);
@@ -108,8 +122,10 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
  * Supports demo mode with demo organization.
  */
 export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
-  // Check for demo mode
-  const isDemo = context.headers.get("x-demo-mode") === "true";
+  // Check for demo mode (development only)
+  const isDemo =
+    demoModeAllowed(context.env) &&
+    context.headers.get("x-demo-mode") === "true";
   if (isDemo) {
     // Return demo organization context
     return next({
