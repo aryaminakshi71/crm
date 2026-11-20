@@ -11,5 +11,8 @@
     "@crm/tsconfig": "file:../tsconfig",
     "@types/node": "^22.19.2",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@platform/email": "file:../../../../platform/packages/email"
   }
 }

@@ -1,9 +1,12 @@
 /**
- * Email Service Abstraction
+ * Email Service
  *
- * Stub implementation that logs to console.
- * Replace with actual provider (SendGrid, Resend, SMTP, etc.)
+ * Real delivery through Resend (shared @platform/email module).
+ * Falls back to console logging when RESEND_API_KEY is not configured,
+ * so local development and demos keep working without credentials.
  */
+
+import { isEmailConfigured, sendEmail } from "@platform/email";
 
 export interface EmailMessage {
   to: string;
@@ -21,27 +24,41 @@ export interface EmailService {
   ): Promise<{ success: boolean; sent: number; failed: number }>;
 }
 
-/**
- * Stub email service - logs to console
- * Replace with actual implementation for production
- */
+function emailEnv() {
+  return {
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+  };
+}
+
 export const emailService: EmailService = {
   async send(message: EmailMessage) {
-    console.log("[Email Stub] Sending email:", {
-      to: message.to,
-      subject: message.subject,
-    });
-    // In production, replace with actual email provider:
-    // - Resend: await resend.emails.send({ ... })
-    // - SendGrid: await sgMail.send({ ... })
-    // - SMTP: await transporter.sendMail({ ... })
-    return { success: true, messageId: `stub-${Date.now()}` };
+    const env = emailEnv();
+    if (!isEmailConfigured(env)) {
+      console.log("[Email] RESEND_API_KEY not set — logging instead:", {
+        to: message.to,
+        subject: message.subject,
+      });
+      return { success: true, messageId: `dev-${Date.now()}` };
+    }
+    try {
+      const result = await sendEmail(env, message);
+      return { success: true, messageId: result.id };
+    } catch (error) {
+      console.error("[Email] Delivery failed:", error);
+      return { success: false };
+    }
   },
 
   async sendBulk(messages: EmailMessage[]) {
-    console.log(`[Email Stub] Sending ${messages.length} emails in bulk`);
-    // In production, implement batch sending with your provider
-    return { success: true, sent: messages.length, failed: 0 };
+    let sent = 0;
+    let failed = 0;
+    for (const message of messages) {
+      const result = await emailService.send(message);
+      if (result.success) sent += 1;
+      else failed += 1;
+    }
+    return { success: failed === 0, sent, failed };
   },
 };
 
