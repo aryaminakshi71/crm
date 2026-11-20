@@ -2,6 +2,7 @@ import { nucleoApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
 import {
   AlertTriangle,
   ArrowRight,
@@ -784,7 +785,9 @@ export function AppLayout() {
           <TrialBanner />
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mx-auto max-w-7xl">
-              <Outlet />
+              <SubscriptionGate>
+                <Outlet />
+              </SubscriptionGate>
             </div>
           </div>
         </main>

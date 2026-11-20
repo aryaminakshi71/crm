@@ -151,8 +151,34 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
     (context.session as any)?.activeOrganizationId ||
     (context as any).activeOrganizationId;
 
-  // Default to demo mode if no organization provided
+  // No explicit org: use the user's first membership, then fall back to demo.
   if (!orgSlug && !orgId) {
+    const db = getDb(context);
+    const [membership] = await db
+      .select({
+        organization: {
+          id: schema.organizations.id,
+          name: schema.organizations.name,
+          slug: schema.organizations.slug,
+        },
+        member: { id: schema.members.id, role: schema.members.role },
+      })
+      .from(schema.members)
+      .innerJoin(
+        schema.organizations,
+        eq(schema.members.organizationId, schema.organizations.id),
+      )
+      .where(eq(schema.members.userId, context.user.id))
+      .limit(1);
+    if (membership) {
+      return next({
+        context: {
+          ...context,
+          organization: { ...membership.organization, plan: "free" },
+          member: membership.member,
+        },
+      });
+    }
     return next({
       context: {
         ...context,
