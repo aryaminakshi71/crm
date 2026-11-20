@@ -57,10 +57,11 @@ export function getCRMRoutes(): SitemapRoute[] {
     { path: "/docs", changefreq: "weekly", priority: 0.7 },
     { path: "/support", changefreq: "weekly", priority: 0.7 },
     { path: "/industries", changefreq: "monthly", priority: 0.8 },
+    { path: "/roi-calculator", changefreq: "monthly", priority: 0.8 },
     { path: "/privacy", changefreq: "yearly", priority: 0.3 },
     { path: "/terms", changefreq: "yearly", priority: 0.3 },
-    { path: "/security", changefreq: "monthly", priority: 0.3 },
-    { path: "/status", changefreq: "weekly", priority: 0.3 },
+    { path: "/security", changefreq: "monthly", priority: 0.4 },
+    { path: "/status", changefreq: "weekly", priority: 0.4 },
   ];
 
   const blogRoutes: SitemapRoute[] = blogPosts.map((post) => ({
@@ -70,11 +71,15 @@ export function getCRMRoutes(): SitemapRoute[] {
     lastmod: post.publishedAt,
   }));
 
-  const competitors = ["hubspot", "zoho", "monday", "salesforce"];
+  const competitors = [
+    "hubspot", "zoho", "monday", "salesforce",
+    "pipedrive", "freshdesk", "zendesk", "clickup",
+    "notion", "asana", "odoo", "servicenow",
+  ];
   const vsRoutes: SitemapRoute[] = competitors.map((c) => ({
     path: `/vs/${c}`,
     changefreq: "monthly",
-    priority: 0.8,
+    priority: 0.85,
   }));
 
   const industryListing = [

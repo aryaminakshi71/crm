@@ -21,7 +21,15 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, Fragment } from "react";
+import {
+  NUCLEO_MODULES,
+  PLAN_TIERS,
+  MODULE_PLANS,
+  getModuleIcon,
+  type NucleoModuleKey,
+  type PlanTierKey,
+} from "@/lib/modules";
 
 export const Route = createFileRoute("/pricing")({
   head: () => {
@@ -46,18 +54,18 @@ export const Route = createFileRoute("/pricing")({
         {
           name: "description",
           content:
-            "Simple, transparent pricing for Nucleo One. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month.",
+            "Simple, transparent pricing for Nucleo One. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $5/user/month with a free forever plan.",
         },
         { name: "robots", content: "index, follow" },
         // Open Graph
         { property: "og:title", content: "Pricing | Nucleo One — AI-Powered Business OS" },
-        { property: "og:description", content: "Simple, transparent pricing. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $15/user/month." },
+        { property: "og:description", content: "Simple, transparent pricing. Replace your CRM, HRM, Projects, Marketing, Helpdesk, Finance, and BI tools with one AI-powered platform. From $5/user/month with a free forever plan." },
         { property: "og:type", content: "website" },
         { property: "og:url", content: canonical },
         // Twitter
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: "Pricing | Nucleo One" },
-        { name: "twitter:description", content: "Simple, transparent pricing. From $15/user/month." },
+        { name: "twitter:description", content: "Simple, transparent pricing. From $5/user/month with a free forever plan." },
         // FAQPage Schema
         { "script:ld+json": JSON.stringify({
           "@context": "https://schema.org",
@@ -94,295 +102,88 @@ export const Route = createFileRoute("/pricing")({
 });
 
 // ─── Plan data ────────────────────────────────────────────────────────────────
+// Uses shared PLAN_TIERS from @/lib/modules
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    icon: Zap,
-    blurb: "Perfect for small teams consolidating tools.",
-    monthlyPrice: 15,
-    annualPrice: 12,
-    color: "text-sky-400",
-    bg: "bg-sky-400/10",
-    border: "border-sky-400/20",
-    cta: "Start free trial",
-    popular: false,
-    features: [
-      "Up to 10 users",
-      "CRM — contacts, leads, deals pipeline",
-      "Helpdesk — tickets & SLA tracking",
-      "Projects — tasks & kanban",
-      "Finance — invoices & expense tracking",
-      "5 GB storage",
-      "Email support (48hr response)",
-      "21-day free trial",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    icon: Star,
-    blurb: "For scaling teams that need full ops coverage.",
-    monthlyPrice: 29,
-    annualPrice: 23,
-    color: "text-primary",
-    bg: "bg-primary/10",
-    border: "border-primary/40",
-    cta: "Start free trial",
-    popular: true,
-    features: [
-      "Up to 100 users",
-      "Everything in Starter",
-      "HRM — employees, leave, recruitment",
-      "Marketing — campaigns, audiences, analytics",
-      "Procurement & purchase orders",
-      "AI lead scoring & campaign planning",
-      "25 GB storage",
-      "Priority email + chat support",
-      "21-day free trial",
-    ],
-  },
-  {
-    id: "business",
-    name: "Business",
-    icon: Globe,
-    blurb: "For established companies with advanced needs.",
-    monthlyPrice: 49,
-    annualPrice: 39,
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
-    border: "border-violet-400/20",
-    cta: "Start free trial",
-    popular: false,
-    features: [
-      "Up to 500 users",
-      "Everything in Growth",
-      "Intelligence BI — AI agents & forecasting",
-      "Compliance & audit trails",
-      "Contracts & document lifecycle",
-      "Enterprise SSO (SAML/OIDC)",
-      "Unlimited storage",
-      "Dedicated account manager",
-      "SLA: 4hr response",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    icon: Shield,
-    blurb: "Custom contracts for regulated organizations.",
-    monthlyPrice: null,
-    annualPrice: null,
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
-    border: "border-amber-400/20",
-    cta: "Book a demo",
-    popular: false,
-    features: [
-      "Unlimited users",
-      "Everything in Business",
-      "Custom AI agent configuration",
-      "SOC 2 Type II compliance",
-      "Data residency (US / EU / India / UAE)",
-      "Custom integrations & API access",
-      "RBAC + approval workflows",
-      "99.99% SLA uptime guarantee",
-      "Dedicated infrastructure",
-    ],
-  },
-];
+const PLAN_ICONS: Record<PlanTierKey, any> = {
+  free: Zap,
+  starter: Globe,
+  business: Shield,
+  enterprise: Sparkles,
+};
+
+const PLAN_COLORS: Record<PlanTierKey, { color: string; bg: string; border: string }> = {
+  free:   { color: "text-sky-400",    bg: "bg-sky-400/10",      border: "border-sky-400/20" },
+  starter:{ color: "text-primary",    bg: "bg-primary/10",       border: "border-primary/40" },
+  business:{ color: "text-violet-400",bg: "bg-violet-400/10",    border: "border-violet-400/20" },
+  enterprise:{ color: "text-amber-400",bg: "bg-amber-400/10",   border: "border-amber-400/20" },
+};
 
 // ─── Feature comparison table ─────────────────────────────────────────────────
+// Built from shared PLAN_TIERS and MODULE_PLANS
 
-const COMPARISON = [
+// Non-module rows (storage, users, support, security)
+const metaRows: Array<{
+  feature: string;
+  free: boolean | string;
+  starter: boolean | string;
+  business: boolean | string;
+  enterprise: boolean | string;
+}> = [
   {
-    category: "Core Platform",
-    rows: [
-      {
-        feature: "CRM (Contacts, Leads, Deals)",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Helpdesk & Ticketing",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Projects & Kanban",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Finance & Invoicing",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "HRM & Leave Management",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Recruitment Module",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Marketing & Campaigns",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Procurement & POs",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-    ],
+    feature: "Team members",
+    free: "1",
+    starter: "25",
+    business: "200",
+    enterprise: "Unlimited",
   },
   {
-    category: "AI & Intelligence",
-    rows: [
-      {
-        feature: "AI Lead Scoring",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Campaign Planning AI",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Revenue Forecasting",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Executive BI Dashboard",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Custom AI Agents",
-        starter: false,
-        growth: false,
-        business: false,
-        enterprise: true,
-      },
-    ],
+    feature: "Storage",
+    free: "100 MB",
+    starter: "50 GB",
+    business: "500 GB",
+    enterprise: "Unlimited",
   },
   {
-    category: "Security & Compliance",
-    rows: [
-      {
-        feature: "SSL & encryption at rest",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "GDPR-compliant data handling",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Audit logs",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "SSO (SAML/OIDC)",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "SOC 2 Type II",
-        starter: false,
-        growth: false,
-        business: false,
-        enterprise: true,
-      },
-      {
-        feature: "Custom data residency",
-        starter: false,
-        growth: false,
-        business: false,
-        enterprise: true,
-      },
-    ],
+    feature: "Audit logs",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
   },
   {
-    category: "Support",
-    rows: [
-      {
-        feature: "Email support",
-        starter: true,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Priority chat support",
-        starter: false,
-        growth: true,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Dedicated account manager",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-      {
-        feature: "Custom SLA",
-        starter: false,
-        growth: false,
-        business: false,
-        enterprise: true,
-      },
-      {
-        feature: "Onboarding assistance",
-        starter: false,
-        growth: false,
-        business: true,
-        enterprise: true,
-      },
-    ],
+    feature: "SSO (SAML/OIDC)",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
+  },
+  {
+    feature: "Custom data residency",
+    free: false,
+    starter: false,
+    business: false,
+    enterprise: true,
+  },
+  {
+    feature: "Custom SLA",
+    free: false,
+    starter: false,
+    business: false,
+    enterprise: true,
+  },
+  {
+    feature: "Dedicated account manager",
+    free: false,
+    starter: false,
+    business: true,
+    enterprise: true,
+  },
+  {
+    feature: "Priority email + chat support",
+    free: false,
+    starter: true,
+    business: true,
+    enterprise: true,
   },
 ];
 
@@ -390,8 +191,8 @@ const COMPARISON = [
 
 const FAQS = [
   {
-    q: "Do I need a credit card to start a free trial?",
-    a: "No. You get 21 days completely free with no credit card required. You only enter payment details if you choose to continue after the trial.",
+    q: "Is there really a free plan?",
+    a: "Yes! Our Free plan is free forever with 1 user, 100MB storage, and core CRM + Projects features. No credit card required.",
   },
   {
     q: "Can I change plans at any time?",
@@ -403,7 +204,7 @@ const FAQS = [
   },
   {
     q: "Do you offer discounts for annual billing?",
-    a: "Yes — annual plans are billed at roughly 20% less than monthly. Toggle the billing period above to see the discounted prices.",
+    a: "Yes — annual plans are billed at roughly 17-20% less than monthly. Toggle the billing period above to see the discounted prices.",
   },
   {
     q: "Can I use Nucleo One for multiple companies/workspaces?",
@@ -411,7 +212,7 @@ const FAQS = [
   },
   {
     q: "What payment methods do you accept?",
-    a: "We accept all major credit/debit cards (Visa, Mastercard, Amex) via Stripe. US customers can also pay via ACH bank transfer. Enterprise customers can pay via wire transfer.",
+    a: "We accept all major credit/debit cards (Visa, Mastercard, Amex) via Stripe. Indian customers can pay via UPI, Net Banking, and cards through our Indian payment gateway. Enterprise customers can pay via wire transfer.",
   },
   {
     q: "Is my data safe if I cancel?",
@@ -419,7 +220,7 @@ const FAQS = [
   },
   {
     q: "Do you have plans for startups or non-profits?",
-    a: "Yes — we offer 50% off for early-stage startups (pre-Series A) and non-profits. Email hello@nucleoone.com with proof of status.",
+    a: "Yes — we offer special pricing for early-stage startups (pre-Series A) and non-profits. Email hello@nucleoone.com with proof of status.",
   },
 ];
 
@@ -478,7 +279,7 @@ function PricingPage() {
             One platform.
             <br />
             <span className="bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent">
-              Replace seven tools.
+              Replace all your tools.
             </span>
           </h1>
           <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
@@ -510,24 +311,29 @@ function PricingPage() {
 
         {/* Pricing cards */}
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => {
+          {PLAN_TIERS.map((plan) => {
             const price =
               plan.monthlyPrice === null
                 ? null
                 : annual
                   ? plan.annualPrice
                   : plan.monthlyPrice;
-            const Icon = plan.icon;
+            const Icon = PLAN_ICONS[plan.key];
+            const { color, bg, border } = PLAN_COLORS[plan.key];
+            const isPopular = plan.key === "starter";
+            const planModuleNames = plan.modules
+              .slice(0, 6)
+              .map((k) => NUCLEO_MODULES.find((m) => m.key === k)?.name ?? k);
             return (
               <article
-                key={plan.id}
+                key={plan.key}
                 className={`relative flex flex-col rounded-2xl border p-6 transition-all hover:shadow-lg hover:shadow-primary/5 ${
-                  plan.popular
+                  isPopular
                     ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : `${plan.border} bg-card`
+                    : `${border} bg-card`
                 }`}
               >
-                {plan.popular && (
+                {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-primary-foreground text-xs font-semibold">
                       <Star className="h-3 w-3" /> Most Popular
@@ -535,13 +341,11 @@ function PricingPage() {
                   </div>
                 )}
 
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${plan.bg} mb-4`}
-                >
-                  <Icon className={`h-5 w-5 ${plan.color}`} />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg} mb-4`}>
+                  <Icon className={`h-5 w-5 ${color}`} />
                 </div>
 
-                <h2 className={`font-bold text-xl ${plan.color}`}>
+                <h2 className={`font-bold text-xl ${color}`}>
                   {plan.name}
                 </h2>
                 <p className="mt-1 text-muted-foreground text-sm">
@@ -551,6 +355,13 @@ function PricingPage() {
                 <div className="mt-6">
                   {price === null ? (
                     <p className="font-bold text-3xl text-foreground">Custom</p>
+                  ) : price === 0 ? (
+                    <div className="flex items-end gap-1">
+                      <p className="font-bold text-3xl text-foreground">Free</p>
+                      <p className="text-muted-foreground text-sm mb-1">
+                        forever
+                      </p>
+                    </div>
                   ) : (
                     <div className="flex items-end gap-1">
                       <p className="font-bold text-3xl text-foreground">
@@ -561,40 +372,46 @@ function PricingPage() {
                       </p>
                     </div>
                   )}
-                  {annual && price !== null && (
+                  {annual && price !== null && price > 0 && (
                     <p className="text-muted-foreground text-xs mt-1">
-                      Billed annually · ${plan.annualPrice! * 12}/user/year
+                      Billed annually · ${(plan.annualPrice ?? plan.monthlyPrice) * 12}/user/year
                     </p>
                   )}
                 </div>
 
                 <ul className="mt-6 space-y-2.5 flex-1">
-                  {plan.features.map((f) => (
+                  {planModuleNames.map((name) => (
                     <li
-                      key={f}
+                      key={name}
                       className="flex items-start gap-2 text-sm text-foreground"
                     >
                       <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-                      {f}
+                      {name}
                     </li>
                   ))}
+                  {plan.modules.length > 6 && (
+                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                      +{plan.modules.length - 6} more modules
+                    </li>
+                  )}
                 </ul>
 
                 <div className="mt-8">
-                  {plan.id === "enterprise" ? (
+                  {plan.key === "enterprise" ? (
                     <Link to="/contact">
                       <Button variant="outline" className="w-full">
-                        {plan.cta}
+                        Book a demo
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
                   ) : (
                     <Link to="/register">
                       <Button
-                        variant={plan.popular ? "primary" : "outline"}
+                        variant={isPopular ? "primary" : "outline"}
                         className="w-full"
                       >
-                        {plan.cta}
+                        {plan.key === "free" ? "Get started free" : "Start free trial"}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -611,18 +428,18 @@ function PricingPage() {
             {[
               {
                 icon: Users,
-                label: "Free for first 21 days",
+                label: "Free forever plan",
                 sub: "No credit card needed",
               },
               {
                 icon: Shield,
-                label: "SOC 2 in progress",
+                label: "Security-first design",
                 sub: "Enterprise-ready security",
               },
               {
                 icon: Globe,
-                label: "US company, global reach",
-                sub: "Data in your region",
+                label: "Built for India & global",
+                sub: "UPI, cards, wire accepted",
               },
               {
                 icon: Bot,
@@ -657,54 +474,65 @@ function PricingPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left p-4 font-medium text-muted-foreground w-1/2">
-                    Feature
+                    Module
                   </th>
-                  {PLANS.map((p) => (
-                    <th key={p.id} className="p-4 text-center font-semibold">
-                      <span className={p.color}>{p.name}</span>
+                  {PLAN_TIERS.map((p) => (
+                    <th key={p.key} className="p-4 text-center font-semibold">
+                      <span className={PLAN_COLORS[p.key].color}>{p.name}</span>
                       <div className="text-muted-foreground text-xs font-normal mt-0.5">
                         {p.monthlyPrice === null
                           ? "Custom"
-                          : annual
-                            ? `$${p.annualPrice}/user`
-                            : `$${p.monthlyPrice}/user`}
+                          : p.monthlyPrice === 0
+                            ? "Free"
+                            : annual
+                              ? `$${p.annualPrice}/user`
+                              : `$${p.monthlyPrice}/user`}
                       </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map((cat) => (
-                  <>
-                    <tr key={cat.category} className="bg-muted/10">
-                      <td
-                        colSpan={5}
-                        className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
-                      >
-                        {cat.category}
-                      </td>
+                {/* Module rows */}
+                {NUCLEO_MODULES.map((mod) => {
+                  return (
+                    <tr
+                      key={mod.key}
+                      className="border-t border-border/50 hover:bg-muted/10 transition-colors"
+                    >
+                      <td className="p-4 text-foreground">{mod.name}</td>
+                      {PLAN_TIERS.map((plan) => {
+                        const included = plan.modules.includes(mod.key as NucleoModuleKey);
+                        return (
+                          <td key={plan.key} className="p-4 text-center">
+                            <CheckCell value={included} />
+                          </td>
+                        );
+                      })}
                     </tr>
-                    {cat.rows.map((row) => (
-                      <tr
-                        key={row.feature}
-                        className="border-t border-border/50 hover:bg-muted/10 transition-colors"
-                      >
-                        <td className="p-4 text-foreground">{row.feature}</td>
-                        <td className="p-4">
-                          <CheckCell value={row.starter} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.growth} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.business} />
-                        </td>
-                        <td className="p-4">
-                          <CheckCell value={row.enterprise} />
-                        </td>
-                      </tr>
+                  );
+                })}
+                {/* Meta rows (users, storage, support, security) */}
+                <tr className="bg-muted/10">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
+                  >
+                    Storage, Security &amp; Support
+                  </td>
+                </tr>
+                {metaRows.map((row) => (
+                  <tr
+                    key={row.feature}
+                    className="border-t border-border/50 hover:bg-muted/10 transition-colors"
+                  >
+                    <td className="p-4 text-foreground">{row.feature}</td>
+                    {(["free", "starter", "business", "enterprise"] as const).map((tier) => (
+                      <td key={tier} className="p-4 text-center">
+                        <CheckCell value={row[tier] as boolean | string} />
+                      </td>
                     ))}
-                  </>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -735,13 +563,12 @@ function PricingPage() {
             Ready to consolidate your stack?
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Start with a 21-day free trial. No credit card. Cancel anytime. Full
-            access to all Growth features from day one.
+            Start free, no credit card needed. Upgrade to Starter from $12/user/month when you're ready.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link to="/register">
               <Button variant="primary" size="lg">
-                Start free trial
+                Get started free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -752,8 +579,7 @@ function PricingPage() {
             </Link>
           </div>
           <p className="text-muted-foreground text-xs">
-            21-day free trial · No credit card · Full Growth access · Cancel
-            anytime
+            Free forever plan available · No credit card · Cancel anytime
           </p>
         </section>
       </main>

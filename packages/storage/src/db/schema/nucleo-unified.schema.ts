@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./auth.schema.js";
 import { contacts, files } from "./crm.schema.js";
+import * as invoicing from "./invoicing.schema.js";
 
 export const customers = pgTable(
   "customers",
@@ -35,10 +36,12 @@ export const customers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_customers_org").on(table.organizationId),
     nameIdx: index("idx_customers_name").on(table.name),
+    deletedAtIdx: index("idx_customers_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -88,6 +91,7 @@ export const projects = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_projects_org").on(table.organizationId),
@@ -98,6 +102,7 @@ export const projects = pgTable(
       table.status,
       table.createdAt,
     ),
+    deletedAtIdx: index("idx_projects_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -125,11 +130,14 @@ export const projectTasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_project_tasks_org").on(table.organizationId),
     projectIdx: index("idx_project_tasks_project").on(table.projectId),
     statusIdx: index("idx_project_tasks_status").on(table.status),
+    assigneeIdx: index("idx_project_tasks_assignee").on(table.assigneeId),
+    deletedAtIdx: index("idx_project_tasks_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -222,17 +230,20 @@ export const tickets = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     orgIdx: index("idx_tickets_org").on(table.organizationId),
     statusIdx: index("idx_tickets_status").on(table.status),
     queueIdx: index("idx_tickets_queue").on(table.queue),
+    assignedToIdx: index("idx_tickets_assigned_to").on(table.assignedToId),
     orgStatusQueueCreatedIdx: index("idx_tickets_org_status_queue_created").on(
       table.organizationId,
       table.status,
       table.queue,
       table.createdAt,
     ),
+    deletedAtIdx: index("idx_tickets_deleted_at").on(table.deletedAt),
   }),
 );
 
@@ -430,74 +441,6 @@ export const documentVersions = pgTable(
   (table) => ({
     documentIdx: index("idx_document_versions_document").on(table.documentId),
     versionIdx: index("idx_document_versions_version").on(table.version),
-  }),
-);
-
-export const invoices = pgTable(
-  "invoices",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    customerId: uuid("customer_id").references(() => customers.id, {
-      onDelete: "set null",
-    }),
-    projectId: uuid("project_id").references(() => projects.id, {
-      onDelete: "set null",
-    }),
-    invoiceNumber: varchar("invoice_number", { length: 64 }).notNull(),
-    status: varchar("status", { length: 40 }).notNull().default("draft"),
-    currency: varchar("currency", { length: 12 }).notNull().default("USD"),
-    subtotal: numeric("subtotal", { precision: 15, scale: 2 })
-      .notNull()
-      .default("0"),
-    tax: numeric("tax", { precision: 15, scale: 2 }).notNull().default("0"),
-    total: numeric("total", { precision: 15, scale: 2 }).notNull().default("0"),
-    issuedAt: timestamp("issued_at", { withTimezone: true }),
-    dueAt: timestamp("due_at", { withTimezone: true }),
-    paidAt: timestamp("paid_at", { withTimezone: true }),
-    notes: text("notes"),
-    createdBy: text("created_by").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => ({
-    orgIdx: index("idx_invoices_org").on(table.organizationId),
-    numberIdx: index("idx_invoices_number").on(table.invoiceNumber),
-    statusIdx: index("idx_invoices_status").on(table.status),
-  }),
-);
-
-export const invoiceItems = pgTable(
-  "invoice_items",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    invoiceId: uuid("invoice_id")
-      .notNull()
-      .references(() => invoices.id, { onDelete: "cascade" }),
-    description: text("description").notNull(),
-    quantity: numeric("quantity", { precision: 12, scale: 2 })
-      .notNull()
-      .default("1"),
-    unitPrice: numeric("unit_price", { precision: 15, scale: 2 })
-      .notNull()
-      .default("0"),
-    lineTotal: numeric("line_total", { precision: 15, scale: 2 })
-      .notNull()
-      .default("0"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => ({
-    invoiceIdx: index("idx_invoice_items_invoice").on(table.invoiceId),
   }),
 );
 
@@ -1549,7 +1492,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   }),
   projects: many(projects),
   tickets: many(tickets),
-  invoices: many(invoices),
+  invoices: many(invoicing.invoices),
   assets: many(digitalAssets),
   documents: many(documents),
 }));
@@ -1691,33 +1634,6 @@ export const documentVersionsRelations = relations(
   }),
 );
 
-export const invoicesRelations = relations(invoices, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [invoices.organizationId],
-    references: [organizations.id],
-  }),
-  customer: one(customers, {
-    fields: [invoices.customerId],
-    references: [customers.id],
-  }),
-  project: one(projects, {
-    fields: [invoices.projectId],
-    references: [projects.id],
-  }),
-  author: one(users, {
-    fields: [invoices.createdBy],
-    references: [users.id],
-  }),
-  items: many(invoiceItems),
-}));
-
-export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
-  invoice: one(invoices, {
-    fields: [invoiceItems.invoiceId],
-    references: [invoices.id],
-  }),
-}));
-
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [campaigns.organizationId],
@@ -1743,3 +1659,6 @@ export const campaignContactsRelations = relations(
     }),
   }),
 );
+
+// Re-export organizations and users for use in other schemas
+export { organizations, users } from "./auth.schema.js";

@@ -5,7 +5,7 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
@@ -91,7 +91,7 @@ export const leadsRouter = {
             const db = getDb(context);
 
             // Build where conditions
-            const conditions = [eq(leads.organizationId, context.organization.id)];
+            const conditions = [eq(leads.organizationId, context.organization.id), isNull(leads.deletedAt)];
             if (input.status) {
               conditions.push(eq(leads.status, input.status));
             }
@@ -112,7 +112,7 @@ export const leadsRouter = {
             // Get total count using SQL COUNT()
             const countResult = await trackQuery("listLeadsCount", () =>
               db.select({ count: count() }).from(leads).where(whereConditions),
-            );
+            ) as { count: number }[];
             const total = countResult[0]?.count ?? 0;
 
             // Get paginated results

@@ -12,7 +12,7 @@ import {
   Loading,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   AlertCircle,
@@ -44,7 +44,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { aiApi, nucleoApi } from "../lib/api";
+import { aiApi, nucleoApi } from "@/lib/api";
 
 const MilestoneIcon = Milestone;
 
@@ -104,7 +104,7 @@ function lsWrite<T>(key: string, data: T[]) {
 
 // ─── Priority badge ──────────────────────────────────────────────────────────
 
-function PriorityBadge({ priority }: { priority: string }) {
+export function PriorityBadge({ priority }: { priority: string }) {
   const map: Record<string, string> = {
     high: "bg-destructive/15 text-destructive",
     medium: "bg-warning/15 text-warning",
@@ -140,6 +140,8 @@ const VIEW_TABS: { id: ProjectView; label: string; icon: React.ElementType }[] =
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function ProjectsPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/projects") return <Outlet />;
   const { view: viewParam } = Route.useSearch();
   const [view, setView] = useState<ProjectView>(viewParam ?? "board");
   const [search, setSearch] = useState("");
@@ -615,10 +617,11 @@ function ProjectsPage() {
             <EmptyState
               icon={<FolderKanban className="h-10 w-10" />}
               title="No projects"
-              action={{
-                label: "Create",
-                onClick: () => setIsCreateModalOpen(true),
-              }}
+              action={
+                <Button onClick={() => setIsCreateModalOpen(true)}>
+                  Create
+                </Button>
+              }
             />
           ) : (
             filtered.map((project: any) => (

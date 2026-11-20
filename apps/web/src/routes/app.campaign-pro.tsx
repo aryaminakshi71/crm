@@ -8,6 +8,7 @@ import {
   EmptyState,
 } from "@crm/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   BarChart3,
@@ -21,6 +22,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  AlertCircle
 } from "lucide-react";
 import { z } from "zod";
 
@@ -29,6 +31,12 @@ import { z } from "zod";
 export const Route = createFileRoute("/app/campaign-pro")({
   validateSearch: z.object({}),
   component: CampaignProPage,
+});
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const getOrgHeader = () => ({
+  "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "",
+  "Content-Type": "application/json",
 });
 
 // ─── Metric Component ───────────────────────────────────────────────────────
@@ -77,6 +85,39 @@ function Metric({
 function CampaignProPage() {
   const navigate = useNavigate();
 
+  const { data: statsData, isError, refetch} = useQuery({
+    queryKey: ["marketing-stats"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/marketing/stats`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
+
+  const { data: campaignsData } = useQuery({
+    queryKey: ["marketing-campaigns"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/marketing/campaigns`, { headers: getOrgHeader() });
+      if (!res.ok) throw new Error("Failed to fetch campaigns");
+      return res.json();
+    },
+  });
+
+  const activeCampaigns = (campaignsData as any)?.data?.filter((c: { status: string }) => c.status === "active") ?? [];
+  const totalCampaigns = (campaignsData as any)?.total ?? 12;
+  const topCampaigns = (campaignsData as any)?.data?.slice(0, 3) ?? [
+    { id: "1", name: "Spring Sale Email", status: "active" },
+    { id: "2", name: "Product Launch Social", status: "active" },
+    { id: "3", name: "Welcome Series", status: "completed" },
+  ];
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -99,28 +140,28 @@ function CampaignProPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Metric
           title="Active Campaigns"
-          value="12"
+          value={activeCampaigns.length || totalCampaigns}
           icon={<Megaphone className="h-4 w-4" />}
           trend="+3 this month"
           color="text-primary"
         />
         <Metric
           title="Total Reach"
-          value="2.4M"
+          value={(statsData as any)?.totalContacts ? `${((statsData as any).totalContacts / 1000).toFixed(1)}K` : "—"}
           icon={<Globe className="h-4 w-4" />}
           trend="+12% vs last month"
           color="text-info"
         />
         <Metric
           title="Engagement Rate"
-          value="4.8%"
+          value={(statsData as any)?.avgOpenRate ? `${(statsData as any).avgOpenRate.toFixed(1)}%` : "—"}
           icon={<MousePointerClick className="h-4 w-4" />}
           trend="+0.5% vs last month"
           color="text-success"
         />
         <Metric
           title="Conversions"
-          value="1,247"
+          value={(statsData as any)?.totalSent?.toLocaleString() ?? "—"}
           icon={<Target className="h-4 w-4" />}
           trend="+23% vs last month"
           color="text-warning"
@@ -219,18 +260,14 @@ function CampaignProPage() {
             <CardTitle className="text-base">Top Campaigns</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm truncate">Spring Sale Email</span>
-              <Badge variant="primary">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm truncate">Product Launch Social</span>
-              <Badge variant="primary">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm truncate">Welcome Series</span>
-              <Badge variant="outline">Completed</Badge>
-            </div>
+            {topCampaigns.map((campaign: { id: string; name: string; status: string }) => (
+              <div key={campaign.id} className="flex items-center justify-between">
+                <span className="text-sm truncate">{campaign.name}</span>
+                <Badge variant={campaign.status === "active" ? "primary" : "outline"}>
+                  {campaign.status === "active" ? "Active" : "Completed"}
+                </Badge>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

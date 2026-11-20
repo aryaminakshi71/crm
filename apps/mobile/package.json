@@ -21,11 +21,11 @@
     "release:android": "bun run build:android && bun run submit:android",
     "release:ios": "bun run build:ios && bun run submit:ios",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --coverage",
     "lint": "biome check .",
-    "format": "biome format --write .",
-    "test:integration": "vitest run src/integration --passWithNoTests",
-    "test:e2e": "playwright test"
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",

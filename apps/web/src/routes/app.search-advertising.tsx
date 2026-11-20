@@ -145,16 +145,13 @@ function SearchAdvertisingPage() {
           description="Start tracking your search advertising campaigns by connecting
             your Google Ads account. Track conversions, analyze performance, and
             optimize your ad spend."
-          action={{
-            label: "Connect Google Ads",
-            onClick: () => {
+          action={<Button onClick={() => {
               // TODO: Open OAuth flow or settings modal
               advertisingApi.connect({
                 adNetwork: "google_ads",
                 accountName: "My Google Ads Account",
               });
-            },
-          }}
+            }}>Connect Google Ads</Button>}
         />
 
         {/* Connection Options */}
@@ -233,10 +230,10 @@ function SearchAdvertisingPage() {
   }
 
   // Calculate totals from campaigns
-  const totalSpend = (campaigns as any[])?.reduce((sum: number, c: any) => sum + (c.cost || 0), 0) || 0;
-  const totalImpressions = (campaigns as any[])?.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0) || 0;
-  const totalClicks = (campaigns as any[])?.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) || 0;
-  const totalConversions = (campaigns as any[])?.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0) || 0;
+  const totalSpend = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.cost || 0), 0) || 0;
+  const totalImpressions = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0) || 0;
+  const totalClicks = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) || 0;
+  const totalConversions = (campaigns as any)?.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -269,7 +266,7 @@ function SearchAdvertisingPage() {
           title="Total Spend"
           value={formatCurrency(totalSpend)}
           icon={<DollarSign className="h-4 w-4" />}
-          trend={`${(campaigns as any[])?.length || 0} campaigns`}
+          trend={`${(campaigns as any)?.length || 0} campaigns`}
           color="text-warning"
         />
         <Metric

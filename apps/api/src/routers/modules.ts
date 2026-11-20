@@ -28,7 +28,7 @@ export const modulesRouter = {
             key: z.string(),
             name: z.string(),
             description: z.string(),
-            phase: z.enum(["core", "ops", "growth", "ai"]),
+            phase: z.enum(["core", "ops", "growth", "ai", "platform", "marketing"]),
             enabled: z.boolean(),
             limits: z.record(z.string(), z.any()).nullable(),
             updatedAt: z.date().nullable(),

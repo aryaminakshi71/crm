@@ -32,12 +32,15 @@ import {
   TrendingUp,
   User,
   Users,
+  AlertCircle
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
+import { nucleoApi } from "@/lib/api";
 
 const settingsSearchSchema = z.object({
   tab: z.string().optional(),
@@ -52,10 +55,9 @@ function SettingsPage() {
   const { tab: activeTabParam } = Route.useSearch();
   const [activeTab, setActiveTab] = useState(activeTabParam || "profile");
   const [saving, setSaving] = useState(false);
-  const { data: session } = authClient.useSession();
-  const activeOrganization = (session as any)?.session?.activeOrganizationId
-    ? { id: (session as any).session.activeOrganizationId }
-    : null;
+  const activeOrganization = (authClient as any).useActiveOrganization?.()?.data ?? null;
+  const isError = false;
+  const refetch = () => {};
   const [profileData, setProfileData] = useState({
     firstName: "John",
     lastName: "Doe",
@@ -170,6 +172,13 @@ function SettingsPage() {
     }
   };
 
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
   return (
     <div className="space-y-6">
       <div>
@@ -711,6 +720,12 @@ function BillingTab() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const trialDays = 14; // simulated days remaining
 
+  const { data: invoicesData, isError, refetch} = useQuery({
+    queryKey: ["billing", "invoices"],
+    queryFn: () => nucleoApi.invoices.list({ page: 1, limit: 50 }),
+    placeholderData: (prev) => prev,
+  });
+
   const handleUpgrade = async (planId: string) => {
     setUpgrading(planId);
     await new Promise((r) => setTimeout(r, 1200));
@@ -936,7 +951,7 @@ function BillingTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_INVOICES.map((inv) => (
+                  {(invoicesData?.data ?? []).map((inv: any) => (
                     <tr
                       key={inv.id}
                       className="border-t border-border/50 hover:bg-muted/10 transition-colors"

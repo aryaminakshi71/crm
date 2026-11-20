@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Trash2,
   Zap,
+  AlertCircle
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -34,7 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/contracts")({
   component: ContractsPage,
@@ -58,6 +59,13 @@ function ContractsPage() {
     queryKey: ["ops-contracts"],
     queryFn: () => nucleoApi.operations.contracts.list({ page: 1, limit: 200 }),
   });
+  if (contractsQuery.isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => contractsQuery.refetch()}>Retry</Button>
+    </div>
+  );
 
   const createContract = useMutation({
     mutationFn: (payload: any) =>

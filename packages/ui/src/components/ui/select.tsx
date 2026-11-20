@@ -3,17 +3,26 @@
 import * as React from "react";
 import { cn } from "../../lib/index";
 
-export interface SelectProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
   helperText?: string;
+  onValueChange?: (value: string) => void;
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, options, helperText, id, ...props }, ref) => {
+  ({ className, label, error, options, helperText, id, onChange, onValueChange, value, children, ...props }, ref) => {
     const selectId = id || props.name;
+
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (onValueChange) {
+        onValueChange(e.target.value);
+      }
+      if (onChange) {
+        onChange(e);
+      }
+    };
 
     return (
       <div className="w-full">
@@ -38,13 +47,17 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             className,
           )}
           ref={ref}
+          onChange={handleChange}
+          value={value}
           {...props}
         >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          {options && options.length > 0
+            ? options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
+            : children}
         </select>
         {error && <p className="mt-1 text-destructive text-sm">{error}</p>}
         {helperText && !error && (

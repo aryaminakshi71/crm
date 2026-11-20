@@ -1,0 +1,107 @@
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSkeleton,
+} from "@crm/ui";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { AlertCircle, Filter, TrendingDown } from "lucide-react";
+import { intelligenceApi } from "@/lib/api";
+
+const STAGE_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#ec4899", "#f43f5e"];
+
+export const Route = createFileRoute("/app/intelligence/funnel")({
+  component: FunnelPage,
+});
+
+function FunnelPage() {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["intelligence", "funnel"],
+    queryFn: () => intelligenceApi.funnel.get(),
+    placeholderData: (prev) => prev,
+  });
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
+
+  const funnel = data ?? { stages: [], overallConversion: 0, avgDealCycle: 0 };
+  const maxCount = (funnel as any).stages?.[0]?.count ?? 1;
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Funnel Analysis</h1>
+        <p className="text-muted-foreground mt-1">
+          Visualize conversion across each stage of your pipeline.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Overall Conversion
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{(funnel as any).overallConversion}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" />
+              Avg Deal Cycle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{(funnel as any).avgDealCycle} days</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton className="h-64 w-full rounded-lg" />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Funnel Stages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(funnel as any).stages?.map((stage: any, i: number) => {
+              const pct = maxCount > 0 ? (stage.count / maxCount) * 100 : 0;
+              return (
+                <div key={stage.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{stage.name}</span>
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <span>{stage.count.toLocaleString()} users</span>
+                      <span className="font-semibold text-foreground">{stage.conversion}%</span>
+                    </div>
+                  </div>
+                  <div className="h-8 bg-muted rounded-md overflow-hidden">
+                    <div
+                      className="h-full rounded-md transition-all duration-700 flex items-center pl-3"
+                      style={{ width: `${pct}%`, backgroundColor: STAGE_COLORS[i] }}
+                    >
+                      <span className="text-xs text-white font-medium truncate">{stage.name}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

@@ -39,7 +39,7 @@ const demoModeAllowed = (env: AppEnv) => env.NODE_ENV !== "production";
 export const pub = base;
 
 /**
- * Authenticated procedure - requires login (session auth) or demo mode
+ * Authenticated procedure - requires login (session auth)
  * Uses .use<T>() for explicit type parameter instead of .middleware() for better type inference.
  */
 export const authed = base.use<AuthContext>(async ({ context, next }) => {
@@ -119,7 +119,6 @@ export const authed = base.use<AuthContext>(async ({ context, next }) => {
 /**
  * Organization-scoped procedure - requires org membership
  * Prefetches organization and member data in a single query.
- * Supports demo mode with demo organization.
  */
 export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
   // Check for demo mode (development only)
@@ -229,6 +228,20 @@ export const orgAuthed = authed.use<OrgContext>(async ({ context, next }) => {
   if (!result[0]) {
     throw new ORPCError("FORBIDDEN", {
       message: "Not a member of this organization",
+    });
+  }
+
+  // Check subscription status (skip for demo)
+  const [sub] = await db
+    .select({ status: schema.subscriptions.status })
+    .from(schema.subscriptions)
+    .where(eq(schema.subscriptions.organizationId, result[0].organization.id))
+    .limit(1);
+
+  const allowedStatuses = ["active", "trialing"];
+  if (sub && !allowedStatuses.includes(sub.status)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Your subscription is not active. Please update your billing to continue.",
     });
   }
 

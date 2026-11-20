@@ -12,7 +12,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useLocation } from "@tanstack/react-router";
 import {
   Bot,
   Brain,
@@ -43,7 +43,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { aiApi, dealsApi, leadsApi, nucleoApi } from "../lib/api";
+import { aiApi, dealsApi, leadsApi, nucleoApi } from "@/lib/api";
 
 // ── Mini Components ──────────────────────────────────────────────────────────
 
@@ -73,8 +73,15 @@ function FunnelBar({
 }
 
 export const Route = createFileRoute("/app/intelligence")({
-  component: IntelligencePage,
+  component: IntelligenceLayout,
 });
+
+function IntelligenceLayout() {
+  const location = useLocation();
+  const isSubRoute = location.pathname !== "/app/intelligence";
+  if (isSubRoute) return <Outlet />;
+  return <IntelligencePage />;
+}
 
 function IntelligencePage() {
   const queryClient = useQueryClient();

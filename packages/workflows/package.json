@@ -1,20 +1,17 @@
 {
   "name": "@crm/workflows",
   "version": "0.0.1",
-  "description": "Cloudflare Workflows stub - uncomment to enable",
+  "description": "Workflow automation engine",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:integration": "vitest run src/integration --passWithNoTests",
-    "test": "vitest run --passWithNoTests",
-    "test:e2e": "playwright test"
+    "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@crm/tsconfig": "file:../tsconfig",
-    "@cloudflare/workers-types": "^4.20250109.0",
     "@types/node": "^22.19.2",
     "typescript": "^5.9.3"
   }

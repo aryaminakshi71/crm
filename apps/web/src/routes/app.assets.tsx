@@ -32,12 +32,13 @@ import {
   Trash2,
   Upload,
   Zap,
+  AlertCircle
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 import { AssetPreviewModal } from "../components/assets/asset-preview-modal";
-import { aiApi, assetsApi, nucleoApi } from "../lib/api";
+import { aiApi, assetsApi, nucleoApi } from "@/lib/api";
 
 type WorkspaceView = "all" | "assets" | "documents";
 
@@ -61,7 +62,7 @@ function AssetsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
+  const { data: assetsData, isLoading: isLoadingAssets, refetch, isError} = useQuery({
     queryKey: ["assets"],
     queryFn: () => assetsApi.list(),
   });
@@ -93,7 +94,6 @@ function AssetsPage() {
           toast.success("Asset uploaded successfully");
           queryClient.invalidateQueries({ queryKey: ["assets"] });
         } catch (error) {
-          console.error("Upload failed", error);
           toast.error(
             `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
           );
@@ -110,7 +110,6 @@ function AssetsPage() {
         setIsUploading(false);
       };
     } catch (error) {
-      console.error("Upload failed", error);
       toast.error(
         `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -132,7 +131,6 @@ function AssetsPage() {
       }
     },
     onError: (error) => {
-      console.error("Tag generation failed", error);
       toast.error(`Tag generation failed: ${error.message}`);
     },
   });
@@ -145,7 +143,6 @@ function AssetsPage() {
       setIsPreviewOpen(false);
     },
     onError: (error) => {
-      console.error("Delete failed", error);
       toast.error(`Delete failed: ${error.message}`);
     },
   });
@@ -232,9 +229,14 @@ function AssetsPage() {
   }, [documentSearch, documents]);
 
   const isLoading = isLoadingAssets || isLoadingDocuments;
-  if (isLoading) {
-    return <Loading text="Loading unified workspace..." />;
-  }
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
+  if (isLoading) return <Loading text="Loading unified workspace..." />;
 
   return (
     <div className="space-y-6">
@@ -466,10 +468,11 @@ function AssetsPage() {
             icon={<ImageIcon className="h-12 w-12" />}
             title="No assets yet"
             description="Upload files to get started with AI tagging."
-            action={{
-              label: "Upload Asset",
-              onClick: () => fileInputRef.current?.click(),
-            }}
+            action={
+              <Button onClick={() => fileInputRef.current?.click()}>
+                Upload Asset
+              </Button>
+            }
           />
         ) : (
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
@@ -562,10 +565,11 @@ function AssetsPage() {
                 icon={<FolderOpen className="h-12 w-12" />}
                 title="No documents found"
                 description="Create a new document or clear your search."
-                action={{
-                  label: "Create Document",
-                  onClick: () => setIsDocumentModalOpen(true),
-                }}
+                action={
+                  <Button onClick={() => setIsDocumentModalOpen(true)}>
+                    Create Document
+                  </Button>
+                }
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

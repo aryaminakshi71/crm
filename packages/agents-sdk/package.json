@@ -1,0 +1,21 @@
+{
+  "name": "@crm/agents-sdk",
+  "version": "0.0.1",
+  "description": "AI Agents SDK for autonomous coding agents",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@crm/tsconfig": "file:../tsconfig",
+    "@types/node": "^22.19.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@crm/platform-runtime": "workspace:*"
+  }
+}

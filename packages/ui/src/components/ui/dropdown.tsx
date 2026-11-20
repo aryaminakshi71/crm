@@ -47,7 +47,8 @@ const Dropdown = ({
 };
 
 export interface DropdownItemProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  label?: string;
   onClick?: () => void;
   className?: string;
   role?: string;
@@ -55,6 +56,7 @@ export interface DropdownItemProps {
 
 const DropdownItem = ({
   children,
+  label,
   onClick,
   className,
   role = "menuitem",
@@ -68,7 +70,7 @@ const DropdownItem = ({
         className,
       )}
     >
-      {children}
+      {label || children}
     </button>
   );
 };

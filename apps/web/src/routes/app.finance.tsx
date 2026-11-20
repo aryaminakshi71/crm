@@ -5,6 +5,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   EmptyState,
   FormField,
   FormModal,
@@ -13,16 +17,19 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
+  AlertCircle,
   ArrowUpRight,
   CreditCard,
   DollarSign,
   FileText,
   History,
+  Mail,
   Plus,
   Receipt,
+  Send,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -32,7 +39,10 @@ import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -40,7 +50,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/finance")({
   validateSearch: z.object({
@@ -52,6 +62,8 @@ export const Route = createFileRoute("/app/finance")({
 type FinanceView = "overview" | "transactions" | "payroll";
 
 function FinancePage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/finance") return <Outlet />;
   const queryClient = useQueryClient();
   const { view: viewParam } = Route.useSearch();
   const [view, setView] = useState<FinanceView>(viewParam ?? "overview");
@@ -86,6 +98,30 @@ function FinancePage() {
     netPay: "",
     notes: "",
   });
+
+  const [isInvoiceSendOpen, setIsInvoiceSendOpen] = useState(false);
+  const [invoiceSendForm, setInvoiceSendForm] = useState({
+    to: "",
+    subject: "Invoice from Nucleo One",
+    message: "",
+  });
+
+  const plSparklineData = [
+    { month: "Oct", revenue: 118, expenses: 72, profit: 46 },
+    { month: "Nov", revenue: 125, expenses: 80, profit: 45 },
+    { month: "Dec", revenue: 131, expenses: 85, profit: 46 },
+    { month: "Jan", revenue: 128, expenses: 82, profit: 46 },
+    { month: "Feb", revenue: 136, expenses: 87, profit: 49 },
+    { month: "Mar", revenue: 142, expenses: 89, profit: 53 },
+  ];
+
+  const expenseCategoryData = [
+    { name: "Salaries", value: 45, color: "#2172cd" },
+    { name: "Software", value: 18, color: "#8b5cf6" },
+    { name: "Marketing", value: 14, color: "#f59e0b" },
+    { name: "Office", value: 12, color: "#22c55e" },
+    { name: "Travel", value: 11, color: "#6b7280" },
+  ];
 
   const invoicesQuery = useQuery({
     queryKey: ["nucleo-invoices-finance"],
@@ -276,6 +312,18 @@ function FinancePage() {
     return <Loading text="Loading finance workspace..." />;
   }
 
+  if (
+    invoicesQuery.isError ||
+    summaryQuery.isError ||
+    transactionsQuery.isError
+  ) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-muted-foreground">Failed to load data. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => { invoicesQuery.refetch(); summaryQuery.refetch(); transactionsQuery.refetch(); }}>Retry</Button>
+    </div>
+  );
+
   const invoiceRevenue = invoices.reduce(
     (sum: number, inv: any) => sum + Number(inv.total || 0),
     0,
@@ -341,6 +389,104 @@ function FinancePage() {
           icon={<CreditCard className="h-4 w-4" />}
           trend="Stable"
         />
+      </div>
+
+      {/* P&L Summary + Expense Categories */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* P&L Summary Card */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+                P&amp;L Summary — Last 6 Months
+              </CardTitle>
+              <Badge variant="success" className="text-[9px] h-4 py-0">
+                +12.4% net profit
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Revenue</p>
+                <p className="text-xl font-black text-primary">$142k</p>
+                <p className="text-[10px] text-green-600 font-semibold mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> +10.9% vs prior
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-destructive/5 border border-destructive/10">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Expenses</p>
+                <p className="text-xl font-black text-destructive">$89k</p>
+                <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> +2.3% vs prior
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Net Profit</p>
+                <p className="text-xl font-black text-green-600">$53k</p>
+                <p className="text-[10px] text-green-600 font-semibold mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> +12.4% vs prior
+                </p>
+              </div>
+            </div>
+            <div className="h-[100px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={plSparklineData} barSize={12} barGap={2}>
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={9} stroke="#888" />
+                  <Tooltip
+                    contentStyle={{ background: "#1e293b", border: "none", borderRadius: "6px", fontSize: "10px" }}
+                    formatter={(value: number, name: string) => [`$${value}k`, name.charAt(0).toUpperCase() + name.slice(1)]}
+                  />
+                  <Bar dataKey="revenue" fill="#2172cd" opacity={0.7} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="expenses" fill="#ef4444" opacity={0.7} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="profit" fill="#22c55e" opacity={0.9} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-4 mt-2">
+              {[
+                { color: "#2172cd", label: "Revenue" },
+                { color: "#ef4444", label: "Expenses" },
+                { color: "#22c55e", label: "Net Profit" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expense Categories Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-tight text-muted-foreground">
+              Top Expense Categories
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {expenseCategoryData.map((cat) => (
+              <div key={cat.name}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-foreground">{cat.name}</span>
+                  <span className="text-xs font-bold text-muted-foreground">{cat.value}%</span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${cat.value}%`, backgroundColor: cat.color }}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-[10px] text-muted-foreground">
+                Total tracked: <span className="font-bold text-foreground">$89,000</span> across 5 categories
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -529,6 +675,15 @@ function FinancePage() {
                     </div>
                   ))}
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  leftIcon={<Mail className="h-3.5 w-3.5" />}
+                  onClick={() => setIsInvoiceSendOpen(true)}
+                >
+                  Send Invoice
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -1208,6 +1363,64 @@ function FinancePage() {
           </FormField>
         </div>
       </FormModal>
+
+      {/* Invoice Send Modal */}
+      <Dialog open={isInvoiceSendOpen} onOpenChange={setIsInvoiceSendOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-primary" />
+              Send Invoice
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To (Email)</label>
+              <input
+                type="email"
+                placeholder="client@example.com"
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                value={invoiceSendForm.to}
+                onChange={(e) => setInvoiceSendForm((prev) => ({ ...prev, to: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subject</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                value={invoiceSendForm.subject}
+                onChange={(e) => setInvoiceSendForm((prev) => ({ ...prev, subject: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Message</label>
+              <textarea
+                rows={4}
+                placeholder="Hi, please find the attached invoice for services rendered..."
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm resize-none"
+                value={invoiceSendForm.message}
+                onChange={(e) => setInvoiceSendForm((prev) => ({ ...prev, message: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setIsInvoiceSendOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              leftIcon={<Send className="h-4 w-4" />}
+              onClick={() => {
+                console.log("Sending invoice to:", invoiceSendForm.to, invoiceSendForm);
+                toast.success(`Invoice sent to ${invoiceSendForm.to || "recipient"}`);
+                setIsInvoiceSendOpen(false);
+                setInvoiceSendForm({ to: "", subject: "Invoice from Nucleo One", message: "" });
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

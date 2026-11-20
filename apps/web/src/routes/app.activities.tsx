@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Zap,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -45,7 +46,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { activitiesApi } from "../lib/api";
+import { activitiesApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/activities")({
   component: ActivitiesPage,
@@ -72,7 +73,7 @@ function ActivitiesPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isError} = useQuery({
     queryKey: ["activities"],
     queryFn: () => activitiesApi.list(),
   });
@@ -105,7 +106,6 @@ function ActivitiesPage() {
     onError: (error: Error) => {
       const errorMessage = error.message || "Failed to create activity";
       toast.error(errorMessage);
-      console.error("Activity creation error:", error);
     },
   });
 
@@ -128,9 +128,14 @@ function ActivitiesPage() {
     return <Icon className="h-5 w-5" />;
   };
 
-  if (isLoading) {
-    return <Loading text="Loading activities..." />;
-  }
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+      <AlertCircle className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-muted-foreground">Failed to load. Please try again.</p>
+      <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+    </div>
+  );
+  if (isLoading) return <Loading text="Loading activities..." />;
 
   return (
     <div className="space-y-6">
@@ -303,10 +308,9 @@ function ActivitiesPage() {
           icon={<Calendar className="h-12 w-12" />}
           title="No activities yet"
           description="Start logging your interactions with contacts."
-          action={{
-            label: "Log Activity",
-            onClick: () => setIsModalOpen(true),
-          }}
+          action={
+            <Button onClick={() => setIsModalOpen(true)}>Log Activity</Button>
+          }
         />
       ) : (
         <>
@@ -474,4 +478,4 @@ function Metric({
     </Card>
   );
 }
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";

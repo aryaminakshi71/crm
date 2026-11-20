@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   ArrowRightLeft,
@@ -63,7 +63,7 @@ import {
   contactsApi,
   dealsApi,
   leadsApi,
-} from "../lib/api";
+} from "@/lib/api";
 
 import { CsvImportModal } from "../components/CsvImportModal";
 
@@ -351,6 +351,10 @@ function DealKanbanColumn({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function CrmWorkspacePage() {
+  const location = useLocation();
+  const isSubRoute = location.pathname !== "/app/crm";
+  if (isSubRoute) return <Outlet />;
+
   const { view: viewParam } = Route.useSearch();
   const navigate = useNavigate();
   const view: CrmView = viewParam ?? "overview";
@@ -1207,10 +1211,11 @@ function CrmWorkspacePage() {
             icon={<Users className="h-12 w-12" />}
             title="No contacts found"
             description="Add your first contact to start building your network."
-            action={{
-              label: "Add Contact",
-              onClick: () => setIsContactModalOpen(true),
-            }}
+            action={
+              <Button onClick={() => setIsContactModalOpen(true)}>
+                Add Contact
+              </Button>
+            }
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1295,10 +1300,9 @@ function CrmWorkspacePage() {
             icon={<Mail className="h-12 w-12" />}
             title="No leads found"
             description="Capture leads from campaigns, forms, or outbound channels."
-            action={{
-              label: "Add Lead",
-              onClick: () => setIsLeadModalOpen(true),
-            }}
+            action={
+              <Button onClick={() => setIsLeadModalOpen(true)}>Add Lead</Button>
+            }
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1452,10 +1456,11 @@ function CrmWorkspacePage() {
               icon={<Target className="h-12 w-12" />}
               title="No deals found"
               description="Build a forecastable pipeline from qualified opportunities."
-              action={{
-                label: "Add Deal",
-                onClick: () => setIsDealModalOpen(true),
-              }}
+              action={
+                <Button onClick={() => setIsDealModalOpen(true)}>
+                  Add Deal
+                </Button>
+              }
             />
           ) : (
             <div className="overflow-x-auto pb-2">

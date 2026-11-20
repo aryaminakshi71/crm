@@ -140,20 +140,20 @@ function AboutPage() {
         <div className="mx-auto max-w-6xl">
           <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4">
             <div>
-              <div className="mb-2 font-bold text-4xl text-primary">500+</div>
-              <div className="text-muted-foreground">Organizations</div>
+              <div className="mb-2 font-bold text-4xl text-primary">16</div>
+              <div className="text-muted-foreground">Business Modules</div>
             </div>
             <div>
-              <div className="mb-2 font-bold text-4xl text-primary">50K+</div>
-              <div className="text-muted-foreground">Active Users</div>
+              <div className="mb-2 font-bold text-4xl text-primary">1</div>
+              <div className="text-muted-foreground">Unified Platform</div>
             </div>
             <div>
-              <div className="mb-2 font-bold text-4xl text-primary">2M+</div>
-              <div className="text-muted-foreground">Contacts Managed</div>
+              <div className="mb-2 font-bold text-4xl text-primary">14</div>
+              <div className="text-muted-foreground">Day Free Trial</div>
             </div>
             <div>
-              <div className="mb-2 font-bold text-4xl text-primary">99.9%</div>
-              <div className="text-muted-foreground">Uptime</div>
+              <div className="mb-2 font-bold text-4xl text-primary">24/7</div>
+              <div className="text-muted-foreground">AI Assistance</div>
             </div>
           </div>
         </div>

@@ -40,10 +40,15 @@ export async function platformFetch(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
+    // Clone Request objects before each attempt — a Request's body stream is
+    // consumed on the first fetch() call and cannot be reused on retry.
+    const fetchInput =
+      input instanceof Request && attempt > 0 ? input.clone() : input;
+
     try {
       // Determine if we need duplex mode for streaming
       const streamingBody =
-        init?.body || (input instanceof Request ? input.body : null);
+        init?.body || (fetchInput instanceof Request ? fetchInput.body : null);
 
       // Build fetch options with duplex if needed
       const fetchOptions: RequestInit = {
@@ -56,7 +61,7 @@ export async function platformFetch(
         (fetchOptions as any).duplex = "half";
       }
 
-      const response = await fetch(input, fetchOptions);
+      const response = await fetch(fetchInput as RequestInfo | URL, fetchOptions);
 
       if (
         (response.status >= 500 || response.status === 429) &&

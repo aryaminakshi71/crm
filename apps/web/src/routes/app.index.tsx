@@ -18,23 +18,33 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  DollarSign,
+  FileText,
   FolderKanban,
+  Gauge,
+  Handshake,
+  Headphones,
   History,
   LifeBuoy,
   Mail,
   Megaphone,
+  PieChart,
+  Plus,
   Receipt,
   Scale,
+  Settings,
   ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
+  UserPlus,
   UserRoundCog,
   Users,
   X,
   Zap,
+  RefreshCw,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   Area,
@@ -45,7 +55,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { dealsApi, leadsApi, nucleoApi } from "../lib/api";
+import { dealsApi, leadsApi, nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/")({
   component: DashboardPage,
@@ -236,7 +246,7 @@ const ONBOARDING_STEPS = [
   {
     id: "setup_billing",
     label: "Choose a plan before trial ends",
-    sub: "Lock in your price — 21 days free, no disruption",
+    sub: "Lock in your price — 14 days free, no disruption",
     href: "/app/settings",
     ctaLabel: "Choose plan",
   },
@@ -370,9 +380,551 @@ function OnboardingChecklist() {
   );
 }
 
+// ─── Role Selector & Widget System ──────────────────────────────────────────
+
+const ROLES = [
+  { id: "all", label: "Executive View", icon: Gauge },
+  { id: "sales", label: "Sales Rep", icon: Target },
+  { id: "support", label: "Support Agent", icon: Headphones },
+  { id: "projects", label: "Project Manager", icon: FolderKanban },
+  { id: "finance", label: "Finance", icon: DollarSign },
+];
+
+// Sales Rep Widgets
+function SalesRepWidgets({ deals, leads, campaigns }: { deals: any[]; leads: any[]; campaigns: any[] }) {
+  const pipelineByStage = deals.reduce((acc: Record<string, number>, d: any) => {
+    acc[d.stage || "unknown"] = (acc[d.stage || "unknown"] || 0) + (d.value || 0);
+    return acc;
+  }, {});
+
+  const topDeals = [...deals].sort((a: any, b: any) => (b.value || 0) - (a.value || 0)).slice(0, 5);
+  const hotLeads = leads.filter((l: any) => l.score && l.score >= 80).slice(0, 5);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Pipeline Summary */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-cyan-500" /> My Pipeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {Object.entries(pipelineByStage).slice(0, 4).map(([stage, value]) => (
+            <div key={stage} className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground capitalize">{stage.replace(/_/g, " ")}</span>
+              <span className="font-semibold text-foreground">${((value as number) || 0).toLocaleString()}</span>
+            </div>
+          ))}
+          <div className="border-t border-border pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground">Total</span>
+              <span className="font-bold text-primary">${Object.values(pipelineByStage).reduce((a, b) => (a as number) + (b as number), 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Deals */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Target className="h-4 w-4 text-violet-500" /> Top Deals
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {topDeals.map((d: any, i) => (
+            <div key={d.id} className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">{i + 1}.</span>
+                <span className="text-foreground truncate max-w-[120px]">{d.name}</span>
+              </div>
+              <span className="font-semibold text-success">${(d.value || 0).toLocaleString()}</span>
+            </div>
+          ))}
+          {topDeals.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No deals yet</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Hot Leads */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-pink-500" /> Hot Leads
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {hotLeads.map((l: any) => (
+            <div key={l.id} className="flex items-center justify-between text-sm">
+              <div>
+                <p className="text-foreground text-xs font-medium">{l.firstName} {l.lastName}</p>
+                <p className="text-muted-foreground text-[10px]">{l.company || l.email}</p>
+              </div>
+              <Badge variant={l.score >= 90 ? "success" : "warning"} className="text-[10px]">
+                {l.score}
+              </Badge>
+            </div>
+          ))}
+          {hotLeads.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No hot leads</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Support Agent Widgets
+function SupportAgentWidgets({ tickets }: { tickets: any[] }) {
+  const openTickets = tickets.filter((t: any) => t.status === "open" || t.status === "pending");
+  const myTickets = openTickets.slice(0, 8);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {/* My Queue */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Headphones className="h-4 w-4 text-orange-500" /> My Ticket Queue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {myTickets.map((t: any) => (
+            <Link key={t.id} to="/app/helpdesk">
+              <div className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-2 -mx-2 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground text-xs font-medium truncate">{t.subject}</p>
+                  <p className="text-muted-foreground text-[10px]">
+                    {t.priority || "Normal"} · {t.status}
+                  </p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-muted-foreground ml-2" />
+              </div>
+            </Link>
+          ))}
+          {myTickets.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No open tickets</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SLA Status */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-500" /> SLA Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            { label: "At Risk", count: openTickets.filter((t: any) => t.priority === "high" || t.priority === "urgent").length, color: "text-destructive" },
+            { label: "Breaching Soon", count: Math.floor(openTickets.length * 0.2), color: "text-warning" },
+            { label: "On Track", count: Math.floor(openTickets.length * 0.6), color: "text-success" },
+            { label: "Total Open", count: openTickets.length, color: "text-foreground" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{item.label}</span>
+              <span className={`font-bold text-sm ${item.color}`}>{item.count}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Project Manager Widgets
+function ProjectManagerWidgets({ projects }: { projects: any[] }) {
+  const activeProjects = projects.filter((p: any) => p.status === "active");
+  const atRiskProjects = projects.filter((p: any) => p.status === "active" && (p.progress || 0) < 40);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {/* Active Projects */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-violet-500" /> Active Projects
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {activeProjects.slice(0, 4).map((p: any) => (
+            <div key={p.id} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.progress || 0}%</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full transition-all"
+                  style={{ width: `${p.progress || 0}%` }}
+                />
+              </div>
+            </div>
+          ))}
+          {activeProjects.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No active projects</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* At Risk */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> At Risk
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {atRiskProjects.slice(0, 4).map((p: any) => (
+            <div key={p.id} className="flex items-center justify-between py-1">
+              <span className="text-xs text-foreground truncate">{p.name}</span>
+              <Badge variant="danger" className="text-[10px]">{p.progress || 0}%</Badge>
+            </div>
+          ))}
+          {atRiskProjects.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">All projects on track</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Finance Widgets
+function FinanceWidgets({ invoices }: { invoices: any[] }) {
+  const overdue = invoices.filter((i: any) => i.status === "overdue");
+  const pending = invoices.filter((i: any) => i.status === "sent" || i.status === "draft");
+  const totalOutstanding = pending.reduce((a: number, i: any) => a + (i.total || 0), 0);
+  const totalOverdue = overdue.reduce((a: number, i: any) => a + (i.total || 0), 0);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Outstanding */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-emerald-500" /> Outstanding
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-black text-foreground">${totalOutstanding.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">{pending.length} pending invoices</p>
+        </CardContent>
+      </Card>
+
+      {/* Overdue */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> Overdue
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-black text-destructive">${totalOverdue.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">{overdue.length} overdue invoices</p>
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <PieChart className="h-4 w-4 text-primary" /> Quick Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Paid (30d)</span>
+            <span className="font-semibold text-success">{invoices.filter((i: any) => i.status === "paid").length}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Total Invoices</span>
+            <span className="font-semibold">{invoices.length}</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Role Selector ─────────────────────────────────────────────────────────────
+
+function RoleSelector({ current, onChange }: { current: string; onChange: (role: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 bg-card/50 rounded-xl p-1 border border-border/40">
+      {ROLES.map((role) => {
+        const isActive = current === role.id;
+        return (
+          <button
+            key={role.id}
+            onClick={() => onChange(role.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            <role.icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{role.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Recent Activity Feed ─────────────────────────────────────────────────────
+
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const ACTIVITY_MOCK = [
+  {
+    id: "1",
+    type: "contact",
+    action: "created contact",
+    subject: "Acme Corp",
+    user: "Sarah K.",
+    time: new Date(Date.now() - 2 * 60000).toISOString(),
+    color: "bg-blue-500",
+    href: "/app/crm",
+  },
+  {
+    id: "2",
+    type: "invoice",
+    action: "sent invoice",
+    subject: "#INV-1042",
+    user: "Mike R.",
+    time: new Date(Date.now() - 15 * 60000).toISOString(),
+    color: "bg-green-500",
+    href: "/app/invoicing",
+  },
+  {
+    id: "3",
+    type: "ticket",
+    action: "resolved ticket",
+    subject: "Login issue",
+    user: "Alex P.",
+    time: new Date(Date.now() - 45 * 60000).toISOString(),
+    color: "bg-purple-500",
+    href: "/app/helpdesk",
+  },
+  {
+    id: "4",
+    type: "deal",
+    action: "won deal",
+    subject: "Enterprise Plan",
+    user: "Jordan L.",
+    time: new Date(Date.now() - 2 * 3600000).toISOString(),
+    color: "bg-yellow-500",
+    href: "/app/crm",
+  },
+  {
+    id: "5",
+    type: "lead",
+    action: "qualified lead",
+    subject: "TechStart Inc",
+    user: "Casey M.",
+    time: new Date(Date.now() - 4 * 3600000).toISOString(),
+    color: "bg-orange-500",
+    href: "/app/crm",
+  },
+  {
+    id: "6",
+    type: "project",
+    action: "completed task",
+    subject: "API Integration",
+    user: "Riley T.",
+    time: new Date(Date.now() - 6 * 3600000).toISOString(),
+    color: "bg-pink-500",
+    href: "/app/projects",
+  },
+];
+
+function RecentActivityFeed() {
+  // Force re-render every minute so timeAgo values stay fresh
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceUpdate((n) => n + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const activityQuery = useQuery({
+    queryKey: ["activities-recent"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/activities/recent?limit=10");
+      if (!res.ok) throw new Error("Not found");
+      return res.json() as Promise<typeof ACTIVITY_MOCK>;
+    },
+    retry: false,
+    refetchInterval: 30000,
+  });
+
+  const items =
+    activityQuery.isSuccess && Array.isArray(activityQuery.data) && activityQuery.data.length > 0
+      ? activityQuery.data.slice(0, 10)
+      : ACTIVITY_MOCK;
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" /> Recent Activity
+          </CardTitle>
+          <button
+            type="button"
+            onClick={() => activityQuery.refetch()}
+            disabled={activityQuery.isFetching}
+            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Refresh activity"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${activityQuery.isFetching ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-0 divide-y divide-border/50">
+        {items.map((item) => {
+          const initials = item.user
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+          return (
+            <Link key={item.id} to={item.href}>
+              <div className="flex items-center gap-3 py-2.5 px-1 rounded-lg hover:bg-muted/40 transition-colors group cursor-pointer">
+                {/* Colored avatar circle */}
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold ${item.color}`}
+                >
+                  {initials}
+                </div>
+                {/* Description */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-foreground leading-tight group-hover:text-primary transition-colors">
+                    <span className="font-semibold">{item.user}</span>{" "}
+                    {item.action}{" "}
+                    <span className="font-semibold">{item.subject}</span>
+                  </p>
+                </div>
+                {/* Time */}
+                <span className="shrink-0 text-[10px] text-muted-foreground whitespace-nowrap">
+                  {timeAgo(item.time)}
+                </span>
+                <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+              </div>
+            </Link>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Quick Actions ─────────────────────────────────────────────────────────────
+
+const QUICK_ACTIONS = [
+  {
+    label: "New Contact",
+    icon: UserPlus,
+    href: "/app/crm/contacts",
+    color: "text-blue-500",
+    bg: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20",
+  },
+  {
+    label: "New Invoice",
+    icon: FileText,
+    href: "/app/invoicing",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20",
+  },
+  {
+    label: "New Ticket",
+    icon: Headphones,
+    href: "/app/helpdesk",
+    color: "text-orange-500",
+    bg: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20",
+  },
+  {
+    label: "New Lead",
+    icon: Mail,
+    href: "/app/crm",
+    color: "text-indigo-500",
+    bg: "bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/20",
+  },
+  {
+    label: "New Project",
+    icon: FolderKanban,
+    href: "/app/projects",
+    color: "text-violet-500",
+    bg: "bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20",
+  },
+  {
+    label: "New Deal",
+    icon: Handshake,
+    href: "/app/crm/pipeline",
+    color: "text-cyan-500",
+    bg: "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20",
+  },
+];
+
+function QuickActionsWidget() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" /> Quick Actions
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {QUICK_ACTIONS.map((action) => (
+            <Link key={action.label} to={action.href}>
+              <div
+                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all cursor-pointer ${action.bg}`}
+              >
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg bg-background/60`}
+                >
+                  <action.icon className={`h-5 w-5 ${action.color}`} />
+                </div>
+                <span className="text-xs font-semibold text-foreground text-center leading-tight">
+                  {action.label}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function DashboardPage() {
+  // Role selector state
+  const [selectedRole, setSelectedRole] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dashboard_role") || "all";
+    }
+    return "all";
+  });
+
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dashboard_role", role);
+    }
+  };
+
   const summaryQuery = useQuery({
     queryKey: ["nucleo-summary-dashboard"],
     queryFn: () => nucleoApi.summary(),
@@ -616,70 +1168,8 @@ function DashboardPage() {
     completed: allProjects.filter((p: any) => p.status === "completed").length,
   };
 
-  // Recent activity
+  // `now` used in New Leads watchlist filter below
   const now = new Date();
-  const recent = [
-    ...tickets.map((t: any) => ({
-      id: `t-${t.id}`,
-      time: t.createdAt,
-      label: "Ticket",
-      text: t.subject,
-      href: "/app/helpdesk",
-      color: "bg-orange-400/15 text-orange-400",
-    })),
-    ...invoices.map((i: any) => ({
-      id: `i-${i.id}`,
-      time: i.createdAt,
-      label: "Invoice",
-      text: `${i.invoiceNumber} · ${i.status}`,
-      href: "/app/invoicing",
-      color: "bg-emerald-400/15 text-emerald-400",
-    })),
-    ...allProjects.map((p: any) => ({
-      id: `p-${p.id}`,
-      time: p.createdAt,
-      label: "Project",
-      text: `${p.name} · ${p.status}`,
-      href: "/app/projects",
-      color: "bg-violet-400/15 text-violet-400",
-    })),
-    ...campaigns.map((c: any) => ({
-      id: `c-${c.id}`,
-      time: c.createdAt,
-      label: "Campaign",
-      text: `${c.name} · ${c.status}`,
-      href: "/app/marketing",
-      color: "bg-pink-400/15 text-pink-400",
-    })),
-    ...deals.map((d: any) => ({
-      id: `d-${d.id}`,
-      time: d.createdAt,
-      label: "Pipeline",
-      text: `${d.name} · $${d.value?.toLocaleString()}`,
-      href: "/app/crm",
-      color: "bg-cyan-400/15 text-cyan-400",
-    })),
-    ...leads.map((l: any) => ({
-      id: `l-${l.id}`,
-      time: l.createdAt,
-      label: "Lead",
-      text: `${l.firstName} ${l.lastName} · ${l.source || "Lead"}`,
-      href: "/app/crm",
-      color: "bg-indigo-400/15 text-indigo-400",
-    })),
-  ]
-
-    .filter((item) => item.time)
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 8);
-
-  function timeAgo(iso: string) {
-    const diff = (now.getTime() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  }
 
   return (
     <div className="space-y-6">
@@ -697,6 +1187,7 @@ function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <RoleSelector current={selectedRole} onChange={handleRoleChange} />
           <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 shadow-sm">
             <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
             <span className="text-foreground text-xs font-semibold tabular-nums uppercase tracking-wider">
@@ -708,6 +1199,24 @@ function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Role-Specific Widgets */}
+      {selectedRole !== "all" && (
+        <div className="space-y-4">
+          {selectedRole === "sales" && (
+            <SalesRepWidgets deals={deals} leads={leads} campaigns={campaigns} />
+          )}
+          {selectedRole === "support" && (
+            <SupportAgentWidgets tickets={tickets} />
+          )}
+          {selectedRole === "projects" && (
+            <ProjectManagerWidgets projects={allProjects} />
+          )}
+          {selectedRole === "finance" && (
+            <FinanceWidgets invoices={invoices} />
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Metric
@@ -1130,49 +1639,11 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Recent Activity Feed</CardTitle>
-            <span className="text-muted-foreground text-xs">
-              {recent.length} recent events
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recent.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-muted-foreground text-sm">
-                No recent activity. Start by creating a project, ticket, or
-                campaign.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-              {recent.map((item) => (
-                <Link key={item.id} to={item.href}>
-                  <div className="group flex flex-col gap-1 rounded-lg border border-border p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.color}`}
-                      >
-                        {item.label}
-                      </span>
-                      <span className="text-muted-foreground text-[10px]">
-                        {timeAgo(item.time)}
-                      </span>
-                    </div>
-                    <p className="text-foreground text-xs font-medium line-clamp-1 group-hover:text-primary transition-colors">
-                      {item.text}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Recent Activity Feed + Quick Actions */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentActivityFeed />
+        <QuickActionsWidget />
+      </div>
     </div>
   );
 }

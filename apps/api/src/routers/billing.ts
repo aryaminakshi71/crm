@@ -1,109 +1,716 @@
 /**
- * Billing Router — plans, subscription, subscribe, cancel.
+ * Billing Router
+ *
+ * API for subscriptions, plans, invoices, payments, and usage tracking.
  */
 
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
-import Stripe from "stripe";
-import { getDb, orgAuthed, pub, schema } from "../procedures";
+import type { OrgContext } from "../context";
+import { APIError, ErrorCode } from "../lib/errors";
+import {
+  createCheckoutSession as createStripeCheckout,
+  createPortalSession as createStripePortal,
+  getOrCreateStripeCustomer,
+} from "../lib/stripe";
+import {
+  getDb,
+  orgAuthed,
+  pub,
+  schema,
+  adminOnly,
+} from "../procedures";
 
-const PLANS = [
-  { id: "starter", name: "Starter", price: 499, interval: "month", limits: "CRM + invoicing, 3 users" },
-  { id: "growth", name: "Growth", price: 999, interval: "month", limits: "+ HRM, projects, helpdesk, 10 users" },
-  { id: "pro", name: "Pro", price: 1499, interval: "month", limits: "+ marketing, assets, AI copilot" },
-  { id: "enterprise", name: "Enterprise", price: 0, interval: "custom", limits: "Unlimited modules, SSO, SLA" },
-];
+const {
+  organizations,
+  users,
+  featureFlags,
+  plans,
+  subscriptions,
+  invoices,
+  payments,
+  usageRecords,
+  modulePricing,
+} = schema;
+
+// ─── Plan Management (Admin Only) ────────────────────────────────────────────
+
+const planSchema = z.object({
+  key: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  basePriceMonthly: z.number().min(0).default(0),
+  basePriceAnnual: z.number().min(0).default(0),
+  pricePerUserMonthly: z.number().min(0).default(0),
+  pricePerUserAnnual: z.number().min(0).default(0),
+  maxUsers: z.number().min(1).default(5),
+  maxStorage: z.number().min(1).default(10),
+  maxApiCalls: z.number().min(1).default(10000),
+  features: z.array(z.string()).default([]),
+  moduleAccess: z.array(z.string()).default([]),
+  isPublic: z.boolean().default(true),
+  trialDays: z.number().min(0).default(14),
+});
 
 export const billingRouter = {
-  getPlans: pub
-    .route({ method: "GET", path: "/billing/plans", tags: ["Billing"] })
-    .output(z.any())
-    .handler(async () => ({ plans: PLANS })),
+  // ─── Public: Get Available Plans ──────────────────────────────────────────
 
-  getSubscription: orgAuthed
-    .route({ method: "GET", path: "/billing/subscription", tags: ["Billing"] })
-    .output(z.any())
+  listPlans: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/plans",
+      summary: "List available subscription plans",
+      tags: ["Billing"],
+    })
+    .input(z.object({}))
     .handler(async ({ context }) => {
       const db = getDb(context);
-      const rows: any = await db.execute(
-        sql`select plan, subscription_status, subscription_expires_at from organizations where id = ${context.organization.id} limit 1`,
-      );
-      const org = (rows as any).rows?.[0] ?? (rows as any)[0] ?? {};
+      const allPlans = await db.query.plans.findMany({
+        where: eq(plans.isPublic, true),
+        orderBy: [desc(plans.createdAt)],
+      });
+      return { plans: allPlans };
+    }),
+
+  // ─── Organization Subscription ─────────────────────────────────────────────
+
+  getSubscription: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/subscription",
+      summary: "Get current organization subscription",
+      tags: ["Billing"],
+    })
+    .input(z.object({}))
+    .handler(async ({ context }) => {
+      const db = getDb(context);
+      const subscription = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.organizationId, context.organization.id),
+        with: {
+          plan: true,
+        },
+      });
+
+      if (!subscription) {
+        return {
+          subscription: null,
+          isTrial: false,
+          daysRemaining: 0,
+        };
+      }
+
+      const now = new Date();
+      const isTrial = subscription.status === "trialing" && subscription.trialEnd
+        ? subscription.trialEnd > now
+        : false;
+      const daysRemaining = subscription.trialEnd
+        ? Math.ceil((subscription.trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
       return {
-        plan: org.plan ?? "free",
-        status: org.subscription_status ?? "none",
-        expiresAt: org.subscription_expires_at ?? null,
+        subscription,
+        isTrial,
+        daysRemaining: Math.max(0, daysRemaining),
       };
     }),
 
-  subscribe: orgAuthed
-    .route({ method: "POST", path: "/billing/subscribe", tags: ["Billing"] })
+  createCheckoutSession: orgAuthed
+    .route({
+      method: "POST",
+      path: "/billing/checkout",
+      summary: "Create Stripe checkout session",
+      tags: ["Billing"],
+    })
     .input(
       z.object({
-        plan: z.string(),
-        interval: z.enum(["month", "year"]).optional(),
+        planKey: z.string(),
+        billingCycle: z.enum(["monthly", "annual"]).default("monthly"),
+        successUrl: z.string().url(),
+        cancelUrl: z.string().url(),
       }),
     )
-    .output(z.any())
-    .handler(async ({ context, input }) => {
+    .handler(async ({ input, context }) => {
       const db = getDb(context);
-      const expires = new Date();
-      expires.setMonth(expires.getMonth() + (input.interval === "year" ? 12 : 1));
-      await db.execute(
-        sql`update organizations set plan = ${input.plan}, subscription_status = 'active', subscription_expires_at = ${expires.toISOString()} where id = ${context.organization.id}`,
+
+      // Get plan
+      const plan = await db.query.plans.findFirst({
+        where: eq(plans.key, input.planKey),
+      });
+
+      if (!plan) {
+        throw new APIError(ErrorCode.NOT_FOUND, "Plan not found", 404);
+      }
+
+      // Get organization
+      const org = await db.query.organizations.findFirst({
+        where: eq(organizations.id, context.organization.id),
+      });
+
+      if (!org) {
+        throw new APIError(ErrorCode.NOT_FOUND, "Organization not found", 404);
+      }
+
+      // Get organization owner email
+      const member = await db.query.members.findFirst({
+        where: eq(schema.members.organizationId, context.organization.id),
+        with: { user: true },
+      });
+
+      const email = member?.user?.email || "unknown@example.com";
+
+      // Get or create Stripe customer
+      const customerId = await getOrCreateStripeCustomer(
+        context.organization.id,
+        org.name,
+        email
       );
-      return { ok: true, plan: input.plan, status: "active", expiresAt: expires };
+
+      // Create Stripe checkout session
+      const result = await createStripeCheckout({
+        customerId,
+        planKey: input.planKey,
+        billingCycle: input.billingCycle,
+        successUrl: input.successUrl,
+        cancelUrl: input.cancelUrl,
+        organizationId: context.organization.id,
+      });
+
+      return result;
     }),
 
-  createCheckout: orgAuthed
-    .route({ method: "POST", path: "/billing/checkout", tags: ["Billing"] })
+  portalSession: orgAuthed
+    .route({
+      method: "POST",
+      path: "/billing/portal",
+      summary: "Create Stripe customer portal session",
+      tags: ["Billing"],
+    })
     .input(
       z.object({
-        plan: z.string(),
-        interval: z.enum(["month", "year"]).optional(),
+        returnUrl: z.string().url(),
       }),
     )
-    .output(z.any())
-    .handler(async ({ context, input }) => {
-      const secret = process.env.STRIPE_SECRET_KEY;
-      if (!secret) return { error: "Stripe not configured" };
-      const stripe = new Stripe(secret);
-      const plan = PLANS.find((p) => p.id === input.plan);
-      if (!plan || plan.price === 0) return { error: "Invalid plan" };
-      const interval = input.interval === "year" ? "year" : "month";
-      const base = process.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
-      const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        line_items: [
-          {
-            price_data: {
-              currency: "inr",
-              unit_amount: plan.price * 100,
-              recurring: { interval },
-              product_data: { name: `NucleoAI ${plan.name}` },
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${base}/app/billing?success=1`,
-        cancel_url: `${base}/app/billing?cancelled=1`,
-        metadata: {
-          orgId: context.organization.id,
-          plan: plan.id,
-          interval,
-        },
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+
+      // Get subscription with Stripe customer ID
+      const subscription = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.organizationId, context.organization.id),
       });
-      return { url: session.url };
+
+      if (!subscription?.stripeCustomerId) {
+        throw new APIError(ErrorCode.NOT_FOUND, "No Stripe customer found. Please subscribe first.", 404);
+      }
+
+      // Create Stripe portal session
+      const result = await createStripePortal({
+        customerId: subscription.stripeCustomerId,
+        returnUrl: input.returnUrl,
+      });
+
+      return result;
     }),
 
-  cancel: orgAuthed
-    .route({ method: "POST", path: "/billing/cancel", tags: ["Billing"] })
-    .output(z.any())
+  // ─── Usage Tracking ────────────────────────────────────────────────────────
+
+  getUsage: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/usage",
+      summary: "Get current billing period usage",
+      tags: ["Billing"],
+    })
+    .input(z.object({}))
     .handler(async ({ context }) => {
       const db = getDb(context);
-      await db.execute(
-        sql`update organizations set subscription_status = 'cancelled' where id = ${context.organization.id}`,
-      );
-      return { ok: true, status: "cancelled" };
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const subscription = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.organizationId, context.organization.id),
+        with: { plan: true },
+      });
+
+      if (!subscription) {
+        return {
+          usage: { apiCalls: 0, storageMb: 0, users: 0 },
+          limits: { maxApiCalls: 10000, maxStorage: 10 * 1024, maxUsers: 5 },
+          percentages: { apiCalls: 0, storage: 0, users: 0 },
+        };
+      }
+
+      const usage = await db.query.usageRecords.findFirst({
+        where: and(
+          eq(usageRecords.organizationId, context.organization.id),
+          gte(usageRecords.periodStart, periodStart),
+          lte(usageRecords.periodEnd, periodEnd),
+        ),
+      });
+
+      const limits = {
+        maxApiCalls: subscription.plan.maxApiCalls,
+        maxStorage: subscription.plan.maxStorage * 1024, // GB to MB
+        maxUsers: subscription.plan.maxUsers,
+      };
+
+      const currentUsage = {
+        apiCalls: usage?.apiCalls ?? 0,
+        storageMb: usage?.storageMb ?? subscription.storageUsed,
+        users: usage?.users ?? subscription.userCount,
+      };
+
+      return {
+        usage: currentUsage,
+        limits,
+        percentages: {
+          apiCalls: Math.round((currentUsage.apiCalls / limits.maxApiCalls) * 100),
+          storage: Math.round((currentUsage.storageMb / limits.maxStorage) * 100),
+          users: Math.round((currentUsage.users / limits.maxUsers) * 100),
+        },
+      };
+    }),
+
+  // ─── Module Access ─────────────────────────────────────────────────────────
+
+  getModuleAccess: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/modules",
+      summary: "Get enabled modules for organization",
+      tags: ["Billing"],
+    })
+    .input(z.object({}))
+    .handler(async ({ context }) => {
+      const db = getDb(context);
+
+      // Get subscription with plan
+      const subscription = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.organizationId, context.organization.id),
+        with: { plan: true },
+      });
+
+      // Get all module flags
+      const flags = await db.query.featureFlags.findMany({
+        where: eq(featureFlags.organizationId, context.organization.id),
+      });
+
+      // Build module access map
+      const moduleAccess: Record<string, { enabled: boolean; source: string }> = {};
+
+      // Base modules (always available)
+      const baseModules = ["crm", "notifications", "rbac"];
+      for (const mod of baseModules) {
+        moduleAccess[mod] = { enabled: true, source: "base" };
+      }
+
+      // Plan modules
+      if (subscription?.plan?.moduleAccess) {
+        for (const mod of subscription.plan.moduleAccess) {
+          moduleAccess[mod] = { enabled: true, source: "plan" };
+        }
+      }
+
+      // Subscription add-ons
+      if (subscription?.enabledModules) {
+        for (const mod of subscription.enabledModules) {
+          moduleAccess[mod] = { enabled: true, source: "addon" };
+        }
+      }
+
+      // Explicit flags (can disable even if in plan)
+      for (const flag of flags) {
+        moduleAccess[flag.moduleKey] = {
+          enabled: flag.enabled,
+          source: flag.enabled ? moduleAccess[flag.moduleKey]?.source ?? "flag" : "disabled",
+        };
+      }
+
+      return { modules: moduleAccess };
+    }),
+
+  // ─── Invoices ──────────────────────────────────────────────────────────────
+
+  listInvoices: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/invoices",
+      summary: "List organization invoices",
+      tags: ["Billing"],
+    })
+    .input(
+      z.object({
+        status: z.string().optional(),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+      const conditions = [eq(invoices.organizationId, context.organization.id)];
+
+      if (input.status) {
+        conditions.push(eq(invoices.status, input.status as "draft" | "sent" | "cancelled" | "paid" | "viewed" | "overdue"));
+      }
+
+      const [results, total] = await Promise.all([
+        db
+          .select()
+          .from(invoices)
+          .where(and(...conditions))
+          .orderBy(desc(invoices.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit),
+        db
+          .select({ count: count() })
+          .from(invoices)
+          .where(and(...conditions)),
+      ]);
+
+      return {
+        invoices: results,
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          total: total[0]?.count ?? 0,
+          pages: Math.ceil((total[0]?.count ?? 0) / input.limit),
+        },
+      };
+    }),
+
+  getInvoice: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/invoices/:id",
+      summary: "Get invoice by ID",
+      tags: ["Billing"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+      const invoice = await db.query.invoices.findFirst({
+        where: and(
+          eq(invoices.id, input.id),
+          eq(invoices.organizationId, context.organization.id),
+        ),
+        with: { payments: true },
+      });
+
+      if (!invoice) {
+        throw new APIError(ErrorCode.NOT_FOUND, "Invoice not found", 404);
+      }
+
+      return { invoice };
+    }),
+
+  // ─── Payments ──────────────────────────────────────────────────────────────
+
+  listPayments: orgAuthed
+    .route({
+      method: "GET",
+      path: "/billing/payments",
+      summary: "List organization payments",
+      tags: ["Billing"],
+    })
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+
+      const [results, total] = await Promise.all([
+        db
+          .select()
+          .from(payments)
+          .where(eq(payments.organizationId, context.organization.id))
+          .orderBy(desc(payments.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit),
+        db
+          .select({ count: count() })
+          .from(payments)
+          .where(eq(payments.organizationId, context.organization.id)),
+      ]);
+
+      return {
+        payments: results,
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          total: total[0]?.count ?? 0,
+          pages: Math.ceil((total[0]?.count ?? 0) / input.limit),
+        },
+      };
+    }),
+
+  // ─── Admin: Plan Management ─────────────────────────────────────────────────
+
+  adminListPlans: adminOnly
+    .route({
+      method: "GET",
+      path: "/admin/billing/plans",
+      summary: "Admin: List all plans",
+      tags: ["Admin", "Billing"],
+    })
+    .input(z.object({}))
+    .handler(async ({ context }) => {
+      const db = getDb(context);
+      const allPlans = await db.select().from(plans).orderBy(plans.createdAt);
+      return { plans: allPlans };
+    }),
+
+  adminCreatePlan: adminOnly
+    .route({
+      method: "POST",
+      path: "/admin/billing/plans",
+      summary: "Admin: Create plan",
+      tags: ["Admin", "Billing"],
+    })
+    .input(planSchema)
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+      const [plan] = await db.insert(plans).values(input).returning();
+      return { plan };
+    }),
+
+  adminUpdatePlan: adminOnly
+    .route({
+      method: "PATCH",
+      path: "/admin/billing/plans/:key",
+      summary: "Admin: Update plan",
+      tags: ["Admin", "Billing"],
+    })
+    .input(planSchema.extend({ id: z.string().uuid().optional() }))
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+      const { id, ...data } = input;
+      const [plan] = await db
+        .update(plans)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(plans.key, input.key as string))
+        .returning();
+      return { plan };
+    }),
+
+  // ─── Admin: Organization Billing Overview ──────────────────────────────────
+
+  adminListOrgSubscriptions: adminOnly
+    .route({
+      method: "GET",
+      path: "/admin/billing/subscriptions",
+      summary: "Admin: List all organization subscriptions",
+      tags: ["Admin", "Billing"],
+    })
+    .input(
+      z.object({
+        status: z.string().optional(),
+        planKey: z.string().optional(),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(50),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+      const conditions = [];
+
+      if (input.status) {
+        conditions.push(eq(subscriptions.status, input.status));
+      }
+      if (input.planKey) {
+        const plan = await db.query.plans.findFirst({
+          where: eq(plans.key, input.planKey),
+        });
+        if (plan) {
+          conditions.push(eq(subscriptions.planId, plan.id));
+        }
+      }
+
+      const [results, total] = await Promise.all([
+        db
+          .select({
+            subscription: subscriptions,
+            organization: organizations,
+            plan: plans,
+          })
+          .from(subscriptions)
+          .innerJoin(organizations, eq(subscriptions.organizationId, organizations.id))
+          .innerJoin(plans, eq(subscriptions.planId, plans.id))
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .orderBy(desc(subscriptions.createdAt))
+          .limit(input.limit)
+          .offset((input.page - 1) * input.limit),
+        db
+          .select({ count: count() })
+          .from(subscriptions),
+      ]);
+
+      return {
+        subscriptions: results,
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          total: total[0]?.count ?? 0,
+          pages: Math.ceil((total[0]?.count ?? 0) / input.limit),
+        },
+      };
+    }),
+
+  adminGetOrgBilling: adminOnly
+    .route({
+      method: "GET",
+      path: "/admin/billing/org/:orgId",
+      summary: "Admin: Get organization billing details",
+      tags: ["Admin", "Billing"],
+    })
+    .input(z.object({ orgId: z.string() }))
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+
+      const [subscription, orgInvoices, recentPayments, usage] = await Promise.all([
+        db.query.subscriptions.findFirst({
+          where: eq(subscriptions.organizationId, input.orgId),
+          with: { plan: true },
+        }),
+        db
+          .select()
+          .from(invoices)
+          .where(eq(invoices.organizationId, input.orgId))
+          .orderBy(desc(invoices.createdAt))
+          .limit(10),
+        db
+          .select()
+          .from(payments)
+          .where(eq(payments.organizationId, input.orgId))
+          .orderBy(desc(payments.createdAt))
+          .limit(10),
+        db.query.usageRecords.findFirst({
+          where: eq(usageRecords.organizationId, input.orgId),
+        }),
+      ]);
+
+      const organization = await db.query.organizations.findFirst({
+        where: eq(organizations.id, input.orgId),
+      });
+
+      return {
+        organization,
+        subscription,
+        invoices: orgInvoices,
+        payments: recentPayments,
+        usage,
+      };
+    }),
+
+  // ─── Admin: Billing Dashboard Stats ───────────────────────────────────────
+
+  adminBillingStats: adminOnly
+    .route({
+      method: "GET",
+      path: "/admin/billing/stats",
+      summary: "Admin: Get billing statistics",
+      tags: ["Admin", "Billing"],
+    })
+    .input(
+      z.object({
+        periodStart: z.string().optional(),
+        periodEnd: z.string().optional(),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const db = getDb(context);
+
+      const [
+        totalOrgs,
+        activeSubs,
+        pastDueSubs,
+        trialingSubs,
+        recentInvoices,
+        recentPayments,
+      ] = await Promise.all([
+        db.select({ count: count() }).from(organizations),
+        db
+          .select({ count: count() })
+          .from(subscriptions)
+          .where(eq(subscriptions.status, "active")),
+        db
+          .select({ count: count() })
+          .from(subscriptions)
+          .where(eq(subscriptions.status, "past_due")),
+        db
+          .select({ count: count() })
+          .from(subscriptions)
+          .where(eq(subscriptions.status, "trialing")),
+        db
+          .select()
+          .from(invoices)
+          .orderBy(desc(invoices.createdAt))
+          .limit(20),
+        db
+          .select()
+          .from(payments)
+          .where(eq(payments.status, "completed"))
+          .orderBy(desc(payments.createdAt))
+          .limit(20),
+      ]);
+
+      // Calculate MRR (simplified)
+      const subscriptionsList = await db.query.subscriptions.findMany({
+        with: { plan: true },
+      });
+
+      let mrr = 0;
+      for (const sub of subscriptionsList) {
+        if (sub.status === "active" && sub.plan) {
+          const basePrice = sub.billingCycle === "annual"
+            ? Number(sub.plan.basePriceAnnual) / 12
+            : Number(sub.plan.basePriceMonthly);
+          const perUserPrice = sub.billingCycle === "annual"
+            ? Number(sub.plan.pricePerUserAnnual) / 12
+            : Number(sub.plan.pricePerUserMonthly);
+          mrr += basePrice + (perUserPrice * sub.userCount);
+        }
+      }
+
+      return {
+        stats: {
+          totalOrganizations: totalOrgs[0]?.count ?? 0,
+          activeSubscriptions: activeSubs[0]?.count ?? 0,
+          pastDueSubscriptions: pastDueSubs[0]?.count ?? 0,
+          trialingSubscriptions: trialingSubs[0]?.count ?? 0,
+          monthlyRecurringRevenue: Math.round(mrr * 100) / 100,
+          annualRecurringRevenue: Math.round(mrr * 12 * 100) / 100,
+        },
+        recentInvoices,
+        recentPayments,
+      };
+    }),
+
+  // ─── Stripe Webhook ─────────────────────────────────────────────────────────
+
+  stripeWebhook: pub
+    .route({
+      method: "POST",
+      path: "/billing/webhook",
+      summary: "Handle Stripe webhook events",
+      tags: ["Billing"],
+    })
+    .input(
+      z.object({
+        payload: z.string(),
+        signature: z.string(),
+      }),
+    )
+    .handler(async ({ input }) => {
+      const { handleStripeWebhook } = await import("../lib/stripe");
+      const result = await handleStripeWebhook(input.payload, input.signature);
+
+      if (!result.success) {
+        throw new APIError(ErrorCode.BAD_REQUEST, result.error || "Webhook processing failed", 400);
+      }
+
+      return { received: true };
     }),
 };

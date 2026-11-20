@@ -1,7 +1,7 @@
 /**
  * Advanced Auth Configuration
  *
- * Cookie settings, ID generation, and other advanced options.
+ * Cookie settings, ID generation, MFA, and other advanced options.
  */
 
 import type { BetterAuthOptions } from "better-auth";
@@ -13,6 +13,17 @@ export interface AdvancedConfig {
   cookiePrefix?: string;
   /** Custom ID generator */
   generateId?: () => string;
+  /** MFA (TOTP) configuration */
+  mfa?: {
+    /** Require MFA for all operations (stricter) */
+    enforceOnAllOperations?: boolean;
+    /** Time window for TOTP codes (in seconds) */
+    maxAge?: number;
+    /** Number of TOTP devices allowed per account */
+    limit?: number;
+    /** Custom TOTP issuer name */
+    issuer?: string;
+  };
 }
 
 /**
@@ -25,6 +36,7 @@ export function advancedConfig(
     useSecureCookies = true,
     cookiePrefix = "saas-layer",
     generateId = () => crypto.randomUUID(),
+    mfa,
   } = config;
 
   return {
@@ -37,5 +49,6 @@ export function advancedConfig(
       sameSite: "lax",
       secure: useSecureCookies,
     },
+    mfa,
   };
 }

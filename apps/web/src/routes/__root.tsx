@@ -1,20 +1,22 @@
+import { DarkModeProvider } from "@crm/ui";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { type ReactNode, useEffect } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundaryWrapper } from "../components/error-boundary-wrapper";
+import { BrandingProvider } from "../components/providers/branding-provider";
 import { PostHogProvider } from "../components/providers/posthog-provider";
 import { WhiteLabelProvider } from "../components/branding/WhiteLabelProvider";
-import { addSkipLink } from "../lib/accessibility";
-import { queryClient } from "../lib/query";
-import { initSentry } from "../lib/sentry";
-import { registerServiceWorker } from "../lib/service-worker";
+import { addSkipLink } from "@/lib/accessibility";
+import { queryClient } from "@/lib/query";
+import { initSentry } from "@/lib/sentry";
+import { registerServiceWorker } from "@/lib/service-worker";
 import {
   generateOrganizationSchema,
   generateWebSiteSchema,
   getCRMOrganizationSchema,
-} from "../lib/structured-data";
+} from "@/lib/structured-data";
 
 import appCss from "../app.css?url";
 
@@ -22,12 +24,16 @@ export const Route = createRootRoute({
   head: () => {
     const siteUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
     const ogImage = siteUrl ? `${siteUrl}/og.svg` : "/og.svg";
+    const brandName = import.meta.env.VITE_BRAND_NAME ?? "Nucleo One";
+    const brandTagline = import.meta.env.VITE_BRAND_TAGLINE ?? "All-in-One Business Management Platform";
+    const themeColor = import.meta.env.VITE_THEME_COLOR ?? "#e11d48";
+    const twitterHandle = import.meta.env.VITE_TWITTER_HANDLE ?? "@nucleoone";
 
     return {
       meta: [
         { charSet: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "Nucleo One - Customer Relationship Management System" },
+        { title: `${brandName} — ${brandTagline}` },
         {
           name: "description",
           content:
@@ -40,7 +46,7 @@ export const Route = createRootRoute({
         },
         {
           property: "og:title",
-          content: "Nucleo One - Customer Relationship Management",
+          content: `${brandName} — ${brandTagline}`,
         },
         {
           property: "og:description",
@@ -49,10 +55,13 @@ export const Route = createRootRoute({
         },
         { property: "og:type", content: "website" },
         { property: "og:image", content: ogImage },
+        { property: "og:site_name", content: brandName },
+        { name: "application-name", content: brandName },
+        { name: "apple-mobile-web-app-title", content: brandName },
         { name: "twitter:card", content: "summary_large_image" },
         {
           name: "twitter:title",
-          content: "Nucleo One - Customer Relationship Management",
+          content: `${brandName} — ${brandTagline}`,
         },
         {
           name: "twitter:description",
@@ -60,8 +69,9 @@ export const Route = createRootRoute({
             "Modern Nucleo One platform for managing customer relationships and sales pipelines.",
         },
         { name: "twitter:image", content: ogImage },
+        { name: "twitter:site", content: twitterHandle },
         { name: "robots", content: "index, follow" },
-        { name: "theme-color", content: "#e11d48" },
+        { name: "theme-color", content: themeColor },
       ],
       links: [
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -136,7 +146,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="mask-icon" href="/icon.svg" color="#e11d48" />
+        <link rel="mask-icon" href="/icon.svg" color={import.meta.env.VITE_THEME_COLOR ?? "#e11d48"} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -161,14 +171,18 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ErrorBoundaryWrapper>
-          <PostHogProvider>
-            <QueryClientProvider client={queryClient}>
-              <WhiteLabelProvider>{children}</WhiteLabelProvider>
-              <Toaster position="top-right" />
-              {import.meta.env.PROD ? null : <TanStackRouterDevtools />}
-              <Scripts />
-            </QueryClientProvider>
-          </PostHogProvider>
+          <DarkModeProvider>
+            <BrandingProvider>
+              <PostHogProvider>
+                <QueryClientProvider client={queryClient}>
+                  <WhiteLabelProvider>{children}</WhiteLabelProvider>
+                  <Toaster position="top-right" />
+                  {import.meta.env.PROD ? null : <TanStackRouterDevtools />}
+                  <Scripts />
+                </QueryClientProvider>
+              </PostHogProvider>
+            </BrandingProvider>
+          </DarkModeProvider>
         </ErrorBoundaryWrapper>
       </body>
     </html>

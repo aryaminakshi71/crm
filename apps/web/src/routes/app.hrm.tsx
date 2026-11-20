@@ -12,7 +12,7 @@ import {
   LoadingSkeleton,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   AlertCircle,
@@ -43,7 +43,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { CsvImportModal } from "../components/CsvImportModal";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/hrm")({
   validateSearch: z.object({
@@ -85,6 +85,8 @@ function toIsoDateTime(date: string): string {
 }
 
 function HrmPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/hrm") return <Outlet />;
   const { view: viewParam } = Route.useSearch();
   const [view, setView] = useState<HrmView>(viewParam ?? "directory");
   const [search, setSearch] = useState("");
@@ -799,10 +801,11 @@ function HrmPage() {
               icon={<Users className="h-12 w-12" />}
               title="No employees found"
               description="Add personnel records to build your HR directory."
-              action={{
-                label: "Add Employee",
-                onClick: () => setIsEmployeeModalOpen(true),
-              }}
+              action={
+                <Button onClick={() => setIsEmployeeModalOpen(true)}>
+                  Add Employee
+                </Button>
+              }
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

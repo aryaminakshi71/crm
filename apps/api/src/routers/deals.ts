@@ -5,7 +5,7 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
@@ -77,6 +77,7 @@ export const dealsRouter = {
             // Build where conditions
             const conditions = [
               eq(deals.organizationId, context.organization.id),
+              isNull(deals.deletedAt),
             ];
             if (input.stage) {
               conditions.push(eq(deals.stage, input.stage));

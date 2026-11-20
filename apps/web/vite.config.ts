@@ -75,6 +75,15 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     environments: {
+      ssr: {
+        optimizeDeps: {
+          exclude: [
+            "@tanstack/router-core",
+            "@tanstack/react-start",
+            "@tanstack/react-router",
+          ],
+        },
+      },
       client: {
         build: {
           rollupOptions: {
@@ -137,6 +146,36 @@ export default defineConfig(async ({ mode }) => {
           brotliSize: true,
           template: "treemap",
         }),
+      // Brand manifest generator plugin
+      {
+        name: "brand-manifest",
+        configResolved(_config) {
+          // Manifest is generated at build time from env vars
+        },
+        generateBundle() {
+          const brandName = env.VITE_BRAND_NAME || "Nucleo One";
+          const themeColor = env.VITE_THEME_COLOR || "#e11d48";
+          const manifest = {
+            name: brandName,
+            short_name: brandName,
+            description: `${brandName} — Business Management Platform`,
+            start_url: "/",
+            display: "standalone",
+            background_color: "#ffffff",
+            theme_color: themeColor,
+            orientation: "portrait-primary",
+            icons: [
+              { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+              { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+            ],
+          };
+          this.emitFile({
+            type: "asset",
+            fileName: "manifest.json",
+            source: JSON.stringify(manifest, null, 2),
+          });
+        },
+      },
     ],
   };
 });

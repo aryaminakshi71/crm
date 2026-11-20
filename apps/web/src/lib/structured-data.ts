@@ -92,10 +92,10 @@ export function generateBreadcrumbSchema(data: BreadcrumbSchema): object {
  * Get default organization schema for CRM
  */
 export function getCRMOrganizationSchema(): OrganizationSchema {
+  const brandName = import.meta.env.VITE_BRAND_NAME ?? "Nucleo One";
   return {
-    name: "Nucleo One",
+    name: brandName,
     url: import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001",
-    description:
-      "Modern Nucleo One platform for managing customer relationships, sales pipelines, and business operations.",
+    description: `Modern ${brandName} platform for managing customer relationships, sales pipelines, and business operations.`,
   };
 }

@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { Button } from "@crm/ui";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { getBlogPostBySlug } from "../lib/blog-content";
+import { getBlogPostBySlug } from "@/lib/blog-content";
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {

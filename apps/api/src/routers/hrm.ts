@@ -1355,4 +1355,265 @@ export const hrmRouter = {
         );
       return { success: true };
     }),
+
+  // ─── Payroll ────────────────────────────────────────────────────────────────
+
+  payrollList: orgAuthed
+    .route({
+      method: "GET",
+      path: "/hrm/payroll",
+      summary: "List payroll runs",
+      tags: ["HRM"],
+    })
+    .input(pageInput)
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const items = await db
+        .select({
+          id: schema.payrollRuns.id,
+          period: schema.payrollRuns.periodLabel,
+          status: schema.payrollRuns.status,
+          totalGross: schema.payrollRuns.totalGross,
+          totalNet: schema.payrollRuns.totalNet,
+          totalDeductions: schema.payrollRuns.totalDeductions,
+          processedAt: schema.payrollRuns.updatedAt,
+          createdAt: schema.payrollRuns.createdAt,
+          payDate: schema.payrollRuns.payDate,
+          notes: schema.payrollRuns.notes,
+        })
+        .from(schema.payrollRuns)
+        .where(eq(schema.payrollRuns.organizationId, context.organization.id))
+        .orderBy(desc(schema.payrollRuns.payDate))
+        .limit(input.limit)
+        .offset(toOffset(input.page, input.limit));
+
+      // Count employees per run via payroll entries
+      const runIds = items.map((r) => r.id);
+      let employeeCounts: Record<string, number> = {};
+      if (runIds.length > 0) {
+        const counts = await db
+          .select({
+            payrollRunId: schema.payrollEntries.payrollRunId,
+            count: sql<number>`count(*)`,
+          })
+          .from(schema.payrollEntries)
+          .where(
+            sql`${schema.payrollEntries.payrollRunId} = ANY(ARRAY[${sql.raw(runIds.map((id) => `'${id}'`).join(","))}]::uuid[])`,
+          )
+          .groupBy(schema.payrollEntries.payrollRunId);
+        for (const c of counts) {
+          if (c.payrollRunId) {
+            employeeCounts[c.payrollRunId] = Number(c.count);
+          }
+        }
+      }
+
+      return {
+        data: items.map((r) => ({
+          ...r,
+          totalAmount: r.totalNet,
+          employeeCount: employeeCounts[r.id] ?? 0,
+        })),
+        page: input.page,
+        limit: input.limit,
+      };
+    }),
+
+  payrollCreate: orgAuthed
+    .route({
+      method: "POST",
+      path: "/hrm/payroll",
+      summary: "Create payroll run",
+      tags: ["HRM"],
+    })
+    .input(
+      z.object({
+        periodLabel: z.string().min(1),
+        payDate: z.string().datetime(),
+        status: z.string().default("draft"),
+        totalGross: z.number().nonnegative().default(0),
+        totalDeductions: z.number().nonnegative().default(0),
+        totalNet: z.number().nonnegative().default(0),
+        notes: z.string().optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [row] = await db
+        .insert(schema.payrollRuns)
+        .values({
+          organizationId: context.organization.id,
+          periodLabel: input.periodLabel,
+          payDate: new Date(input.payDate),
+          status: input.status,
+          totalGross: String(input.totalGross),
+          totalDeductions: String(input.totalDeductions),
+          totalNet: String(input.totalNet),
+          notes: input.notes || null,
+          createdBy: context.user.id,
+        })
+        .returning();
+      return row;
+    }),
+
+  payrollGet: orgAuthed
+    .route({
+      method: "GET",
+      path: "/hrm/payroll/:id",
+      summary: "Get payroll run",
+      tags: ["HRM"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [row] = await db
+        .select()
+        .from(schema.payrollRuns)
+        .where(
+          and(
+            eq(schema.payrollRuns.id, input.id),
+            eq(schema.payrollRuns.organizationId, context.organization.id),
+          ),
+        )
+        .limit(1);
+      return row ?? null;
+    }),
+
+  payrollProcess: orgAuthed
+    .route({
+      method: "PATCH",
+      path: "/hrm/payroll/:id/process",
+      summary: "Mark payroll run as processed",
+      tags: ["HRM"],
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const [row] = await db
+        .update(schema.payrollRuns)
+        .set({
+          status: "completed",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.payrollRuns.id, input.id),
+            eq(schema.payrollRuns.organizationId, context.organization.id),
+          ),
+        )
+        .returning();
+      return row;
+    }),
+
+  payrollEntries: orgAuthed
+    .route({
+      method: "GET",
+      path: "/hrm/payroll/:id/entries",
+      summary: "List payroll entries for a run",
+      tags: ["HRM"],
+    })
+    .input(
+      pageInput.extend({
+        id: z.string().uuid(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const db = getDb(context);
+      const items = await db
+        .select({
+          id: schema.payrollEntries.id,
+          payrollRunId: schema.payrollEntries.payrollRunId,
+          employeeId: schema.payrollEntries.employeeId,
+          employeeName: schema.employees.fullName,
+          grossPay: schema.payrollEntries.grossPay,
+          deductions: schema.payrollEntries.deductions,
+          netPay: schema.payrollEntries.netPay,
+          status: schema.payrollEntries.status,
+          notes: schema.payrollEntries.notes,
+          createdAt: schema.payrollEntries.createdAt,
+        })
+        .from(schema.payrollEntries)
+        .innerJoin(
+          schema.payrollRuns,
+          eq(schema.payrollEntries.payrollRunId, schema.payrollRuns.id),
+        )
+        .leftJoin(
+          schema.employees,
+          eq(schema.payrollEntries.employeeId, schema.employees.id),
+        )
+        .where(
+          and(
+            eq(schema.payrollEntries.payrollRunId, input.id),
+            eq(schema.payrollRuns.organizationId, context.organization.id),
+          ),
+        )
+        .orderBy(desc(schema.payrollEntries.createdAt))
+        .limit(input.limit)
+        .offset(toOffset(input.page, input.limit));
+
+      return { data: items, page: input.page, limit: input.limit };
+    }),
+
+  payrollStats: orgAuthed
+    .route({
+      method: "GET",
+      path: "/hrm/payroll/stats",
+      summary: "Payroll statistics",
+      tags: ["HRM"],
+    })
+    .input(z.object({}).optional())
+    .output(z.any())
+    .handler(async ({ context }) => {
+      const db = getDb(context);
+      const orgId = context.organization.id;
+
+      const [totalsResult, avgResult, lastRun] = await Promise.all([
+        db
+          .select({
+            totalPaid: sql<number>`coalesce(sum(${schema.payrollRuns.totalNet}::numeric), 0)`,
+          })
+          .from(schema.payrollRuns)
+          .where(
+            and(
+              eq(schema.payrollRuns.organizationId, orgId),
+              eq(schema.payrollRuns.status, "completed"),
+            ),
+          ),
+        db
+          .select({
+            avgNet: sql<number>`coalesce(avg(${schema.payrollEntries.netPay}::numeric), 0)`,
+          })
+          .from(schema.payrollEntries)
+          .innerJoin(
+            schema.payrollRuns,
+            eq(schema.payrollEntries.payrollRunId, schema.payrollRuns.id),
+          )
+          .where(eq(schema.payrollRuns.organizationId, orgId)),
+        db
+          .select({ payDate: schema.payrollRuns.payDate })
+          .from(schema.payrollRuns)
+          .where(eq(schema.payrollRuns.organizationId, orgId))
+          .orderBy(desc(schema.payrollRuns.payDate))
+          .limit(1),
+      ]);
+
+      // Estimate next run as ~1 month after the last pay date
+      let nextRunDate: string | null = null;
+      if (lastRun[0]?.payDate) {
+        const next = new Date(lastRun[0].payDate);
+        next.setMonth(next.getMonth() + 1);
+        nextRunDate = next.toISOString();
+      }
+
+      return {
+        totalPaid: Number(totalsResult[0]?.totalPaid ?? 0),
+        avgSalary: Number(avgResult[0]?.avgNet ?? 0),
+        nextRunDate,
+      };
+    }),
 };

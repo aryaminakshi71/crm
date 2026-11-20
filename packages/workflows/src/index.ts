@@ -1,14 +1,13 @@
 /**
- * Cloudflare Workflows
+ * Workflow Engine
  *
- * This package contains workflow definitions for Cloudflare Workflows.
- * Workflows are currently stubbed out - uncomment and configure when needed.
- *
- * @see https://developers.cloudflare.com/workflows/
+ * Workflow automation engine with support for:
+ * - Step execution
+ * - Conditions and branching
+ * - Data transforms
+ * - Compensation (saga pattern)
  */
 
-// Export workflow types for use in the app
-export type { WorkflowEvent, WorkflowStep } from "./types";
-
-// Uncomment to export workflow classes:
-// export { ExampleWorkflow } from "./example";
+export { WorkflowEngine } from "./engine";
+export { WorkflowExecutor } from "./executor";
+export type { Workflow, WorkflowStep, WorkflowRun, StepResult } from "./types";

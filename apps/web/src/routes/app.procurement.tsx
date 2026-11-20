@@ -12,7 +12,7 @@ import {
   Loading,
 } from "@crm/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Activity,
   Briefcase,
@@ -36,13 +36,15 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { nucleoApi } from "../lib/api";
+import { nucleoApi } from "@/lib/api";
 
 export const Route = createFileRoute("/app/procurement")({
   component: ProcurementPage,
 });
 
 function ProcurementPage() {
+  const location = useLocation();
+  if (location.pathname !== "/app/procurement") return <Outlet />;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
