@@ -43,13 +43,13 @@ export default function PlatformScreen() {
 
   const employeesQuery = useQuery({
     queryKey: ["mobile", "employees", ...cacheScope],
-    queryFn: client.employees.list,
+    queryFn: () => client.employees.list(),
   });
 
   const tickets = ticketsQuery.data?.data ?? [];
   const invoices = invoicesQuery.data?.data ?? [];
   const projects = projectsQuery.data?.data ?? [];
-  const employees = employeesQuery.data?.data ?? [];
+  const employees: any[] = (employeesQuery.data as any)?.data ?? [];
 
   const openTickets = tickets.filter(
     (t) => t.status !== "closed" && t.status !== "resolved",
@@ -197,7 +197,7 @@ export default function PlatformScreen() {
             </View>
             <Pill label="Active" tone="accent" />
           </View>
-          {employees.slice(0, 3).map((emp) => (
+          {employees.slice(0, 3).map((emp: any) => (
             <View key={emp.id} style={styles.itemRow}>
               <View style={styles.flex}>
                 <Text style={styles.itemTitle} numberOfLines={1}>
