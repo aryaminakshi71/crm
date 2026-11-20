@@ -75,3 +75,7 @@ exports/
 generated-envs/
 *-SECURE.csv
 *-SECURE.json
+
+# Agent worktree artifacts
+.claude/worktrees/
+.claire/worktrees/
