@@ -14,6 +14,7 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { getSessionCookie } from "better-auth/cookies";
 import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import Stripe from "stripe";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import type { AppEnv, InitialContext } from "./context";
@@ -316,6 +317,45 @@ export function createApp() {
   });
 
   // Health check (non-RPC) - must be before rate limiting
+  app.post("/api/billing/webhook", async (c: any) => {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    const whSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret || !whSecret) return c.json({ error: "Stripe not configured" }, 503);
+    const stripe = new Stripe(secret);
+    const sig = c.req.header("stripe-signature");
+    const raw = await c.req.text();
+    let event: any;
+    try {
+      event = stripe.webhooks.constructEvent(raw, sig, whSecret);
+    } catch {
+      return c.json({ error: "Invalid signature" }, 400);
+    }
+    const db = getDb({ env: c.env } as any);
+    if (event.type === "checkout.session.completed") {
+      const s = event.data.object as any;
+      const orgId = s.metadata?.orgId;
+      const plan = s.metadata?.plan;
+      const interval = s.metadata?.interval;
+      if (orgId && plan) {
+        const expires = new Date();
+        expires.setMonth(expires.getMonth() + (interval === "year" ? 12 : 1));
+        await db.execute(
+          sql`update organizations set plan = ${plan}, subscription_status = 'active', subscription_expires_at = ${expires.toISOString()} where id = ${orgId}`,
+        );
+      }
+    }
+    if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as any;
+      const orgId = sub.metadata?.orgId;
+      if (orgId) {
+        await db.execute(
+          sql`update organizations set subscription_status = 'cancelled' where id = ${orgId}`,
+        );
+      }
+    }
+    return c.json({ received: true });
+  });
+
   app.get("/api/health", (c: any) => {
     return c.json({
       status: "ok",

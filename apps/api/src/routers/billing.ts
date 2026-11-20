@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
+import Stripe from "stripe";
 import { getDb, orgAuthed, pub, schema } from "../procedures";
 
 const PLANS = [
@@ -52,6 +53,47 @@ export const billingRouter = {
         sql`update organizations set plan = ${input.plan}, subscription_status = 'active', subscription_expires_at = ${expires.toISOString()} where id = ${context.organization.id}`,
       );
       return { ok: true, plan: input.plan, status: "active", expiresAt: expires };
+    }),
+
+  createCheckout: orgAuthed
+    .route({ method: "POST", path: "/billing/checkout", tags: ["Billing"] })
+    .input(
+      z.object({
+        plan: z.string(),
+        interval: z.enum(["month", "year"]).optional(),
+      }),
+    )
+    .output(z.any())
+    .handler(async ({ context, input }) => {
+      const secret = process.env.STRIPE_SECRET_KEY;
+      if (!secret) return { error: "Stripe not configured" };
+      const stripe = new Stripe(secret);
+      const plan = PLANS.find((p) => p.id === input.plan);
+      if (!plan || plan.price === 0) return { error: "Invalid plan" };
+      const interval = input.interval === "year" ? "year" : "month";
+      const base = process.env.VITE_PUBLIC_SITE_URL || "http://localhost:3001";
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [
+          {
+            price_data: {
+              currency: "inr",
+              unit_amount: plan.price * 100,
+              recurring: { interval },
+              product_data: { name: `NucleoAI ${plan.name}` },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${base}/app/billing?success=1`,
+        cancel_url: `${base}/app/billing?cancelled=1`,
+        metadata: {
+          orgId: context.organization.id,
+          plan: plan.id,
+          interval,
+        },
+      });
+      return { url: session.url };
     }),
 
   cancel: orgAuthed
