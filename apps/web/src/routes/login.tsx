@@ -6,7 +6,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Lock, LogIn, Mail } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -41,6 +41,19 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    fetch("/api/rpc/branding/getPublic")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: any) => {
+        const b = d?.json?.branding ?? d?.branding;
+        if (b?.brandName) document.title = b.brandName;
+        if (b?.primaryColor) {
+          document.documentElement.style.setProperty("--brand-primary", b.primaryColor);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [error, setError] = useState("");
 
   // Demo credentials should be set via environment variables
