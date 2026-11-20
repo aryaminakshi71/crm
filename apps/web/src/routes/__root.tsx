@@ -5,6 +5,7 @@ import { type ReactNode, useEffect } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundaryWrapper } from "../components/error-boundary-wrapper";
 import { PostHogProvider } from "../components/providers/posthog-provider";
+import { WhiteLabelProvider } from "../components/branding/WhiteLabelProvider";
 import { addSkipLink } from "../lib/accessibility";
 import { queryClient } from "../lib/query";
 import { initSentry } from "../lib/sentry";
@@ -162,7 +163,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <ErrorBoundaryWrapper>
           <PostHogProvider>
             <QueryClientProvider client={queryClient}>
-              {children}
+              <WhiteLabelProvider>{children}</WhiteLabelProvider>
               <Toaster position="top-right" />
               {import.meta.env.PROD ? null : <TanStackRouterDevtools />}
               <Scripts />
