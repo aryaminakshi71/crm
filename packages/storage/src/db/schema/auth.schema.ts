@@ -90,6 +90,9 @@ export const organizations = pgTable("organizations", {
   slug: text("slug").notNull().unique(),
   logo: text("logo"),
   metadata: text("metadata"),
+  plan: text("plan").notNull().default("free"),
+  subscriptionStatus: text("subscription_status").notNull().default("active"),
+  subscriptionExpiresAt: timestamp("subscription_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

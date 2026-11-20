@@ -6,6 +6,7 @@
  */
 
 import { brandingRouter } from "./branding";
+import { billingRouter } from "./billing";
 import { outreachRouter } from "./outreach";
 import { activitiesRouter } from "./activities";
 import { advertisingRouter } from "./advertising";
@@ -26,6 +27,7 @@ import { assetsRouter } from "./assets";
 
 export const appRouter = {
   branding: brandingRouter,
+  billing: billingRouter,
   outreach: outreachRouter,
   health: healthRouter,
   metrics: metricsRouter,
