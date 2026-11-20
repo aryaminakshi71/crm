@@ -45,7 +45,7 @@ function fmt(n: number) {
 
 function VendorsPage() {
   const { q: search, status: statusFilter } = useSearch({ from: "/app/invoicing/vendors/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/vendors/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/vendors" });
 
   const setSearch = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, q: value || undefined }) });

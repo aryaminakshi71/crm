@@ -66,7 +66,7 @@ function AddProductPage() {
         }),
       });
       if (!res.ok) throw new Error("Failed to create product");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ecommerce-products"] });

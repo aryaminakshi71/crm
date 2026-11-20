@@ -33,7 +33,7 @@ const orgHeader = () => ({
 function WorkflowsPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/integrations/workflows/_index" });
-  const navigate = useNavigate({ from: "/app/integrations/workflows/_index" });
+  const navigate = useNavigate({ from: "/app/integrations/workflows" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : (v as any) }) });
 
@@ -51,7 +51,7 @@ function WorkflowsPage() {
         body: JSON.stringify({ active }),
       });
       if (!res.ok) throw new Error("Failed to toggle workflow");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integrations", "workflows"] });

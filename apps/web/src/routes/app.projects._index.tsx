@@ -66,7 +66,7 @@ export const Route = createFileRoute("/app/projects/_index")({
 
 function ProjectsIndexPage() {
   const { q = "", status, page = 1 } = useSearch({ from: "/app/projects/_index" });
-  const navigate = useNavigate({ from: "/app/projects/_index" });
+  const navigate = useNavigate({ from: "/app/projects" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

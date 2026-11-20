@@ -45,7 +45,7 @@ function priorityColor(priority: string): string {
 function DispatchPage() {
   const queryClient = useQueryClient();
   const { q = "", priority = "all" } = useSearch({ from: "/app/field-service/dispatch/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/dispatch/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/dispatch" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setPriority = (v: string) => navigate({ search: (p) => ({ ...p, priority: v === "all" ? undefined : (v as any) }) });
 
@@ -67,7 +67,7 @@ function DispatchPage() {
         body: JSON.stringify({ technicianId }),
       });
       if (!res.ok) throw new Error("Failed to assign job");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Job assigned");

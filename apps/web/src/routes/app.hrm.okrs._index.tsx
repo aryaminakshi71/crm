@@ -51,7 +51,7 @@ const QUARTER_OPTIONS = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026", "Q1 2025", 
 function OkrsIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", status, page = 1 } = useSearch({ from: "/app/hrm/okrs/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/okrs/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/okrs" });
   const search = q;
   const quarterFilter = status ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
@@ -65,7 +65,7 @@ function OkrsIndexPage() {
     placeholderData: (prev) => prev,
   });
 
-  const objectives: any[] = (data?.data as any[]) ?? [];
+  const objectives: any[] = ((data as any)?.data as any[]) ?? [];
 
   const quarters = useMemo(() => {
     const qs = new Set(objectives.map((o: any) => o.quarter || "").filter(Boolean));

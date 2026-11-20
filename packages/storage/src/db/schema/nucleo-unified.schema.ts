@@ -1514,7 +1514,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   tickets: many(tickets),
   assets: many(digitalAssets),
   documents: many(documents),
-  invoices: many(invoices),
+  invoices: many(invoicing.invoices),
 }));
 
 export const projectTasksRelations = relations(projectTasks, ({ one }) => ({

@@ -103,7 +103,7 @@ function Metric({
 function AdjustmentsPage() {
   const { q = "", type: typeFilterRaw = "" } = useSearch({ from: "/app/inventory/adjustments/_index" });
   const typeFilter = typeFilterRaw as AdjustmentType;
-  const navigate = useNavigate({ from: "/app/inventory/adjustments/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/adjustments" });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newAdj, setNewAdj] = useState({
     productId: "",

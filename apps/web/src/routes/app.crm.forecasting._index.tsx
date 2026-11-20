@@ -66,7 +66,7 @@ function fmt(n: number) {
 
 function ForecastingPage() {
   const { q = "", stage: stageFilter = "all" } = useSearch({ from: "/app/crm/forecasting/_index" });
-  const navigate = useNavigate({ from: "/app/crm/forecasting/_index" });
+  const navigate = useNavigate({ from: "/app/crm/forecasting" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStageFilter = (v: string) => navigate({ search: (p) => ({ ...p, stage: v }) });
 
@@ -244,7 +244,7 @@ function ForecastingPage() {
                 />
                 <Tooltip
                   contentStyle={{ background: "#0f172a", border: "none", borderRadius: "8px", fontSize: "11px" }}
-                  formatter={(v: number | null) => [v != null ? fmt(v) : "—", ""]}
+                  formatter={(v: any) => [v != null ? fmt(v) : "—", ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: "11px" }} />
                 <Line

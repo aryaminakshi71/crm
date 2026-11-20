@@ -59,7 +59,7 @@ const PAGE_SIZE = 50;
 
 function DirectoryIndexPage() {
   const { q = "", dept = "all", page = 1 } = useSearch({ from: "/app/hrm/directory/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/directory/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/directory" });
   const search = q;
   const deptFilter = dept;
   const setSearch = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });

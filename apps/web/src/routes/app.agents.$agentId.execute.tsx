@@ -51,7 +51,7 @@ function AgentExecutePage() {
   const [selectedTask, setSelectedTask] = useState("code_generation");
   const [taskInput, setTaskInput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionLogs, setExecutionLogs] = useState<ExecutionLog>([]);
+  const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [taskHistory, setTaskHistory] = useState<Task[]>([
     { id: "1", name: "Generate API Documentation", status: "completed", progress: 100, duration: "4.2s", timestamp: new Date(Date.now() - 300000) },
     { id: "2", name: "Analyze Sales Data Q4", status: "completed", progress: 100, duration: "8.5s", timestamp: new Date(Date.now() - 600000) },

@@ -344,10 +344,10 @@ export function createApp() {
   app.use(
     "*",
     cors({
-      origin: (origin: string | null) => {
-        if (!origin) return true; // allow non-browser clients (curl, server-to-server)
+      origin: (origin: string) => {
+        if (!origin) return origin; // allow non-browser clients (curl, server-to-server)
         if (process.env.NODE_ENV !== "production") return origin; // allow all in dev
-        return ALLOWED_ORIGINS.includes(origin);
+        return ALLOWED_ORIGINS.includes(origin) ? origin : undefined;
       },
       credentials: true,
     }),

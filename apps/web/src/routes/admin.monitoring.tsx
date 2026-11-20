@@ -80,7 +80,7 @@ function AdminMonitoringPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/monitoring");
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,

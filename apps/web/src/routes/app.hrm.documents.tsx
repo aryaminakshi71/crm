@@ -44,7 +44,7 @@ const departments = ["All Departments", "All", "HR", "Legal", "Engineering", "Sa
 const fileTypes = ["All Types", "PDF", "DOCX", "XLSX"];
 
 function DocumentManagement() {
-  const { q, type, department } = useSearch({ from: Route.fullPath });
+  const { q, type, department } = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.fullPath });
   const qc = useQueryClient();
 
@@ -65,7 +65,7 @@ function DocumentManagement() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to fetch documents");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     retry: false,
@@ -78,7 +78,7 @@ function DocumentManagement() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to fetch signatures");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     retry: false,
@@ -93,7 +93,7 @@ function DocumentManagement() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to upload document");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Document uploaded successfully");
@@ -108,7 +108,7 @@ function DocumentManagement() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/hrm/documents/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete document");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Document deleted");

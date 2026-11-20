@@ -71,7 +71,7 @@ function formatDuration(startedAt: string | null, completedAt: string | null): s
 function DevopsRunsPage() {
   const queryClient = useQueryClient();
   const { q = "", status: statusFilter = "all", page = 1 } = useSearch({ from: "/app/devops/runs/_index" });
-  const navigate = useNavigate({ from: "/app/devops/runs/_index" });
+  const navigate = useNavigate({ from: "/app/devops/runs" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });

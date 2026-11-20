@@ -54,7 +54,7 @@ function EnvironmentsPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("development");
   const { q = "", type = "all" } = useSearch({ from: "/app/devops/environments/_index" });
-  const navigate = useNavigate({ from: "/app/devops/environments/_index" });
+  const navigate = useNavigate({ from: "/app/devops/environments" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setType = (v: string) => navigate({ search: (p) => ({ ...p, type: v === "all" ? undefined : (v as any) }) });
 

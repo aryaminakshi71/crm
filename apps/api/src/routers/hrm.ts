@@ -1389,7 +1389,7 @@ export const hrmRouter = {
         .offset(toOffset(input.page, input.limit));
 
       // Count employees per run via payroll entries
-      const runIds = items.map((r) => r.id);
+      const runIds = items.map((r: any) => r.id);
       let employeeCounts: Record<string, number> = {};
       if (runIds.length > 0) {
         const counts = await db
@@ -1399,7 +1399,7 @@ export const hrmRouter = {
           })
           .from(schema.payrollEntries)
           .where(
-            sql`${schema.payrollEntries.payrollRunId} = ANY(ARRAY[${sql.raw(runIds.map((id) => `'${id}'`).join(","))}]::uuid[])`,
+            sql`${schema.payrollEntries.payrollRunId} = ANY(ARRAY[${sql.raw(runIds.map((id: any) => `'${id}'`).join(","))}]::uuid[])`,
           )
           .groupBy(schema.payrollEntries.payrollRunId);
         for (const c of counts) {
@@ -1410,7 +1410,7 @@ export const hrmRouter = {
       }
 
       return {
-        data: items.map((r) => ({
+        data: items.map((r: any) => ({
           ...r,
           totalAmount: r.totalNet,
           employeeCount: employeeCounts[r.id] ?? 0,

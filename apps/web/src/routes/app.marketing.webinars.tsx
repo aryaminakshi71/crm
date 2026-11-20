@@ -72,7 +72,7 @@ function MarketingWebinarsPage() {
           { headers: { "Content-Type": "application/json", ...getOrgHeader() } },
         );
         if (!res.ok) return null;
-        return res.json();
+        return res.json() as Promise<any>;
       } catch {
         return null;
       }

@@ -74,7 +74,7 @@ const PAGE_SIZE = 50;
 
 function HelpdeskTicketsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { q: search, status: statusFilter, priority: priorityFilter, page } = useSearch({ from: Route.fullPath });
+  const { q: search, status: statusFilter, priority: priorityFilter, page } = useSearch({ from: Route.id });
   const setSearch = (q: string) => navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
   const setStatusFilter = (status: string) => navigate({ search: (prev) => ({ ...prev, status, page: 1 }) });
   const setPriorityFilter = (priority: string) => navigate({ search: (prev) => ({ ...prev, priority, page: 1 }) });

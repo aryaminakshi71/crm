@@ -48,7 +48,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function OrchestrationPage() {
   const { q = "", status: statusFilter = "all" } = useSearch({ from: "/app/agents/orchestration/_index" });
-  const navigate = useNavigate({ from: "/app/agents/orchestration/_index" });
+  const navigate = useNavigate({ from: "/app/agents/orchestration" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : v as any }) });
 

@@ -63,7 +63,7 @@ function statusBadge(status: string) {
 
 function IntegrationEventsPage() {
   const { q = "", status: statusFilter = "all" } = useSearch({ from: "/app/integrations/events/_index" });
-  const navigate = useNavigate({ from: "/app/integrations/events/_index" });
+  const navigate = useNavigate({ from: "/app/integrations/events" });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : (v as any) }) });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 

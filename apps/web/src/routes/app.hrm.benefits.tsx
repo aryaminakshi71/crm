@@ -175,7 +175,7 @@ function HrmBenefitsPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hrm", "benefits"] });
@@ -195,7 +195,7 @@ function HrmBenefitsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hrm", "benefits"] });
@@ -213,7 +213,7 @@ function HrmBenefitsPage() {
         headers: getOrgHeader(),
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hrm", "benefits"] });

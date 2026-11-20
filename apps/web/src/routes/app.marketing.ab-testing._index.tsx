@@ -225,7 +225,7 @@ function NewTestModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 function AbTestingPage() {
   const qc = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/marketing/ab-testing/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/ab-testing/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/ab-testing" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : v }) });
   const [showNew, setShowNew] = useState(false);

@@ -108,7 +108,7 @@ function CartSettingsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -133,7 +133,7 @@ function CartSettingsPage() {
         }),
       });
       if (!res.ok) throw new Error(`Failed to save: ${res.status}`);
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-settings"] });
@@ -163,7 +163,7 @@ function CartSettingsPage() {
         }),
       });
       if (!res.ok) throw new Error(`Checkout failed: ${res.status}`);
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       setCartItems([]);

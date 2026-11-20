@@ -65,7 +65,7 @@ const FALLBACK_QUEUE: any[] = [
 
 function QueueIndexPage() {
   const { q: search, priority: priorityFilter, status: statusFilter } = useSearch({ from: "/app/queue/_index" });
-  const navigate = useNavigate({ from: "/app/queue/_index" });
+  const navigate = useNavigate({ from: "/app/queue" });
 
   const setSearch = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, q: value || undefined }) });
@@ -83,7 +83,7 @@ function QueueIndexPage() {
         },
       });
       if (!res.ok) throw new Error("Failed to fetch queue");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     retry: false,
   });

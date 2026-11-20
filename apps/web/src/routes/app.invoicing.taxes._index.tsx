@@ -51,7 +51,7 @@ function fmt(n: number) {
 
 function TaxesPage() {
   const { q: search, type: typeFilter, status: statusFilter } = useSearch({ from: "/app/invoicing/taxes/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/taxes/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/taxes" });
 
   const setSearch = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, q: value || undefined }) });

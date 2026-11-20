@@ -90,7 +90,7 @@ function StatusBadge({ status }: { status: string }) {
 function DiscountsIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/ecommerce/discounts/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/discounts/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/discounts" });
 
   const searchQuery = q;
   const setSearchQuery = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });

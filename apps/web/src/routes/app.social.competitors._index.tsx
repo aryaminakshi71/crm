@@ -174,7 +174,7 @@ function AddCompetitorModal({ open, onClose, onCreated }: { open: boolean; onClo
 function SocialCompetitorsPage() {
   const qc = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/social/competitors/_index" });
-  const navigate = useNavigate({ from: "/app/social/competitors/_index" });
+  const navigate = useNavigate({ from: "/app/social/competitors" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

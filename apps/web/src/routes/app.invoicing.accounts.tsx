@@ -69,7 +69,7 @@ function ChartOfAccounts() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/invoicing/accounts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete account");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/accounts"] }),
   });

@@ -90,7 +90,7 @@ function CampaignProPage() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/marketing/stats`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch stats");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -99,7 +99,7 @@ function CampaignProPage() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/marketing/campaigns`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch campaigns");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 

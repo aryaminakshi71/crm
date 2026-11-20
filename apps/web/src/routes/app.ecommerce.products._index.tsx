@@ -289,7 +289,7 @@ function CSVImportModal({ onClose, onImported }: { onClose: () => void; onImport
 
 function ProductsIndexPage() {
   const { q: searchQuery = "", category: filterStatus = "all", page = 1 } = useSearch({ from: "/app/ecommerce/products/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/products/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/products" });
   const setSearchQuery = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setFilterStatus = (v: string) => navigate({ search: (p) => ({ ...p, category: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

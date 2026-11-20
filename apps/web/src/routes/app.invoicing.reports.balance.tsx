@@ -111,7 +111,7 @@ function BalanceSheet() {
               <div key={section.category}>
                 <p className="text-xs font-medium text-muted-foreground mb-2">{section.category}</p>
                 <div className="space-y-2">
-                  {section.items.map((item) => (
+                  {section.items.map((item: any) => (
                     <div key={item.name} className="flex items-center justify-between text-sm">
                       <span className={item.amount < 0 ? "text-rose-400" : ""}>{item.name}</span>
                       <span className={item.amount < 0 ? "text-rose-400" : "font-medium"}>
@@ -146,7 +146,7 @@ function BalanceSheet() {
               <div key={section.category}>
                 <p className="text-xs font-medium text-muted-foreground mb-2">{section.category}</p>
                 <div className="space-y-2">
-                  {section.items.map((item) => (
+                  {section.items.map((item: any) => (
                     <div key={item.name} className="flex items-center justify-between text-sm">
                       <span>{item.name}</span>
                       <span className="font-medium text-rose-400">${item.amount.toLocaleString()}</span>

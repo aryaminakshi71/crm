@@ -53,7 +53,7 @@ function NewConnectorPage() {
         // Return a stub created connector for demo
         return { id: `conn-${Date.now()}`, ...data, status: "connected", connectedAt: new Date().toISOString() };
       }
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (connector) => {
       queryClient.invalidateQueries({ queryKey: ["integration", "connectors"] });

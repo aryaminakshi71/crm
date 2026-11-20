@@ -43,7 +43,7 @@ function DeploymentDetail() {
         headers,
       });
       if (!res.ok) throw new Error("Rollback failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "deployments"] });

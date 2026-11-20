@@ -38,7 +38,7 @@ function Infrastructure() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch infrastructure");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -50,7 +50,7 @@ function Infrastructure() {
         body: JSON.stringify(values),
       });
       if (!res.ok) throw new Error("Failed to create infrastructure");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "infrastructure"] });

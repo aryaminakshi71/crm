@@ -36,7 +36,7 @@ function statusBadgeClass(status: string): string {
 
 function ErrorsPage() {
   const { q = "", level, page = 1 } = useSearch({ from: "/app/monitoring/errors/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/errors/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/errors" });
   const search = q;
   const statusFilter = level ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

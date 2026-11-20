@@ -112,7 +112,7 @@ function PlatformPill({ platform }: { platform: string }) {
 
 function SocialAnalyticsPage() {
   const { q = "", period: periodParam = "month", platform = "" } = useSearch({ from: "/app/social/analytics/_index" });
-  const navigate = useNavigate({ from: "/app/social/analytics/_index" });
+  const navigate = useNavigate({ from: "/app/social/analytics" });
   const period = periodParam as Period;
 
   const { data } = useQuery({

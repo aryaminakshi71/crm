@@ -156,7 +156,6 @@ function EmailComposer({ onClose }: EmailComposerProps) {
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
         onClick={handleDiscard}
       />
-
       {/* Slide-over panel from bottom */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-0">
         <div className="w-full max-w-3xl rounded-t-2xl border border-border bg-card shadow-2xl flex flex-col"
@@ -369,7 +368,6 @@ function EmailComposer({ onClose }: EmailComposerProps) {
           </div>
         </div>
       </div>
-
       {/* Discard confirm dialog */}
       <ConfirmDialog
         open={discardOpen}
@@ -381,7 +379,7 @@ function EmailComposer({ onClose }: EmailComposerProps) {
         onCancel={() => setDiscardOpen(false)}
       />
     </>
-  );
+  )
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/app/field-service/schedule/_index")({
 
 function SchedulePage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/field-service/schedule/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/schedule/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/schedule" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
 
   const { data: scheduleData, isLoading } = useQuery({

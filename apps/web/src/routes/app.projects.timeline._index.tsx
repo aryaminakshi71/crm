@@ -134,7 +134,7 @@ function todayMarkerStyle(rangeStart: Date, rangeEnd: Date): React.CSSProperties
 
 function TimelineIndexPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/projects/timeline/_index" });
-  const navigate = useNavigate({ from: "/app/projects/timeline/_index" });
+  const navigate = useNavigate({ from: "/app/projects/timeline" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

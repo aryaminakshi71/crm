@@ -37,7 +37,7 @@ export const moduleSEO: Record<ModuleKey, {
     benefits: ["Kanban & Gantt views", "Team collaboration", "Deadline tracking"],
     icon: "📦",
   },
-  invoicing: {
+  finance: {
     title: "Invoicing & Billing",
     description: "Create professional invoices, track payments, and manage billing automatically.",
     keywords: ["invoicing", "billing", "payments", "invoice software"],
@@ -86,12 +86,47 @@ export const moduleSEO: Record<ModuleKey, {
     benefits: ["Real-time alerts", "Error tracking", "Performance metrics"],
     icon: "📊",
   },
-  advertising: {
-    title: "Advertising Management",
-    description: "Manage ad campaigns across Google, Meta, LinkedIn with AI-powered optimization.",
-    keywords: ["advertising", "ad management", "PPC", "campaign optimization"],
-    benefits: ["Multi-platform ads", "AI optimization", "Budget control"],
-    icon: "📢",
+  analytics: {
+    title: "Business Analytics",
+    description: "Turn raw data into decisions with dashboards, reports, and AI-powered insights.",
+    keywords: ["analytics", "business intelligence", "dashboards", "reporting"],
+    benefits: ["Custom dashboards", "Scheduled reports", "AI insights"],
+    icon: "📈",
+  },
+  inventory: {
+    title: "Inventory Management",
+    description: "Track stock, warehouses, and suppliers with real-time inventory control.",
+    keywords: ["inventory", "stock management", "warehouse", "supply chain"],
+    benefits: ["Real-time stock levels", "Low-stock alerts", "Multi-warehouse"],
+    icon: "📦",
+  },
+  communications: {
+    title: "Team Communications",
+    description: "Chat, video, and voice built into your business platform.",
+    keywords: ["communications", "team chat", "video calls", "voice"],
+    benefits: ["Built-in chat", "Video meetings", "Call recording"],
+    icon: "💬",
+  },
+  field_service: {
+    title: "Field Service Management",
+    description: "Schedule technicians, dispatch jobs, and track work in the field.",
+    keywords: ["field service", "dispatch", "technicians", "scheduling"],
+    benefits: ["Smart scheduling", "Route optimization", "Mobile job cards"],
+    icon: "🚚",
+  },
+  ecommerce: {
+    title: "E-commerce",
+    description: "Manage products, orders, storefronts, and discounts in one place.",
+    keywords: ["ecommerce", "online store", "orders", "products"],
+    benefits: ["Product catalog", "Order management", "Discount engine"],
+    icon: "🛒",
+  },
+  devops: {
+    title: "DevOps",
+    description: "Ship faster with CI/CD, secrets management, and deployment monitoring.",
+    keywords: ["devops", "ci/cd", "deployments", "secrets"],
+    benefits: ["Pipeline visibility", "Secrets vault", "Deployment tracking"],
+    icon: "⚙️",
   },
 };
 

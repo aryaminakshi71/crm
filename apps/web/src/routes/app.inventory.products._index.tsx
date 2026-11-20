@@ -88,7 +88,7 @@ function Metric({
 
 function ProductsPage() {
   const { q: search = "", category: categoryFilter = "" } = useSearch({ from: "/app/inventory/products/_index" });
-  const navigate = useNavigate({ from: "/app/inventory/products/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/products" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setCategoryFilter = (v: string) => navigate({ search: (p) => ({ ...p, category: v }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

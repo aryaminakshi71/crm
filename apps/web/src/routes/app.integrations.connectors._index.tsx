@@ -74,7 +74,7 @@ function categoryColor(category: string): string {
 function ConnectorsPage() {
   const queryClient = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/integrations/connectors/_index" });
-  const navigate = useNavigate({ from: "/app/integrations/connectors/_index" });
+  const navigate = useNavigate({ from: "/app/integrations/connectors" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
 
   const { data, isLoading } = useQuery({
@@ -91,7 +91,7 @@ function ConnectorsPage() {
         headers: orgHeader(),
       });
       if (!res.ok) throw new Error(`Failed to ${action} connector`);
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (_, { connect }) => {
       toast.success(connect ? "Connector connected" : "Connector disconnected");

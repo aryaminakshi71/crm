@@ -53,7 +53,7 @@ function getRetentionColor(val: number | null | undefined): string {
 
 function CohortPage() {
   const { q = "" } = useSearch({ from: "/app/intelligence/cohort/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/cohort/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/cohort" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

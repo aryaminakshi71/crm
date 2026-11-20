@@ -39,7 +39,7 @@ function Runs() {
         headers,
       });
       if (!res.ok) throw new Error("Failed to cancel run");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "runs"] });

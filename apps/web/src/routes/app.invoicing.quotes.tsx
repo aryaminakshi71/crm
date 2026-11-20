@@ -65,7 +65,7 @@ function QuoteBuilder() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/invoicing/quotes/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete quote");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/quotes"] }),
   });

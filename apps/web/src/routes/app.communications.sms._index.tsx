@@ -52,7 +52,7 @@ function formatDate(val: string | null | undefined): string {
 function SmsPage() {
   const queryClient = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/communications/sms/_index" });
-  const navigate = useNavigate({ from: "/app/communications/sms/_index" });
+  const navigate = useNavigate({ from: "/app/communications/sms" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
   const [showModal, setShowModal] = useState(false);
   const [toNumber, setToNumber] = useState("");

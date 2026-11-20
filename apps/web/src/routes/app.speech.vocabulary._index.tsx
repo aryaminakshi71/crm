@@ -85,7 +85,7 @@ function TypeBadge({ type }: { type: string }) {
 function VocabularyIndexPage() {
   const queryClient = useQueryClient();
   const { q: searchQuery = "", type: filterType = "all" } = useSearch({ from: "/app/speech/vocabulary/_index" });
-  const navigate = useNavigate({ from: "/app/speech/vocabulary/_index" });
+  const navigate = useNavigate({ from: "/app/speech/vocabulary" });
   const setSearchQuery = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setFilterType = (v: string) => navigate({ search: (p) => ({ ...p, type: v }) });
   const [showAdd, setShowAdd] = useState(false);

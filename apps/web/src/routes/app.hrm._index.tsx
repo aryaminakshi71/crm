@@ -137,8 +137,8 @@ function HrmDashboard() {
     status: lr.status || "Pending",
   }));
 
-  const employees = (employeesQuery.data as any)?.data ?? [];
-  const departmentCounts = employees.reduce<Record<string, number>>((acc, emp: any) => {
+  const employees: any[] = (employeesQuery.data as any)?.data ?? [];
+  const departmentCounts: Record<string, number> = employees.reduce((acc: Record<string, number>, emp: any) => {
     const dept = emp.department || "Other";
     acc[dept] = (acc[dept] || 0) + 1;
     return acc;

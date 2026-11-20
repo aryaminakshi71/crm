@@ -74,7 +74,7 @@ function UsageBar({ value }: { value: number }) {
 
 function InfrastructurePage() {
   const { q: search = "", type: typeFilter = "all" } = useSearch({ from: "/app/devops/infrastructure/_index" });
-  const navigate = useNavigate({ from: "/app/devops/infrastructure/_index" });
+  const navigate = useNavigate({ from: "/app/devops/infrastructure" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setTypeFilter = (v: string) => navigate({ search: (p) => ({ ...p, type: v === "all" ? undefined : v }) });
 

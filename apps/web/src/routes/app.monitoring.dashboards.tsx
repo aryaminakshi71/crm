@@ -63,7 +63,7 @@ function DashboardsPage() {
         body: JSON.stringify({ name }),
       });
       if (!res.ok) throw new Error("Failed to create dashboard");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "dashboards"] });
@@ -79,7 +79,7 @@ function DashboardsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete dashboard");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "dashboards"] });
@@ -89,7 +89,7 @@ function DashboardsPage() {
   const dashboards = (dashboardQuery.data as any)?.dashboards ?? [];
 
   const filteredDashboards = dashboards.filter(
-    (d) =>
+    (d: any) =>
       d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -177,7 +177,7 @@ function DashboardsPage() {
 
       {/* Dashboards Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredDashboards.map((dashboard) => (
+        {filteredDashboards.map((dashboard: any) => (
           <Card key={dashboard.id} className="border-border/60 hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">

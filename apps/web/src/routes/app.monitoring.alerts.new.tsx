@@ -78,7 +78,7 @@ function NewAlertPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to create alert");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring-alerts"] });

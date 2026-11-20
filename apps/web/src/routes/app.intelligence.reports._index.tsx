@@ -66,7 +66,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 function ReportsPage() {
   const { q = "", type: typeFilter = "" } = useSearch({ from: "/app/intelligence/reports/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/reports/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/reports" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setTypeFilter = (v: string) => navigate({ search: (p) => ({ ...p, type: v || undefined }) });
 

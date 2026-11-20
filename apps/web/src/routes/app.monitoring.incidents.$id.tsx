@@ -58,7 +58,7 @@ function IncidentDetailPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -70,7 +70,7 @@ function IncidentDetailPage() {
         { headers: { ...getOrgHeader() } },
       );
       if (!res.ok) return { items: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -82,7 +82,7 @@ function IncidentDetailPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to update incident");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents", id] });
@@ -103,7 +103,7 @@ function IncidentDetailPage() {
         },
       );
       if (!res.ok) throw new Error("Failed to add timeline entry");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

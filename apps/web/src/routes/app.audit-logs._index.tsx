@@ -44,7 +44,7 @@ type DateRange = "today" | "7d" | "30d" | "all";
 
 function AuditLogsPage() {
   const { q = "", action = "all", page = 1 } = useSearch({ from: "/app/audit-logs/_index" });
-  const navigate = useNavigate({ from: "/app/audit-logs/_index" });
+  const navigate = useNavigate({ from: "/app/audit-logs" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setAction = (v: string) => navigate({ search: (p) => ({ ...p, action: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

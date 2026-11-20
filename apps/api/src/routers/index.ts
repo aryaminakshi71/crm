@@ -75,7 +75,6 @@ export const appRouter = {
   presence: presenceRouter,
   apiKeys: apiKeysRouter,
   audit: auditRouter,
-  billing: billingRouter,
   realtime: realtimeRouter,
   fieldService: fieldServiceRouter,
   devops: devopsRouter,

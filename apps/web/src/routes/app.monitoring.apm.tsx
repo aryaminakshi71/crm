@@ -66,7 +66,7 @@ function MonitoringApmPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return { items: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -77,7 +77,7 @@ function MonitoringApmPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -89,7 +89,7 @@ function MonitoringApmPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create trace");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "traces"] });

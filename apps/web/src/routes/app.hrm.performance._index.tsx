@@ -65,7 +65,7 @@ function StarRating({ score }: { score: number }) {
 function PerformanceIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all", page = 1 } = useSearch({ from: "/app/hrm/performance/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/performance/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/performance" });
   const search = q;
   const statusFilter = status;
   const setSearch = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });

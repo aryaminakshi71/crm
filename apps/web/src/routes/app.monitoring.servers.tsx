@@ -64,7 +64,7 @@ function MonitoringServersPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return { items: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -76,7 +76,7 @@ function MonitoringServersPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to add server");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "servers"] });
@@ -94,7 +94,7 @@ function MonitoringServersPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete server");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "servers"] });

@@ -75,7 +75,7 @@ function Metric({
 
 function StockPage() {
   const { q: search = "" } = useSearch({ from: "/app/inventory/stock/_index" });
-  const navigate = useNavigate({ from: "/app/inventory/stock/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/stock" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<any>(null);

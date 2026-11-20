@@ -26,7 +26,7 @@ function FieldServiceJobs() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create job");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fieldService", "jobs"] }),
   });
@@ -37,8 +37,8 @@ function FieldServiceJobs() {
       api.fieldService.listJobs({
         page: 1,
         limit: 100,
-        ...(statusFilter && { status: statusFilter }),
-        ...(priorityFilter && { priority: priorityFilter }),
+        ...(statusFilter && { status: statusFilter as any }),
+        ...(priorityFilter && { priority: priorityFilter as any }),
       }),
   });
 

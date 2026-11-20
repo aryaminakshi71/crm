@@ -110,7 +110,7 @@ function SettingsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete API key");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("API key deleted");

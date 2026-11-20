@@ -119,7 +119,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 function NotificationsPage() {
   const { q = "", group: groupFilter } = useSearch({ from: "/app/settings/notifications/_index" });
-  const navigate = useNavigate({ from: "/app/settings/notifications/_index" });
+  const navigate = useNavigate({ from: "/app/settings/notifications" });
   const [prefs, setPrefs] = useState<AllPrefs>(DEFAULT_PREFS);
 
   const { data, isLoading } = useQuery({
@@ -130,7 +130,7 @@ function NotificationsPage() {
         headers: getOrgHeader(),
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -149,7 +149,7 @@ function NotificationsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Save failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => toast.success("Notification preferences saved"),
     onError: () => toast.error("Failed to save preferences"),

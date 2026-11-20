@@ -65,7 +65,7 @@ function VendorManagement() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/invoicing/vendors/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete vendor");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/vendors"] }),
   });

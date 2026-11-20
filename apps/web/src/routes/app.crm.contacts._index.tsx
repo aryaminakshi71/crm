@@ -213,7 +213,7 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
 
 function ContactsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { q: search, page } = useSearch({ from: Route.fullPath });
+  const { q: search, page } = useSearch({ from: Route.id });
   const setSearch = (q: string) => navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
   const setPage = (page: number) => navigate({ search: (prev) => ({ ...prev, page }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

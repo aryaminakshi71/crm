@@ -98,7 +98,7 @@ function DealDetail() {
         body: JSON.stringify({ content }),
       });
       if (!res.ok) throw new Error("Failed to add note");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Note added");
@@ -117,7 +117,7 @@ function DealDetail() {
         },
       });
       if (!res.ok) throw new Error("Failed to delete note");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Note deleted");

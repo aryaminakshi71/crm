@@ -42,7 +42,7 @@ function StatusPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "catalog"] }),
   });

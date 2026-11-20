@@ -99,7 +99,7 @@ function handlePrintQuote(quote: any) {
 function QuotesPage() {
   const qc = useQueryClient();
   const { q = "", status, page = 1 } = useSearch({ from: "/app/invoicing/quotes/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/quotes/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/quotes" });
   const search = q;
   const statusFilter = status ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

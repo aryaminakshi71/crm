@@ -110,7 +110,7 @@ function Section({
 
 function BalanceSheetPage() {
   const { period, section } = useSearch({ from: "/app/invoicing/reports/balance/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/reports/balance/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/reports/balance" });
 
   const setPeriod = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, period: value as any }) });

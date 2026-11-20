@@ -33,7 +33,7 @@ export const integrationRouter = {
       }
 
       return {
-        data: items.map((item) => ({
+        data: items.map((item: any) => ({
           id: item.id,
           name: item.accountName ?? item.integrationType,
           type: item.integrationType,
@@ -89,7 +89,7 @@ export const integrationRouter = {
       z.object({
         name: z.string().min(1),
         type: z.string().min(1),
-        config: z.record(z.any()).optional(),
+        config: z.record(z.string(), z.any()).optional(),
         accessToken: z.string().optional(),
       }),
     )
@@ -139,7 +139,7 @@ export const integrationRouter = {
 
       if (executions.length > 0) {
         return {
-          data: executions.map((e) => ({
+          data: executions.map((e: any) => ({
             id: e.id,
             name: e.triggerEvent,
             source: "Integration",
@@ -164,7 +164,7 @@ export const integrationRouter = {
 
       if (connections.length > 0) {
         return {
-          data: connections.map((c, i) => ({
+          data: connections.map((c: any, i: number) => ({
             id: `trigger-${i}`,
             name: c.triggerEvent,
             source: c.sourceApp,
@@ -208,7 +208,7 @@ export const integrationRouter = {
       }
 
       return {
-        data: items.map((item) => ({
+        data: items.map((item: any) => ({
           id: item.id,
           event: item.triggerEvent,
           status: item.status,
@@ -241,7 +241,7 @@ export const integrationRouter = {
       }
 
       return {
-        data: items.map((item) => ({
+        data: items.map((item: any) => ({
           id: item.id,
           name: `${item.sourceApp} → ${item.targetApp}`,
           sourceApp: item.sourceApp,
@@ -322,7 +322,7 @@ export const integrationRouter = {
         targetApp: z.string().min(1),
         triggerEvent: z.string().min(1),
         actionType: z.string().min(1),
-        actionConfig: z.record(z.any()).optional(),
+        actionConfig: z.record(z.string(), z.any()).optional(),
         isActive: z.boolean().default(true),
       }),
     )

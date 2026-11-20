@@ -106,7 +106,7 @@ const PAGE_SIZE = 50;
 
 function FieldServiceJobsPage() {
   const { q = "", status = "", page = 1 } = useSearch({ from: "/app/field-service/jobs/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/jobs/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/jobs" });
   const search = q;
   const statusFilter = status as JobStatus;
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

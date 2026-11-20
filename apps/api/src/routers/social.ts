@@ -117,7 +117,7 @@ export const socialRouter = {
         followersCount: z.number().int().min(0).default(0),
         engagementRate: z.number().min(0).max(100).optional(),
         status: z.enum(["prospect", "active", "inactive"]).default("prospect"),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.any())
@@ -252,7 +252,7 @@ export const socialRouter = {
         followersCount: z.number().int().min(0).default(0),
         engagementRate: z.number().min(0).max(100).optional(),
         notes: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .output(z.any())

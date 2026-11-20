@@ -62,7 +62,7 @@ function fmtDate(d?: string | null) {
 
 function PaymentsPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/invoicing/payments/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/payments/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/payments" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
 

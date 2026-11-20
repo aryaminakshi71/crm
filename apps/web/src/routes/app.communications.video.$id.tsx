@@ -21,6 +21,12 @@ import {
 import { useState } from "react";
 import { communicationsApi } from "@/lib/api";
 
+const CHAT_MESSAGES = [
+  { id: "1", sender: "Priya", timestamp: "10:02", content: "Can everyone see the shared screen?" },
+  { id: "2", sender: "Rahul", timestamp: "10:03", content: "Yes, looks good." },
+  { id: "3", sender: "You", timestamp: "10:04", content: "Let's start with the roadmap." },
+];
+
 export const Route = createFileRoute("/app/communications/video/$id")({
   component: VideoRoomPage,
 });

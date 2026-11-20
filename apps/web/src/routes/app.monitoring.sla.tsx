@@ -93,7 +93,7 @@ function SLAPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to create SLA policy");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "sla"] });
@@ -113,7 +113,7 @@ function SLAPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to update SLA policy");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "sla"] });

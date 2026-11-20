@@ -110,7 +110,7 @@ function StatusBadge({ status }: { status: string }) {
 function ReviewsIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", rating: filterRating = "all", status: filterStatus = "all", page = 1 } = useSearch({ from: "/app/ecommerce/reviews/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/reviews/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/reviews" });
 
   const searchQuery = q;
   const setSearchQuery = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val }) });

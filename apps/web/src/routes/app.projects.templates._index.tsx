@@ -97,7 +97,7 @@ const FALLBACK_TEMPLATES = [
 
 function TemplatesIndexPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/projects/templates/_index" });
-  const navigate = useNavigate({ from: "/app/projects/templates/_index" });
+  const navigate = useNavigate({ from: "/app/projects/templates" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
@@ -112,7 +112,7 @@ function TemplatesIndexPage() {
         },
       });
       if (!res.ok) throw new Error("Failed to fetch templates");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     retry: false,
   });
@@ -128,7 +128,7 @@ function TemplatesIndexPage() {
         body: JSON.stringify({ templateId }),
       });
       if (!res.ok) throw new Error("Failed to use template");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Project created from template");

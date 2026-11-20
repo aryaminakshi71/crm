@@ -126,7 +126,7 @@ function InviteModal({
         body: JSON.stringify({ email, role }),
       });
       if (!res.ok) throw new Error("Invite failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success(`Invite sent to ${email}`);
@@ -223,7 +223,7 @@ function TeamSettingsPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const queryClient = useQueryClient();
   const { q = "", role: roleFilter } = useSearch({ from: "/app/settings/team/_index" });
-  const navigate = useNavigate({ from: "/app/settings/team/_index" });
+  const navigate = useNavigate({ from: "/app/settings/team" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["team-members"],
@@ -250,7 +250,7 @@ function TeamSettingsPage() {
         headers: getOrgHeader(),
       });
       if (!res.ok) throw new Error("Remove failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Member removed");

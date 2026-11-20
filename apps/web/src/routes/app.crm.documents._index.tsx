@@ -51,7 +51,7 @@ function formatBytes(bytes: number) {
 
 function DocumentsPage() {
   const { q: search = "", category: categoryFilter = "all" } = useSearch({ from: "/app/crm/documents/_index" });
-  const navigate = useNavigate({ from: "/app/crm/documents/_index" });
+  const navigate = useNavigate({ from: "/app/crm/documents" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setCategoryFilter = (v: string) => navigate({ search: (p) => ({ ...p, category: v }) });
 
@@ -70,7 +70,7 @@ function DocumentsPage() {
 
   const createDocumentMutation = useMutation({
     mutationFn: (docData: { name: string; category?: string; type?: string }) =>
-      nucleoApi.documents.create(docData),
+      nucleoApi.documents.create({ title: docData.name, content: docData.category }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-documents"] });
       toast.success("Document created successfully");

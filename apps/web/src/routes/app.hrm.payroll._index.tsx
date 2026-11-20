@@ -79,7 +79,7 @@ function fmt(val: number | undefined | null): string {
 function PayrollIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/hrm/payroll/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/payroll/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/payroll" });
   const search = q;
   const setSearch = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });
   const setPage = (val: number) => navigate({ search: (prev) => ({ ...prev, page: val }) });

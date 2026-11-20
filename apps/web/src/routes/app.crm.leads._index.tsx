@@ -235,7 +235,7 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
 
 function LeadsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { q: search, status: statusFilter, page } = useSearch({ from: Route.fullPath });
+  const { q: search, status: statusFilter, page } = useSearch({ from: Route.id });
   const setSearch = (q: string) => navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
   const setStatusFilter = (status: string) => navigate({ search: (prev) => ({ ...prev, status, page: 1 }) });
   const setPage = (page: number) => navigate({ search: (prev) => ({ ...prev, page }) });

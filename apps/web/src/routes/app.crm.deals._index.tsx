@@ -68,7 +68,7 @@ const PAGE_SIZE = 50;
 
 function DealsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { stage: stageFilter, page } = useSearch({ from: Route.fullPath });
+  const { stage: stageFilter, page } = useSearch({ from: Route.id });
   const setStageFilter = (stage: string) => navigate({ search: (prev) => ({ ...prev, stage, page: 1 }) });
   const setPage = (page: number) => navigate({ search: (prev) => ({ ...prev, page }) });
   const [search, setSearch] = useState("");

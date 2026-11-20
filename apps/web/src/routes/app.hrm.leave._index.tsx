@@ -371,7 +371,7 @@ function LeaveRow({
 function LeaveIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", status, page = 1 } = useSearch({ from: "/app/hrm/leave/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/leave/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/leave" });
   const search = q;
   const statusFilter = status ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

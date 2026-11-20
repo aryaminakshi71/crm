@@ -79,7 +79,7 @@ function StatusBadge({ status }: { status: string }) {
 function ShippingIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", carrier: carrierFilter = "all", status: statusFilter = "all" } = useSearch({ from: "/app/ecommerce/shipping/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/shipping/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/shipping" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setCarrierFilter = (v: string) => navigate({ search: (p) => ({ ...p, carrier: v }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });

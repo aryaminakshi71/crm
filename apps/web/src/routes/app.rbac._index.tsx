@@ -58,7 +58,7 @@ function groupPermsByModule(permissions: any[]): Record<string, any[]> {
 
 function RbacPage() {
   const { q = "", tab: tabParam } = useSearch({ from: "/app/rbac/_index" });
-  const navigate = useNavigate({ from: "/app/rbac/_index" });
+  const navigate = useNavigate({ from: "/app/rbac" });
   const activeTab: "roles" | "permissions" = tabParam ?? "roles";
   const [editRoleId, setEditRoleId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -71,7 +71,7 @@ function RbacPage() {
     queryFn: async () => {
       const res = await fetch("/api/v1/rbac/roles", { headers: ORG_HEADER });
       if (!res.ok) throw new Error("Failed to fetch roles");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -80,7 +80,7 @@ function RbacPage() {
     queryFn: async () => {
       const res = await fetch("/api/v1/rbac/permissions", { headers: ORG_HEADER });
       if (!res.ok) throw new Error("Failed to fetch permissions");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -92,7 +92,7 @@ function RbacPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to create role");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Role created");
@@ -111,7 +111,7 @@ function RbacPage() {
         body: JSON.stringify({ permissionIds: permIds }),
       });
       if (!res.ok) throw new Error("Failed to update permissions");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Permissions updated");

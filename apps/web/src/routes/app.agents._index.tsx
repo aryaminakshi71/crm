@@ -62,7 +62,7 @@ const AGENT_TYPES = [
 
 function AgentsIndexPage() {
   const { q = "", status = "", page = 1 } = useSearch({ from: "/app/agents/_index" });
-  const navigate = useNavigate({ from: "/app/agents/_index" });
+  const navigate = useNavigate({ from: "/app/agents" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
@@ -77,7 +77,7 @@ function AgentsIndexPage() {
     queryFn: async () => {
       const res = await fetch("/api/agents", { headers: { "Content-Type": "application/json" } });
       if (!res.ok) return { data: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -89,7 +89,7 @@ function AgentsIndexPage() {
         headers: { "Content-Type": "application/json" }
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -106,7 +106,7 @@ function AgentsIndexPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents", "list"] }),
   });
@@ -115,7 +115,7 @@ function AgentsIndexPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/agents/${id}`, { method: "DELETE" });
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents", "list"] }),
   });

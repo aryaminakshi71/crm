@@ -76,7 +76,7 @@ function getRiskRowClass(prob: number): string {
 
 function ChurnPage() {
   const { q = "", riskLevel = "all" } = useSearch({ from: "/app/intelligence/churn/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/churn/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/churn" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setRiskLevel = (v: string) => navigate({ search: (p) => ({ ...p, riskLevel: v === "all" ? undefined : v as any }) });
 

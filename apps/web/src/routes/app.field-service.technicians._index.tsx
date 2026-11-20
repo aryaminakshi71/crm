@@ -60,7 +60,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function TechniciansPage() {
   const { q = "", status = "all", page = 1 } = useSearch({ from: "/app/field-service/technicians/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/technicians/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/technicians" });
   const search = q;
   const statusFilter = status;
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

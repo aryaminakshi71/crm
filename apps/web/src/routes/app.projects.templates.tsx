@@ -94,7 +94,7 @@ function TemplatesPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch templates");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     retry: false,

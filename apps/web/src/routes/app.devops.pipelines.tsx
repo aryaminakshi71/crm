@@ -41,7 +41,7 @@ function Pipelines() {
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error("Failed to trigger run");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "pipelines"] });

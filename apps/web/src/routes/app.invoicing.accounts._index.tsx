@@ -53,7 +53,7 @@ function fmt(n: number) {
 
 function AccountsPage() {
   const { q: search, type: typeFilter } = useSearch({ from: "/app/invoicing/accounts/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/accounts/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/accounts" });
 
   const setSearch = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, q: value || undefined }) });

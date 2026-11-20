@@ -33,7 +33,7 @@ export const Route = createFileRoute("/app/hrm/org-chart/_index")({
 
 function OrgChartPage() {
   const { q: search = "" } = useSearch({ from: "/app/hrm/org-chart/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/org-chart/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/org-chart" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
 
   const { data, isLoading } = useQuery({

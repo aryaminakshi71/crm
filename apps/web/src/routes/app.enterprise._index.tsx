@@ -59,7 +59,7 @@ function EnterpriseSettingsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to save settings");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Enterprise settings saved");

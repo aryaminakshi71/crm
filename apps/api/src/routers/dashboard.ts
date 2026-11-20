@@ -77,12 +77,12 @@ export const dashboardRouter = {
       };
 
       return {
-        pipeline: pipelineData.map(p => ({
+        pipeline: pipelineData.map((p: any) => ({
           name: p.stage ?? "Unknown",
           value: Number(p.count),
           color: STAGE_COLORS[p.stage ?? ""] ?? "#818cf8",
         })),
-        revenue: revenueData.map(r => ({
+        revenue: revenueData.map((r: any) => ({
           month: r.month,
           revenue: Number(r.revenue),
           target: 0,

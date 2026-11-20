@@ -74,3 +74,29 @@ export const agentWorkflows = pgTable(
     statusIdx: index("idx_agent_workflows_status").on(table.status),
   }),
 );
+
+// Organization-scoped API keys (used by the api-keys router)
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    permissions: jsonb("permissions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("idx_api_keys_org").on(table.organizationId),
+  }),
+);

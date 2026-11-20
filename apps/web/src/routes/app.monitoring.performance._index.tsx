@@ -70,7 +70,7 @@ function getApdex(p50: number): number {
 
 function PerformancePage() {
   const { q = "", service = "" } = useSearch({ from: "/app/monitoring/performance/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/performance/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/performance" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setService = (v: string) => navigate({ search: (p) => ({ ...p, service: v || undefined }) });
 

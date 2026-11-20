@@ -118,7 +118,7 @@ function AdminAnalyticsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/analytics");
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });

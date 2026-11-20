@@ -102,7 +102,7 @@ const tooltipStyle = {
 
 function MarketingAnalyticsPage() {
   const { q = "", period = "month", channel = "" } = useSearch({ from: "/app/marketing/analytics/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/analytics/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/analytics" });
   const setPeriod = (v: Period) => navigate({ search: (p) => ({ ...p, period: v }) });
   const setChannel = (v: string) => navigate({ search: (p) => ({ ...p, channel: v || undefined }) });
 

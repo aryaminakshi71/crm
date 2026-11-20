@@ -131,7 +131,7 @@ function handlePrintInvoice(invoice: any) {
 function InvoicesPage() {
   const qc = useQueryClient();
   const { q: search = "", status: statusFilter = "all", page = 1 } = useSearch({ from: "/app/invoicing/invoices/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/invoices/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/invoices" });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 

@@ -59,7 +59,7 @@ function SettingsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -83,7 +83,7 @@ function SettingsPage() {
         }),
       });
       if (!res.ok) throw new Error(`Failed to save: ${res.status}`);
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("DevOps settings saved");

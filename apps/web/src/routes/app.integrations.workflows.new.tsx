@@ -76,7 +76,7 @@ function NewWorkflowPage() {
       if (!res.ok) {
         return { id: `wf-${Date.now()}`, ...data, createdAt: new Date().toISOString(), runCount: 0 };
       }
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (workflow) => {
       queryClient.invalidateQueries({ queryKey: ["integration", "workflows"] });

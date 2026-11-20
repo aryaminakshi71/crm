@@ -83,7 +83,7 @@ function NewTranscriptionPage() {
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to start transcription");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["speech", "transcriptions"] });

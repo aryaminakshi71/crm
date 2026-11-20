@@ -61,7 +61,7 @@ function statusBadgeClass(status: string): string {
 function IncidentsPage() {
   const queryClient = useQueryClient();
   const { q = "", status, page = 1 } = useSearch({ from: "/app/monitoring/incidents/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/incidents/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/incidents" });
   const search = q;
   const statusFilter = status ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
@@ -74,7 +74,6 @@ function IncidentsPage() {
     queryKey: ["monitoring", "incidents", page],
     queryFn: () => monitoringApi.getIncidents({ page, limit: PAGE_SIZE }),
     refetchInterval: 20000,
-    onSuccess: () => setLastUpdated(new Date()),
   });
 
   const resolveMutation = useMutation({
@@ -84,7 +83,7 @@ function IncidentsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to resolve incident");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents"] }),
   });

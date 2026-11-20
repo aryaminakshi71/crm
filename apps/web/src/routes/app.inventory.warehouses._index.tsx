@@ -92,7 +92,7 @@ function UtilizationBar({ value }: { value: number }) {
 
 function WarehousesPage() {
   const { q = "", status: statusFilter = "" } = useSearch({ from: "/app/inventory/warehouses/_index" });
-  const navigate = useNavigate({ from: "/app/inventory/warehouses/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/warehouses" });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newWarehouse, setNewWarehouse] = useState({
     name: "",
@@ -236,7 +236,7 @@ function WarehousesPage() {
             <button
               key={t.value}
               onClick={() =>
-                navigate({ search: (prev) => ({ ...prev, status: t.value || undefined }) })
+                navigate({ search: (prev) => ({ ...prev, status: (t.value || undefined) as any }) })
               }
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                 statusFilter === t.value

@@ -72,7 +72,7 @@ function buildLatencyDistribution(metrics: any) {
 
 function AnalyticsPage() {
   const { q = "", service = "" } = useSearch({ from: "/app/monitoring/analytics/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/analytics/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/analytics" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setService = (v: string) => navigate({ search: (p) => ({ ...p, service: v || undefined }) });
 

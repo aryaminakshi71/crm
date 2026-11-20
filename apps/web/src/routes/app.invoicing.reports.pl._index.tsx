@@ -70,7 +70,7 @@ function exportToCsv(filename: string, headers: string[], rows: string[][]) {
 
 function ProfitLossPage() {
   const { period = "ytd" } = useSearch({ from: "/app/invoicing/reports/pl/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/reports/pl/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/reports/pl" });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["invoicing/reports/pl", period],

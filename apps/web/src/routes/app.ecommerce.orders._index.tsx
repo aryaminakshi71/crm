@@ -125,7 +125,7 @@ function StatusIcon({ status }: { status: string }) {
 const PAGE_SIZE = 50;
 
 function OrdersIndexPage() {
-  const { q: searchQuery, status: filterStatus, page } = useSearch({ from: Route.fullPath });
+  const { q: searchQuery, status: filterStatus, page } = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.fullPath });
   const setSearchQuery = (v: string) => navigate({ search: (prev: any) => ({ ...prev, q: v, page: 1 }) });
   const setFilterStatus = (v: string) => navigate({ search: (prev: any) => ({ ...prev, status: v, page: 1 }) });

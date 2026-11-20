@@ -81,14 +81,14 @@ const MOCK_EVENTS = [
 
 function IntegrationsOverview() {
   const { q = "", status: statusFilter } = useSearch({ from: "/app/integrations/_index" });
-  const navigate = useNavigate({ from: "/app/integrations/_index" });
+  const navigate = useNavigate({ from: "/app/integrations" });
 
   const { data: connectorsData, isLoading: connectorsLoading, isError: connectorsError, refetch: connectorsRefetch } = useQuery({
     queryKey: ["integration-connectors"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/integration/connectors`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch connectors");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });
@@ -98,7 +98,7 @@ function IntegrationsOverview() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/integration/workflows`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch workflows");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });

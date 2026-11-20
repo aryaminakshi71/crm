@@ -114,7 +114,7 @@ function AgentTemplatesPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any).message ?? "Failed to create agent");
       }
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (agent) => {
       toast.success("Agent created from template");

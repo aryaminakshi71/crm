@@ -51,7 +51,7 @@ function Parts() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch parts");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     retry: false,
     placeholderData: (prev) => prev,

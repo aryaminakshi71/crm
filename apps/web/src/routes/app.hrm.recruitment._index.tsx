@@ -53,7 +53,7 @@ const STATUS_BADGE: Record<string, "primary" | "success" | "warning" | "danger" 
 function RecruitmentIndexPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all", page = 1 } = useSearch({ from: "/app/hrm/recruitment/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/recruitment/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/recruitment" });
   const search = q;
   const statusFilter = status;
   const setSearch = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });

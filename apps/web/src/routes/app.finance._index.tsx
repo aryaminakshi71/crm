@@ -26,6 +26,7 @@ import {
   Globe,
   Receipt,
   RefreshCcw,
+  Search,
   TrendingDown,
   TrendingUp,
   Users,
@@ -146,7 +147,7 @@ const NAV_LINKS = [
 
 function FinanceDashboard() {
   const { q = "", status: statusFilter = "" } = useSearch({ from: "/app/finance/_index" });
-  const navigate = useNavigate({ from: "/app/finance/_index" });
+  const navigate = useNavigate({ from: "/app/finance" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v || undefined }) });
 

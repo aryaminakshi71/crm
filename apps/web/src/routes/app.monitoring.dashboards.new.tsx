@@ -80,7 +80,7 @@ function NewDashboard() {
         }),
       });
       if (!res.ok) throw new Error("Failed to save dashboard");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring-dashboards"] });

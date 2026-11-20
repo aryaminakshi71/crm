@@ -60,7 +60,7 @@ function isEnabled(c: Command) { return c.enabled ?? c.isEnabled ?? c.isActive ?
 function CommandsIndexPage() {
   const queryClient = useQueryClient();
   const { q: searchQuery = "", category: filterCategory = "all" } = useSearch({ from: "/app/speech/commands/_index" });
-  const navigate = useNavigate({ from: "/app/speech/commands/_index" });
+  const navigate = useNavigate({ from: "/app/speech/commands" });
   const setSearchQuery = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setFilterCategory = (v: string) => navigate({ search: (p) => ({ ...p, category: v }) });
   const [showCreate, setShowCreate] = useState(false);

@@ -91,7 +91,7 @@ function TranscriptionBadge({ status }: { status: string }) {
 function MeetingsIndexPage() {
   const queryClient = useQueryClient();
   const { q: searchQuery = "", status: statusFilter = "all" } = useSearch({ from: "/app/speech/meetings/_index" });
-  const navigate = useNavigate({ from: "/app/speech/meetings/_index" });
+  const navigate = useNavigate({ from: "/app/speech/meetings" });
   const setSearchQuery = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });
   const [showCreate, setShowCreate] = useState(false);

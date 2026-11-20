@@ -189,10 +189,10 @@ function Secrets() {
           method: "DELETE",
           headers: (() => {
             const orgId = localStorage.getItem("activeOrganizationId");
-            return orgId ? { "x-organization-id": orgId } : {};
+            return (orgId ? { "x-organization-id": orgId } : {}) as Record<string, string>;
           })(),
         }
-      ).then((r) => r.json()),
+      ).then((r) => r.json() as Promise<any>),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "secrets"] });
       toast.success("Secret deleted");
@@ -208,12 +208,12 @@ function Secrets() {
           method: "POST",
           headers: (() => {
             const orgId = localStorage.getItem("activeOrganizationId");
-            return orgId
+            return (orgId
               ? { "x-organization-id": orgId, "Content-Type": "application/json" }
-              : { "Content-Type": "application/json" };
+              : { "Content-Type": "application/json" }) as Record<string, string>;
           })(),
         }
-      ).then((r) => r.json()),
+      ).then((r) => r.json() as Promise<any>),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devops", "secrets"] });
       toast.success("Rotation initiated");

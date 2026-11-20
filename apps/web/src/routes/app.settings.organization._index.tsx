@@ -169,7 +169,7 @@ function OrganizationSettingsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Save failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Organization updated");
@@ -185,7 +185,7 @@ function OrganizationSettingsPage() {
         headers: getOrgHeader(),
       });
       if (!res.ok) throw new Error("Delete failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Organization deleted");

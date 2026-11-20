@@ -59,7 +59,7 @@ function fmt(n: number) {
 
 function PipelinePage() {
   const { q = "", stage: stageFilter = "all" } = useSearch({ from: "/app/crm/pipeline/_index" });
-  const navigate = useNavigate({ from: "/app/crm/pipeline/_index" });
+  const navigate = useNavigate({ from: "/app/crm/pipeline" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStageFilter = (v: string) => navigate({ search: (p) => ({ ...p, stage: v }) });
 

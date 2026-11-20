@@ -4,6 +4,16 @@ const rpc = rpcClient as any;
 
 const API_BASE = "/api/v1";
 
+function qs(params?: Record<string, unknown>): string {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
+  }
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
 function getOrgHeader(): Record<string, string> {
   const isDemo =
     typeof window !== "undefined" &&
@@ -529,7 +539,10 @@ export const activitiesApi = {
 interface DashboardStats {
   totalContacts: number;
   contactsChange: number;
+  newLeadsThisWeek?: number;
   activeDeals: number;
+  dealsValue?: number;
+  wonDealsThisMonth?: number;
   dealsChange: number;
   conversionRate: number;
   conversionChange: number;
@@ -961,9 +974,9 @@ export const monitoringApi = {
     }
   },
 
-  getErrors: async (): Promise<{ errorCount: number; uniqueErrors: number; resolvedErrors: number; criticalErrors: number; recentErrors?: Array<{ id: string; message: string; count: number; lastSeen: string }> }> => {
+  getErrors: async (params?: { page?: number; limit?: number }): Promise<{ errorCount: number; uniqueErrors: number; resolvedErrors: number; criticalErrors: number; recentErrors?: Array<{ id: string; message: string; count: number; lastSeen: string }> }> => {
     try {
-      const res = await fetch(`${API_BASE}/monitoring/errors`, {
+      const res = await fetch(`${API_BASE}/monitoring/errors${qs(params)}`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch errors");
@@ -1009,7 +1022,7 @@ export const monitoringApi = {
     }
   },
 
-  getIncidents: async (): Promise<Incident[]> => {
+  getIncidents: async (_params?: { page?: number; limit?: number }): Promise<Incident[]> => {
     try {
       const res = await fetch(`${API_BASE}/monitoring/incidents`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
@@ -1067,7 +1080,7 @@ export const monitoringApi = {
     }
   },
 
-  getLogs: async (): Promise<LogEntry[]> => {
+  getLogs: async (_params?: { page?: number; limit?: number }): Promise<LogEntry[]> => {
     try {
       const res = await fetch(`${API_BASE}/monitoring/logs`, {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
@@ -3970,117 +3983,6 @@ export const hrmApi = {
   },
 };
 
-// ============ ADVERTISING ============
-export const advertisingApi = {
-  // Connection management
-  connect: async (data: {
-    adNetwork: "google_ads" | "microsoft_ads" | "facebook_ads";
-    accessToken?: string;
-    refreshToken?: string;
-    customerId?: string;
-    accountName?: string;
-  }) => rpc.advertising?.connect?.(data),
-
-  disconnect: async (adNetwork: "google_ads" | "microsoft_ads" | "facebook_ads") =>
-    rpc.advertising?.disconnect?.({ adNetwork }),
-
-  getStatus: async () => {
-    try {
-      return await withRpcTimeout(rpc.advertising?.status?.({}), "advertising.status");
-    } catch (error) {
-      console.error("advertisingApi.getStatus error:", error);
-      return [];
-    }
-  },
-
-  // Conversion tracking
-  trackConversion: async (data: {
-    leadId?: string;
-    contactId?: string;
-    adNetwork?: "google_ads" | "microsoft_ads" | "facebook_ads";
-    campaignId?: string;
-    conversionType?: "form_submission" | "page_view" | "purchase" | "signup";
-    conversionValue?: number;
-    formId?: string;
-    formName?: string;
-    pageUrl?: string;
-    pagePath?: string;
-    utmSource?: string;
-    utmMedium?: string;
-    utmCampaign?: string;
-    utmTerm?: string;
-    utmContent?: string;
-    gclid?: string;
-    msclkid?: string;
-    fbclid?: string;
-  }) => rpc.advertising?.trackConversion?.(data),
-
-  listConversions: async (params?: {
-    page?: number;
-    limit?: number;
-    adNetwork?: "google_ads" | "microsoft_ads" | "facebook_ads";
-    campaignId?: string;
-    conversionType?: "form_submission" | "page_view" | "purchase" | "signup";
-    startDate?: string;
-    endDate?: string;
-  }) => {
-    const page = params?.page ?? 1;
-    const limit = params?.limit ?? 50;
-    try {
-      return await withRpcTimeout(
-        rpc.advertising?.listConversions?.({
-          page,
-          limit,
-          adNetwork: params?.adNetwork,
-          campaignId: params?.campaignId,
-          conversionType: params?.conversionType,
-          startDate: params?.startDate,
-          endDate: params?.endDate,
-        }),
-        "advertising.listConversions",
-      );
-    } catch (error) {
-      console.error("advertisingApi.listConversions error:", error);
-      return { data: [], total: 0, page, limit, totalPages: 0 };
-    }
-  },
-
-  // Dashboard
-  overview: async (params?: { startDate?: string; endDate?: string }) => {
-    try {
-      return await withRpcTimeout(
-        rpc.advertising?.overview?.({
-          startDate: params?.startDate,
-          endDate: params?.endDate,
-        }),
-        "advertising.overview",
-      );
-    } catch (error) {
-      console.error("advertisingApi.overview error:", error);
-      return {
-        totalConversions: 0,
-        totalValue: 0,
-        byNetwork: [],
-        byCampaign: [],
-        byType: [],
-        recentConversions: [],
-      };
-    }
-  },
-
-  campaigns: async () => {
-    try {
-      return await withRpcTimeout(rpc.advertising?.campaigns?.({}), "advertising.campaigns");
-    } catch (error) {
-      console.error("advertisingApi.campaigns error:", error);
-      return [];
-    }
-  },
-
-  syncConversion: async (id: string) =>
-    rpc.advertising?.syncConversion?.({ id }),
-};
-
 // ============ MARKETING API ============
 export const marketingApi = {
   campaigns: {
@@ -5164,7 +5066,7 @@ export const ecommerceApi = {
   },
 
   discounts: {
-    list: () => ecFetch("/ecommerce/discounts"),
+    list: (params?: { page?: number; limit?: number }) => ecFetch(`/ecommerce/discounts${qs(params)}`),
     create: (data: any) => ecFetch("/ecommerce/discounts", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) => ecFetch(`/ecommerce/discounts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: string) => ecFetch(`/ecommerce/discounts/${id}`, { method: "DELETE" }),
@@ -5185,6 +5087,14 @@ export const ecommerceApi = {
   abandoned: { list: () => ecFetch("/ecommerce/abandoned") },
   wishlists: { list: () => ecFetch("/ecommerce/wishlists") },
   upsell: { list: () => ecFetch("/ecommerce/upsell") },
+  dropship: {
+    list: () => ecFetch("/ecommerce/dropship"),
+    create: (data: any) => ecFetch("/ecommerce/dropship", { method: "POST", body: JSON.stringify(data) }),
+  },
+  store: {
+    get: () => ecFetch("/ecommerce/store"),
+    update: (data: any) => ecFetch("/ecommerce/store", { method: "PUT", body: JSON.stringify(data) }),
+  },
 };
 
 // ── Invoicing API ─────────────────────────────────────────────────────────────
@@ -5303,118 +5213,118 @@ export const invoicingApi = {
 
 export const fieldServiceApi = {
   jobs: {
-    list: () => fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/field-service/jobs/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/jobs`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/jobs/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/field-service/jobs/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: (params?: { page?: number; limit?: number; status?: string; priority?: string }) => fetch(`${API_BASE}/field-service/jobs${qs(params)}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/field-service/jobs/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/jobs`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/jobs/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/field-service/jobs/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   technicians: {
-    list: () => fetch(`${API_BASE}/field-service/technicians`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/technicians`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: (params?: { page?: number; limit?: number }) => fetch(`${API_BASE}/field-service/technicians${qs(params)}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/technicians`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   equipment: {
-    list: () => fetch(`${API_BASE}/field-service/equipment`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/equipment`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/field-service/equipment`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/equipment`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   parts: {
-    list: () => fetch(`${API_BASE}/field-service/parts`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/parts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/field-service/parts`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/field-service/parts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   schedule: {
-    list: () => fetch(`${API_BASE}/field-service/schedule`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: (params?: { page?: number; limit?: number }) => fetch(`${API_BASE}/field-service/schedule${qs(params)}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   routes: {
-    list: () => fetch(`${API_BASE}/field-service/routes`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/field-service/routes`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
-  dispatch: (jobId: string) => fetch(`${API_BASE}/field-service/dispatch`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify({ jobId }) }).then(r => r.json()),
+  dispatch: (jobId: string) => fetch(`${API_BASE}/field-service/dispatch`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify({ jobId }) }).then(r => r.json() as Promise<any>),
 };
 
 export const socialApi = {
   posts: {
-    list: () => fetch(`${API_BASE}/social/posts`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/social/posts/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/posts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/social/posts/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/social/posts/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
-    publish: (id: string) => fetch(`${API_BASE}/social/posts/${id}/publish`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() } }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/posts`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/social/posts/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/posts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/social/posts/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/social/posts/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    publish: (id: string) => fetch(`${API_BASE}/social/posts/${id}/publish`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() } }).then(r => r.json() as Promise<any>),
   },
   accounts: {
-    list: () => fetch(`${API_BASE}/social/accounts`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/accounts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/accounts`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/accounts`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/social/accounts/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   campaigns: {
-    list: () => fetch(`${API_BASE}/social/campaigns`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/campaigns`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/social/campaigns/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/campaigns`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/campaigns`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/social/campaigns/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   analytics: {
-    get: (accountId: string) => fetch(`${API_BASE}/social/analytics/${accountId}`, { headers: getOrgHeader() }).then(r => r.json()),
+    get: (accountId: string) => fetch(`${API_BASE}/social/analytics/${accountId}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   inbox: {
-    list: () => fetch(`${API_BASE}/social/inbox`, { headers: getOrgHeader() }).then(r => r.json()),
-    reply: (id: string, content: string) => fetch(`${API_BASE}/social/inbox/${id}/reply`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify({ content }) }).then(r => r.json()),
+    list: (params?: { page?: number; limit?: number }) => fetch(`${API_BASE}/social/inbox${qs(params)}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    reply: (id: string, content: string) => fetch(`${API_BASE}/social/inbox/${id}/reply`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify({ content }) }).then(r => r.json() as Promise<any>),
   },
   competitors: {
-    list: () => fetch(`${API_BASE}/social/competitors`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/competitors`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/competitors`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/competitors`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   hashtags: {
-    list: () => fetch(`${API_BASE}/social/hashtags`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/hashtags`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   influencers: {
-    list: () => fetch(`${API_BASE}/social/influencers`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/influencers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/influencers`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/social/influencers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   listening: {
-    list: () => fetch(`${API_BASE}/social/listening`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/social/listening`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
 };
 
 export const speechApi = {
   transcriptions: {
-    list: () => fetch(`${API_BASE}/speech/transcriptions`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/speech/transcriptions/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/transcriptions`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/speech/transcriptions/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/transcriptions`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/speech/transcriptions/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/transcriptions`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/speech/transcriptions/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   meetings: {
-    list: () => fetch(`${API_BASE}/speech/meetings`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/speech/meetings/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/meetings`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/meetings`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/speech/meetings/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/meetings`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   commands: {
-    list: () => fetch(`${API_BASE}/speech/commands`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/commands`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/speech/commands/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/commands`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/commands`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/speech/commands/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   vocabulary: {
-    list: () => fetch(`${API_BASE}/speech/vocabulary`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/vocabulary`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/speech/vocabulary/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/vocabulary`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/vocabulary`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/speech/vocabulary/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   models: {
-    list: () => fetch(`${API_BASE}/speech/models`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/models`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
-  stats: () => fetch(`${API_BASE}/speech/stats`, { headers: getOrgHeader() }).then(r => r.json()),
+  stats: () => fetch(`${API_BASE}/speech/stats`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   settings: {
-    get: () => fetch(`${API_BASE}/speech/settings`, { headers: getOrgHeader() }).then(r => r.json()),
-    update: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/settings`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    get: () => fetch(`${API_BASE}/speech/settings`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    update: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/settings`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   speakers: {
-    list: () => fetch(`${API_BASE}/speech/speakers`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/speech/speakers`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/speech/speakers/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   sentiment: {
     list: (params?: { limit?: number }) => {
       const qs = new URLSearchParams();
       if (params?.limit) qs.set("limit", String(params.limit));
-      return fetch(`${API_BASE}/speech/sentiment?${qs}`, { headers: getOrgHeader() }).then(r => r.json());
+      return fetch(`${API_BASE}/speech/sentiment?${qs}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>);
     },
   },
 };
@@ -5424,14 +5334,14 @@ export const notificationsApi = {
     const qs = new URLSearchParams();
     if (params?.unreadOnly) qs.set("unreadOnly", "true");
     if (params?.limit) qs.set("limit", String(params.limit));
-    return fetch(`${API_BASE}/notifications?${qs}`, { headers: getOrgHeader() }).then(r => r.json());
+    return fetch(`${API_BASE}/notifications?${qs}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>);
   },
   markRead: (id: string) =>
-    fetch(`${API_BASE}/notifications/${id}/read`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json()),
+    fetch(`${API_BASE}/notifications/${id}/read`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   markAllRead: () =>
-    fetch(`${API_BASE}/notifications/read-all`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json()),
+    fetch(`${API_BASE}/notifications/read-all`, { method: "PATCH", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   unreadCount: () =>
-    fetch(`${API_BASE}/notifications/unread-count`, { headers: getOrgHeader() }).then(r => r.json()),
+    fetch(`${API_BASE}/notifications/unread-count`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
 };
 
 // ── Intelligence API ────────────────────────────────────────────────────────────
@@ -5549,38 +5459,38 @@ export const intelligenceApi = {
 
 export const devopsApi = {
   pipelines: {
-    list: () => fetch(`${API_BASE}/devops/pipelines`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/pipelines`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/devops/pipelines/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
-    delete: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json()),
-    trigger: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}/trigger`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() } }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/pipelines`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/pipelines`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    update: (id: string, data: Record<string, unknown>) => fetch(`${API_BASE}/devops/pipelines/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
+    delete: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}`, { method: "DELETE", headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    trigger: (id: string) => fetch(`${API_BASE}/devops/pipelines/${id}/trigger`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() } }).then(r => r.json() as Promise<any>),
   },
   runs: {
-    list: () => fetch(`${API_BASE}/devops/runs`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/devops/runs/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/runs`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/devops/runs/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   deployments: {
-    list: () => fetch(`${API_BASE}/devops/deployments`, { headers: getOrgHeader() }).then(r => r.json()),
-    get: (id: string) => fetch(`${API_BASE}/devops/deployments/${id}`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/deployments`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/deployments`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    get: (id: string) => fetch(`${API_BASE}/devops/deployments/${id}`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/deployments`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   environments: {
-    list: () => fetch(`${API_BASE}/devops/environments`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/environments`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/environments`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/environments`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   infrastructure: {
-    list: () => fetch(`${API_BASE}/devops/infrastructure`, { headers: getOrgHeader() }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/infrastructure`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
   },
   secrets: {
-    list: () => fetch(`${API_BASE}/devops/secrets`, { headers: getOrgHeader() }).then(r => r.json()),
-    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/secrets`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    list: () => fetch(`${API_BASE}/devops/secrets`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    create: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/secrets`, { method: "POST", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
   settings: {
-    get: () => fetch(`${API_BASE}/devops/settings`, { headers: getOrgHeader() }).then(r => r.json()),
-    update: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/settings`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json()),
+    get: () => fetch(`${API_BASE}/devops/settings`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
+    update: (data: Record<string, unknown>) => fetch(`${API_BASE}/devops/settings`, { method: "PUT", headers: { "Content-Type": "application/json", ...getOrgHeader() }, body: JSON.stringify(data) }).then(r => r.json() as Promise<any>),
   },
-  stats: () => fetch(`${API_BASE}/devops/stats`, { headers: getOrgHeader() }).then(r => r.json()),
+  stats: () => fetch(`${API_BASE}/devops/stats`, { headers: getOrgHeader() }).then(r => r.json() as Promise<any>),
 };
 
 // ============ ADVERTISING ============

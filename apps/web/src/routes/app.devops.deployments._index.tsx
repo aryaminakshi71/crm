@@ -64,7 +64,7 @@ const PAGE_SIZE = 25;
 function DeploymentsPage() {
   const queryClient = useQueryClient();
   const { q: search = "", status: envFilter = "all", page = 1 } = useSearch({ from: "/app/devops/deployments/_index" });
-  const navigate = useNavigate({ from: "/app/devops/deployments/_index" });
+  const navigate = useNavigate({ from: "/app/devops/deployments" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setEnvFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
@@ -82,7 +82,7 @@ function DeploymentsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to rollback deployment");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Rollback initiated");

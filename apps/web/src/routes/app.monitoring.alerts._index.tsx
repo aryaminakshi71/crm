@@ -71,7 +71,7 @@ function AlertsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const { severity: severityFilter, page } = useSearch({ from: Route.fullPath });
+  const { severity: severityFilter, page } = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.fullPath });
   const setSeverityFilter = (v: string) => navigate({ search: (prev: any) => ({ ...prev, severity: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (prev: any) => ({ ...prev, page: v }) });
@@ -80,7 +80,6 @@ function AlertsPage() {
     queryKey: ["monitoring", "alerts", page],
     queryFn: () => monitoringApi.getAlerts(),
     refetchInterval: 15000,
-    onSuccess: () => setLastUpdated(new Date()),
   });
 
   const acknowledgeMutation = useMutation({
@@ -90,7 +89,7 @@ function AlertsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to acknowledge alert");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
   });
@@ -102,7 +101,7 @@ function AlertsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to resolve alert");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
   });

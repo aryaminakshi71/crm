@@ -293,7 +293,7 @@ function AdminUsersPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/users");
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });

@@ -46,7 +46,7 @@ const STATUS_BADGE: Record<string, "primary" | "success" | "warning" | "default"
 function TrainingIndexPage() {
   const queryClient = useQueryClient();
   const { q: search = "", status: statusFilter = "all" } = useSearch({ from: "/app/hrm/training/_index" });
-  const navigate = useNavigate({ from: "/app/hrm/training/_index" });
+  const navigate = useNavigate({ from: "/app/hrm/training" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });
 

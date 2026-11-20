@@ -60,7 +60,7 @@ const PAGE_SIZE = 25;
 function PipelinesPage() {
   const queryClient = useQueryClient();
   const { q: search = "", status: statusFilter = "all", page = 1 } = useSearch({ from: "/app/devops/pipelines/_index" });
-  const navigate = useNavigate({ from: "/app/devops/pipelines/_index" });
+  const navigate = useNavigate({ from: "/app/devops/pipelines" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setStatusFilter = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

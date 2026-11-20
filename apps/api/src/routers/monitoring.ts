@@ -415,7 +415,7 @@ export const monitoringRouter = {
 
       if (alertSnapshots.length > 0) {
         // Each snapshot represents one alert rule stored in its metrics field
-        return alertSnapshots.map((s) => ({
+        return alertSnapshots.map((s: any) => ({
           id: s.id,
           ...(s.metrics as object),
           createdAt: s.createdAt,

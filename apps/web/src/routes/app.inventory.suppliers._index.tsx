@@ -95,7 +95,7 @@ function ReliabilityDots({ value }: { value: number }) {
 
 function SuppliersPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/inventory/suppliers/_index" });
-  const navigate = useNavigate({ from: "/app/inventory/suppliers/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/suppliers" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

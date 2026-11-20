@@ -33,7 +33,7 @@ function CheckoutSettingsPage() {
         body: JSON.stringify(orderPayload),
       });
       if (!res.ok) throw new Error("Failed to create order");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 

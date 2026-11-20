@@ -230,7 +230,7 @@ const PAGE_SIZE = 25;
 
 function CampaignsPage() {
   const qc = useQueryClient();
-  const { q: search, status: statusFilter, page } = useSearch({ from: Route.fullPath });
+  const { q: search, status: statusFilter, page } = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.fullPath });
   const setSearch = (v: string) => navigate({ search: (prev: any) => ({ ...prev, q: v, page: 1 }) });
   const setStatusFilter = (v: string) => navigate({ search: (prev: any) => ({ ...prev, status: v, page: 1 }) });

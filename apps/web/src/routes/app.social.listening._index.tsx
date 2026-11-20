@@ -174,7 +174,7 @@ function NewTopicModal({ open, onClose, onCreated }: { open: boolean; onClose: (
 function SocialListeningPage() {
   const qc = useQueryClient();
   const { q: search = "", sentiment: sentimentFilter = "all" } = useSearch({ from: "/app/social/listening/_index" });
-  const navigate = useNavigate({ from: "/app/social/listening/_index" });
+  const navigate = useNavigate({ from: "/app/social/listening" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setSentimentFilter = (v: string) => navigate({ search: (p) => ({ ...p, sentiment: v }) });
   const [showNew, setShowNew] = useState(false);

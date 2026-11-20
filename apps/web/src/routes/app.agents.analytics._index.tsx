@@ -39,7 +39,7 @@ export const Route = createFileRoute("/app/agents/analytics/_index")({
 
 function AgentAnalyticsPage() {
   const { q = "" } = useSearch({ from: "/app/agents/analytics/_index" });
-  const navigate = useNavigate({ from: "/app/agents/analytics/_index" });
+  const navigate = useNavigate({ from: "/app/agents/analytics" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

@@ -53,7 +53,7 @@ function FeatureFlagsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/feature-flags", { headers: ADMIN_HEADER });
       if (!res.ok) throw new Error("Failed to fetch feature flags");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -65,7 +65,7 @@ function FeatureFlagsPage() {
         body: JSON.stringify({ enabled }),
       });
       if (!res.ok) throw new Error("Failed to toggle flag");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (_, vars) => {
       toast.success(`Flag ${vars.enabled ? "enabled" : "disabled"}`);
@@ -82,7 +82,7 @@ function FeatureFlagsPage() {
         body: JSON.stringify({ rolloutPercentage: percentage }),
       });
       if (!res.ok) throw new Error("Failed to update rollout");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-feature-flags"] });

@@ -37,7 +37,7 @@ export const Route = createFileRoute("/app/communications/numbers/_index")({
 function NumbersPage() {
   const queryClient = useQueryClient();
   const { q = "", type = "all", provider: providerFilter = "all" } = useSearch({ from: "/app/communications/numbers/_index" });
-  const navigate = useNavigate({ from: "/app/communications/numbers/_index" });
+  const navigate = useNavigate({ from: "/app/communications/numbers" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setType = (v: string) => navigate({ search: (p) => ({ ...p, type: v }) });
   const setProviderFilter = (v: string) => navigate({ search: (p) => ({ ...p, provider: v }) });

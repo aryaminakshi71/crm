@@ -18,7 +18,7 @@ function AdminBillingPage() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     enabled: !!session?.user,
     placeholderData: (prev) => prev,
@@ -31,7 +31,7 @@ function AdminBillingPage() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     enabled: !!session?.user,
     placeholderData: (prev) => prev,

@@ -47,7 +47,7 @@ function ReviewsPage() {
         body: JSON.stringify({ id: String(id), status }),
       });
       if (!res.ok) throw new Error("Failed to update review");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-reviews"] }),
   });

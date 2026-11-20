@@ -471,7 +471,7 @@ export const speechRouter = {
           .object({
             type: z.string(),
             endpoint: z.string().optional(),
-            params: z.record(z.string()).optional(),
+            params: z.record(z.string(), z.string()).optional(),
           })
           .optional(),
       }),

@@ -167,7 +167,7 @@ function useToggleMutation(onSettled: () => void) {
 function AutomationPage() {
   const qc = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/marketing/automation/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/automation/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/automation" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : v }) });
   const [showNew, setShowNew] = useState(false);

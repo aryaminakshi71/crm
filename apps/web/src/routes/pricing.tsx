@@ -374,7 +374,7 @@ function PricingPage() {
                   )}
                   {annual && price !== null && price > 0 && (
                     <p className="text-muted-foreground text-xs mt-1">
-                      Billed annually · ${(plan.annualPrice ?? plan.monthlyPrice) * 12}/user/year
+                      Billed annually · ${((plan?.annualPrice ?? plan?.monthlyPrice ?? 0) * 12)}/user/year
                     </p>
                   )}
                 </div>

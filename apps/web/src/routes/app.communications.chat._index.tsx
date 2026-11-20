@@ -50,7 +50,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 function ChatPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/communications/chat/_index" });
-  const navigate = useNavigate({ from: "/app/communications/chat/_index" });
+  const navigate = useNavigate({ from: "/app/communications/chat" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

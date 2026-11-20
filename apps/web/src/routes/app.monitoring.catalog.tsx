@@ -106,7 +106,7 @@ function CatalogPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to register application");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "catalog"] });
@@ -125,7 +125,7 @@ function CatalogPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to deregister application");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "catalog"] });
@@ -139,7 +139,7 @@ function CatalogPage() {
     mutationFn: (id: string | number) => monitoringApi.healthCheck(String(id)),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "catalog"] });
-      toast.success(`Health check completed — ${result.latency}ms`);
+      toast.success(`Health check completed — ${(result as any)?.latency ?? 0}ms`);
     },
     onError: () => toast.error("Health check failed"),
   });

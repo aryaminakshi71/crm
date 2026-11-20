@@ -57,7 +57,7 @@ function fmtDate(d?: string | null) {
 function RecurringPage() {
   const qc = useQueryClient();
   const { q: search = "", frequency: frequencyFilter = "", active: activeFilter } = useSearch({ from: "/app/invoicing/recurring/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/recurring/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/recurring" });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["invoicing/recurring"],

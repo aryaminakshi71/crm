@@ -47,7 +47,7 @@ function statusColor(status: string): string {
 
 function RoutesPage() {
   const { q = "", status = "all" } = useSearch({ from: "/app/field-service/routes/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/routes/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/routes" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : (v as any) }) });
 

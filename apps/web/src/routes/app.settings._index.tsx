@@ -114,7 +114,7 @@ function SettingsPage() {
         headers: orgHeader(),
       });
       if (!res.ok) throw new Error("Revoke failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Session revoked");
@@ -130,7 +130,7 @@ function SettingsPage() {
         headers: orgHeader(),
       });
       if (!res.ok) throw new Error("Revoke all failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("All other sessions revoked");
@@ -147,7 +147,7 @@ function SettingsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Save failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Settings saved");
@@ -174,7 +174,6 @@ function SettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-muted-foreground mt-1">Manage your organization preferences and configuration</p>
       </div>
-
       {/* Quick links to dedicated sub-pages */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
@@ -197,13 +196,13 @@ function SettingsPage() {
             desc: "Generate and manage API keys",
           },
           {
-            to: "/app/settings/organization/_index" as any,
+            to: "/app/settings/organization" as any,
             icon: Building2,
             label: "Organization",
             desc: "Manage org name, logo, industry, and danger zone",
           },
           {
-            to: "/app/settings/team/_index" as any,
+            to: "/app/settings/team" as any,
             icon: Users2,
             label: "Team",
             desc: "Invite members and manage roles",
@@ -227,7 +226,6 @@ function SettingsPage() {
           );
         })}
       </div>
-
       {/* Tabs */}
       <div className="flex border-b border-border gap-1">
         {TABS.map((t) => {
@@ -248,7 +246,6 @@ function SettingsPage() {
           );
         })}
       </div>
-
       {/* General */}
       {tab === "general" && (
         <Card>
@@ -316,7 +313,6 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
-
       {/* Notifications */}
       {tab === "notifications" && (
         <Card>
@@ -368,7 +364,6 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
-
       {/* Security */}
       {tab === "security" && (
         <div className="space-y-4">
@@ -529,7 +524,6 @@ function SettingsPage() {
           </Card>
         </div>
       )}
-
       {/* Billing */}
       {tab === "billing" && (
         <Card>
@@ -587,5 +581,5 @@ function SettingsPage() {
         </Card>
       )}
     </div>
-  );
+  )
 }

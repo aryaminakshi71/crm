@@ -66,7 +66,7 @@ function MonitoringIncidentsPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return { items: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -78,7 +78,7 @@ function MonitoringIncidentsPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create incident");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents"] });
@@ -97,7 +97,7 @@ function MonitoringIncidentsPage() {
         body: JSON.stringify({ status: "resolved" }),
       });
       if (!res.ok) throw new Error("Failed to resolve incident");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "incidents"] });

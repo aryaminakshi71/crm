@@ -149,7 +149,7 @@ function ReplyModal({ message, onClose, onReplied }: { message: InboxMessage; on
 function SocialInboxPage() {
   const qc = useQueryClient();
   const { filter = "all", page = 1 } = useSearch({ from: "/app/social/inbox/_index" });
-  const navigate = useNavigate({ from: "/app/social/inbox/_index" });
+  const navigate = useNavigate({ from: "/app/social/inbox" });
 
   const setFilter = (val: string) => navigate({ search: (prev) => ({ ...prev, filter: val, page: 1 }) });
   const setPage = (val: number) => navigate({ search: (prev) => ({ ...prev, page: val }) });

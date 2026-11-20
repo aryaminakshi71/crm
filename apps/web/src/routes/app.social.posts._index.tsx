@@ -192,7 +192,7 @@ const PAGE_SIZE = 25;
 function SocialPostsPage() {
   const qc = useQueryClient();
   const { q: search = "", platform: platformFilter = "all", status: statusFilter = "all", page = 1 } = useSearch({ from: "/app/social/posts/_index" });
-  const navigate = useNavigate({ from: "/app/social/posts/_index" });
+  const navigate = useNavigate({ from: "/app/social/posts" });
 
   const setSearch = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val }) });
   const setPlatformFilter = (val: string) => navigate({ search: (prev) => ({ ...prev, platform: val, page: 1 }) });

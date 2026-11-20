@@ -73,7 +73,7 @@ const PERMISSION_COLORS: Record<string, string> = {
 function ApiKeysPage() {
   const queryClient = useQueryClient();
   const { q = "", permission = "" } = useSearch({ from: "/app/settings/api-keys/_index" });
-  const navigate = useNavigate({ from: "/app/settings/api-keys/_index" });
+  const navigate = useNavigate({ from: "/app/settings/api-keys" });
   const [showModal, setShowModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyPerms, setNewKeyPerms] = useState<string[]>(["read"]);
@@ -86,7 +86,7 @@ function ApiKeysPage() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/api-keys`, { headers: getOrgHeader() });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });
@@ -102,7 +102,7 @@ function ApiKeysPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to generate key");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (result: any) => {
       const key = result?.data?.key ?? result?.key ?? `sk_live_${Math.random().toString(36).slice(2, 14)}`;
@@ -125,7 +125,7 @@ function ApiKeysPage() {
         headers: getOrgHeader(),
       });
       if (!res.ok) throw new Error("Failed to revoke key");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });

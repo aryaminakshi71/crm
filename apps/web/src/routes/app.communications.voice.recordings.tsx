@@ -123,7 +123,7 @@ function RecordingsPage() {
         headers,
       });
       if (!res.ok) throw new Error("Delete failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "recordings"] });

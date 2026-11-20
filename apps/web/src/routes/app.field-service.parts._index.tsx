@@ -27,7 +27,7 @@ export const Route = createFileRoute("/app/field-service/parts/_index")({
 
 function PartsPage() {
   const { q: search = "", stock = "all" } = useSearch({ from: "/app/field-service/parts/_index" });
-  const navigate = useNavigate({ from: "/app/field-service/parts/_index" });
+  const navigate = useNavigate({ from: "/app/field-service/parts" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStock = (v: string) => navigate({ search: (p) => ({ ...p, stock: v === "all" ? undefined : (v as any) }) });
 

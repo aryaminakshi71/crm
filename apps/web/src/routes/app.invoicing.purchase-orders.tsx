@@ -70,7 +70,7 @@ function PurchaseOrders() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/purchase-orders"] }),
   });
@@ -82,7 +82,7 @@ function PurchaseOrders() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/purchase-orders"] }),
   });
@@ -91,7 +91,7 @@ function PurchaseOrders() {
     queryKey: ["invoicing/purchase-orders"],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/invoicing/purchase-orders`, { headers: { ...getOrgHeader() } });
-      return res.json();
+      return res.json() as Promise<any>;
     },
     retry: false,
     placeholderData: (prev) => prev,

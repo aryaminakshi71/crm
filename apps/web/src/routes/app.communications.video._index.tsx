@@ -46,7 +46,7 @@ const STATUS_COLORS: Record<string, string> = {
 function VideoPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/communications/video/_index" });
-  const navigate = useNavigate({ from: "/app/communications/video/_index" });
+  const navigate = useNavigate({ from: "/app/communications/video" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });
 

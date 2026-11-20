@@ -88,7 +88,7 @@ function getSegmentConfig(name: string) {
 
 function RFMPage() {
   const { q = "" } = useSearch({ from: "/app/intelligence/rfm/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/rfm/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/rfm" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

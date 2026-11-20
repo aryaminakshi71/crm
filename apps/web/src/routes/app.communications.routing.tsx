@@ -63,7 +63,7 @@ function CallRoutingPage() {
         body: JSON.stringify({ ...input, status: "active" }),
       });
       if (!res.ok) throw new Error("Failed to create rule");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "routing-rules"] });
@@ -82,7 +82,7 @@ function CallRoutingPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update rule");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "routing-rules"] });
@@ -98,7 +98,7 @@ function CallRoutingPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete rule");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "routing-rules"] });

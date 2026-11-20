@@ -73,7 +73,7 @@ function VideoRoomsPage() {
         body: JSON.stringify({ name, maxParticipants: 10 }),
       });
       if (!res.ok) throw new Error("Failed to create room");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "video-rooms"] });
@@ -91,7 +91,7 @@ function VideoRoomsPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to end room");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "video-rooms"] });

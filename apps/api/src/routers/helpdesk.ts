@@ -461,7 +461,7 @@ export const helpdeskRouter = {
 
       if (input.status?.trim()) {
         conditions.push(
-          eq(schema.helpdeskKnowledgeArticles.status, input.status as "draft" | "published" | "archived"),
+          eq(schema.helpdeskKnowledgeArticles.status, input.status as "draft" | "published"),
         );
       }
 
@@ -1030,7 +1030,7 @@ export const helpdeskRouter = {
 
       if (input.status?.trim()) {
         conditions.push(
-          eq(schema.helpdeskForums.status, input.status as "open" | "closed" | "archived"),
+          eq(schema.helpdeskForums.status, input.status as "open" | "closed" | "answered"),
         );
       }
 

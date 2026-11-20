@@ -46,7 +46,7 @@ const STATUS_VARIANTS: Record<string, string> = {
 
 function KnowledgeBasePage() {
   const { q = "", category = "all", page = 1 } = useSearch({ from: "/app/helpdesk/knowledge/_index" });
-  const navigate = useNavigate({ from: "/app/helpdesk/knowledge/_index" });
+  const navigate = useNavigate({ from: "/app/helpdesk/knowledge" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setCategory = (v: string) => navigate({ search: (p) => ({ ...p, category: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

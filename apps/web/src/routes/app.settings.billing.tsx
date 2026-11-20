@@ -39,7 +39,7 @@ function SettingsBillingPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch subscription");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });
@@ -59,7 +59,7 @@ function SettingsBillingPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to fetch usage");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });

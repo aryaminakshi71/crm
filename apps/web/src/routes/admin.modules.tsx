@@ -44,7 +44,7 @@ const moduleDetails = Object.fromEntries(
       name: m.name,
       icon: getModuleIcon(m.key),
       description: m.description,
-      category: m.phase,
+      category: "Module",
       adoption: ADMIN_MODULE_META[m.key]?.adoption ?? 0,
       revenue: ADMIN_MODULE_META[m.key]?.revenue ?? 0,
       plans: MODULE_PLANS[m.key],
@@ -72,7 +72,7 @@ function AdminModulesPage() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
     enabled: !!session?.user,
   });

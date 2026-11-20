@@ -95,7 +95,7 @@ function ProfilePage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to save profile");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => toast.success("Profile updated"),
     onError: () => toast.error("Failed to update profile"),
@@ -112,7 +112,7 @@ function ProfilePage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to change password");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Password updated");

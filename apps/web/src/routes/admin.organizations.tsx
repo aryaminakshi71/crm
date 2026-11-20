@@ -138,7 +138,7 @@ function AdminOrganizationsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/organizations");
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -147,7 +147,7 @@ function AdminOrganizationsPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/billing/stats");
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 

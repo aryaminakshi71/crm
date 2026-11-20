@@ -86,7 +86,7 @@ function Metric({
 function TransfersPage() {
   const { q = "", status: statusFilterRaw = "" } = useSearch({ from: "/app/inventory/transfers/_index" });
   const statusFilter = statusFilterRaw as TransferStatus;
-  const navigate = useNavigate({ from: "/app/inventory/transfers/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/transfers" });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTransfer, setNewTransfer] = useState({
     productId: "",

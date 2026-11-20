@@ -61,7 +61,7 @@ function AlertsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete alert");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
   });
@@ -74,7 +74,7 @@ function AlertsPage() {
         body: JSON.stringify({ enabled }),
       });
       if (!res.ok) throw new Error("Failed to update alert");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring", "alerts"] }),
   });

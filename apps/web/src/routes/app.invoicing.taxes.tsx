@@ -60,7 +60,7 @@ function TaxConfiguration() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/invoicing/taxes/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete tax rate");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoicing/taxes"] }),
   });

@@ -55,7 +55,7 @@ function recoveryStatusBadge(status: string) {
 function AbandonedCartsPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/ecommerce/abandoned/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/abandoned/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/abandoned" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });
 
@@ -72,7 +72,7 @@ function AbandonedCartsPage() {
         headers: { "Content-Type": "application/json", ...orgHeader },
       });
       if (!res.ok) throw new Error("Failed to send recovery email");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Recovery email sent");

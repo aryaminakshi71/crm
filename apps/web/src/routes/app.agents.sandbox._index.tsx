@@ -32,7 +32,7 @@ export const Route = createFileRoute("/app/agents/sandbox/_index")({
 
 function AgentSandboxPage() {
   const { q = "" } = useSearch({ from: "/app/agents/sandbox/_index" });
-  const navigate = useNavigate({ from: "/app/agents/sandbox/_index" });
+  const navigate = useNavigate({ from: "/app/agents/sandbox" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -71,7 +71,7 @@ function AgentSandboxPage() {
         body: JSON.stringify({ taskDescription: input }),
       });
       if (!res.ok) throw new Error(`Agent run failed: ${res.status}`);
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onMutate: ({ input }) => {
       setOutputLog((prev) => [

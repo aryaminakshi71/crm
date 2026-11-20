@@ -67,7 +67,7 @@ type TypeFilter = "all" | "mention" | "comment" | "task" | "system" | "billing";
 
 function NotificationsPage() {
   const { filter = "all", page = 1 } = useSearch({ from: "/app/notifications/_index" });
-  const navigate = useNavigate({ from: "/app/notifications/_index" });
+  const navigate = useNavigate({ from: "/app/notifications" });
   const activeTab = (filter as TabValue) ?? "all";
   const setActiveTab = (v: TabValue) => navigate({ search: (p) => ({ ...p, filter: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

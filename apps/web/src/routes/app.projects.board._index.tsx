@@ -51,7 +51,7 @@ function statusToColumn(status: string): string {
 
 function BoardIndexPage() {
   const { q = "", assignee } = useSearch({ from: "/app/projects/board/_index" });
-  const navigate = useNavigate({ from: "/app/projects/board/_index" });
+  const navigate = useNavigate({ from: "/app/projects/board" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const [draggedId, setDraggedId] = useState<string | null>(null);

@@ -86,7 +86,7 @@ function Metric({
 function AlertsPage() {
   const { q = "", severity: severityFilterRaw = "" } = useSearch({ from: "/app/inventory/alerts/_index" });
   const severityFilter = severityFilterRaw as Severity;
-  const navigate = useNavigate({ from: "/app/inventory/alerts/_index" });
+  const navigate = useNavigate({ from: "/app/inventory/alerts" });
 
   const { data: alertsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["inventory", "alerts"],
@@ -167,7 +167,6 @@ function AlertsPage() {
           </p>
         </div>
       </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <Metric
@@ -185,7 +184,6 @@ function AlertsPage() {
           trend="Monitor closely"
         />
       </div>
-
       {/* Search + Severity filter */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative">
@@ -221,7 +219,6 @@ function AlertsPage() {
           ))}
         </div>
       </div>
-
       {/* Alert list */}
       {isLoading ? (
         <Loading />
@@ -294,5 +291,5 @@ function AlertsPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

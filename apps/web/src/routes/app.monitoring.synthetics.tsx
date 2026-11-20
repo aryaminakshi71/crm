@@ -65,7 +65,7 @@ function MonitoringSyntheticsPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) return { items: [] };
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -77,7 +77,7 @@ function MonitoringSyntheticsPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create synthetic test");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "synthetics"] });
@@ -102,7 +102,7 @@ function MonitoringSyntheticsPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete synthetic test");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring", "synthetics"] });

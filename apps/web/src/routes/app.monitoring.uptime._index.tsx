@@ -68,7 +68,7 @@ function statusIcon(status: string) {
 
 function UptimePage() {
   const { q = "", status = "" } = useSearch({ from: "/app/monitoring/uptime/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/uptime/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/uptime" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v || undefined }) });
 

@@ -133,7 +133,7 @@ function NewPageModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 function LandingPagesPage() {
   const qc = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/marketing/landing-pages/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/landing-pages/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/landing-pages" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v === "all" ? undefined : v }) });
   const [showNew, setShowNew] = useState(false);

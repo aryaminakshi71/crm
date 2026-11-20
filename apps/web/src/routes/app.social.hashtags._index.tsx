@@ -141,7 +141,7 @@ function TrackHashtagModal({ open, onClose, onCreated }: { open: boolean; onClos
         </form>
       </div>
     </>
-  );
+  )
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ function TrackHashtagModal({ open, onClose, onCreated }: { open: boolean; onClos
 function SocialHashtagsPage() {
   const qc = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/social/hashtags/_index" });
-  const navigate = useNavigate({ from: "/app/social/hashtags/_index" });
+  const navigate = useNavigate({ from: "/app/social/hashtags" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

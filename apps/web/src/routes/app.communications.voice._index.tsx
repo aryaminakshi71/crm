@@ -75,7 +75,7 @@ const CALL_VOLUME_DATA = [
 
 function VoicePage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/communications/voice/_index" });
-  const navigate = useNavigate({ from: "/app/communications/voice/_index" });
+  const navigate = useNavigate({ from: "/app/communications/voice" });
   const setPage = (v: number) =>
     navigate({ search: (p) => ({ ...p, page: v }) });
 

@@ -50,7 +50,7 @@ function MapView() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/field-service/technicians`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch technicians");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,
@@ -61,7 +61,7 @@ function MapView() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/field-service/jobs`, { headers: getOrgHeader() });
       if (!res.ok) throw new Error("Failed to fetch jobs");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,

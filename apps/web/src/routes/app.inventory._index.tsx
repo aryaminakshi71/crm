@@ -150,7 +150,7 @@ function Metric({
 const PAGE_SIZE = 50;
 
 function InventoryPage() {
-  const { view: viewParam, q, page } = useSearch({ from: Route.fullPath });
+  const { view: viewParam, q, page } = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.fullPath });
   const [view, setView] = useState<InventoryView>(viewParam ?? "products");
   const [isCreateOpen, setIsCreateOpen] = useState(false);

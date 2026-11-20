@@ -38,7 +38,7 @@ export const Route = createFileRoute("/app/helpdesk/canned/_index")({
 
 function CannedResponsesPage() {
   const { q: search = "", category: categoryFilter = "all" } = useSearch({ from: "/app/helpdesk/canned/_index" });
-  const navigate = useNavigate({ from: "/app/helpdesk/canned/_index" });
+  const navigate = useNavigate({ from: "/app/helpdesk/canned" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setCategoryFilter = (v: string) => navigate({ search: (p) => ({ ...p, category: v }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

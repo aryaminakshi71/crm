@@ -35,12 +35,12 @@ export const projectsRouter = {
         .where(and(eq(schema.projects.organizationId, orgId), isNull(schema.projects.deletedAt)));
 
       const totalProjects = allProjects.length;
-      const activeProjects = allProjects.filter((p) => p.status === "active").length;
+      const activeProjects = allProjects.filter((p: any) => p.status === "active").length;
       const completedThisMonth = allProjects.filter(
-        (p) => p.status === "completed" && p.updatedAt >= firstOfMonth,
+        (p: any) => p.status === "completed" && p.updatedAt >= firstOfMonth,
       ).length;
       const atRisk = allProjects.filter(
-        (p) => p.status === "active" && p.dueDate && new Date(p.dueDate) < now,
+        (p: any) => p.status === "active" && p.dueDate && new Date(p.dueDate) < now,
       ).length;
 
       // Aggregate budget/spent from time entries as a proxy for spend

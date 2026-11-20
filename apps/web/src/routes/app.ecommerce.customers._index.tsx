@@ -93,7 +93,7 @@ function getInitials(name: string) {
 
 function CustomersIndexPage() {
   const { q = "", status: filterStatus = "all", page = 1 } = useSearch({ from: "/app/ecommerce/customers/_index" });
-  const navigate = useNavigate({ from: "/app/ecommerce/customers/_index" });
+  const navigate = useNavigate({ from: "/app/ecommerce/customers" });
 
   const searchQuery = q;
   const setSearchQuery = (val: string) => navigate({ search: (prev) => ({ ...prev, q: val, page: 1 }) });

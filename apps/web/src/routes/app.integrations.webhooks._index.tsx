@@ -191,7 +191,7 @@ function WebhooksPage() {
   const [testingWebhook, setTestingWebhook] = useState<any | null>(null);
   const queryClient = useQueryClient();
   const { q = "", page = 1 } = useSearch({ from: "/app/integrations/webhooks/_index" });
-  const navigate = useNavigate({ from: "/app/integrations/webhooks/_index" });
+  const navigate = useNavigate({ from: "/app/integrations/webhooks" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
 
   const { data, isLoading } = useQuery({
@@ -208,7 +208,7 @@ function WebhooksPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to create webhook");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Webhook created");
@@ -228,7 +228,7 @@ function WebhooksPage() {
         body: JSON.stringify({ active }),
       });
       if (!res.ok) throw new Error("Failed to update webhook");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integrations", "webhooks"] });

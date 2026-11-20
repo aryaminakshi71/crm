@@ -64,7 +64,7 @@ function fmtDate(d?: string | null) {
 function ExpensesPage() {
   const qc = useQueryClient();
   const { q = "", status, page = 1 } = useSearch({ from: "/app/invoicing/expenses/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/expenses/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/expenses" });
   const search = q;
   const statusFilter = status ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

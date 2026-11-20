@@ -11,32 +11,32 @@ export function useBilling() {
   // Get current subscription
   const subscriptionQuery = useQuery({
     queryKey: ["subscription"],
-    queryFn: () => api.billing.subscription.get({}),
+    queryFn: () => api.billing.getSubscription({}),
   });
 
   // Get available plans
   const plansQuery = useQuery({
     queryKey: ["plans"],
-    queryFn: () => api.billing.plans.list({}),
+    queryFn: () => api.billing.listPlans({}),
   });
 
   // Get usage
   const usageQuery = useQuery({
     queryKey: ["usage"],
-    queryFn: () => api.billing.usage.get({}),
+    queryFn: () => api.billing.getUsage({}),
   });
 
   // Get module access
   const moduleAccessQuery = useQuery({
     queryKey: ["moduleAccess"],
-    queryFn: () => api.billing.modules.getModuleAccess({}),
+    queryFn: () => api.billing.getModuleAccess({}),
   });
 
   // Get invoices
   const invoicesQuery = useQuery({
     queryKey: ["invoices"],
     queryFn: () =>
-      api.billing.invoices.list({
+      api.billing.listInvoices({
         page: 1,
         limit: 20,
       }),
@@ -46,7 +46,7 @@ export function useBilling() {
   const paymentsQuery = useQuery({
     queryKey: ["payments"],
     queryFn: () =>
-      api.billing.payments.list({
+      api.billing.listPayments({
         page: 1,
         limit: 20,
       }),
@@ -59,13 +59,13 @@ export function useBilling() {
       billingCycle: "monthly" | "annual";
       successUrl: string;
       cancelUrl: string;
-    }) => api.billing.checkout.createCheckoutSession(input),
+    }) => api.billing.createCheckoutSession(input),
   });
 
   // Create portal session
   const portalMutation = useMutation({
     mutationFn: (input: { returnUrl: string }) =>
-      api.billing.portal.createPortalSession(input),
+      api.billing.portalSession(input),
   });
 
   return {
@@ -125,7 +125,7 @@ export function useUsageLimit(type: "apiCalls" | "storage" | "users") {
   const { usage, usageLimits: limits, usagePercentages: percentages } = useBilling();
 
   return {
-    used: usage?.[type] ?? 0,
+    used: usage?.[type === "storage" ? "storageMb" : type] ?? 0,
     limit: limits?.[type === "storage" ? "maxStorage" : type === "apiCalls" ? "maxApiCalls" : "maxUsers"] ?? 0,
     percentage: percentages?.[type] ?? 0,
     isNearLimit: (percentages?.[type] ?? 0) >= 80,

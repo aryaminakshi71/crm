@@ -171,7 +171,7 @@ function ConnectModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 function SocialAccountsPage() {
   const qc = useQueryClient();
   const { q = "", platform, page = 1 } = useSearch({ from: "/app/social/accounts/_index" });
-  const navigate = useNavigate({ from: "/app/social/accounts/_index" });
+  const navigate = useNavigate({ from: "/app/social/accounts" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPlatform = (v: string) => navigate({ search: (p) => ({ ...p, platform: v === "all" ? undefined : v, page: 1 }) });

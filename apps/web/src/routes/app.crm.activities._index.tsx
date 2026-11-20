@@ -58,7 +58,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
 
 function CrmActivitiesPage() {
   const { q: search = "", type: typeFilter = "all" } = useSearch({ from: "/app/crm/activities/_index" });
-  const navigate = useNavigate({ from: "/app/crm/activities/_index" });
+  const navigate = useNavigate({ from: "/app/crm/activities" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setTypeFilter = (v: string) => navigate({ search: (p) => ({ ...p, type: v }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

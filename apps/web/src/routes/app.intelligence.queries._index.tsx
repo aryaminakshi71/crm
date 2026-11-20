@@ -38,7 +38,7 @@ function formatDate(val: string | null | undefined): string {
 
 function QueriesPage() {
   const { page = 1 } = useSearch({ from: "/app/intelligence/queries/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/queries/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/queries" });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
   const [queryText, setQueryText] = useState("");
   const [queryResults, setQueryResults] = useState<any[] | null>(null);

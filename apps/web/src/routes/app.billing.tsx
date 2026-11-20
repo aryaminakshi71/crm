@@ -9,60 +9,70 @@ export const Route = createFileRoute("/app/billing")({
 
 function BillingPage() {
   const client = useQueryClient();
-  const [interval, setInterval] = useState<"month" | "year">("month");
+  const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
   const [message, setMessage] = useState("");
 
-  const plansQuery = useQuery(orpc.billing.getPlans.queryOptions({ input: {} }));
-  const subQuery = useQuery(orpc.billing.getSubscription.queryOptions({ input: {} }));
-
-  const subscribe = useMutation({
-    ...orpc.billing.subscribe.mutationOptions(),
-    onSuccess: () => {
-      setMessage("Subscription activated.");
-      client.invalidateQueries();
-    },
-    onError: (e: any) => setMessage(String(e?.message ?? e)),
-  });
+  const plansQuery = useQuery(orpc.billing.listPlans.queryOptions({ input: {} }));
+  const subQuery = useQuery(
+    orpc.billing.getSubscription.queryOptions({ input: {} }),
+  );
 
   const checkout = useMutation({
-    ...orpc.billing.createCheckout.mutationOptions(),
+    ...orpc.billing.createCheckoutSession.mutationOptions(),
     onSuccess: (data: any) => {
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        // Stripe not configured — fall back to direct activation.
-        subscribe.mutate({ plan: pendingPlan, interval });
+        setMessage("Stripe is not configured yet. Add STRIPE_SECRET_KEY to enable checkout.");
       }
     },
-    onError: () => subscribe.mutate({ plan: pendingPlan, interval }),
+    onError: (e: any) => setMessage(String(e?.message ?? e)),
   });
 
-  const [pendingPlan, setPendingPlan] = useState("starter");
-
-  const cancel = useMutation({
-    ...orpc.billing.cancel.mutationOptions(),
-    onSuccess: () => {
-      setMessage("Subscription cancelled.");
-      client.invalidateQueries();
+  const portal = useMutation({
+    ...orpc.billing.portalSession.mutationOptions(),
+    onSuccess: (data: any) => {
+      if (data?.url) window.location.href = data.url;
     },
+    onError: (e: any) => setMessage(String(e?.message ?? e)),
   });
 
   const plans: any[] = (plansQuery.data as any)?.plans ?? [];
-  const current: any = subQuery.data ?? { plan: "free", status: "none" };
+  const sub: any = (subQuery.data as any)?.subscription ?? null;
+  const isTrial = (subQuery.data as any)?.isTrial ?? false;
+  const daysRemaining = (subQuery.data as any)?.daysRemaining ?? 0;
 
-  const price = (p: any) =>
-    p.price === 0
-      ? "Custom"
-      : `₹${(interval === "year" ? p.price * 10 : p.price).toLocaleString("en-IN")}`;
+  const price = (p: any) => {
+    const monthly = Number(p.basePriceMonthly ?? 0);
+    const annual = Number(p.basePriceAnnual ?? 0);
+    const value = cycle === "annual" ? annual : monthly;
+    if (!value) return "Custom";
+    return `₹${value.toLocaleString("en-IN")}`;
+  };
+
+  const startCheckout = (planKey: string) => {
+    const origin = window.location.origin;
+    checkout.mutate({
+      planKey,
+      billingCycle: cycle,
+      successUrl: `${origin}/app/billing?status=success`,
+      cancelUrl: `${origin}/app/billing?status=cancelled`,
+    });
+  };
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="font-bold text-3xl text-foreground">Billing & Subscription</h1>
         <p className="mt-1 text-muted-foreground">
-          Current plan: <span className="font-semibold capitalize">{current.plan}</span> ·{" "}
-          <span className="capitalize">{current.status}</span>
-          {current.expiresAt && ` · renews ${new Date(current.expiresAt).toLocaleDateString()}`}
+          Current plan:{" "}
+          <span className="font-semibold capitalize">
+            {sub?.plan?.name ?? "Free"}
+          </span>{" "}
+          · <span className="capitalize">{sub?.status ?? "none"}</span>
+          {isTrial && daysRemaining > 0 && ` · trial ends in ${daysRemaining} days`}
+          {sub?.currentPeriodEnd &&
+            ` · renews ${new Date(sub.currentPeriodEnd).toLocaleDateString()}`}
         </p>
       </div>
 
@@ -73,22 +83,25 @@ function BillingPage() {
       )}
 
       <div className="inline-flex gap-1 rounded-xl bg-muted p-1">
-        {(["month", "year"] as const).map((i) => (
+        {(["monthly", "annual"] as const).map((c) => (
           <button
-            key={i}
-            onClick={() => setInterval(i)}
+            key={c}
+            onClick={() => setCycle(c)}
             className={`rounded-lg px-4 py-1.5 font-medium capitalize ${
-              interval === i ? "bg-background shadow-sm" : "text-muted-foreground"
+              cycle === c ? "bg-background shadow-sm" : "text-muted-foreground"
             }`}
           >
-            {i}ly {i === "year" && <span className="text-xs text-green-600">save 2 months</span>}
+            {c}
+            {c === "annual" && (
+              <span className="ml-1 text-xs text-green-600">save 2 months</span>
+            )}
           </button>
         ))}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
-          const active = current.plan === p.id && current.status === "active";
+          const active = sub?.planId === p.id && sub?.status === "active";
           return (
             <div
               key={p.id}
@@ -99,28 +112,41 @@ function BillingPage() {
               <h2 className="text-lg font-semibold text-foreground">{p.name}</h2>
               <p className="mt-2 text-3xl font-bold text-foreground">{price(p)}</p>
               <p className="text-sm text-muted-foreground">
-                {p.price === 0 ? "contact sales" : `per ${interval}`}
+                {Number(p.basePriceMonthly) === 0
+                  ? "contact sales"
+                  : `per ${cycle === "annual" ? "year" : "month"}`}
               </p>
-              <p className="mt-3 text-sm text-muted-foreground">{p.limits}</p>
+              {p.description && (
+                <p className="mt-3 text-sm text-muted-foreground">{p.description}</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Up to {p.maxUsers} users · {p.maxStorage} GB
+              </p>
               <button
-                disabled={subscribe.isPending || active}
-                onClick={() => { setPendingPlan(p.id); checkout.mutate({ plan: p.id, interval }); }}
+                disabled={checkout.isPending || active}
+                onClick={() => startCheckout(p.key)}
                 className="mt-5 w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {active ? "Current plan" : p.price === 0 ? "Contact sales" : "Subscribe"}
+                {active
+                  ? "Current plan"
+                  : Number(p.basePriceMonthly) === 0
+                    ? "Contact sales"
+                    : "Subscribe"}
               </button>
             </div>
           );
         })}
       </div>
 
-      {current.status === "active" && current.plan !== "free" && (
+      {sub?.stripeCustomerId && (
         <button
-          disabled={cancel.isPending}
-          onClick={() => cancel.mutate({})}
-          className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700 hover:bg-red-50"
+          disabled={portal.isPending}
+          onClick={() =>
+            portal.mutate({ returnUrl: `${window.location.origin}/app/billing` })
+          }
+          className="rounded-lg border border-border px-4 py-2 font-medium hover:bg-muted"
         >
-          Cancel subscription
+          Manage billing in Stripe
         </button>
       )}
     </div>

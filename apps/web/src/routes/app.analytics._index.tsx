@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Users,
   UserPlus,
+  Search,
 } from "lucide-react";
 import {
   Area,
@@ -61,7 +62,7 @@ const MODULE_LINKS = [
 
 function AnalyticsIndexPage() {
   const { q = "" } = useSearch({ from: "/app/analytics/_index" });
-  const navigate = useNavigate({ from: "/app/analytics/_index" });
+  const navigate = useNavigate({ from: "/app/analytics" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const [dateRange, setDateRange] = useState<DateRange>({

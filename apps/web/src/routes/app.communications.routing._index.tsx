@@ -36,7 +36,7 @@ export const Route = createFileRoute("/app/communications/routing/_index")({
 function RoutingPage() {
   const queryClient = useQueryClient();
   const { q = "", status = "all" } = useSearch({ from: "/app/communications/routing/_index" });
-  const navigate = useNavigate({ from: "/app/communications/routing/_index" });
+  const navigate = useNavigate({ from: "/app/communications/routing" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v }) });
 

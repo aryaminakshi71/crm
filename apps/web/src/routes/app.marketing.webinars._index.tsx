@@ -59,7 +59,7 @@ function statusBadge(status: string) {
 
 function WebinarsPage() {
   const { q = "", status: statusFilter } = useSearch({ from: "/app/marketing/webinars/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/webinars/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/webinars" });
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -76,7 +76,7 @@ function WebinarsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to create webinar");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Webinar created");

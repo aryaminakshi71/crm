@@ -178,7 +178,7 @@ function OrchestrationPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
   });
@@ -192,7 +192,7 @@ function OrchestrationPage() {
         headers: { ...getOrgHeader() },
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
   });
 
@@ -208,7 +208,7 @@ function OrchestrationPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create workflow");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agents", "workflows"] });
@@ -233,7 +233,7 @@ function OrchestrationPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error("Failed to run workflow");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["agents", "workflows"] });

@@ -38,7 +38,7 @@ export const Route = createFileRoute("/app/helpdesk/queue/_index")({
 
 function HelpdeskQueuePage() {
   const { q = "", status = "", page = 1 } = useSearch({ from: "/app/helpdesk/queue/_index" });
-  const navigate = useNavigate({ from: "/app/helpdesk/queue/_index" });
+  const navigate = useNavigate({ from: "/app/helpdesk/queue" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setStatus = (v: string) => navigate({ search: (p) => ({ ...p, status: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });

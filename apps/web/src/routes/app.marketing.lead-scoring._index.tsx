@@ -174,7 +174,7 @@ function NewRuleModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 function LeadScoringPage() {
   const qc = useQueryClient();
   const { q = "", category = "all" } = useSearch({ from: "/app/marketing/lead-scoring/_index" });
-  const navigate = useNavigate({ from: "/app/marketing/lead-scoring/_index" });
+  const navigate = useNavigate({ from: "/app/marketing/lead-scoring" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
   const setCategory = (v: string) => navigate({ search: (p) => ({ ...p, category: v === "all" ? undefined : v }) });
   const [showNew, setShowNew] = useState(false);

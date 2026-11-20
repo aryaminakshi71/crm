@@ -60,7 +60,7 @@ const STAGE_SHADOW = [
 
 function FunnelPage() {
   const { q = "" } = useSearch({ from: "/app/intelligence/funnel/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/funnel/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/funnel" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

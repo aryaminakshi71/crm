@@ -32,7 +32,7 @@ function WorkflowDetailPage() {
         headers: { "Content-Type": "application/json", ...getOrgHeader() },
       });
       if (!res.ok) return {};
-      return res.json();
+      return res.json() as Promise<any>;
     },
     placeholderData: (prev) => prev,
     enabled: !!id,

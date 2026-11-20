@@ -46,7 +46,7 @@ function DropshippingPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-dropship-shipping"] }),
   });
@@ -60,7 +60,7 @@ function DropshippingPage() {
         headers,
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce-dropship-shipping"] }),
   });

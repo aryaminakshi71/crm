@@ -228,7 +228,7 @@ function EcommerceDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {topProducts.map((product, idx) => (
+            {topProducts.map((product: any, idx: number) => (
               <div
                 key={product.id}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"

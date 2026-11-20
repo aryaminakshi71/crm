@@ -119,7 +119,7 @@ function ActivitySection({
 
 function CashFlowPage() {
   const { period = "ytd" } = useSearch({ from: "/app/invoicing/reports/cashflow/_index" });
-  const navigate = useNavigate({ from: "/app/invoicing/reports/cashflow/_index" });
+  const navigate = useNavigate({ from: "/app/invoicing/reports/cashflow" });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["invoicing/reports/cashflow", period],

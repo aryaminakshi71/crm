@@ -45,7 +45,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 function SLAPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/helpdesk/sla/_index" });
-  const navigate = useNavigate({ from: "/app/helpdesk/sla/_index" });
+  const navigate = useNavigate({ from: "/app/helpdesk/sla" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) => navigate({ search: (p) => ({ ...p, page: v }) });
   const [isCreateOpen, setIsCreateOpen] = useState(false);

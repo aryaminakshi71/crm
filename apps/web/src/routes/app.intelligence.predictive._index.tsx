@@ -63,7 +63,7 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function PredictivePage() {
   const { q = "" } = useSearch({ from: "/app/intelligence/predictive/_index" });
-  const navigate = useNavigate({ from: "/app/intelligence/predictive/_index" });
+  const navigate = useNavigate({ from: "/app/intelligence/predictive" });
   const setQ = (v: string) => navigate({ search: (p) => ({ ...p, q: v || undefined }) });
 
   const { data, isLoading, isError, refetch } = useQuery({

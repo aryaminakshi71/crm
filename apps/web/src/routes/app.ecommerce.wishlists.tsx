@@ -120,7 +120,7 @@ function WishlistsPage() {
             <h3 className="font-semibold text-foreground">Most Wishlisted Items</h3>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {popularItems.map((item) => (
+            {MOCK_POPULAR_ITEMS.map((item) => (
               <div key={item.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
                 <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
                   <Package className="h-6 w-6 text-muted-foreground" />

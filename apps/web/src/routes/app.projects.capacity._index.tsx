@@ -56,7 +56,7 @@ function deriveCapacity(employees: any[], projects: any[]) {
 
 function CapacityIndexPage() {
   const { q: search = "", dept: deptFilter = "all" } = useSearch({ from: "/app/projects/capacity/_index" });
-  const navigate = useNavigate({ from: "/app/projects/capacity/_index" });
+  const navigate = useNavigate({ from: "/app/projects/capacity" });
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setDeptFilter = (v: string) => navigate({ search: (p) => ({ ...p, dept: v }) });
 

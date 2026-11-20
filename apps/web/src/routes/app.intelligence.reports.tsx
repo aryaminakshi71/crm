@@ -149,7 +149,7 @@ function Reports() {
         <CardContent className="p-6">
           <h3 className="font-bold text-foreground mb-4">All Reports</h3>
           <div className="space-y-3">
-            {reports.map((report) => (
+            {reports.map((report: any) => (
               <div
                 key={report.id}
                 className="flex items-center gap-4 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"

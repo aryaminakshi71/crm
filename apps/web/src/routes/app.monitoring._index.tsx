@@ -55,7 +55,7 @@ function MonitoringOverview() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create incident");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["monitoring"] }),
   });
@@ -65,7 +65,6 @@ function MonitoringOverview() {
     queryKey: ["monitoring", "dashboard"],
     queryFn: () => monitoringApi.getDashboard(),
     refetchInterval: 30000,
-    onSuccess: () => setLastUpdated(new Date()),
   });
 
   const { data: alerts } = useQuery({

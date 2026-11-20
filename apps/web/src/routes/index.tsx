@@ -67,6 +67,8 @@ import {
   TrendingUp,
   UserRoundCog,
   Webhook,
+  LayoutGrid,
+  Globe,
 } from "lucide-react";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────

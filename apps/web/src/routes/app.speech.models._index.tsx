@@ -15,7 +15,7 @@ import {
   Search,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { speechApi } from "@/lib/api";
 
 const searchSchema = z.object({
@@ -80,7 +80,7 @@ function ModelTypeBadge({ type }: { type: string }) {
 function ModelsIndexPage() {
   const queryClient = useQueryClient();
   const { q: searchQuery = "", type: typeFilter = "all" } = useSearch({ from: "/app/speech/models/_index" });
-  const navigate = useNavigate({ from: "/app/speech/models/_index" });
+  const navigate = useNavigate({ from: "/app/speech/models" });
   const setSearchQuery = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setTypeFilter = (v: string) => navigate({ search: (p) => ({ ...p, type: v }) });
   const [defaultModel, setDefaultModel] = useState<string | null>(null);
@@ -89,12 +89,13 @@ function ModelsIndexPage() {
     queryKey: ["speech-models-index"],
     queryFn: () => speechApi.models.list(),
     placeholderData: (prev) => prev,
-    onSuccess: (data: SpeechModel[] | { data: SpeechModel[] }) => {
-      const list = Array.isArray(data) ? data : data?.data ?? [];
-      const def = list.find((m) => m.isDefault);
-      if (def) setDefaultModel(def.id);
-    },
-  } as any);
+  });
+
+  useEffect(() => {
+    const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+    const def = list.find((m: any) => m.isDefault);
+    if (def) setDefaultModel(def.id);
+  }, [data]);
 
   const setDefaultMutation = useMutation({
     mutationFn: async (modelId: string) => {
@@ -103,7 +104,7 @@ function ModelsIndexPage() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to set default");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: (_, modelId) => {
       setDefaultModel(modelId);

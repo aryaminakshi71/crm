@@ -87,7 +87,7 @@ function Metric({
 
 function AssetsIndexPage() {
   const { q = "", type: typeFilterParam = "", page = 1 } = useSearch({ from: "/app/assets/_index" });
-  const navigate = useNavigate({ from: "/app/assets/_index" });
+  const navigate = useNavigate({ from: "/app/assets" });
   const search = q;
   const typeFilter = typeFilterParam;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

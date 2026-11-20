@@ -84,10 +84,6 @@ function QueuePage() {
         .catch(() => null),
     placeholderData: (prev) => prev,
     refetchInterval: 5000,
-    onSuccess: () => {
-      setLastUpdated(new Date());
-      setSecondsAgo(0);
-    },
   });
 
   const pauseMutation = useMutation({
@@ -97,7 +93,7 @@ function QueuePage() {
         headers: orgHeader,
       });
       if (!res.ok) throw new Error("Failed to pause queue");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Queue paused");
@@ -113,7 +109,7 @@ function QueuePage() {
         headers: orgHeader,
       });
       if (!res.ok) throw new Error("Failed to resume queue");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Queue resumed");
@@ -129,7 +125,7 @@ function QueuePage() {
         headers: orgHeader,
       });
       if (!res.ok) throw new Error("Failed to clear queue");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Queue cleared");

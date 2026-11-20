@@ -76,7 +76,7 @@ function IVRBuilderPage() {
         body: JSON.stringify({ name: input.name, nodes: input.nodes, status: "draft" }),
       });
       if (!res.ok) throw new Error("Failed to create IVR flow");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communications", "ivr"] });

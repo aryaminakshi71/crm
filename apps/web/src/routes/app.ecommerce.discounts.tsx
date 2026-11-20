@@ -41,7 +41,7 @@ function DiscountsPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create discount");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce", "discounts"] }),
   });
@@ -55,7 +55,7 @@ function DiscountsPage() {
         headers,
       });
       if (!res.ok) throw new Error("Failed to delete discount");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ecommerce", "discounts"] }),
   });

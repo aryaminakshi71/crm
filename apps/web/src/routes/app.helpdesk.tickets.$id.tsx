@@ -80,7 +80,7 @@ function TicketDetailPage() {
         headers: { "x-organization-id": localStorage.getItem("activeOrganizationId") ?? "" },
       });
       if (!res.ok) throw new Error("Delete failed");
-      return res.json();
+      return res.json() as Promise<any>;
     },
     onSuccess: () => {
       toast.success("Attachment deleted");
@@ -284,7 +284,7 @@ function TicketDetailPage() {
                   <div className="flex justify-end pt-1">
                     <Button
                       size="sm"
-                      variant={isInternal ? "outline" : "default"}
+                      variant={isInternal ? "outline" : "primary"}
                       onClick={() => {
                         const msg = commentDraft.trim();
                         if (!msg) {

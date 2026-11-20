@@ -64,7 +64,7 @@ function exportToCsv(filename: string, headers: string[], rows: string[][]) {
 
 function LogsPage() {
   const { q = "", level, page = 1 } = useSearch({ from: "/app/monitoring/logs/_index" });
-  const navigate = useNavigate({ from: "/app/monitoring/logs/_index" });
+  const navigate = useNavigate({ from: "/app/monitoring/logs" });
   const search = q;
   const levelFilter = level ?? "all";
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });

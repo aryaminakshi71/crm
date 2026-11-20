@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 import { socialApi } from "@/lib/api";
 
+const MOCK_PLATFORM_STATS = [
+  { platform: "Twitter", icon: Twitter, followers: 12400, engagement: 4.2, posts: 48, color: "text-sky-500", change: "+2.1%" },
+  { platform: "LinkedIn", icon: Linkedin, followers: 8900, engagement: 6.1, posts: 32, color: "text-blue-600", change: "+3.4%" },
+  { platform: "Instagram", icon: Instagram, followers: 15600, engagement: 5.4, posts: 56, color: "text-pink-500", change: "+1.8%" },
+  { platform: "Facebook", icon: Facebook, followers: 7200, engagement: 3.1, posts: 24, color: "text-blue-500", change: "+0.9%" },
+];
+
 export const Route = createFileRoute("/app/social/analytics")({
   component: AnalyticsPage,
 });

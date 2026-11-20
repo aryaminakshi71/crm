@@ -238,7 +238,7 @@ export function getRecommendedPlan(score: number): typeof pricingTiers[number] |
     case "hot":
       return pricingTiers.find((p) => p.key === "business") || null;
     case "warm":
-      return pricingTiers.find((p) => p.key === "growth") || null;
+      return pricingTiers.find((p) => p.key === "starter") || null;
     default:
       return pricingTiers.find((p) => p.key === "starter") || null;
   }

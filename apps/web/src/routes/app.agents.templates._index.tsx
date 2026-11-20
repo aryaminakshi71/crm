@@ -43,7 +43,7 @@ const PAGE_SIZE = 12;
 
 function AgentTemplatesPage() {
   const { q = "", page = 1 } = useSearch({ from: "/app/agents/templates/_index" });
-  const navigate = useNavigate({ from: "/app/agents/templates/_index" });
+  const navigate = useNavigate({ from: "/app/agents/templates" });
   const setQ = (v: string) =>
     navigate({ search: (p) => ({ ...p, q: v, page: 1 }) });
   const setPage = (v: number) =>

@@ -104,7 +104,7 @@ const MITIGATION_LABEL: Record<string, string> = {
 
 function RisksIndexPage() {
   const { q = "", severity: severityFilter = "all", mitigation: mitigationFilter = "all" } = useSearch({ from: "/app/projects/risks/_index" });
-  const navigate = useNavigate({ from: "/app/projects/risks/_index" });
+  const navigate = useNavigate({ from: "/app/projects/risks" });
   const search = q;
   const setSearch = (v: string) => navigate({ search: (p) => ({ ...p, q: v }) });
   const setSeverityFilter = (v: string) => navigate({ search: (p) => ({ ...p, severity: v }) });
