@@ -360,23 +360,23 @@ describe("pricingTiers structured data", () => {
     });
   });
 
-  it("each tier has a price (0 = custom/contact)", () => {
+  it("each tier has a price (null = custom/contact)", () => {
     pricingTiers.forEach((tier) => {
-      expect(typeof tier.price).toBe("number");
+      expect(tier.monthlyPrice === null || typeof tier.monthlyPrice === "number").toBe(true);
     });
   });
 
-  it("each tier has features array", () => {
+  it("each tier has modules array", () => {
     pricingTiers.forEach((tier) => {
-      expect(Array.isArray(tier.features)).toBe(true);
-      expect(tier.features.length).toBeGreaterThan(0);
+      expect(Array.isArray(tier.modules)).toBe(true);
+      expect(tier.modules.length).toBeGreaterThan(0);
     });
   });
 
   it("Starter tier price is lower than Business tier price", () => {
     const starter = pricingTiers.find((t) => t.key === "starter");
     const business = pricingTiers.find((t) => t.key === "business");
-    expect(starter?.price).toBeLessThan(business!.price);
+    expect(starter!.monthlyPrice).toBeLessThan(business!.monthlyPrice);
   });
 
   it("can serialize all tiers to valid JSON", () => {
