@@ -79,3 +79,7 @@ generated-envs/
 # Agent worktree artifacts
 .claude/worktrees/
 .claire/worktrees/
+
+# Nested local projects (not part of this app)
+observability/
+weavebridge/
