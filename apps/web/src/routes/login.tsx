@@ -41,12 +41,13 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [brandName, setBrandName] = useState("Nucleo One");
   useEffect(() => {
     fetch("/api/rpc/branding/getPublic")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: any) => {
         const b = d?.json?.branding ?? d?.branding;
-        if (b?.brandName) document.title = b.brandName;
+        if (b?.brandName) { setBrandName(b.brandName); document.title = b.brandName; }
         if (b?.primaryColor) {
           document.documentElement.style.setProperty("--brand-primary", b.primaryColor);
         }
@@ -178,7 +179,7 @@ function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div>
           <Link to="/" className="flex justify-center">
-            <h1 className="font-bold text-3xl text-primary">Nucleo One</h1>
+            <h1 className="font-bold text-3xl text-primary">{brandName}</h1>
           </Link>
           <h2 className="mt-6 text-center font-extrabold text-3xl text-foreground">
             Sign in to your account
