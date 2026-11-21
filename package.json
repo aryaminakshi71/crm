@@ -27,7 +27,7 @@
     "test:watch": "turbo run test:watch",
     "test:coverage": "turbo run test:coverage",
     "test:ci": "turbo run test:ci",
-    "test:unit": "bun run --cwd apps/web test --run && bun run --cwd apps/mobile test",
+    "test:unit": "bun run --cwd apps/web test && bun run --cwd apps/mobile test",
     "test:integration": "bun run --cwd apps/api test:integration",
     "test:e2e": "E2E_TEST=1 playwright test",
     "test:smoke": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 playwright test e2e/link-testing.spec.ts --project=chromium",
