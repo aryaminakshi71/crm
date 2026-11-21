@@ -13,6 +13,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@platform/email": "file:../../../../platform/packages/email"
+    "@platform/email": "workspace:*"
   }
 }

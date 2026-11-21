@@ -72,7 +72,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
-    "@platform/email": "file:../../platform/packages/email"
+    "@platform/email": "workspace:*"
   },
   "overrides": {
     "@tanstack/query-core": "5.90.20"

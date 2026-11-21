@@ -5,7 +5,7 @@
     "": {
       "name": "saas-layer-crm",
       "dependencies": {
-        "@platform/email": "file:../../platform/packages/email",
+        "@platform/email": "workspace:*",
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.45.1",
       },
@@ -237,6 +237,10 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/platform-email": {
+      "name": "@platform/email",
+      "version": "1.0.0",
+    },
     "packages/platform-runtime": {
       "name": "@crm/platform-runtime",
       "version": "0.0.1",
@@ -258,7 +262,7 @@
     "packages/services": {
       "name": "@crm/services",
       "dependencies": {
-        "@platform/email": "file:../../../../platform/packages/email",
+        "@platform/email": "workspace:*",
       },
       "devDependencies": {
         "@crm/tsconfig": "file:../tsconfig",
@@ -1026,7 +1030,7 @@
 
     "@orpc/zod": ["@orpc/zod@1.13.6", "", { "dependencies": { "@orpc/json-schema": "1.13.6", "@orpc/openapi": "1.13.6", "@orpc/shared": "1.13.6", "escape-string-regexp": "^5.0.0", "wildcard-match": "^5.1.4" }, "peerDependencies": { "@orpc/contract": "1.13.6", "@orpc/server": "1.13.6", "zod": ">=3.25.0" } }, "sha512-Sj3KQbtV1Zuy2QnSs3NrFBnuZfttmWnXb39gLarD3rEKaxE4Mugv2yXIZ7vnBOj5cL24V+ysgharU/Dl7Ro0yA=="],
 
-    "@platform/email": ["@platform/email@file:../../platform/packages/email", {}],
+    "@platform/email": ["@platform/email@workspace:packages/platform-email"],
 
     "@playwright/test": ["@playwright/test@1.57.0", "", { "dependencies": { "playwright": "1.57.0" }, "bin": { "playwright": "cli.js" } }, "sha512-6TyEnHgd6SArQO8UO2OMTxshln3QMWBtPGrOCgs3wVEmQmwyuNtB10IZMfmYDE0riwNR1cu4q+pPcxMVtaG3TA=="],
 
@@ -2909,8 +2913,6 @@
     "@crm/registry/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
     "@crm/services/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
-
-    "@crm/services/@platform/email": ["@platform/email@file:../../platform/packages/email", {}],
 
     "@crm/shared/@crm/tsconfig": ["@crm/tsconfig@file:packages/tsconfig", {}],
 
