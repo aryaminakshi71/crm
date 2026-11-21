@@ -60,7 +60,8 @@
     "mobile:release:ios": "bun run --cwd apps/mobile release:ios",
     "mobile:submit:android": "bun run --cwd apps/mobile submit:android",
     "mobile:submit:ios": "bun run --cwd apps/mobile submit:ios",
-    "db:optimize": "bash scripts/db-indexes.sh --apply && bash scripts/db-trigram.sh --apply && bash scripts/db-triggers.sh --apply"
+    "db:optimize": "bash scripts/db-indexes.sh --apply && bash scripts/db-trigram.sh --apply && bash scripts/db-triggers.sh --apply",
+    "db:health": "bash scripts/db-health.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

@@ -4,10 +4,11 @@
  * Audit log querying and compliance reporting.
  */
 
-import { and, count, desc, eq, gte, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { getDb, orgAuthed, schema } from "../procedures";
+import { decodeCursor, encodeCursor } from "../lib/pagination";
 
 const { auditLogs } = schema;
 
@@ -44,6 +45,7 @@ export const auditRouter = {
         endDate: z.string().optional(),
         userId: z.string().optional(),
         action: z.string().optional(),
+        cursor: z.string().optional(),
       }),
     )
     .output(
@@ -53,6 +55,7 @@ export const auditRouter = {
         page: z.number(),
         limit: z.number(),
         totalPages: z.number(),
+        nextCursor: z.string().nullable().optional(),
       }),
     )
     .handler(
@@ -68,6 +71,7 @@ export const auditRouter = {
           endDate?: string;
           userId?: string;
           action?: string;
+          cursor?: string;
         };
       }) => {
         const db = getDb(context);
@@ -96,13 +100,36 @@ export const auditRouter = {
           .where(whereConditions);
         const total = countResult[0]?.count ?? 0;
 
+        const cursor = decodeCursor(input.cursor);
+        const pageConditions = cursor
+          ? and(
+              whereConditions,
+              or(
+                lt(auditLogs.createdAt, new Date(cursor.createdAt)),
+                and(
+                  eq(auditLogs.createdAt, new Date(cursor.createdAt)),
+                  lt(auditLogs.id, cursor.id),
+                ),
+              ),
+            )
+          : whereConditions;
+
         const data = await db
           .select()
           .from(auditLogs)
-          .where(whereConditions)
-          .orderBy(desc(auditLogs.createdAt))
+          .where(pageConditions)
+          .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
           .limit(input.limit)
-          .offset(offset);
+          .offset(cursor ? 0 : offset);
+
+        const last = data[data.length - 1];
+        const nextCursor =
+          data.length === input.limit && last
+            ? encodeCursor({
+                createdAt: new Date(last.createdAt).toISOString(),
+                id: last.id,
+              })
+            : null;
 
         return {
           data,
@@ -110,6 +137,7 @@ export const auditRouter = {
           page: input.page,
           limit: input.limit,
           totalPages: Math.ceil(total / input.limit),
+          nextCursor,
         };
       },
     ),

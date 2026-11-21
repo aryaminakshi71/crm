@@ -5,12 +5,13 @@
  */
 
 import { getOrCache, invalidateCache } from "@crm/storage/redis";
-import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import type { OrgContext } from "../context";
 import { APIError, ErrorCode } from "../lib/errors";
 import { trackQuery } from "../lib/db-performance";
 import { getDb, orgAuthed, schema } from "../procedures";
+import { decodeCursor, encodeCursor } from "../lib/pagination";
 
 const { leads, contacts, adConversions } = schema;
 
@@ -48,6 +49,7 @@ export const leadsRouter = {
         limit: z.number().min(1).max(200).default(50),
         status: z.string().optional(),
         search: z.string().optional(),
+        cursor: z.string().optional(),
       }),
     )
     .output(
@@ -57,6 +59,7 @@ export const leadsRouter = {
         page: z.number(),
         limit: z.number(),
         totalPages: z.number(),
+        nextCursor: z.string().nullable().optional(),
       }),
     )
     .handler(
@@ -70,13 +73,14 @@ export const leadsRouter = {
           limit: number;
           status?: string;
           search?: string;
+          cursor?: string;
         };
       }) => {
         const offset = (input.page - 1) * input.limit;
         const search = input.search?.trim();
 
         // Cache key for list queries
-        const cacheKey = `leads:list:${context.organization.id}:${input.page}:${input.limit}:${input.status || "all"}:${search || "all"}`;
+        const cacheKey = `leads:list:${context.organization.id}:${input.page}:${input.limit}:${input.status || "all"}:${search || "all"}:${input.cursor || "first"}`;
 
         // Use cache for list queries (5 min TTL)
         return getOrCache<{
@@ -85,6 +89,7 @@ export const leadsRouter = {
           page: number;
           limit: number;
           totalPages: number;
+          nextCursor?: string | null;
         }>(
           cacheKey,
           async () => {
@@ -115,18 +120,41 @@ export const leadsRouter = {
             ) as { count: number }[];
             const total = countResult[0]?.count ?? 0;
 
-            // Get paginated results
+            // Keyset pagination when a cursor is supplied, otherwise offset.
+            const cursor = decodeCursor(input.cursor);
+            const pageConditions = cursor
+              ? and(
+                  whereConditions,
+                  or(
+                    lt(leads.createdAt, new Date(cursor.createdAt)),
+                    and(
+                      eq(leads.createdAt, new Date(cursor.createdAt)),
+                      lt(leads.id, cursor.id),
+                    ),
+                  ),
+                )
+              : whereConditions;
+
             const paginatedLeads = await trackQuery(
               "listLeadsPaginated",
               () =>
                 db
                   .select()
                   .from(leads)
-                  .where(whereConditions)
-                  .orderBy(desc(leads.createdAt))
+                  .where(pageConditions)
+                  .orderBy(desc(leads.createdAt), desc(leads.id))
                   .limit(input.limit)
-                  .offset(offset),
+                  .offset(cursor ? 0 : offset),
             );
+
+            const last = paginatedLeads[paginatedLeads.length - 1];
+            const nextCursor =
+              paginatedLeads.length === input.limit && last
+                ? encodeCursor({
+                    createdAt: new Date(last.createdAt).toISOString(),
+                    id: last.id,
+                  })
+                : null;
 
             return {
               data: paginatedLeads,
@@ -134,6 +162,7 @@ export const leadsRouter = {
               page: input.page,
               limit: input.limit,
               totalPages: Math.ceil(total / input.limit),
+              nextCursor,
             };
           },
           300, // 5 minutes TTL
