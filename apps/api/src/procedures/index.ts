@@ -18,7 +18,7 @@ import type {
   OrgContext,
 } from "../context";
 import { createAuthFromEnv } from "../lib/create-auth-from-env";
-import { getDb, schema } from "../lib/db";
+import { getDb, getReadDb, schema } from "../lib/db";
 
 /**
  * Base procedure with initial context (env, headers, requestId, logger)
@@ -281,4 +281,4 @@ export const adminOnly = requireRole("admin", "owner");
 export const ownerOnly = requireRole("owner");
 
 // Re-export getDb and schema for convenience in procedure files
-export { getDb, schema };
+export { getDb, getReadDb, schema };

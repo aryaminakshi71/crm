@@ -33,6 +33,20 @@ export function getDb(context: Pick<InitialContext, "env">) {
 }
 
 /**
+ * Read-only database client.
+ *
+ * Uses DATABASE_READ_URL when set (e.g. a Neon read replica) so analytics and
+ * dashboard queries don't compete with writes. Falls back to the primary.
+ */
+export function getReadDb(context: Pick<InitialContext, "env">) {
+  const readUrl =
+    (context.env as any)?.DATABASE_READ_URL ||
+    (typeof process !== "undefined" ? process.env.DATABASE_READ_URL : undefined);
+  if (!readUrl) return getDb(context);
+  return createDbClient({ connectionString: readUrl });
+}
+
+/**
  * Database client type - use sparingly to avoid type inference bloat
  */
 export type Db = ReturnType<typeof getDb>;
