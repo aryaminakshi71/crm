@@ -16,7 +16,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { organizations } from "./auth.schema";
+import { organizations } from "./auth.schema.js";
 
 // Plan Types (matching nucleo-modules.ts PLAN_MODULES)
 export const PlanType = [

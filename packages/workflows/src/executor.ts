@@ -91,7 +91,7 @@ export class WorkflowExecutor {
     input: Record<string, unknown>,
     context: Record<string, unknown>
   ): Promise<unknown> {
-    const { mapping = {} } = step.config;
+    const { mapping = {} } = step.config as { mapping?: Record<string, unknown> };
     // Data transformation
     return { ...input, ...mapping };
   }

@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
-import { organizations, users } from "./nucleo-unified.schema";
+import { organizations, users } from "./nucleo-unified.schema.js";
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),

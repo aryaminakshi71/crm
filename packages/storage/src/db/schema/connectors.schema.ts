@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
-import { organizations } from "./nucleo-unified.schema";
+import { organizations } from "./nucleo-unified.schema.js";
 
 export const connectors = pgTable("connectors", {
   id: uuid("id").primaryKey().defaultRandom(),

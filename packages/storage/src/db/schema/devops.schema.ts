@@ -16,7 +16,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { organizations } from "./auth.schema";
+import { organizations } from "./auth.schema.js";
 
 // Pipeline Status
 export const PipelineStatus = [
