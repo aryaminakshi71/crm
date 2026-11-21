@@ -67,7 +67,8 @@
     "@playwright/test": "^1.57.0",
     "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.3",
-    "turbo": "^2.4.4"
+    "turbo": "^2.4.4",
+    "@cloudflare/workers-types": "^4.20250109.0"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
