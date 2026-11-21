@@ -1,6 +1,23 @@
-# CRM
+# NucleoAI — Business OS
 
-A modern Customer Relationship Management system built for teams to manage contacts, deals, and customer interactions.
+[![CI](https://github.com/aryaminakshi71/crm/actions/workflows/ci.yml/badge.svg)](https://github.com/aryaminakshi71/crm/actions/workflows/ci.yml)
+
+One AI-powered business OS with 15 equal modules: CRM, projects, helpdesk, HRM, inventory, monitoring, communications, field service, DevOps, finance, marketing, ecommerce, agents, analytics, and integrations.
+
+## AI features
+
+- AI agents: create, run, chat, orchestrate, sandbox, templates
+- Speech suite: transcription (Whisper), speakers, voice commands, meetings, vocabulary, models
+- AI outreach personalisation (scheduled campaigns)
+- In-app AI copilot
+
+## Quick start
+
+```bash
+bun install
+cp .env.example .env   # fill DATABASE_URL, BETTER_AUTH_SECRET, OPENAI_API_KEY
+bun run dev            # web on :3001, API on :8787
+```
 
 ## ✨ Features
 
