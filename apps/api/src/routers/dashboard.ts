@@ -39,33 +39,34 @@ export const dashboardRouter = {
     .handler(async ({ context }: { context: OrgContext }) => {
       const db = getDb(context);
 
-      const pipelineData = await db
-        .select({
-          stage: deals.stage,
-          count: count(),
-        })
-        .from(deals)
-        .where(eq(deals.organizationId, context.organization.id))
-        .groupBy(deals.stage);
-
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const revenueData = await db
-        .select({
-          month: sql<string>`to_char(${deals.expectedCloseDate}, 'Mon')`,
-          revenue: sql<number>`COALESCE(SUM(CAST(${deals.value} AS NUMERIC)), 0)`,
-        })
-        .from(deals)
-        .where(
-          and(
-            eq(deals.organizationId, context.organization.id),
-            eq(deals.stage, "won"),
-            gte(deals.expectedCloseDate, sixMonthsAgo),
+      const [pipelineData, revenueData] = await Promise.all([
+        db
+          .select({
+            stage: deals.stage,
+            count: count(),
+          })
+          .from(deals)
+          .where(eq(deals.organizationId, context.organization.id))
+          .groupBy(deals.stage),
+        db
+          .select({
+            month: sql<string>`to_char(${deals.expectedCloseDate}, 'Mon')`,
+            revenue: sql<number>`COALESCE(SUM(CAST(${deals.value} AS NUMERIC)), 0)`,
+          })
+          .from(deals)
+          .where(
+            and(
+              eq(deals.organizationId, context.organization.id),
+              eq(deals.stage, "won"),
+              gte(deals.expectedCloseDate, sixMonthsAgo),
+            )
           )
-        )
-        .groupBy(sql`to_char(${deals.expectedCloseDate}, 'Mon'), DATE_TRUNC('month', ${deals.expectedCloseDate})`)
-        .orderBy(sql`DATE_TRUNC('month', ${deals.expectedCloseDate})`);
+          .groupBy(sql`to_char(${deals.expectedCloseDate}, 'Mon'), DATE_TRUNC('month', ${deals.expectedCloseDate})`)
+          .orderBy(sql`DATE_TRUNC('month', ${deals.expectedCloseDate})`),
+      ]);
 
       const STAGE_COLORS: Record<string, string> = {
         lead: "#818cf8",
@@ -136,18 +137,18 @@ export const dashboardRouter = {
       return await getOrCache(
         `dashboard:stats:${orgId}`,
         async () => {
-          // Get all contacts
-          const allContacts = await db
-            .select()
-            .from(contacts)
-            .where(eq(contacts.organizationId, orgId));
+          // Load contacts and deals in parallel.
+          const [allContacts, allDeals] = await Promise.all([
+            db
+              .select()
+              .from(contacts)
+              .where(eq(contacts.organizationId, orgId)),
+            db
+              .select()
+              .from(deals)
+              .where(eq(deals.organizationId, orgId)),
+          ]);
           const totalContacts = allContacts.length;
-
-          // Get all deals
-          const allDeals = await db
-            .select()
-            .from(deals)
-            .where(eq(deals.organizationId, orgId));
 
           const activeDeals = allDeals.filter(
             (d: any) => d.stage !== "won" && d.stage !== "lost",
