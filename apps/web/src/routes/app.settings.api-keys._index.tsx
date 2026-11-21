@@ -37,7 +37,7 @@ const _MOCK_KEYS = [
   {
     id: "1",
     name: "Production Integration",
-    key: "sk_live_abc123",
+    key: "nkey_demo_abc123",
     last4: "c123",
     permissions: ["read", "write"],
     createdAt: "2026-01-15",
@@ -46,7 +46,7 @@ const _MOCK_KEYS = [
   {
     id: "2",
     name: "Analytics Dashboard",
-    key: "sk_live_xyz789",
+    key: "nkey_demo_xyz789",
     last4: "x789",
     permissions: ["read"],
     createdAt: "2026-02-01",
@@ -55,7 +55,7 @@ const _MOCK_KEYS = [
   {
     id: "3",
     name: "Webhook Processor",
-    key: "sk_live_def456",
+    key: "nkey_demo_def456",
     last4: "f456",
     permissions: ["webhooks"],
     createdAt: "2026-03-01",
@@ -105,14 +105,14 @@ function ApiKeysPage() {
       return res.json() as Promise<any>;
     },
     onSuccess: (result: any) => {
-      const key = result?.data?.key ?? result?.key ?? `sk_live_${Math.random().toString(36).slice(2, 14)}`;
+      const key = result?.data?.key ?? result?.key ?? `nkey_demo_${Math.random().toString(36).slice(2, 14)}`;
       setGeneratedKey(key);
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
       toast.success("API key generated");
     },
     onError: () => {
       // Simulate generation in mock mode
-      const mockKey = `sk_live_${Math.random().toString(36).slice(2, 14)}`;
+      const mockKey = `nkey_demo_${Math.random().toString(36).slice(2, 14)}`;
       setGeneratedKey(mockKey);
       toast.success("API key generated");
     },
@@ -273,7 +273,7 @@ function ApiKeysPage() {
                       <td className="py-3 pr-4 font-medium">{k.name}</td>
                       <td className="py-3 pr-4">
                         <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
-                          sk_live_••••••••••••••{k.last4 ?? k.key?.slice(-4) ?? "????"}
+                          nkey_demo_••••••••••••{k.last4 ?? k.key?.slice(-4) ?? "????"}
                         </code>
                       </td>
                       <td className="py-3 pr-4">
