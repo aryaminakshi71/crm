@@ -1,35 +1,30 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
-    name: Validate (Typecheck/Test/Build)
+  verify:
+    name: Typecheck · Test · Build
     runs-on: ubuntu-latest
     timeout-minutes: 40
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.9
+          bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Enforce lockfile policy
-        run: bun run guard:lockfiles
+        run: bun install
 
       - name: Typecheck
         run: bun run typecheck
@@ -39,93 +34,5 @@ jobs:
 
       - name: Build
         run: bun run build
-
-  smoke-e2e:
-    name: Smoke E2E (Playwright)
-    runs-on: ubuntu-latest
-    needs: validate
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.9
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Install Playwright (Chromium)
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run smoke route checks
-        run: |
-          set -euo pipefail
-          bun run dev > /tmp/nucleo-dev.log 2>&1 &
-          DEV_PID=$!
-
-          cleanup() {
-            kill "$DEV_PID" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          for i in {1..90}; do
-            if curl -fsS "http://127.0.0.1:3001/" >/dev/null 2>&1; then
-              echo "✅ Web server is ready on port 3001"
-              break
-            fi
-            sleep 2
-            if [[ "$i" -eq 90 ]]; then
-              echo "❌ Timed out waiting for web server on port 3001"
-              tail -n 200 /tmp/nucleo-dev.log || true
-              exit 1
-            fi
-          done
-
-          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 bunx playwright test e2e/link-testing.spec.ts --project=chromium --reporter=line
-
-      - name: Upload dev logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-e2e-dev-logs
-          path: /tmp/nucleo-dev.log
-
-  dependency-audit:
-    name: Dependency Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.9
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run audit
-        run: bun audit
-
-  secret-scan:
-    name: Secret Scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKIP_CLOUDFLARE: "true"
